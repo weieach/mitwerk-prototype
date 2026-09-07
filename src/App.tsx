@@ -21,7 +21,7 @@ export default function App() {
     setStatus({ kind: 'working' });
 
     try {
-      const response = await fetch('/api/annotate', {
+      const response = await fetch('/api/comment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileUrl, frameName }),
@@ -53,10 +53,10 @@ export default function App() {
     <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-8 px-6 py-16">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
-          Mitwerk — annotation spike
+          Mitwerk — review comment spike
         </h1>
         <p className="text-sm leading-relaxed text-neutral-600">
-          Writes one fixed sample annotation onto a named frame, through the Figma MCP server.
+          Pins one fixed sample comment to a named frame, through the Figma REST API.
           Proving this write is the point; everything else in the product depends on it.
         </p>
       </header>
@@ -74,7 +74,7 @@ export default function App() {
             placeholder="https://www.figma.com/design/…"
             className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-900"
           />
-          <p className="text-xs text-neutral-500">Must be a design file — FigJam boards can't take annotations.</p>
+          <p className="text-xs text-neutral-500">Paste the full URL from your browser's address bar.</p>
         </div>
 
         <div className="space-y-1.5">
@@ -96,7 +96,7 @@ export default function App() {
           disabled={working}
           className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:bg-neutral-400"
         >
-          {working ? 'Annotating…' : 'Annotate frame'}
+          {working ? 'Posting…' : 'Post comment to frame'}
         </button>
       </form>
 
