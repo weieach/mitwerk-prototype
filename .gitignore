@@ -14,3 +14,7 @@ build/
 *.log
 .env
 .env.local
+
+# Local Figma OAuth cache — never commit
+.mitwerk-auth.json
+dist/
