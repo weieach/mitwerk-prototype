@@ -9,62 +9,88 @@ Research and prototyping repo for the capstone.
 ## Contents
 
 - [`docs/project-proposal.md`](docs/project-proposal.md) — the project proposal, transcribed from the
-  *Capstone research* Figma board: concept, context chain, preliminary research question, target
-  audience, and work plan.
-- The annotation MVP (below) — a spike proving the proposal's core technical bet.
+  *Capstone research* Figma board.
+- The review-comment MVP (below).
 
-## The annotation MVP
+## MVP V1
 
-The proposal rests on one line: *"Read Figma / coding files — having agent directly annotate inside
-figma files."* Everything else is conventional app-building; this is the part that might not work.
-So the first build proves exactly that, and nothing more: given a Figma design-file URL and a frame
-name, write a fixed sample annotation onto that frame.
+A local web app that takes a Figma design-file URL and a frame name, resolves that name to a node via
+the Figma REST API, and pins a sample comment to it.
 
-**Status: the write works.** Confirmed on frame `Test frame` in the test file, read back from the node.
+Written against REST rather than the Figma MCP server, which admits only clients on Figma's MCP
+Catalog — annotations remain unreachable to a custom client; comments do not.
 
 ```bash
 npm install
+cp .env.local.example .env.local   # then fill it in
 npm run dev
 ```
 
-Then open the printed localhost URL, paste a Figma **design** file URL and a frame name, and submit.
-To prove the path without the UI:
+| Command | What it does |
+|---|---|
+| `npm run dev` | App + API on Vite's dev server |
+| `npm run build && npm start` | Production build behind the standalone Node server |
+| `npm run spike` | Post a comment from the command line, no UI |
+| `npm run bench` | Measure the frame-lookup strategies against a file |
 
-```bash
-npm run spike
-```
+## Connecting Figma
 
-### How it works
+Two ways, set in `.env.local`:
 
-`use_figma` is a deterministic MCP tool — it takes `{fileKey, code, description}` and runs JavaScript
-against the Figma Plugin API. No model sits in the write path.
+**OAuth (multi-user, works hosted).** Create an app at
+[figma.com/developers/apps](https://www.figma.com/developers/apps) — self-serve, no approval — and set
+`FIGMA_CLIENT_ID`, `FIGMA_CLIENT_SECRET`, and `FIGMA_REDIRECT_URI`. Any Figma user can then connect
+their own account and comment on their own files. Scopes requested: `file_content:read`,
+`file_comments:write`, `current_user:read`. Comments post as the connected user.
 
-- `server/annotate.mjs` — builds the Plugin API script and maps failures to messages
-- `server/mcpClient.mjs` — connects to the MCP server (local or remote)
-- `server/figmaAuth.mjs` — OAuth for the remote server
-- `server/figmaUrl.mjs` — parses the file key out of a pasted URL
-- `vite.config.ts` — mounts `POST /api/annotate` on Vite's dev server, so the MCP client runs in Node
-  and the token never reaches the browser, without a second process
+**Personal access token (just you, local).** Set `FIGMA_TOKEN`. Used automatically when the OAuth
+values are blank.
 
-### Transport, and a constraint worth knowing
+## Frame lookup, and what it costs
 
-Set with `MITWERK_MCP=local|remote` (default `local`).
+Resolving a user-typed frame name to a node id is the expensive part. The naive approach —
+`GET /v1/files/{key}` and walk the whole document — returns the entire file on every submit. Fine for
+a test file, potentially megabytes for a real one.
 
-**local** — `http://127.0.0.1:3845/mcp`, served by the Figma desktop app. Requires the local MCP
-server to be enabled in Figma's preferences. No authentication.
+`resolveFrame()` in [`server/figmaRest.mjs`](server/figmaRest.mjs) escalates instead:
 
-**remote** — `https://mcp.figma.com/mcp`. The OAuth implementation is complete and correct, but
-**currently unusable for this app**: Figma's docs state that *"Only clients listed in the Figma MCP
-Catalog can connect to the Figma MCP Server,"* and the advertised dynamic-registration endpoint
-returns `403 Forbidden`. There is a waitlist for new clients.
+1. **node-hint** — if the URL's `node-id` points at a frame, that is the answer, in one small call.
+   Ids starting `0:` are skipped: a plain file link carries `node-id=0-1`, the first page, never a frame.
+2. **depth=2** — every page plus its top-level objects and nothing deeper. Most named frames are
+   top-level, so this usually ends here.
+3. **full document** — only for frames nested inside other frames.
 
-That constraint is strategic, not cosmetic: until this app is catalog-listed, it can only run on a
-machine with Figma desktop open, so it cannot become the hosted, remote-collaboration tool the
-proposal describes. Worth resolving early — see the alternatives noted in the project docs.
+Responses are cached for 5 minutes, keyed by URL *and* a fingerprint of the caller's token so one
+user's cached file content can never be served to another.
+
+### Measured
+
+On the one-frame test file, both paths resolve in a single request:
+
+| Link shape | Resolved by | Downloaded |
+|---|---|---|
+| `?node-id=1-2` (frame selected) | `node-hint` | 1.4 KB |
+| `?node-id=0-1` (plain file link) | `depth2` | 2.4 KB |
+
+An earlier version also re-fetched the hinted *page* scoped to `depth=2`. Benchmarking removed it: it
+spent two round trips to obtain what plain `depth=2` returns in one, and fired on the common case.
+
+**This has not been measured on a large file.** On the test file all strategies are the same 2.4 KB,
+so the ladder's value is currently reasoned rather than demonstrated. Run `npm run bench -- "<url>"`
+against a real production file before trusting it — that is where they diverge, and where a
+many-paged file might justify reintroducing page scoping.
+
+The cache also only helps within a running server; each `npm run spike` is a fresh process.
+
+## Known limits
+
+- Sessions are held in memory, so a server restart signs everyone out, and it will not survive being
+  run as more than one process. Replace before this holds anything you would mind losing.
+- Hosting makes you custodian of other people's Figma tokens. That is a bigger responsibility than
+  the deployment work.
+- Comments post as the connected user, so there is no agent identity. A dedicated Figma account is
+  the usual workaround; Figma's comment object requires a `user` and has no app identity.
 
 ## Source of record
 
 Research board (FigJam): [Capstone research](https://www.figma.com/board/im0O0k4DLrdOmlk5NJjMaq/Capstone-research?node-id=0-1)
-
-Sections beyond the proposal — *Competitive analysis*, *Primary research*, *Research plan*,
-*Idea Cloud*, *Style+Inspiration* — are not yet transcribed.

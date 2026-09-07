@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "spike": "node scripts/spike.mjs"
+    "spike": "node scripts/spike.mjs",
+    "start": "node server/standalone.mjs",
+    "bench": "node scripts/bench-lookup.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

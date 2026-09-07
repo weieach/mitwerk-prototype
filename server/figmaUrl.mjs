@@ -30,14 +30,14 @@ export function parseFigmaUrl(input) {
     return {
       ok: false,
       code: 'figjam',
-      message: 'Annotations only work in Figma design files, not FigJam boards.',
+      message: 'Comments can only be pinned to frames in Figma design files, not FigJam boards.',
     };
   }
   if (kind === 'slides') {
     return {
       ok: false,
       code: 'slides',
-      message: 'Annotations only work in Figma design files, not Slides.',
+      message: 'Comments can only be pinned to frames in Figma design files, not Slides.',
     };
   }
   if ((kind !== 'design' && kind !== 'file') || !fileKey) {
