@@ -108,6 +108,52 @@ function stashPath(conversationId) {
   return join(stashDir, `${conversationId || 'latest'}.txt`);
 }
 
+function skipPath(conversationId) {
+  return join(stashDir, `${conversationId || 'latest'}.skip`);
+}
+
+function composerMode(payload) {
+  const raw = payload.composer_mode
+    ?? payload.composerMode
+    ?? payload.mode
+    ?? payload.session_mode
+    ?? payload.current_mode
+    ?? payload.interaction_mode
+    ?? '';
+  return String(raw).toLowerCase();
+}
+
+function isAskMode(payload) {
+  const mode = composerMode(payload);
+  return mode === 'ask' || mode === 'chat';
+}
+
+function saveSkip(conversationId) {
+  mkdirSync(stashDir, { recursive: true });
+  writeFileSync(skipPath(conversationId), 'ask', 'utf8');
+  writeFileSync(skipPath('latest'), 'ask', 'utf8');
+}
+
+function clearSkip(conversationId) {
+  for (const path of [skipPath(conversationId), skipPath('latest')]) {
+    try {
+      unlinkSync(path);
+    } catch {
+      // not present
+    }
+  }
+}
+
+function shouldSkipAskScreenshot(payload) {
+  if (isAskMode(payload)) {
+    return true;
+  }
+  if (existsSync(skipPath(payload.conversation_id))) {
+    return true;
+  }
+  return !payload.conversation_id && existsSync(skipPath('latest'));
+}
+
 function saveStash(conversationId, prompt) {
   mkdirSync(stashDir, { recursive: true });
   writeFileSync(stashPath(conversationId), prompt, 'utf8');
@@ -466,6 +512,14 @@ async function main() {
   const event = payload.hook_event_name ?? '';
 
   if (hookMode && event === 'beforeSubmitPrompt') {
+    captureLog(`prompt submit mode=${composerMode(payload) || 'unknown'}`);
+    if (isAskMode(payload)) {
+      saveSkip(payload.conversation_id);
+      captureLog(`skip ask prompt (${composerMode(payload) || 'ask'})`);
+      emitHook({ continue: true });
+      return;
+    }
+    clearSkip(payload.conversation_id);
     saveStash(payload.conversation_id, textFromUnknown(payload.prompt) || 'prompt');
     emitHook({ continue: true });
     return;
@@ -507,6 +561,12 @@ async function main() {
     || (tag === 'prompt' ? labelFromHook(payload) : git(['log', '-1', '--pretty=%s', sha]));
 
   try {
+    if (hookMode && tag === 'prompt' && shouldSkipAskScreenshot(payload)) {
+      clearSkip(payload.conversation_id);
+      captureLog(`skip ask screenshot (${composerMode(payload) || 'stashed'})`);
+      emitHook({});
+      return;
+    }
     if (process.env.MITWERK_SCREENSHOT_SKIP === '1') {
       if (hookMode) {
         emitHook({});

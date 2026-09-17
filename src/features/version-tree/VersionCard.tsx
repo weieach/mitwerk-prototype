@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Icon } from '../../components/Icon';
 import type { VersionNode } from './model';
@@ -8,25 +8,68 @@ type Props = {
   selected: boolean;
   hasDescendants: boolean;
   onActivePath: boolean;
+  isCurrentBranch: boolean;
+  canDeleteFuture: boolean;
   color: string;
   onSelect: () => void;
   onBranch: () => void;
   onCommit: () => void;
+  onSwitchBranch: () => void;
+  onDeleteFuture: () => void;
 };
 
-export function VersionCard({ node, selected, hasDescendants, onActivePath, color, onSelect, onBranch, onCommit }: Props) {
+export function VersionCard({
+  node, selected, hasDescendants, onActivePath, isCurrentBranch, canDeleteFuture, color,
+  onSelect, onBranch, onCommit, onSwitchBranch, onDeleteFuture,
+}: Props) {
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menu = useRef<HTMLDivElement>(null);
   const references = node.files.filter(file => file.kind !== 'code');
   const codeFiles = node.files.filter(file => file.kind === 'code');
   const added = node.files.reduce((sum, file) => sum + file.added, 0);
   const removed = node.files.reduce((sum, file) => sum + file.removed, 0);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    function closeOnOutside(event: PointerEvent) {
+      if (!menu.current?.contains(event.target as Node)) setMenuOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setMenuOpen(false);
+    }
+    document.addEventListener('pointerdown', closeOnOutside);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutside);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [menuOpen]);
+
   return <article className={`version-card ${selected ? 'is-selected' : ''} ${onActivePath ? 'is-active-branch' : ''}`} style={{ '--route-color': color } as CSSProperties} data-node-id={node.id} data-active-branch={onActivePath}>
     <button className={`station ${hasDescendants ? 'has-descendants' : 'is-terminal'}`} aria-label={`Select ${node.label}`} aria-pressed={selected} onClick={onSelect}>
       <span />
     </button>
+    <div ref={menu} className="card-menu">
+      <button className="card-menu-trigger" aria-haspopup="menu" aria-expanded={menuOpen}
+        aria-label={`Actions for ${node.label}`} onClick={() => setMenuOpen(open => !open)}>
+        <Icon name="more" size={14}/>
+      </button>
+      {menuOpen && <ul className="card-menu-panel" role="menu">
+        <li role="none">
+          <button role="menuitem" disabled={isCurrentBranch} onClick={() => { setMenuOpen(false); onSwitchBranch(); }}>
+            Switch to this branch
+          </button>
+        </li>
+        <li role="none">
+          <button role="menuitem" disabled={!canDeleteFuture} onClick={() => { setMenuOpen(false); onDeleteFuture(); }}>
+            Delete future endpoint
+          </button>
+        </li>
+      </ul>}
+    </div>
     <button className="version-heading" onClick={onSelect} aria-label={`View ${node.label}: ${node.title || 'Untitled version'}`}>
-      <span className="version-meta"><span className="version-number">{node.label}</span><span className="save-label">{node.saveType === 'auto' ? <Icon name="spark" size={11}/> : <Icon name="commit" size={12}/>} {node.saveType === 'auto' ? 'Autosave' : 'Manual save'}</span></span>
+      <span className="version-meta"><span className="save-label">{node.saveType === 'auto' ? <Icon name="spark" size={11}/> : <Icon name="commit" size={12}/>} {node.saveType === 'auto' ? 'Autosave' : 'Manual save'}</span></span>
       <span className={`version-title ${!node.title ? 'untitled' : ''}`} title={node.title || 'Untitled version'}>{node.title || 'Untitled version'}</span>
     </button>
     <div className="reference-files">

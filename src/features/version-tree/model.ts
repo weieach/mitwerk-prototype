@@ -21,7 +21,8 @@ export type VersionNode = {
   relation: 'root' | 'commit' | 'branch';
 };
 
-export type GraphState = { nodes: VersionNode[]; selectedId: string | null };
+/** `activeBranchId` is the checked-out branch, like `git branch`; it is independent of `selectedId`. */
+export type GraphState = { nodes: VersionNode[]; selectedId: string | null; activeBranchId: string };
 
 export const graphStorageKey = 'mitwerk.version-tree.graph';
 
@@ -29,9 +30,91 @@ type GraphStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
 export type GraphAction =
   | { type: 'select'; id: string | null }
+  | { type: 'set-active-branch'; branchId: string }
   | { type: 'add-branch'; sourceId: string }
   | { type: 'add-commit'; sourceId: string }
+  | { type: 'delete-future'; sourceId: string }
   | { type: 'reset' };
+
+function hasAncestor(nodes: VersionNode[], node: VersionNode, ancestorId: string) {
+  const byId = new Map(nodes.map(item => [item.id, item]));
+  const seen = new Set<string>();
+  let current: VersionNode | undefined = node;
+  while (current && !seen.has(current.id)) {
+    if (current.id === ancestorId) return true;
+    seen.add(current.id);
+    current = current.parentId ? byId.get(current.parentId) : undefined;
+  }
+  return false;
+}
+
+/** This station and every version after it. */
+export function futureNodeIds(nodes: VersionNode[], sourceId: string) {
+  if (!nodes.some(node => node.id === sourceId)) return [];
+  return nodes.filter(node => hasAncestor(nodes, node, sourceId)).map(node => node.id);
+}
+
+export function canDeleteFuture(nodes: VersionNode[], sourceId: string) {
+  const doomed = futureNodeIds(nodes, sourceId);
+  return doomed.length > 0 && doomed.length < nodes.length;
+}
+
+/** Last commit on a branch: its first station followed along direct commit children. */
+export function branchTip(nodes: VersionNode[], branchId: string): VersionNode | undefined {
+  const byId = new Map(nodes.map(node => [node.id, node]));
+  const start = nodes.find(node => node.branchId === branchId
+    && (!node.parentId || byId.get(node.parentId)?.branchId !== branchId))
+    ?? nodes.find(node => node.branchId === branchId);
+  if (!start) return undefined;
+  const continuation = new Map(nodes.filter(node => node.relation === 'commit').map(node => [node.parentId, node]));
+  let tip = start;
+  const visited = new Set<string>();
+  while (continuation.has(tip.id) && !visited.has(tip.id)) {
+    visited.add(tip.id);
+    tip = continuation.get(tip.id)!;
+  }
+  return tip;
+}
+
+/**
+ * The checked-out spine: exactly one station per level from the root to the branch's
+ * last commit. Same-level alternatives the branch was forked from are skipped, so each
+ * fork contributes a single station. Empty when the branch is unknown.
+ */
+export function branchPathIds(nodes: VersionNode[], branchId: string): Set<string> {
+  const byId = new Map(nodes.map(node => [node.id, node]));
+  const path = new Set<string>();
+  const visited = new Set<string>();
+  let node = branchTip(nodes, branchId);
+  while (node && !visited.has(node.id)) {
+    visited.add(node.id);
+    path.add(node.id);
+    // Branch edges stay on their level; climb past them to the previous level's station.
+    let parent = node.parentId ? byId.get(node.parentId) : undefined;
+    while (parent && node.relation === 'branch' && !visited.has(parent.id)) {
+      visited.add(parent.id);
+      node = parent;
+      parent = node.parentId ? byId.get(node.parentId) : undefined;
+    }
+    node = parent;
+  }
+  return path;
+}
+
+/** Longest root-to-tip path; ties prefer an existing `main`, then first-seen order. */
+export function longestBranchId(nodes: VersionNode[]) {
+  const ids = [...new Set(nodes.map(node => node.branchId))];
+  let best = ids[0] ?? 'main';
+  let bestLength = branchPathIds(nodes, best).size;
+  for (const id of ids.slice(1)) {
+    const length = branchPathIds(nodes, id).size;
+    if (length > bestLength || (length === bestLength && id === 'main')) {
+      best = id;
+      bestLength = length;
+    }
+  }
+  return best;
+}
 
 /** Prototype content shared by the starting example and completed empty versions. */
 export const filledVersionTemplate = {
@@ -65,6 +148,7 @@ export function fillPrototypeVersion(node: VersionNode): VersionNode {
 export function createInitialGraphState(): GraphState {
   return {
     selectedId: 'v1',
+    activeBranchId: 'main',
     nodes: [fillPrototypeVersion({
       id: 'v1', label: 'V1', title: '', saveType: 'manual', createdAt: '',
       branchId: 'main', parentId: null, relation: 'root',
@@ -144,7 +228,11 @@ export function parseStoredGraphState(value: unknown): GraphState | null {
   const selectedId = value.selectedId === null || (typeof value.selectedId === 'string' && ids.has(value.selectedId))
     ? value.selectedId
     : roots[0].id;
-  return { nodes, selectedId };
+  const branchIds = new Set(nodes.map(node => node.branchId));
+  const activeBranchId = typeof value.activeBranchId === 'string' && branchIds.has(value.activeBranchId)
+    ? value.activeBranchId
+    : longestBranchId(nodes);
+  return { nodes, selectedId, activeBranchId };
 }
 
 export function loadGraphState(storage: GraphStorage | null = browserStorage()): GraphState {
@@ -207,6 +295,25 @@ export function graphReducer(state: GraphState, action: GraphAction): GraphState
       ? { ...state, selectedId: action.id }
       : state;
   }
+  if (action.type === 'set-active-branch') {
+    // Checking out a branch also selects its last commit, mirroring `git checkout`.
+    const tip = branchTip(state.nodes, action.branchId);
+    if (!tip) return state;
+    if (state.activeBranchId === action.branchId && state.selectedId === tip.id) return state;
+    return { ...state, activeBranchId: action.branchId, selectedId: tip.id };
+  }
+  if (action.type === 'delete-future') {
+    const doomed = new Set(futureNodeIds(state.nodes, action.sourceId));
+    if (doomed.size === 0 || doomed.size === state.nodes.length) return state;
+    const nodes = state.nodes.filter(node => !doomed.has(node.id));
+    const activeBranchId = nodes.some(node => node.branchId === state.activeBranchId)
+      ? state.activeBranchId
+      : longestBranchId(nodes);
+    const selectedId = state.selectedId && nodes.some(node => node.id === state.selectedId)
+      ? state.selectedId
+      : branchTip(nodes, activeBranchId)?.id ?? nodes[0].id;
+    return { nodes, selectedId, activeBranchId };
+  }
   const source = state.nodes.find(node => node.id === action.sourceId);
   if (!source) return state;
   const relation = action.type === 'add-branch' ? 'branch' : 'commit';
@@ -220,5 +327,5 @@ export function graphReducer(state: GraphState, action: GraphAction): GraphState
     }
     return node;
   });
-  return { nodes: [...nodes, nextNode], selectedId: nextNode.id };
+  return { ...state, nodes: [...nodes, nextNode], selectedId: nextNode.id };
 }

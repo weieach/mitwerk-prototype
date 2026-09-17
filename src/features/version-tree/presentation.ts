@@ -1,4 +1,4 @@
-import type { VersionNode } from './model';
+import { branchPathIds, branchTip, longestBranchId, type VersionNode } from './model.ts';
 import type { GraphLayout } from './layout';
 
 /** Selection follows the whole branch, not only the currently focused station. */
@@ -33,28 +33,33 @@ export function getBranchState(nodes: VersionNode[], selectedId: string | null) 
 
 /** Last commit on each branch, in first-seen branch order. */
 export function getBranchEndpoints(nodes: VersionNode[]) {
-  const continuation = new Map(nodes.filter(node => node.relation === 'commit').map(node => [node.parentId, node]));
-  const seen = new Set<string>();
-  const tips: VersionNode[] = [];
-  for (const node of nodes) {
-    if (seen.has(node.branchId)) continue;
-    seen.add(node.branchId);
-    let tip = node;
-    const visited = new Set<string>();
-    while (continuation.has(tip.id) && !visited.has(tip.id)) {
-      visited.add(tip.id);
-      tip = continuation.get(tip.id)!;
-    }
-    tips.push(tip);
-  }
-  return tips;
+  return getBranchIds(nodes).flatMap(branchId => {
+    const tip = branchTip(nodes, branchId);
+    return tip ? [tip] : [];
+  });
+}
+
+/** Branch IDs in creation order, which stays stable as the graph grows. */
+export function getBranchIds(nodes: VersionNode[]) {
+  return [...new Set(nodes.map(node => node.branchId))];
+}
+
+/** The longest branch is `main`; every other branch is numbered in creation order. */
+export function branchName(branchId: string, nodes: VersionNode[]) {
+  const mainId = longestBranchId(nodes);
+  if (branchId === mainId) return 'main';
+  const others = getBranchIds(nodes).filter(id => id !== mainId);
+  return `branch-${others.indexOf(branchId) + 1}`;
 }
 
 export type DisplayRoute = {
   id: string;
   path: string;
   branchId: string;
+  sourceId?: string;
+  targetId?: string;
   active: boolean;
+  spine: boolean;
   kind: 'horizontal-branch' | 'branch' | 'commit';
 };
 
@@ -63,8 +68,14 @@ export type DisplayRoute = {
  * own lines above the overlap and (2) adds one horizontal connector across each
  * sibling level on the selected path.
  */
-export function presentTree(layout: GraphLayout, selectedId: string | null, collapsedLevels: ReadonlySet<string> = new Set()) {
+export function presentTree(
+  layout: GraphLayout,
+  selectedId: string | null,
+  collapsedLevels: ReadonlySet<string> = new Set(),
+  activeBranchId = '',
+) {
   const selection = getBranchState(layout.nodes, selectedId);
+  const spineIds = activeBranchId ? branchPathIds(layout.nodes, activeBranchId) : new Set<string>();
   const byId = new Map(layout.nodes.map(node => [node.id, node]));
   const groups = layout.forks ?? [];
   const hiddenById = new Map(groups.filter(group => collapsedLevels.has(group.id))
@@ -79,27 +90,39 @@ export function presentTree(layout: GraphLayout, selectedId: string | null, coll
   for (const edge of layout.edges) {
     const arm = edge.id.startsWith('arm:');
     if (arm && hiddenById.has(edge.targetId)) continue;
-    const source = byId.get(edge.sourceId)!;
-    const target = byId.get(edge.targetId)!;
-    const collapsedSource = !arm ? hiddenById.get(source.id) : undefined;
-    const active = arm ? ownsSelectedLine(target.id)
-      : selection.activeNodeIds.has(source.id) && selection.activeNodeIds.has(target.id);
+    const source = byId.get(edge.sourceId);
+    const target = byId.get(edge.targetId);
+    const forkTarget = groups.find(group => group.id === edge.targetId);
+    const fromOrigin = edge.sourceId.startsWith('origin:');
+    if (!arm && !source && !fromOrigin) continue;
+    const collapsedSource = !arm && source ? hiddenById.get(source.id) : undefined;
+    const active = arm ? ownsSelectedLine(edge.targetId)
+      : Boolean(source && target && selection.activeNodeIds.has(source.id) && selection.activeNodeIds.has(target.id));
+    const spine = arm
+      ? spineIds.has(edge.targetId)
+      : Boolean(
+        (source && spineIds.has(source.id) && (
+          (target && spineIds.has(target.id))
+          || forkTarget?.nodeIds.some(id => spineIds.has(id))
+        ))
+        || (fromOrigin && forkTarget?.nodeIds.some(id => spineIds.has(id)))
+      );
     let path = edge.path;
     if (collapsedSource) {
       path = edge.collapsedSourcePath!;
     }
-    routes.push({ ...edge, path, active, kind: arm ? 'branch' : 'commit' });
+    routes.push({ ...edge, path, active, spine, kind: arm ? 'branch' : 'commit' });
   }
   for (const fork of groups) {
     if (!fork.horizontal || collapsedLevels.has(fork.id)) continue;
     const xs = fork.nodeIds.map(id => byId.get(id)!.x);
     const y = byId.get(fork.nodeIds[0])!.y;
-    routes.push({ id: `siblings:${fork.id}`, kind: 'horizontal-branch', active: true,
+    routes.push({ id: `siblings:${fork.id}`, kind: 'horizontal-branch', active: true, spine: false,
       branchId: selection.selectedBranchId,
       path: `M ${Math.min(...xs)} ${y} L ${Math.max(...xs)} ${y}` });
   }
-  // Grayed level connector underneath, then default wiring, with the selected branch's own lines on top.
-  const layer = (route: DisplayRoute) => route.kind === 'horizontal-branch' ? 0 : !route.active ? 1 : route.kind === 'commit' ? 2 : 3;
+  // Grayed level connector, default wiring, selected branch, then the checked-out spine on top.
+  const layer = (route: DisplayRoute) => route.spine ? 4 : route.kind === 'horizontal-branch' ? 0 : !route.active ? 1 : route.kind === 'commit' ? 2 : 3;
   routes.sort((a, b) => layer(a) - layer(b));
   const hiddenNodeIds = new Set(hiddenById.keys());
   const endpoints = getBranchEndpoints(layout.nodes)

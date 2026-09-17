@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createInitialGraphState, graphReducer } from '../src/features/version-tree/model.ts';
+import { branchPathIds, createInitialGraphState, graphReducer, longestBranchId, parseStoredGraphState } from '../src/features/version-tree/model.ts';
 import { frameVersionLevel, layoutGraph as logicalLayout, layoutBranchView, geometry } from '../src/features/version-tree/layout.ts';
-import { getBranchState, presentTree } from '../src/features/version-tree/presentation.ts';
-import { treeTheme } from '../src/features/version-tree/tokens.ts';
+import { branchName, getBranchState, presentTree } from '../src/features/version-tree/presentation.ts';
+import { levelColorLookup, stationLabelOffset, treeTheme } from '../src/features/version-tree/tokens.ts';
 import { createTestGraphState } from './graph-fixture.ts';
 
 const layoutGraph = (nodes, selectedId = null) => layoutBranchView(logicalLayout(nodes), selectedId);
@@ -33,7 +33,8 @@ test('fork routes run as full lines from the preceding station, share the stem, 
       assert.deepEqual(points[0], [parent.x, parent.y], 'Full line starts at the preceding station');
       assert.deepEqual(points.at(-1), [node.x, node.y]);
       const departure = [...points].reverse().find(([x]) => x === fork.x);
-      assert.ok(departure[1] >= fork.y - 0.00001, 'Arm stays on the stem through the count before diverging');
+      assert.ok(departure[1] >= fork.y + geometry.gridRise * geometry.forkDivergeStartRows - 0.00001,
+        'Arm stays on the stem through the count and one grid below it before diverging');
       departures[Math.sign(node.x - fork.x)].push({ offset: departure[1] - fork.y, distance: Math.abs(node.x - fork.x) });
       for (const [x, y] of points) {
         assert.ok(y <= node.y, 'Connector never passes below its endpoint');
@@ -61,7 +62,7 @@ test('fork routes run as full lines from the preceding station, share the stem, 
     for (const side of Object.values(departures)) {
       side.sort((a, b) => b.distance - a.distance);
       side.forEach((arm, index) => assert.ok(
-        Math.abs(arm.offset - index * geometry.gridRise * geometry.forkDivergeRows) < 0.00001,
+        Math.abs(arm.offset - geometry.gridRise * (geometry.forkDivergeStartRows + index * geometry.forkDivergeRows)) < 0.00001,
         'Arms leave the stem one by one, farthest first, at the shared divergence spacing'));
     }
   }
@@ -180,9 +181,32 @@ test('root-level branches can collapse without a predecessor', () => {
   const layout = layoutGraph(state.nodes);
   const result = presentTree(layout, state.selectedId, new Set(['v1']));
   assert.equal(result.hiddenNodeIds.size, 3);
-  assert.equal(result.routes.length, 0);
   assert.equal(result.tip, null);
   assert.equal(result.groups[0].nodeIds.length, 3);
+  assert.ok(layout.origins.some(origin => origin.forkId === 'v1'));
+  assert.ok(result.routes.some(route => route.id === 'trunk:v1'));
+});
+
+test('a root-level fork keeps an origin station above the count with no card', () => {
+  let state = graphReducer(createInitialGraphState(), { type: 'add-branch', sourceId: 'v1' });
+  const layout = layoutGraph(state.nodes);
+  const fork = layout.forks[0];
+  const origin = layout.origins[0];
+  assert.equal(fork.parentId, null);
+  assert.equal(origin.x, fork.x);
+  assert.equal(fork.y - origin.y, geometry.gridRise * geometry.originStemRows);
+  assert.equal(layout.nodes.some(node => node.x === origin.x && node.y === origin.y), false);
+});
+
+test('branches that share a level receive distinct colors', () => {
+  let state = createInitialGraphState();
+  state = graphReducer(state, { type: 'add-branch', sourceId: 'v1' });
+  state = graphReducer(state, { type: 'add-branch', sourceId: 'v1' });
+  const layout = layoutGraph(state.nodes);
+  const colorOf = levelColorLookup(layout.nodes);
+  const row = layout.nodes[0].row;
+  const colors = [...new Set(layout.nodes.filter(node => node.row === row).map(node => colorOf(node.branchId, node.row)))];
+  assert.equal(colors.length, new Set(layout.nodes.filter(node => node.row === row).map(node => node.branchId)).size);
 });
 
 test('one empty station is open with no connectors and no endpoint marker', () => {
@@ -270,6 +294,25 @@ test('clearing selection drops branch highlight and sibling flattening', () => {
   assert.ok(cleared.routes.some(route => route.kind === 'branch'));
 });
 
+test('the checked-out branch stays on a straight vertical spine through a fork', () => {
+  let state = graphReducer(createInitialGraphState(), { type: 'add-commit', sourceId: 'v1' });
+  const sourceId = state.selectedId;
+  state = graphReducer(state, { type: 'add-branch', sourceId });
+  const spine = branchPathIds(state.nodes, 'main');
+  const layout = layoutBranchView(logicalLayout(state.nodes), state.selectedId, spine);
+  const fork = layout.forks[0];
+  const trunk = layout.nodes.find(node => spine.has(node.id) && fork.nodeIds.includes(node.id));
+  const side = layout.nodes.find(node => !spine.has(node.id) && fork.nodeIds.includes(node.id));
+  assert.ok(trunk && side);
+  assert.equal(trunk.x, fork.x);
+  assert.notEqual(side.x, fork.x);
+  const arm = layout.edges.find(edge => edge.id === `arm:${trunk.id}`);
+  const points = pathPoints(arm.path);
+  assert.ok(points.every(([x]) => Math.abs(x - fork.x) < 0.00001), 'Active-branch arm never leaves the vertical column');
+  const presented = presentTree(layout, state.selectedId, new Set(), 'main');
+  assert.ok(presented.routes.some(route => route.spine && route.id === arm.id));
+});
+
 test('connector width tracks node diameter and horizontal cards clear both routing levels', () => {
   assert.equal(treeTheme.routeWidth, treeTheme.stationInnerDiameter);
   assert.equal(treeTheme.stationInnerDiameter, treeTheme.stationDiameter - treeTheme.stationBorderWidth * 2);
@@ -278,4 +321,20 @@ test('connector width tracks node diameter and horizontal cards clear both routi
   assert.ok(geometry.gridRise * geometry.branchRouteRows - strokeRadius > geometry.horizontalCardOffsetY + geometry.cardHeight);
   assert.ok(geometry.rowGap + geometry.cardOffsetY > geometry.gridRise * geometry.branchRouteRows + strokeRadius);
   assert.ok(treeTheme.endpointTriangleGap > 0);
+  assert.equal(treeTheme.activeBranchColor, '#000000');
+  assert.equal(stationLabelOffset().x, -(treeTheme.stationRadius + treeTheme.versionLabelGap));
+  assert.equal(stationLabelOffset().y, 0);
+  assert.equal(geometry.forkDivergeStartRows, 2);
+});
+
+test('the longest branch is named main and is the default checkout', () => {
+  let state = createInitialGraphState();
+  state = graphReducer(state, { type: 'add-branch', sourceId: 'v1' });
+  const side = state.nodes.at(-1).branchId;
+  state = graphReducer(state, { type: 'add-commit', sourceId: state.selectedId! });
+  state = graphReducer(state, { type: 'add-commit', sourceId: state.selectedId! });
+  assert.equal(longestBranchId(state.nodes), side);
+  assert.equal(branchName(side, state.nodes), 'main');
+  assert.equal(branchName('main', state.nodes), 'branch-1');
+  assert.equal(parseStoredGraphState({ nodes: state.nodes, selectedId: state.selectedId })?.activeBranchId, side);
 });

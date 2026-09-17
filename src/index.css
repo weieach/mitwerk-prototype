@@ -48,7 +48,6 @@ button svg { flex: 0 0 auto; }
 .panel-header { height: 62px; flex: 0 0 62px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 28px; gap: 12px; background: var(--paper); }
 .panel-heading { display: flex; align-items: center; gap: 11px; }
 .panel-header h2 { font-size: 12px; font-weight: 700; margin: 0; letter-spacing: .05px; }
-.panel-count { font: 9px var(--mono); padding: 3px 5px; min-width: 18px; text-align: center; background: var(--fill); border-radius: 4px; color: var(--muted); }
 .panel-header-actions { display: flex; align-items: center; gap: 8px; }
 .icon-button { width: 29px; height: 29px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); }
 .icon-button:hover, .icon-button.is-active { background: var(--fill); color: var(--ink); }
@@ -69,12 +68,21 @@ button svg { flex: 0 0 auto; }
 .station span { width: var(--station-inner-size); height: var(--station-inner-size); border-radius: 50%; background: var(--station-open-fill); }
 .station.has-descendants { border-color: transparent; background: transparent; box-shadow: none; }
 .station.has-descendants span { background: var(--route-color); box-shadow: 0 0 0 var(--station-clearance) var(--canvas-bg); }
+.origin-station { transform: translate(-50%, -50%); z-index: 4; pointer-events: none; }
+.card-menu { position: absolute; top: 8px; right: 8px; z-index: 6; }
+.card-menu-trigger { display: flex; padding: 2px; color: var(--muted); border-radius: 3px; }
+.card-menu-trigger:hover, .card-menu-trigger[aria-expanded="true"] { background: var(--fill); color: var(--ink); }
+.card-menu-panel { position: absolute; top: calc(100% + 4px); right: 0; min-width: 168px; margin: 0; padding: 4px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; list-style: none; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06); }
+.card-menu-panel button { width: 100%; justify-content: flex-start; padding: 6px 8px; font-size: 11px; color: var(--ink); text-align: left; }
+.card-menu-panel button:hover:not(:disabled) { background: var(--fill); }
+.card-menu-panel button:disabled { color: var(--faint); }
 .version-card.is-selected .station { border-color: var(--route-color); background: var(--route-color); box-shadow: 0 0 0 var(--station-selected-ring) var(--station-fill), 0 0 0 calc(var(--station-selected-ring) + var(--station-clearance)) var(--canvas-bg); }
 .version-card.is-selected .station span { background: var(--station-open-fill); box-shadow: none; }
 .version-card.is-active-branch { border-color: var(--route-color); }
-.version-heading { padding: 0; width: 100%; display: block; text-align: left; }
+.station-label { position: absolute; z-index: 4; transform: translate(-100%, -50%); font: 700 var(--version-label-size) var(--sans); color: var(--route-color); pointer-events: none; white-space: nowrap; }
+.version-heading { padding: 0 22px 0 0; width: 100%; display: block; text-align: left; }
+.version-position:has(.card-menu-panel) { z-index: 9 !important; }
 .version-meta { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
-.version-number { font: 700 11px var(--sans); color: var(--route-color); }
 .save-label { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 10px; }
 .version-title { font-size: 17px; font-weight: 700; letter-spacing: -.4px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .version-title.untitled { color: var(--faint); font-weight: 400; }
@@ -110,7 +118,14 @@ button svg { flex: 0 0 auto; }
 .zoom-controls button { display: flex; align-items: center; justify-content: center; padding: 5px; color: var(--muted); border-radius: 3px; }
 .zoom-controls button:hover { background: var(--fill); }
 .zoom-controls .zoom-value { font: 9px var(--mono); min-width: 37px; }
-.endpoint-controls .endpoint-jump { gap: 6px; padding: 5px 8px; font-size: 11px; color: var(--ink); white-space: nowrap; }
+.endpoint-controls .endpoint-jump,
+.branch-controls .branch-current { gap: 6px; padding: 5px 8px; font-size: 11px; color: var(--ink); white-space: nowrap; }
+.branch-controls { position: relative; }
+.branch-menu { position: absolute; bottom: calc(100% + 6px); left: 0; min-width: 100%; margin: 0; padding: 4px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; list-style: none; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06); }
+.branch-menu button { width: 100%; justify-content: space-between; gap: 10px; padding: 6px 8px; font-size: 11px; color: var(--ink); }
+.branch-menu button[aria-checked="true"] { background: var(--fill); }
+.branch-menu-name { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.branch-menu small { font: 8px var(--mono); color: var(--muted); letter-spacing: 0.04em; }
 .control-divider { height: 15px; width: 1px; background: var(--line); margin: 0 3px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

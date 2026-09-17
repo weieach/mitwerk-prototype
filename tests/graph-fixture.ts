@@ -4,6 +4,7 @@ import type { GraphState } from '../src/features/version-tree/model.ts';
 export function createTestGraphState(): GraphState {
   return {
     selectedId: 'v2',
+    activeBranchId: 'main',
     nodes: [
       {
         id: 'v1', label: 'V1', title: 'Finish project setup', saveType: 'auto',

@@ -21,19 +21,24 @@ export const geometry = {
   branchCountOffsetY: gridRise * 4,
   /** Minimum distance every alternative shares on the stem before the count and divergence. */
   forkSharedStemRows: 22,
+  /** Origin station to count: three visible grids (two lattice rows each). */
+  originStemRows: 6,
   forkTerminalRows: 4,
   /** Longest outward diagonal; farther alternatives continue horizontally. */
   forkDepartureUnits: 8,
   forkLandingUnits: 2,
   /** Stem distance between successive departures on one side of the count. */
   forkDivergeRows: 4,
+  /** First peel sits one visible grid below the count (two lattice rows, so it stays on the lattice). */
+  forkDivergeStartRows: 2,
 } as const;
 
 export type PositionedNode = VersionNode & { x: number; y: number; row: number; column: number };
 export type GraphEdge = { id: string; sourceId: string; targetId: string; path: string; branchId: string; collapsedSourcePath?: string };
 export type VersionLevel = { id: string; row: number; label: string; nodeIds: string[]; x: number; y: number };
 export type Fork = VersionLevel & { parentId: string | null; horizontal: boolean; branchId: string };
-export type GraphLayout = { nodes: PositionedNode[]; edges: GraphEdge[]; levels: VersionLevel[]; width: number; height: number; forks?: Fork[] };
+export type OriginStation = { id: string; x: number; y: number; forkId: string };
+export type GraphLayout = { nodes: PositionedNode[]; edges: GraphEdge[]; levels: VersionLevel[]; width: number; height: number; forks?: Fork[]; origins?: OriginStation[] };
 
 const rise = (run: number) => run / Math.sqrt(3);
 
@@ -56,12 +61,53 @@ function forkApproach(x: number, y: number, targetX: number) {
 }
 
 /** Stem offset below the count where the arm with this departure index peels away. */
-const departureOffset = (index: number) => index * geometry.gridRise * geometry.forkDivergeRows;
+const departureOffset = (index: number) =>
+  geometry.gridRise * (geometry.forkDivergeStartRows + index * geometry.forkDivergeRows);
 
 const toPath = (points: number[][]) => points.map(([x, y], index) => `${index ? 'L' : 'M'} ${x} ${y}`).join(' ');
 
+function placeFamilySlots(
+  members: PositionedNode[],
+  center: number,
+  originId: string,
+  activeId: string | undefined,
+  positions: Map<string, number>,
+) {
+  if (activeId && members.length > 1) {
+    // The original alternative holds the center by default and the others fan out
+    // around it in creation order. Checking out another alternative swaps it with the
+    // centered station; every remaining alternative keeps its slot.
+    const others = members.filter(node => node.id !== originId);
+    const leftCount = Math.floor(others.length / 2);
+    const slots = new Map<string, number>([[originId, 0]]);
+    others.forEach((node, index) => slots.set(node.id, index < leftCount ? -(leftCount - index) : index - leftCount + 1));
+    if (activeId !== originId) {
+      slots.set(originId, slots.get(activeId)!);
+      slots.set(activeId, 0);
+    }
+    for (const [id, slot] of slots) positions.set(id, center + slot * geometry.columnGap);
+    return;
+  }
+  const width = members.length + (members.length > 1 && members.length % 2 === 1 ? 1 : 0);
+  let slot = 0;
+  const slots: number[] = [];
+  for (const [index] of members.entries()) {
+    if (members.length > 1 && members.length % 2 === 1 && index === Math.floor(members.length / 2)) slot += 1;
+    slots.push(slot);
+    slot += 1;
+  }
+  const localCenter = (width - 1) / 2;
+  for (const [index, node] of members.entries()) {
+    positions.set(node.id, center + (slots[index] - localCenter) * geometry.columnGap);
+  }
+}
+
 /** Lay out actual fork junctions, treating same-level alternatives as siblings. */
-export function layoutBranchView(base: GraphLayout, selectedId: string | null): GraphLayout {
+export function layoutBranchView(
+  base: GraphLayout,
+  selectedId: string | null,
+  activePath: ReadonlySet<string> = new Set(),
+): GraphLayout {
   const byId = new Map(base.nodes.map(node => [node.id, node]));
   const familyId = (node: PositionedNode): string => node.relation === 'branch' && node.parentId
     ? familyId(byId.get(node.parentId)!) : node.id;
@@ -85,19 +131,12 @@ export function layoutBranchView(base: GraphLayout, selectedId: string | null): 
   const centers = new Map<string, number>();
   function place(id: string, centerX: number) {
     const members = families.get(id)!;
-    const width = compactWidth(id);
-    const slots: number[] = [];
-    let slot = 0;
-    for (const [index] of members.entries()) {
-      if (members.length > 1 && members.length % 2 === 1 && index === Math.floor(members.length / 2)) slot++;
-      slots.push(slot);
-      slot++;
-    }
     const center = snap(centerX);
     centers.set(id, center);
-    const localCenter = (width - 1) / 2;
-    for (const [index, node] of members.entries()) {
-      const x = snap(center + (slots[index] - localCenter) * geometry.columnGap);
+    const activeId = members.find(node => activePath.has(node.id))?.id;
+    placeFamilySlots(members, center, id, activeId, positions);
+    for (const node of members) {
+      const x = snap(positions.get(node.id)!);
       positions.set(node.id, x);
       if (nextFamily.has(node.id)) place(nextFamily.get(node.id)!, x);
     }
@@ -116,23 +155,32 @@ export function layoutBranchView(base: GraphLayout, selectedId: string | null): 
     place(id, geometry.originX + (cursor + (width - 1) / 2) * geometry.columnGap);
     cursor += width;
   }
+  // Keep a fork's junction on its parent; only the members and later descendants
+  // move, so earlier levels stay compact.
+  const shiftMembers = (members: PositionedNode[], dx: number) => {
+    for (const node of members) {
+      positions.set(node.id, positions.get(node.id)! + dx);
+      if (nextFamily.has(node.id)) shiftTree(nextFamily.get(node.id)!, dx);
+    }
+  };
   const maxRow = Math.max(0, ...base.nodes.map(node => node.row));
   for (let row = 0; row <= maxRow; row++) {
     const rowFamilies = [...families].filter(([, members]) => members[0].row === row)
       .sort((a, b) => centers.get(a[0])! - centers.get(b[0])!);
+    // The family holding the active path never moves; neighbors spread away from it
+    // on both sides so the checked-out branch keeps its vertical column.
+    const pivot = Math.max(0, rowFamilies.findIndex(([, members]) => members.some(node => activePath.has(node.id))));
     let lastMax = -Infinity;
-    for (const [, members] of rowFamilies) {
+    for (const [, members] of rowFamilies.slice(pivot)) {
       const min = Math.min(...members.map(node => positions.get(node.id)!));
-      if (min < lastMax + geometry.columnGap) {
-        // Keep this fork's junction on its parent; only the members and later
-        // descendants move, so earlier levels stay compact.
-        const dx = snapUp(lastMax + geometry.columnGap - min);
-        for (const node of members) {
-          positions.set(node.id, positions.get(node.id)! + dx);
-          if (nextFamily.has(node.id)) shiftTree(nextFamily.get(node.id)!, dx);
-        }
-      }
+      if (min < lastMax + geometry.columnGap) shiftMembers(members, snapUp(lastMax + geometry.columnGap - min));
       lastMax = Math.max(...members.map(node => positions.get(node.id)!));
+    }
+    let lastMin = Infinity;
+    for (const [, members] of rowFamilies.slice(0, pivot + 1).reverse()) {
+      const max = Math.max(...members.map(node => positions.get(node.id)!));
+      if (max > lastMin - geometry.columnGap) shiftMembers(members, -snapUp(max - (lastMin - geometry.columnGap)));
+      lastMin = Math.min(...members.map(node => positions.get(node.id)!));
     }
   }
   const minX = Math.min(...positions.values(), ...centers.values());
@@ -165,7 +213,10 @@ export function layoutBranchView(base: GraphLayout, selectedId: string | null): 
   for (let row = 0; row <= maxRow; row++) {
     const forks = [...families].filter(([, members]) => members[0].row === row && members.length > 1);
     const maxArm = Math.max(0, ...forks.flatMap(([id, members]) => members.map(node => armFromCount(id, node, 0).at(-1)![1])));
-    const junctionY = row === 0 ? geometry.originY : rowYs.get(row - 1)! + geometry.gridRise * geometry.forkSharedStemRows;
+    const rootOrigin = row === 0 && forks.some(([id]) => !byId.get(id)!.parentId);
+    const junctionY = row === 0
+      ? geometry.originY + (rootOrigin ? geometry.gridRise * geometry.originStemRows : 0)
+      : rowYs.get(row - 1)! + geometry.gridRise * geometry.forkSharedStemRows;
     junctionYs.set(row, junctionY);
     rowYs.set(row, forks.length ? junctionY + maxArm + geometry.gridRise * geometry.forkTerminalRows
       : row === 0 ? geometry.originY : rowYs.get(row - 1)! + geometry.rowGap);
@@ -178,6 +229,9 @@ export function layoutBranchView(base: GraphLayout, selectedId: string | null): 
       parentId: byId.get(id)!.parentId, branchId: byId.get(id)!.branchId, horizontal,
       x: centers.get(id)!, y: junctionYs.get(members[0].row)! };
   });
+  const origins: OriginStation[] = forks.filter(fork => !fork.parentId)
+    .map(fork => ({ id: `origin:${fork.id}`, x: fork.x, y: geometry.originY, forkId: fork.id }));
+  const originByFork = new Map(origins.map(origin => [origin.forkId, origin]));
   const forkByNode = new Map(forks.flatMap(fork => fork.nodeIds.map(id => [id, fork] as const)));
   const edges: GraphEdge[] = [];
   for (const target of nodes) {
@@ -187,13 +241,17 @@ export function layoutBranchView(base: GraphLayout, selectedId: string | null): 
       branchId: target.branchId, path: `M ${source.x} ${source.y} L ${target.x} ${target.y}` });
   }
   for (const fork of forks) {
-    const parent = fork.parentId ? positioned.get(fork.parentId)! : null;
+    const parent: { id: string; x: number; y: number } | null = fork.parentId
+      ? positioned.get(fork.parentId)!
+      : originByFork.get(fork.id) ?? null;
     // Every alternative is drawn as one full line from the preceding station, so the
     // arms overlap along the shared stem until they diverge below the count.
     for (const id of fork.nodeIds) {
       const node = positioned.get(id)!;
       const stem = parent ? [[parent.x, parent.y]] : [];
-      const points = [...stem, ...armFromCount(fork.id, node, fork.y), [node.x, node.y]];
+      const points = activePath.has(id)
+        ? [...stem, [fork.x, fork.y], [node.x, node.y]]
+        : [...stem, ...armFromCount(fork.id, node, fork.y), [node.x, node.y]];
       edges.push({ id: `arm:${id}`, sourceId: fork.id, targetId: id, branchId: node.branchId, path: toPath(points) });
     }
     // The continuing branch's trunk is painted after the arms so it owns the shared stem's color.
@@ -207,9 +265,11 @@ export function layoutBranchView(base: GraphLayout, selectedId: string | null): 
     const sourceFork = forkByNode.get(edge.sourceId);
     if (!sourceFork) continue;
     const target = edge.id.startsWith('trunk:') ? forkByNode.get(edge.targetId)! : positioned.get(edge.targetId)!;
-    edge.collapsedSourcePath = toPath([...forkApproach(sourceFork.x, sourceFork.y, target.x), [target.x, target.y]]);
+    const divergeY = sourceFork.y + geometry.gridRise * geometry.forkDivergeStartRows;
+    edge.collapsedSourcePath = toPath([[sourceFork.x, sourceFork.y],
+      ...forkApproach(sourceFork.x, divergeY, target.x), [target.x, target.y]]);
   }
-  return { ...base, nodes, edges, forks,
+  return { ...base, nodes, edges, forks, origins,
     levels: base.levels.map(level => ({ ...level, y: rowYs.get(level.row)! - geometry.branchCountOffsetY })),
     width: Math.max(...nodes.map(node => node.x)) + geometry.cardOffsetX + geometry.cardWidth + geometry.padding,
     height: Math.max(...nodes.map(node => node.y)) + geometry.horizontalCardOffsetY + geometry.cardHeight + geometry.padding };
