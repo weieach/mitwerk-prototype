@@ -13,6 +13,14 @@
         "timeout": 20,
         "failClosed": false
       }
+    ],
+    "afterShellExecution": [
+      {
+        "command": ".cursor/hooks/screenshot-push.sh",
+        "matcher": "git\\s+push",
+        "timeout": 30,
+        "failClosed": false
+      }
     ]
   }
 }

@@ -29,8 +29,6 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
   const jumperEndpointId = endpoints.find(node => node.branchId === presentation.selectedBranchId)?.id ?? endpoints[0]?.id;
   const jumperIndex = Math.max(0, endpoints.findIndex(node => node.id === jumperEndpointId));
   const jumperEndpoint = endpoints[jumperIndex];
-  const jumperIsCurrent = Boolean(jumperEndpoint && presentation.selectedBranchId
-    && jumperEndpoint.branchId === presentation.selectedBranchId);
 
   function toggleLevel(id: string) {
     setCollapsedLevels(current => {
@@ -240,21 +238,18 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
           <button className="zoom-value" onClick={() => changeZoom(1)} aria-label="Reset zoom to 100 percent">{Math.round(zoom * 100)}%</button>
           <button onClick={() => changeZoom(zoom + treeTheme.zoomStep)} disabled={zoom >= treeTheme.maxZoom} aria-label="Zoom in"><Icon name="plus" size={14}/></button>
         </div>
-        <div className="endpoint-control-group">
-          <span className="endpoint-control-label">Endpoint</span>
-          <div className="zoom-controls endpoint-controls">
-          <button onClick={() => stepEndpoint(-1)} disabled={endpoints.length < 2} aria-label="Previous branch endpoint" title="Previous branch endpoint">
+        <div className="zoom-controls endpoint-controls">
+          <button onClick={() => stepEndpoint(-1)} disabled={endpoints.length < 2} aria-label="Previous endpoint" title="Previous endpoint">
             <Icon name="arrow" size={14} style={{ transform: 'scaleX(-1)' }}/>
           </button>
           <button className="endpoint-jump" onClick={() => goToEndpoint(jumperEndpoint)} disabled={!jumperEndpoint}
-            aria-label={jumperEndpoint ? `Jump to branch ${jumperIndex + 1} of ${endpoints.length}${jumperIsCurrent ? ', current' : ''}` : 'Jump to current endpoint'}
+            aria-label={jumperEndpoint ? `Jump to endpoint ${jumperIndex + 1} of ${endpoints.length}` : 'Jump to current endpoint'}
             title="Jump to current endpoint">
-            {jumperEndpoint ? <>Branch {jumperIndex + 1}/{endpoints.length}{jumperIsCurrent && <span className="endpoint-current-tag">current</span>}</> : 'Jump to current endpoint'}
+            {jumperEndpoint ? `Endpoint ${jumperIndex + 1}/${endpoints.length}` : 'Jump to current endpoint'}
           </button>
-          <button onClick={() => stepEndpoint(1)} disabled={endpoints.length < 2} aria-label="Next branch endpoint" title="Next branch endpoint">
+          <button onClick={() => stepEndpoint(1)} disabled={endpoints.length < 2} aria-label="Next endpoint" title="Next endpoint">
             <Icon name="arrow" size={14}/>
           </button>
-          </div>
         </div>
       </div>
     </div>

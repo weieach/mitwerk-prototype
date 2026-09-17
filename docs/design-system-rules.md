@@ -36,7 +36,7 @@ This file is reserved for project-wide design-system rules requested by the user
 - When the graph has more than one node, show one small black, upward-pointing triangle below the last commit on the selected branch. It is separated from the station by a gap and has no connecting segment.
 - Hide the triangle for a one-node tree.
 - Connector width equals the station's **inner circle** diameter, derived from the outer diameter minus twice the ring thickness. This supersedes the earlier outer-diameter rule.
-- A canvas control to the right of zoom lists every branch endpoint (the last commit on each `branchId`), left to right. A small `Endpoint` caption sits above the cluster, outside the control box. Arrow buttons and the middle button all select that endpoint and zoom to 100% centered on that station. The middle button reads `Branch k/N` and shows a `current` tag when that endpoint belongs to the selected branch. Derive the list from graph structure; skip endpoints hidden by collapse.
+- A canvas control to the right of zoom lists every branch endpoint (the last commit on each `branchId`), left to right. Arrow buttons and the middle button all select that endpoint and zoom to 100% centered on that station. The middle button reads `Endpoint k/N` with no outside caption. Derive the list from graph structure; skip endpoints hidden by collapse.
 
 ## Node and connector appearance — 2026-09-17 revision
 

@@ -110,11 +110,7 @@ button svg { flex: 0 0 auto; }
 .zoom-controls button { display: flex; align-items: center; justify-content: center; padding: 5px; color: var(--muted); border-radius: 3px; }
 .zoom-controls button:hover { background: var(--fill); }
 .zoom-controls .zoom-value { font: 9px var(--mono); min-width: 37px; }
-.endpoint-control-group { position: relative; pointer-events: none; }
-.endpoint-control-group .endpoint-controls { pointer-events: auto; }
-.endpoint-control-label { position: absolute; left: 2px; bottom: calc(100% + 5px); font-size: 9px; color: var(--muted); letter-spacing: .2px; pointer-events: none; }
 .endpoint-controls .endpoint-jump { gap: 6px; padding: 5px 8px; font-size: 11px; color: var(--ink); white-space: nowrap; }
-.endpoint-current-tag { font: 8px var(--mono); padding: 2px 5px; background: var(--fill); border-radius: 3px; color: var(--muted); letter-spacing: .3px; }
 .control-divider { height: 15px; width: 1px; background: var(--line); margin: 0 3px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

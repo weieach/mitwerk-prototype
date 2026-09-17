@@ -1,4 +1,5 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { existsSync, readFileSync, watch, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -73,8 +74,45 @@ function mitwerkGraphPersist(): Plugin {
   };
 }
 
+/**
+ * Cursor's Source Control panel sets core.hooksPath=/dev/null, so pre-push never
+ * runs there. Watch the remote-tracking ref and capture after a UI push lands.
+ */
+function mitwerkPushCapture(): Plugin {
+  return {
+    name: 'mitwerk-push-capture',
+    apply: 'serve',
+    configureServer() {
+      const root = process.cwd();
+      const script = join(root, 'scripts/screenshot-progress.mjs');
+      const originDir = join(root, '.git/refs/remotes/origin');
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const kick = () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          if (process.env.MITWERK_SCREENSHOT_SKIP === '1') return;
+          const child = spawn(process.execPath, [script, '--reconcile-push', '--commit-and-push'], {
+            cwd: root,
+            detached: true,
+            stdio: 'ignore',
+          });
+          child.unref();
+        }, 800);
+      };
+      if (existsSync(originDir)) {
+        try {
+          watch(originDir, { persistent: false }, kick);
+        } catch {
+          // packed-refs only; startup pass still covers a just-finished push
+        }
+      }
+      setTimeout(kick, 2000);
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), mitwerkGraphPersist()],
+  plugins: [react(), mitwerkGraphPersist(), mitwerkPushCapture()],
   server: {
     port: 5173,
     strictPort: true,

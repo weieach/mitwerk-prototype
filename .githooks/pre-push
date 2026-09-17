@@ -6,9 +6,16 @@ if [ "${MITWERK_SCREENSHOT_HOOK:-}" = "1" ] || [ "${MITWERK_SCREENSHOT_SKIP:-}" 
   exit 0
 fi
 
+export PATH="/usr/local/bin:/opt/homebrew/bin:${HOME}/.local/bin:${PATH}"
+
 remote="$1"
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
+NODE="$(command -v node || true)"
+if [ -z "$NODE" ]; then
+  echo "pre-push: node is not on PATH; cannot capture a progress screenshot." >&2
+  exit 1
+fi
 
 zeros="0000000000000000000000000000000000000000"
 local_sha=""
@@ -49,9 +56,10 @@ if [ "$has_update" -eq 0 ]; then
 fi
 
 echo "pre-push: capturing progress screenshot for $local_sha" >&2
-file="$(node "$root/scripts/screenshot-progress.mjs" --tag push --sha "$local_sha" --base "$remote_sha")"
+file="$("$NODE" "$root/scripts/screenshot-progress.mjs" --tag push --sha "$local_sha" --base "$remote_sha")"
 
-git commit --no-verify -m "chore: progress screenshot" -- "$file"
+GIT_LITERAL_PATHSPECS=1 git add -- "$file"
+GIT_LITERAL_PATHSPECS=1 git commit --no-verify -m "chore: progress screenshot" -- "$file"
 
 export MITWERK_SCREENSHOT_HOOK=1
 git push --no-verify "$remote" "HEAD:$remote_ref"

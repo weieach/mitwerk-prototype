@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { appendFileSync, closeSync, constants, existsSync, mkdirSync, openSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +8,9 @@ import { execFileSync } from 'node:child_process';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const url = process.env.SCREENSHOT_URL ?? 'http://localhost:5173';
 const screenshotsDir = join(root, 'screenshots');
+const pushMarkerFile = join(screenshotsDir, '.last-push-sha');
+const captureLockFile = join(screenshotsDir, '.capture.lock');
+const captureLogFile = join(screenshotsDir, '.capture.log');
 const stashDir = join(tmpdir(), 'mitwerk-prompt-stash');
 const chromeCandidates = [
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -316,6 +319,129 @@ function capture(chrome, outFile) {
   });
 }
 
+function captureLog(message) {
+  mkdirSync(screenshotsDir, { recursive: true });
+  appendFileSync(captureLogFile, `${new Date().toISOString()} ${message}\n`);
+}
+
+function readPushMarker() {
+  return existsSync(pushMarkerFile) ? readFileSync(pushMarkerFile, 'utf8').trim() : '';
+}
+
+function writePushMarker(sha) {
+  mkdirSync(screenshotsDir, { recursive: true });
+  writeFileSync(pushMarkerFile, `${sha}\n`);
+}
+
+function gitLiteral(args) {
+  return execFileSync('git', args, {
+    cwd: root,
+    encoding: 'utf8',
+    env: { ...process.env, GIT_LITERAL_PATHSPECS: '1' },
+  }).trim();
+}
+
+function newestUntrackedPushScreenshot(subject) {
+  try {
+    const needle = sanitizeMessage(subject, 'commit');
+    const names = git(['ls-files', '--others', '--exclude-standard', '--', 'screenshots'])
+      .split('\n')
+      .filter((name) => name.startsWith('screenshots/[push') && name.includes(needle));
+    if (!names.length) return '';
+    names.sort();
+    return join(root, names.at(-1));
+  } catch {
+    return '';
+  }
+}
+
+function acquireCaptureLock() {
+  mkdirSync(screenshotsDir, { recursive: true });
+  try {
+    const fd = openSync(captureLockFile, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY);
+    writeFileSync(captureLockFile, `${process.pid}\n`);
+    closeSync(fd);
+    return true;
+  } catch {
+    if (existsSync(captureLockFile) && Date.now() - statSync(captureLockFile).mtimeMs > 120000) {
+      try { unlinkSync(captureLockFile); } catch { /* retry below */ }
+      return acquireCaptureLock();
+    }
+    return false;
+  }
+}
+
+function releaseCaptureLock() {
+  try {
+    unlinkSync(captureLockFile);
+  } catch {
+    // already gone
+  }
+}
+
+async function reconcilePush({ commitAndPush }) {
+  if (process.env.MITWERK_SCREENSHOT_SKIP === '1' || process.env.MITWERK_SCREENSHOT_HOOK === '1') {
+    return '';
+  }
+  const sha = git(['rev-parse', 'HEAD']);
+  let upstream = '';
+  try {
+    upstream = git(['rev-parse', '@{u}']);
+  } catch {
+    captureLog(`reconcile skip: no upstream (${sha})`);
+    return '';
+  }
+  if (sha !== upstream) {
+    captureLog(`reconcile skip: HEAD ${sha} != upstream ${upstream}`);
+    return '';
+  }
+  const subject = git(['log', '-1', '--pretty=%s', sha]);
+  if (subject === 'chore: progress screenshot') {
+    writePushMarker(sha);
+    captureLog(`reconcile skip: screenshot commit ${sha}`);
+    return '';
+  }
+  const pending = newestUntrackedPushScreenshot(subject);
+  if (!pending && readPushMarker() === sha) {
+    captureLog(`reconcile skip: already captured ${sha}`);
+    return '';
+  }
+  if (!acquireCaptureLock()) {
+    captureLog('reconcile skip: capture lock held');
+    return '';
+  }
+  try {
+    let outFile = pending;
+    if (!outFile) {
+      let base = '';
+      try {
+        base = git(['rev-parse', `${sha}^`]);
+      } catch {
+        base = '';
+      }
+      captureLog(`reconcile capture ${sha} ${subject}`);
+      outFile = await takeScreenshot({ tag: 'push', label: subject, sha, base });
+    } else {
+      captureLog(`reconcile reuse ${outFile}`);
+    }
+    if (commitAndPush) {
+      gitLiteral(['add', '--', outFile]);
+      gitLiteral(['commit', '--no-verify', '-m', 'chore: progress screenshot', '--', outFile]);
+      execFileSync('git', ['push', '--no-verify'], {
+        cwd: root,
+        env: { ...process.env, MITWERK_SCREENSHOT_HOOK: '1' },
+      });
+      writePushMarker(git(['rev-parse', 'HEAD']));
+      captureLog(`reconcile pushed screenshot ${outFile}`);
+    } else {
+      writePushMarker(sha);
+    }
+    return outFile;
+  } finally {
+    releaseCaptureLock();
+  }
+}
+
 async function takeScreenshot({ tag, label, sha, base }) {
   const chrome = findChrome();
   if (!chrome) {
@@ -342,6 +468,35 @@ async function main() {
   if (hookMode && event === 'beforeSubmitPrompt') {
     saveStash(payload.conversation_id, textFromUnknown(payload.prompt) || 'prompt');
     emitHook({ continue: true });
+    return;
+  }
+
+  if (hasFlag('reconcile-push') || event === 'afterShellExecution') {
+    try {
+      if (process.env.MITWERK_SCREENSHOT_SKIP === '1') {
+        if (hookMode) emitHook({});
+        return;
+      }
+      const outFile = await reconcilePush({
+        commitAndPush: hasFlag('commit-and-push') || event === 'afterShellExecution',
+      });
+      if (hookMode) {
+        if (outFile) console.error(`Saved ${outFile}`);
+        emitHook({});
+        return;
+      }
+      if (outFile) console.log(outFile);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      captureLog(`reconcile failed: ${message}`);
+      console.error(message);
+      if (hookMode) {
+        emitHook({});
+        return;
+      }
+      if (failOpen) return;
+      process.exit(1);
+    }
     return;
   }
 

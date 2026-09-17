@@ -19,4 +19,6 @@ build/
 .mitwerk-auth.json
 # Saved version-stream graph used by local screenshots
 .mitwerk-graph.json
+screenshots/.last-push-sha
+screenshots/.capture.lock
 dist/
