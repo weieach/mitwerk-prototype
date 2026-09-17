@@ -17,4 +17,6 @@ build/
 
 # Local Figma OAuth cache — never commit
 .mitwerk-auth.json
+# Saved version-stream graph used by local screenshots
+.mitwerk-graph.json
 dist/

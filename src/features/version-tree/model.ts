@@ -167,6 +167,20 @@ export function saveGraphState(state: GraphState, storage: GraphStorage | null =
   }
 }
 
+/** Keep the browser snapshot and the disk snapshot used by progress screenshots in sync. */
+export function persistGraphState(state: GraphState, storage: GraphStorage | null = browserStorage()) {
+  saveGraphState(state, storage);
+  if (typeof fetch === 'undefined') return;
+  void fetch('/__mitwerk/graph', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(state),
+    keepalive: true,
+  }).catch(() => {
+    // Dev-only endpoint; ignore when the server is not the Vite app.
+  });
+}
+
 function createEmptyVersion(state: GraphState, source: VersionNode, relation: 'branch' | 'commit'): VersionNode {
   // Keep an internal creation ordinal; layout derives the displayed level labels.
   const ordinal = state.nodes.reduce((max, node) => {

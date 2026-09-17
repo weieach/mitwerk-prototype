@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { VersionTreePanel } from './features/version-tree/VersionTreePanel';
-import { graphReducer, loadGraphState, saveGraphState } from './features/version-tree/model';
+import { graphReducer, loadGraphState, persistGraphState } from './features/version-tree/model';
 
 const MIN_PANEL = 280;
 const KEY_STEP = 24;
@@ -23,7 +23,7 @@ export default function App() {
   leftWidthRef.current = leftWidth;
 
   useEffect(() => {
-    saveGraphState(graph);
+    persistGraphState(graph);
   }, [graph]);
 
   function totalWidth() {

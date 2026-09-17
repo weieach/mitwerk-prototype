@@ -48,6 +48,38 @@ function sanitizeMessage(message, fallback) {
   return (cleaned || fallback).slice(0, 120);
 }
 
+function fileLabel(count) {
+  return count === 1 ? '1 file' : `${count} files`;
+}
+
+function listedPaths(output) {
+  return output.split('\n').map((line) => line.trim()).filter(Boolean);
+}
+
+function isCountedPath(name) {
+  return Boolean(name) && !name.startsWith('screenshots/') && name !== '.mitwerk-graph.json';
+}
+
+function countChangedFiles(tag, sha, base) {
+  try {
+    if (tag === 'push') {
+      const zeros = '0000000000000000000000000000000000000000';
+      const names = base && base !== zeros
+        ? listedPaths(git(['diff', '--name-only', `${base}...${sha}`]))
+        : listedPaths(git(['diff-tree', '--no-commit-id', '--name-only', '-r', sha]));
+      return new Set(names.filter(isCountedPath)).size;
+    }
+    const names = [
+      ...listedPaths(git(['diff', '--name-only'])),
+      ...listedPaths(git(['diff', '--name-only', '--cached'])),
+      ...listedPaths(git(['ls-files', '--others', '--exclude-standard'])),
+    ];
+    return new Set(names.filter(isCountedPath)).size;
+  } catch {
+    return 0;
+  }
+}
+
 function nextTagCount(dir, tag) {
   let max = 0;
   let matching = 0;
@@ -284,7 +316,7 @@ function capture(chrome, outFile) {
   });
 }
 
-async function takeScreenshot({ tag, label }) {
+async function takeScreenshot({ tag, label, sha, base }) {
   const chrome = findChrome();
   if (!chrome) {
     throw new Error('Google Chrome is required to capture progress screenshots.');
@@ -293,7 +325,8 @@ async function takeScreenshot({ tag, label }) {
   mkdirSync(screenshotsDir, { recursive: true });
   const message = sanitizeMessage(label, tag === 'prompt' ? 'prompt' : 'commit');
   const count = nextTagCount(screenshotsDir, tag);
-  const filename = `[${tag} #${count}] ${message}-${timecode()}.png`;
+  const files = countChangedFiles(tag, sha, base);
+  const filename = `[${tag} #${count}] ${fileLabel(files)} · ${message}-${timecode()}.png`;
   const outFile = join(screenshotsDir, filename);
   await capture(chrome, outFile);
   return outFile;
@@ -314,6 +347,7 @@ async function main() {
 
   const tag = argValue('tag', event === 'stop' || event === 'beforeSubmitPrompt' ? 'prompt' : 'push');
   const sha = argValue('sha', 'HEAD');
+  const base = argValue('base');
   const label = argValue('label')
     || (tag === 'prompt' ? labelFromHook(payload) : git(['log', '-1', '--pretty=%s', sha]));
 
@@ -324,7 +358,7 @@ async function main() {
       }
       return;
     }
-    const outFile = await takeScreenshot({ tag, label });
+    const outFile = await takeScreenshot({ tag, label, sha, base });
     if (hookMode) {
       console.error(`Saved ${outFile}`);
       emitHook({});
