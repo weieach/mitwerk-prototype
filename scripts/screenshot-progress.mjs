@@ -285,84 +285,143 @@ function stopProcess(child) {
   }
 }
 
-function capture(chrome, outFile) {
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function screenshotUrl() {
+  const target = new URL(url);
+  target.searchParams.set('screenshot', '1');
+  return target.href;
+}
+
+async function waitForFile(path, timeoutMs) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    if (existsSync(path)) return readFileSync(path, 'utf8');
+    await delay(50);
+  }
+  throw new Error(`Timed out waiting for ${path}`);
+}
+
+async function waitForPage(port) {
+  const started = Date.now();
+  while (Date.now() - started < 8000) {
+    try {
+      const list = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) => response.json());
+      const page = list.find((target) => target.type === 'page' && target.webSocketDebuggerUrl);
+      if (page) return page;
+    } catch {
+      // Chrome is still starting.
+    }
+    await delay(50);
+  }
+  throw new Error('Chrome DevTools page target not found');
+}
+
+function waitForSocket(ws) {
   return new Promise((resolve, reject) => {
-    const child = spawn(
-      chrome,
-      [
-        '--headless',
-        '--disable-gpu',
-        '--hide-scrollbars',
-        '--no-first-run',
-        '--no-default-browser-check',
-        '--disable-background-networking',
-        '--disable-component-update',
-        '--disable-crash-reporter',
-        '--disable-sync',
-        '--metrics-recording-only',
-        '--mute-audio',
-        `--user-data-dir=${join(tmpdir(), `mitwerk-chrome-screenshot-${process.pid}`)}`,
-        '--high-dpi-support=1',
-        '--force-device-scale-factor=2',
-        '--window-size=1440,900',
-        `--screenshot=${outFile}`,
-        url,
-      ],
-      { detached: true, stdio: ['ignore', 'ignore', 'pipe'] },
-    );
-
-    let stderr = '';
-    let settled = false;
-    let lastSize = -1;
-    let stableCount = 0;
-
-    const finish = (error) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      clearInterval(poll);
-      clearTimeout(timeout);
-      stopProcess(child);
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve();
-    };
-
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString();
-    });
-    child.on('error', (error) => finish(error));
-
-    const poll = setInterval(() => {
-      if (!existsSync(outFile)) {
-        return;
-      }
-      const size = statSync(outFile).size;
-      if (size < 1000) {
-        return;
-      }
-      if (size === lastSize) {
-        stableCount += 1;
-        if (stableCount >= 2) {
-          finish();
-        }
-        return;
-      }
-      lastSize = size;
-      stableCount = 0;
-    }, 150);
-
-    const timeout = setTimeout(() => {
-      if (existsSync(outFile) && statSync(outFile).size > 1000) {
-        finish();
-        return;
-      }
-      finish(new Error(`Chrome screenshot timed out. ${stderr.trim()}`.trim()));
-    }, 15000);
+    ws.addEventListener('open', () => resolve(), { once: true });
+    ws.addEventListener('error', () => reject(new Error('Chrome DevTools socket failed')), { once: true });
   });
+}
+
+function createCdp(ws) {
+  let nextId = 0;
+  const pending = new Map();
+  ws.addEventListener('message', (event) => {
+    const payload = typeof event.data === 'string' ? event.data : event.data.toString();
+    const message = JSON.parse(payload);
+    const waiter = pending.get(message.id);
+    if (!waiter) return;
+    pending.delete(message.id);
+    if (message.error) waiter.reject(new Error(message.error.message));
+    else waiter.resolve(message.result);
+  });
+  return (method, params = {}) => new Promise((resolve, reject) => {
+    const id = nextId += 1;
+    pending.set(id, { resolve, reject });
+    ws.send(JSON.stringify({ id, method, params }));
+  });
+}
+
+async function waitForScreenshotReady(cdp, timeoutMs) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const result = await cdp('Runtime.evaluate', {
+      expression: 'document.documentElement.dataset.screenshotReady === "1"',
+      returnByValue: true,
+    });
+    if (result.result?.value === true) return;
+    await delay(100);
+  }
+  throw new Error('Timed out waiting for the tree to frame the selected station');
+}
+
+async function capture(chrome, outFile) {
+  if (typeof WebSocket !== 'function') {
+    throw new Error('Node WebSocket is required to capture focused progress screenshots.');
+  }
+  const userDataDir = join(tmpdir(), `mitwerk-chrome-screenshot-${process.pid}`);
+  mkdirSync(userDataDir, { recursive: true });
+  const child = spawn(
+    chrome,
+    [
+      '--headless',
+      '--disable-gpu',
+      '--hide-scrollbars',
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--disable-background-networking',
+      '--disable-component-update',
+      '--disable-crash-reporter',
+      '--disable-sync',
+      '--metrics-recording-only',
+      '--mute-audio',
+      '--remote-debugging-address=127.0.0.1',
+      '--remote-debugging-port=0',
+      '--remote-allow-origins=*',
+      `--user-data-dir=${userDataDir}`,
+      '--high-dpi-support=1',
+      '--force-device-scale-factor=2',
+      '--window-size=1440,900',
+      screenshotUrl(),
+    ],
+    { detached: true, stdio: ['ignore', 'ignore', 'pipe'] },
+  );
+
+  let stderr = '';
+  child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+
+  try {
+    await new Promise((resolve, reject) => {
+      child.once('error', reject);
+      child.once('spawn', resolve);
+    });
+    const raw = await waitForFile(join(userDataDir, 'DevToolsActivePort'), 8000);
+    const port = Number(raw.split('\n')[0]);
+    if (!Number.isInteger(port) || port <= 0) {
+      throw new Error(`Invalid Chrome DevTools port: ${raw.trim()}`);
+    }
+    const page = await waitForPage(port);
+    const ws = new WebSocket(page.webSocketDebuggerUrl);
+    await waitForSocket(ws);
+    const cdp = createCdp(ws);
+    await waitForScreenshotReady(cdp, 10000);
+    await delay(150);
+    const shot = await cdp('Page.captureScreenshot', { format: 'png', fromSurface: true });
+    writeFileSync(outFile, Buffer.from(shot.data, 'base64'));
+    ws.close();
+    if (!existsSync(outFile) || statSync(outFile).size < 1000) {
+      throw new Error('Chrome screenshot was empty.');
+    }
+  } catch (error) {
+    const detail = stderr.trim();
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(detail ? `${message} ${detail}` : message);
+  } finally {
+    stopProcess(child);
+  }
 }
 
 function captureLog(message) {

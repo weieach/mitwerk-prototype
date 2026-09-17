@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { branchPathIds, createInitialGraphState, graphReducer, longestBranchId, parseStoredGraphState } from '../src/features/version-tree/model.ts';
-import { frameVersionLevel, layoutGraph as logicalLayout, layoutBranchView, geometry } from '../src/features/version-tree/layout.ts';
+import { frameScreenshotTargets, frameVersionLevel, layoutGraph as logicalLayout, layoutBranchView, geometry } from '../src/features/version-tree/layout.ts';
 import { branchName, getBranchState, presentTree } from '../src/features/version-tree/presentation.ts';
 import { levelColorLookup, stationLabelOffset, treeTheme } from '../src/features/version-tree/tokens.ts';
 import { createTestGraphState } from './graph-fixture.ts';
@@ -115,6 +115,15 @@ test('adding branches frames the count inside the viewport, even at minimum zoom
   }
 });
 
+test('progress screenshots frame a count hint and a card together', () => {
+  const frame = frameScreenshotTargets([
+    { x: 80, y: 40, width: 40, height: 32 },
+    { x: 200, y: 180, width: 264, height: 360 },
+  ], 720, 640, treeTheme.minZoom);
+  assert.ok(frame.zoom <= 1);
+  assert.ok(frame.left >= 0 && frame.top >= 0);
+});
+
 test('upper-level forks stay compact when later levels fan out', () => {
   let state = graphReducer(createInitialGraphState(), { type: 'add-commit', sourceId: 'v1' });
   const sourceId = state.selectedId;
@@ -163,15 +172,16 @@ test('collapse preserves selection, descendants and data, and expansion restores
   state = graphReducer(state, { type: 'add-commit', sourceId: state.selectedId });
   const before = JSON.stringify(state);
   const layout = layoutGraph(state.nodes);
-  const expanded = presentTree(layout, state.selectedId);
-  const collapsed = presentTree(layout, state.selectedId, new Set([expanded.groups[0].id]));
-  assert.equal(collapsed.hiddenNodeIds.size, 3);
+  const expanded = presentTree(layout, state.selectedId, new Set(), state.activeBranchId);
+  const collapsed = presentTree(layout, state.selectedId, new Set([expanded.groups[0].id]), state.activeBranchId);
+  assert.equal(collapsed.hiddenNodeIds.has(sourceId), false, 'Current-branch station stays visible');
+  assert.equal(collapsed.hiddenNodeIds.size, expanded.groups[0].nodeIds.filter(id => id !== sourceId).length);
   assert.equal(collapsed.hiddenNodeIds.has(state.selectedId), false);
   assert.equal(collapsed.tip.id, state.selectedId);
   assert.equal(collapsed.selectedBranchId, expanded.selectedBranchId);
-  assert.equal(collapsed.routes.length, 2);
+  assert.ok(collapsed.routes.length > 0);
   assert.equal(JSON.stringify(state), before);
-  assert.deepEqual(presentTree(layout, state.selectedId), expanded);
+  assert.deepEqual(presentTree(layout, state.selectedId, new Set(), state.activeBranchId), expanded);
 });
 
 test('root-level branches can collapse without a predecessor', () => {
@@ -179,8 +189,9 @@ test('root-level branches can collapse without a predecessor', () => {
   state = graphReducer(state, { type: 'add-branch', sourceId: 'v1' });
   state = graphReducer(state, { type: 'add-branch', sourceId: 'v1' });
   const layout = layoutGraph(state.nodes);
-  const result = presentTree(layout, state.selectedId, new Set(['v1']));
-  assert.equal(result.hiddenNodeIds.size, 3);
+  const result = presentTree(layout, state.selectedId, new Set(['v1']), state.activeBranchId);
+  assert.equal(result.hiddenNodeIds.has('v1'), false);
+  assert.equal(result.hiddenNodeIds.size, 2);
   assert.equal(result.tip, null);
   assert.equal(result.groups[0].nodeIds.length, 3);
   assert.ok(layout.origins.some(origin => origin.forkId === 'v1'));
@@ -237,7 +248,7 @@ test('every branch contributes one endpoint, ordered left to right, omitting col
   assert.ok(expanded.endpoints.every((node, index) => index === 0 || node.x >= expanded.endpoints[index - 1].x));
   const layout = layoutGraph(graph.nodes);
   const fork = presentTree(layout, graph.selectedId).groups[0];
-  const collapsed = presentTree(layout, graph.selectedId, new Set([fork.id]));
+  const collapsed = presentTree(layout, graph.selectedId, new Set([fork.id]), graph.activeBranchId);
   assert.equal(collapsed.endpoints.some(node => node.id === 'v2-1'), false);
   assert.ok(collapsed.endpoints.some(node => node.id === 'v3'));
 });

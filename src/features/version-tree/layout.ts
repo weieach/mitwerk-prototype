@@ -276,6 +276,36 @@ export function layoutBranchView(
 }
 
 /** Keep a level's collapse control visible when navigating to a new alternative. */
+/** Fit a set of world-space boxes into the viewport for a progress screenshot. */
+export function frameScreenshotTargets(
+  targets: { x: number; y: number; width?: number; height?: number }[],
+  viewportWidth: number,
+  viewportHeight: number,
+  minZoom: number,
+) {
+  const boxes = targets.map(target => {
+    const width = target.width ?? 0;
+    const height = target.height ?? 0;
+    return {
+      left: target.x - width / 2,
+      right: target.x + width / 2,
+      top: target.y - height / 2,
+      bottom: target.y + height / 2,
+    };
+  });
+  const pad = geometry.padding;
+  const left = Math.min(...boxes.map(box => box.left)) - pad;
+  const right = Math.max(...boxes.map(box => box.right)) + pad;
+  const top = Math.min(...boxes.map(box => box.top)) - pad;
+  const bottom = Math.max(...boxes.map(box => box.bottom)) + pad;
+  const zoom = Math.max(minZoom, Math.min(1, viewportWidth / Math.max(1, right - left), viewportHeight / Math.max(1, bottom - top)));
+  return {
+    zoom,
+    left: Math.max(0, ((left + right) / 2) * zoom - viewportWidth / 2),
+    top: Math.max(0, ((top + bottom) / 2) * zoom - viewportHeight / 2),
+  };
+}
+
 export function frameVersionLevel(layout: GraphLayout, level: VersionLevel, viewportWidth: number,
   currentZoom: number, minZoom: number, countDiameter: number) {
   const members = new Set(level.nodeIds);

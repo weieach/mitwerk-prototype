@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, Dispatch, PointerEvent as ReactPointerEvent } from 'react';
 import { Icon } from '../../components/Icon';
-import { branchPathIds, canDeleteFuture, type GraphAction, type GraphState } from './model';
-import { frameVersionLevel, geometry, layoutBranchView, layoutGraph } from './layout';
+import { branchPathIds, canDeleteCurrent, canDeleteFuture, screenshotFocusId, type GraphAction, type GraphState } from './model';
+import { frameScreenshotTargets, frameVersionLevel, geometry, layoutBranchView, layoutGraph } from './layout';
 import { activeRouteColor, levelColorLookup, stationLabelOffset, treeTheme } from './tokens';
 import { IsometricGrid } from './IsometricGrid';
 import { VersionCard } from './VersionCard';
 import { branchName, presentTree } from './presentation';
 
 type Props = { graph: GraphState; dispatch: Dispatch<GraphAction> };
+
+const screenshotCapture = typeof window !== 'undefined'
+  && new URLSearchParams(window.location.search).get('screenshot') === '1';
+if (screenshotCapture) document.documentElement.dataset.screenshotInteract = '1';
 
 export function VersionTreePanel({ graph, dispatch }: Props) {
   const activePath = useMemo(() => branchPathIds(graph.nodes, graph.activeBranchId), [graph.nodes, graph.activeBranchId]);
@@ -24,7 +28,10 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
   const [isPanning, setIsPanning] = useState(false);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const initialFit = useRef(false);
+  const screenshotReady = useRef(false);
   const previousCount = useRef(graph.nodes.length);
+  const focusId = screenshotFocusId(graph);
+  const focusNode = layout.nodes.find(node => node.id === focusId);
   const drag = useRef<{ x: number; y: number; left: number; top: number; moved: boolean } | null>(null);
   const selected = layout.nodes.find(node => node.id === graph.selectedId);
   const presentation = useMemo(() => presentTree(layout, graph.selectedId, collapsedLevels, graph.activeBranchId),
@@ -67,6 +74,12 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
     });
   }
 
+  function markScreenshotReady() {
+    if (screenshotReady.current || !screenshotCapture) return;
+    screenshotReady.current = true;
+    document.documentElement.dataset.screenshotReady = '1';
+  }
+
   useEffect(() => {
     const element = viewport.current;
     if (!element) return;
@@ -75,13 +88,54 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
       setViewportSize({ width, height });
       if (!initialFit.current && width > 0) {
         initialFit.current = true;
-        const next = Math.max(0.55, Math.min(1, (width - 24) / layout.width));
-        setZoom(next); zoomRef.current = next;
+        if (screenshotCapture) {
+          const nearestCount = focusNode
+            ? presentation.groups.slice().sort((a, b) => {
+              const da = (a.x - focusNode.x) ** 2 + (a.y - focusNode.y) ** 2;
+              const db = (b.x - focusNode.x) ** 2 + (b.y - focusNode.y) ** 2;
+              return da - db;
+            })[0]
+            : presentation.groups[0];
+          const targets = [
+            nearestCount && {
+              x: nearestCount.x + treeTheme.branchCountDiameter / 2 + treeTheme.countHintGap + treeTheme.countHintWidth,
+              y: nearestCount.y,
+              width: treeTheme.branchCountDiameter + treeTheme.countHintGap + treeTheme.countHintWidth,
+              height: treeTheme.branchCountDiameter,
+            },
+            focusNode && {
+              x: focusNode.x + geometry.cardOffsetX + geometry.cardWidth / 2,
+              y: focusNode.y + geometry.cardOffsetY + geometry.cardHeight / 2,
+              width: geometry.cardWidth,
+              height: geometry.cardHeight + 120,
+            },
+          ].filter(Boolean) as { x: number; y: number; width: number; height: number }[];
+          if (targets.length) {
+            const frame = frameScreenshotTargets(targets, width, height, treeTheme.minZoom);
+            zoomRef.current = frame.zoom;
+            setZoom(frame.zoom);
+            requestAnimationFrame(() => {
+              element.scrollTo({ left: frame.left, top: frame.top, behavior: 'instant' });
+              requestAnimationFrame(markScreenshotReady);
+            });
+          } else {
+            requestAnimationFrame(() => requestAnimationFrame(markScreenshotReady));
+          }
+        } else {
+          const next = Math.max(0.55, Math.min(1, (width - 24) / layout.width));
+          setZoom(next); zoomRef.current = next;
+        }
       }
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, [layout.width]);
+  }, [layout.width, screenshotCapture, focusNode, presentation.groups]);
+
+  useEffect(() => {
+    if (!screenshotCapture) return;
+    const timer = window.setTimeout(markScreenshotReady, 2500);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   function changeZoom(next: number, clientX?: number, clientY?: number) {
     const element = viewport.current;
@@ -141,7 +195,7 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
     requestAnimationFrame(() => element.scrollTo({ left: 0, top: 0, behavior: 'smooth' }));
   }
 
-  function focusAtZoom(node: { x: number; y: number }, nextZoom: number) {
+  function focusAtZoom(node: { x: number; y: number }, nextZoom: number, behavior: ScrollBehavior = 'smooth') {
     const element = viewport.current;
     if (!element) return;
     const clamped = Math.max(treeTheme.minZoom, Math.min(treeTheme.maxZoom, nextZoom));
@@ -151,7 +205,7 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
       element.scrollTo({
         left: Math.max(0, node.x * clamped - element.clientWidth / 3),
         top: Math.max(0, node.y * clamped - element.clientHeight / 3),
-        behavior: 'smooth',
+        behavior,
       });
     });
   }
@@ -209,6 +263,10 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
     '--station-selected-ring': `${treeTheme.stationSelectedBorderWidth}px`,
     '--branch-count-size': `${treeTheme.branchCountDiameter}px`,
     '--branch-count-font-size': `${treeTheme.branchCountFontSize}px`,
+    '--count-hint-width': `${treeTheme.countHintWidth}px`,
+    '--count-hint-height': `${treeTheme.countHintHeight}px`,
+    '--count-hint-gap': `${treeTheme.countHintGap}px`,
+    '--count-hint-fade': `${treeTheme.countHintFadeMs}ms`,
     '--station-fill': treeTheme.stationFill,
     '--station-open-fill': treeTheme.stationOpenFill,
     '--active-branch-color': treeTheme.activeBranchColor,
@@ -241,6 +299,7 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
               aria-label={`${collapsedLevels.has(group.id) ? 'Expand' : 'Collapse'} ${group.nodeIds.length} versions at ${group.label}`}
               aria-expanded={!collapsedLevels.has(group.id)} onClick={() => toggleLevel(group.id)}>
               {group.nodeIds.length}
+              <span className="branch-count-hint" aria-hidden="true"/>
             </button>)}
             {(layout.origins ?? []).map(origin => {
               const fork = layout.forks?.find(item => item.id === origin.forkId);
@@ -269,13 +328,16 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
                 <VersionCard node={node} selected={node.id === graph.selectedId}
                   hasDescendants={presentation.nodesWithChildren.has(node.id)} onActivePath={onSpine}
                   isCurrentBranch={node.branchId === graph.activeBranchId}
+                  canDeleteCurrent={canDeleteCurrent(graph.nodes, node.id)}
                   canDeleteFuture={canDeleteFuture(graph.nodes, node.id)}
                   color={color}
                   onSelect={() => dispatch({ type: 'select', id: node.id })}
                   onBranch={() => dispatch({ type: 'add-branch', sourceId: node.id })}
                   onCommit={() => dispatch({ type: 'add-commit', sourceId: node.id })}
                   onSwitchBranch={() => dispatch({ type: 'set-active-branch', branchId: node.branchId })}
-                  onDeleteFuture={() => dispatch({ type: 'delete-future', sourceId: node.id })}/>
+                  onDeleteCurrent={() => dispatch({ type: 'delete-current', sourceId: node.id })}
+                  onDeleteFuture={() => dispatch({ type: 'delete-future', sourceId: node.id })}
+                  forceMenuOpen={screenshotCapture && node.id === focusId}/>
               </div>;
             })}
           </div>
@@ -319,12 +381,6 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
           </button>
           <button onClick={() => stepEndpoint(1)} disabled={endpoints.length < 2} aria-label="Next endpoint" title="Next endpoint">
             <Icon name="arrow" size={14}/>
-          </button>
-          <span className="control-divider"/>
-          <button onClick={() => jumperEndpoint && dispatch({ type: 'delete-future', sourceId: jumperEndpoint.id })}
-            disabled={!jumperEndpoint || !canDeleteFuture(graph.nodes, jumperEndpoint.id)}
-            aria-label="Delete current endpoint" title="Delete current endpoint">
-            <Icon name="trash" size={14}/>
           </button>
         </div>
       </div>

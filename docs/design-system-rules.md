@@ -15,7 +15,7 @@ This file is reserved for project-wide design-system rules requested by the user
 - Derive the active path from the root through that branch's last commit. Place every station on that path on one shared vertical column.
 - Draw the active path as one straight vertical line in the shared `activeBranchColor` token, including through a branching group. This is the only exception to the rule that fork alternatives leave on an isometric slope. Other alternatives at that fork still peel off with the shared fork-divergence geometry.
 - Stations on the active path use that same connector color. Off-path alternatives keep their own branch color. No two branches on the same level share a color; assign from the shared palette and skip a swatch already used on that row.
-- Each info card has a vertical overflow control at the top right. It opens a floating panel to switch to that card's branch or delete the future endpoint. Deleting removes this version and every version after it. Shared ancestors stay. Do not empty the graph.
+- Each info card has a vertical overflow control at the top right. It opens a floating panel to switch to that card's branch, revert to version, delete the current node, or delete future nodes. Revert to version is present but not functional yet. Delete current removes only that selected station and reparents any later versions to its parent. Delete future removes every version after it and keeps the station. On an endpoint with no later versions, show only Delete current endpoint. Do not empty the graph.
 - Place each version number to the left of its station, vertically centered. Do not sit a label on the stem or under a starting station; that hid V1. Do not repeat the number on the card.
 - A canvas control immediately left of the endpoint jumper lists every branch. The open control names the active branch; choosing another branch switches it. Derive the list from graph structure and skip branches whose endpoints are hidden by collapse.
 
@@ -47,7 +47,7 @@ This file is reserved for project-wide design-system rules requested by the user
 - When the graph has more than one node, show one small black, upward-pointing triangle below the last commit on the selected branch. It is separated from the station by a gap and has no connecting segment.
 - Hide the triangle for a one-node tree.
 - Connector width equals the station's **inner circle** diameter, derived from the outer diameter minus twice the ring thickness. This supersedes the earlier outer-diameter rule.
-- A canvas control to the right of zoom lists every branch endpoint (the last commit on each `branchId`), left to right. Arrow buttons and the middle button all select that endpoint and zoom to 100% centered on that station. The middle button reads `Endpoint k/N` with no outside caption. A delete action next to the jumper removes the current endpoint (that last commit) and any versions after it. Disable it when deletion would empty the graph. Derive the list from graph structure; skip endpoints hidden by collapse.
+- A canvas control to the right of zoom lists every branch endpoint (the last commit on each `branchId`), left to right. Arrow buttons and the middle button all select that endpoint and zoom to 100% centered on that station. The middle button reads `Endpoint k/N` with no outside caption. Derive the list from graph structure; skip endpoints hidden by collapse.
 
 ## Node and connector appearance — 2026-09-17 revision
 
@@ -69,14 +69,16 @@ This file is reserved for project-wide design-system rules requested by the user
 - The count sits exactly at the shared junction where the parent stem diverges. Center the parent above its alternatives and reserve room for the junction. Pack each fork from its own sibling count and shared geometry, not from descendant span. Later levels fan around their parent and may extend past ancestor siblings; they must not widen earlier forks.
 - When the first versions fork with no preceding station, place an origin station on the stem above the count. The origin-to-count stem is `originStemRows` (three grids). It has no info card and is not a selectable version.
 - Keep that junction fixed when selection changes; the selected horizontal route is drawn as an additional path from the junction to the alternatives' row.
-- The count toggles the level's stations and cards. Preserve data and selection; leave later levels visible and connect them through the collapsed count. Expanding restores the level. Counts remain available in both states and support keyboard activation.
+- Hover or keyboard focus on a count fades in a small right-pointing triangle to its right, using shared count-hint tokens. The triangle is decorative.
+- The count toggles the level's stations and cards. Preserve data and selection; leave later levels visible and connect them through the collapsed count. Do not hide the station on the current (checked-out) branch. Expanding restores the level. Counts remain available in both states and support keyboard activation.
+- Hover, focus, and open-panel affordances added to the diagram must also turn on during progress screenshots via `data-screenshot-interact`. Open the focused card's action menu. Frame a visible instance of each forced affordance (for example a count showing its hover triangle) rather than only the selected station. Do not depend on a real pointer hover in headless capture.
 - Use shared count diameter/font tokens. Keep graph relationships, node population, and selected-branch logic independent of collapse state.
 - When adding to a level with a count, automatically frame the level and its count together rather than scrolling only to the newest node. At the minimum zoom limit, keep the count visible and allow horizontal scrolling to reach farther alternatives.
 
 ## Implementation locations
 
-- `src/features/version-tree/tokens.ts`: station diameters, derived connector width, ring and stripe styling, fills, opacity, triangle dimensions/gap, version-label size/gap/`stationLabelOffset`, `activeBranchColor`, and per-level unique branch colors.
+- `src/features/version-tree/tokens.ts`: station diameters, derived connector width, ring and stripe styling, fills, opacity, triangle dimensions/gap, count-hint triangle size/gap/fade, version-label size/gap/`stationLabelOffset`, `activeBranchColor`, and per-level unique branch colors.
 - `src/features/version-tree/layout.ts`: lattice geometry, card offsets, row spacing, inactive-route clearance, origin stations for root-level forks, and fork divergence tokens (`forkSharedStemRows`, `originStemRows`, `forkDivergeStartRows`, `forkDivergeRows`, `forkDepartureUnits`, `forkLandingUnits`, `forkTerminalRows`) with `forkApproach`.
 - `src/features/version-tree/presentation.ts`: selected branch, full selected path, terminal detection, sibling connectors, branch endpoint, the ordered endpoint list for traversal, and the checked-out spine.
-- `src/features/version-tree/model.ts`: `activeBranchId`, `longestBranchId`, future-endpoint deletion, and the path from root to that branch's last commit.
+- `src/features/version-tree/model.ts`: `activeBranchId`, `longestBranchId`, current-node and future-node deletion, and the path from root to that branch's last commit.
 - `VersionTreePanel.tsx` and `VersionCard.tsx`: render these shared decisions; do not independently infer branch or terminal state.

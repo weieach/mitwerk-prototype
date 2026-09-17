@@ -9,21 +9,24 @@ type Props = {
   hasDescendants: boolean;
   onActivePath: boolean;
   isCurrentBranch: boolean;
+  canDeleteCurrent: boolean;
   canDeleteFuture: boolean;
   color: string;
   onSelect: () => void;
   onBranch: () => void;
   onCommit: () => void;
   onSwitchBranch: () => void;
+  onDeleteCurrent: () => void;
   onDeleteFuture: () => void;
+  forceMenuOpen?: boolean;
 };
 
 export function VersionCard({
-  node, selected, hasDescendants, onActivePath, isCurrentBranch, canDeleteFuture, color,
-  onSelect, onBranch, onCommit, onSwitchBranch, onDeleteFuture,
+  node, selected, hasDescendants, onActivePath, isCurrentBranch, canDeleteCurrent, canDeleteFuture, color,
+  onSelect, onBranch, onCommit, onSwitchBranch, onDeleteCurrent, onDeleteFuture, forceMenuOpen = false,
 }: Props) {
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(forceMenuOpen);
   const menu = useRef<HTMLDivElement>(null);
   const references = node.files.filter(file => file.kind !== 'code');
   const codeFiles = node.files.filter(file => file.kind === 'code');
@@ -31,7 +34,11 @@ export function VersionCard({
   const removed = node.files.reduce((sum, file) => sum + file.removed, 0);
 
   useEffect(() => {
-    if (!menuOpen) return;
+    if (forceMenuOpen) setMenuOpen(true);
+  }, [forceMenuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen || forceMenuOpen) return;
     function closeOnOutside(event: PointerEvent) {
       if (!menu.current?.contains(event.target as Node)) setMenuOpen(false);
     }
@@ -44,7 +51,7 @@ export function VersionCard({
       document.removeEventListener('pointerdown', closeOnOutside);
       document.removeEventListener('keydown', closeOnEscape);
     };
-  }, [menuOpen]);
+  }, [menuOpen, forceMenuOpen]);
 
   return <article className={`version-card ${selected ? 'is-selected' : ''} ${onActivePath ? 'is-active-branch' : ''}`} style={{ '--route-color': color } as CSSProperties} data-node-id={node.id} data-active-branch={onActivePath}>
     <button className={`station ${hasDescendants ? 'has-descendants' : 'is-terminal'}`} aria-label={`Select ${node.label}`} aria-pressed={selected} onClick={onSelect}>
@@ -62,10 +69,18 @@ export function VersionCard({
           </button>
         </li>
         <li role="none">
-          <button role="menuitem" disabled={!canDeleteFuture} onClick={() => { setMenuOpen(false); onDeleteFuture(); }}>
-            Delete future endpoint
+          <button role="menuitem" disabled>Revert to version</button>
+        </li>
+        <li role="none">
+          <button role="menuitem" disabled={!canDeleteCurrent} onClick={() => { setMenuOpen(false); onDeleteCurrent(); }}>
+            {hasDescendants ? 'Delete current node' : 'Delete current endpoint'}
           </button>
         </li>
+        {hasDescendants && <li role="none">
+          <button role="menuitem" disabled={!canDeleteFuture} onClick={() => { setMenuOpen(false); onDeleteFuture(); }}>
+            Delete future nodes
+          </button>
+        </li>}
       </ul>}
     </div>
     <button className="version-heading" onClick={onSelect} aria-label={`View ${node.label}: ${node.title || 'Untitled version'}`}>

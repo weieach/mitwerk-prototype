@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canDeleteFuture, createInitialGraphState, graphReducer, graphStorageKey, loadGraphState, parseStoredGraphState, saveGraphState } from '../src/features/version-tree/model.ts';
+import { canDeleteCurrent, canDeleteFuture, createInitialGraphState, graphReducer, graphStorageKey, loadGraphState, parseStoredGraphState, saveGraphState, screenshotFocusId } from '../src/features/version-tree/model.ts';
 import { createTestGraphState } from './graph-fixture.ts';
 import { geometry, layoutGraph } from '../src/features/version-tree/layout.ts';
 import { treeTheme } from '../src/features/version-tree/tokens.ts';
@@ -254,14 +254,30 @@ test('graph state is restored from storage and ignores corrupt snapshots', () =>
   branched = graphReducer(branched, { type: 'add-commit', sourceId: side.id });
   const later = branched.nodes.at(-1);
   assert.equal(canDeleteFuture(branched.nodes, side.id), true);
-  assert.equal(canDeleteFuture(branched.nodes, 'v1'), false);
+  assert.equal(canDeleteFuture(branched.nodes, later.id), false);
+  assert.equal(canDeleteCurrent(branched.nodes, 'v1'), true);
   const trimmed = graphReducer(branched, { type: 'delete-future', sourceId: side.id });
-  assert.equal(trimmed.nodes.some(node => node.id === side.id), false);
+  assert.ok(trimmed.nodes.some(node => node.id === side.id));
   assert.equal(trimmed.nodes.some(node => node.id === later.id), false);
   assert.ok(trimmed.nodes.some(node => node.id === 'v1'));
-  assert.equal(graphReducer(branched, { type: 'delete-future', sourceId: 'v1' }), branched);
+  const dropped = graphReducer(branched, { type: 'delete-current', sourceId: side.id });
+  assert.equal(dropped.nodes.some(node => node.id === side.id), false);
+  assert.ok(dropped.nodes.some(node => node.id === later.id));
+  assert.equal(dropped.nodes.find(node => node.id === later.id)?.parentId, 'v1');
+  const initial = createInitialGraphState();
+  assert.equal(graphReducer(initial, { type: 'delete-current', sourceId: 'v1' }), initial);
   const missingParent = { nodes: grown.nodes.map(node => node.id === grown.selectedId ? { ...node, parentId: 'missing' } : node), selectedId: grown.selectedId };
   assert.equal(parseStoredGraphState(missingParent), null);
+});
+
+test('progress screenshots frame the selected station, else the active tip', () => {
+  const initial = createInitialGraphState();
+  assert.equal(screenshotFocusId(initial), 'v1');
+  let state = graphReducer(initial, { type: 'add-branch', sourceId: 'v1' });
+  const side = state.nodes.at(-1);
+  assert.equal(screenshotFocusId({ ...state, selectedId: null }), 'v1');
+  state = graphReducer(state, { type: 'select', id: side.id });
+  assert.equal(screenshotFocusId(state), side.id);
 });
 
 test('invalid ancestry gives a clear error instead of an infinite layout traversal', () => {

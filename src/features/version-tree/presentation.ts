@@ -79,7 +79,7 @@ export function presentTree(
   const byId = new Map(layout.nodes.map(node => [node.id, node]));
   const groups = layout.forks ?? [];
   const hiddenById = new Map(groups.filter(group => collapsedLevels.has(group.id))
-    .flatMap(group => group.nodeIds.map(id => [id, group] as const)));
+    .flatMap(group => group.nodeIds.filter(id => !spineIds.has(id)).map(id => [id, group] as const)));
   const groupByNode = new Map(groups.flatMap(group => group.nodeIds.map(id => [id, group] as const)));
   // At each fork, the selected path's last alternative owns the line that rises above the overlap.
   // Same-level ancestors (the alternative a sibling was branched from) stay beneath.

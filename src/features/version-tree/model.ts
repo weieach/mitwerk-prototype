@@ -33,6 +33,7 @@ export type GraphAction =
   | { type: 'set-active-branch'; branchId: string }
   | { type: 'add-branch'; sourceId: string }
   | { type: 'add-commit'; sourceId: string }
+  | { type: 'delete-current'; sourceId: string }
   | { type: 'delete-future'; sourceId: string }
   | { type: 'reset' };
 
@@ -48,15 +49,40 @@ function hasAncestor(nodes: VersionNode[], node: VersionNode, ancestorId: string
   return false;
 }
 
-/** This station and every version after it. */
+/** Versions after this station, not including the station itself. */
 export function futureNodeIds(nodes: VersionNode[], sourceId: string) {
   if (!nodes.some(node => node.id === sourceId)) return [];
-  return nodes.filter(node => hasAncestor(nodes, node, sourceId)).map(node => node.id);
+  return nodes.filter(node => node.id !== sourceId && hasAncestor(nodes, node, sourceId)).map(node => node.id);
+}
+
+export function canDeleteCurrent(nodes: VersionNode[], sourceId: string) {
+  return nodes.length > 1 && nodes.some(node => node.id === sourceId);
 }
 
 export function canDeleteFuture(nodes: VersionNode[], sourceId: string) {
-  const doomed = futureNodeIds(nodes, sourceId);
-  return doomed.length > 0 && doomed.length < nodes.length;
+  return futureNodeIds(nodes, sourceId).length > 0;
+}
+
+function adoptParent(child: VersionNode, parent: VersionNode | undefined): VersionNode {
+  if (!parent) {
+    return { ...child, parentId: null, relation: child.relation === 'branch' ? 'branch' : 'root' };
+  }
+  return { ...child, parentId: parent.id };
+}
+
+function afterRemoval(state: GraphState, nodes: VersionNode[], preferredId?: string | null): GraphState {
+  const activeBranchId = nodes.some(node => node.branchId === state.activeBranchId)
+    ? state.activeBranchId
+    : longestBranchId(nodes);
+  const selectedId = [preferredId, state.selectedId].find(id => id && nodes.some(node => node.id === id))
+    ?? branchTip(nodes, activeBranchId)?.id ?? nodes[0].id;
+  return { nodes, selectedId, activeBranchId };
+}
+
+/** Station the progress screenshot should frame: selection, else the active tip. */
+export function screenshotFocusId(state: GraphState) {
+  if (state.selectedId && state.nodes.some(node => node.id === state.selectedId)) return state.selectedId;
+  return branchTip(state.nodes, state.activeBranchId)?.id ?? state.nodes[0]?.id ?? null;
 }
 
 /** Last commit on a branch: its first station followed along direct commit children. */
@@ -302,17 +328,18 @@ export function graphReducer(state: GraphState, action: GraphAction): GraphState
     if (state.activeBranchId === action.branchId && state.selectedId === tip.id) return state;
     return { ...state, activeBranchId: action.branchId, selectedId: tip.id };
   }
+  if (action.type === 'delete-current') {
+    const source = state.nodes.find(node => node.id === action.sourceId);
+    if (!source || state.nodes.length <= 1) return state;
+    const parent = source.parentId ? state.nodes.find(node => node.id === source.parentId) : undefined;
+    const nodes = state.nodes.filter(node => node.id !== source.id)
+      .map(node => node.parentId === source.id ? adoptParent(node, parent) : node);
+    return afterRemoval(state, nodes, parent?.id);
+  }
   if (action.type === 'delete-future') {
     const doomed = new Set(futureNodeIds(state.nodes, action.sourceId));
-    if (doomed.size === 0 || doomed.size === state.nodes.length) return state;
-    const nodes = state.nodes.filter(node => !doomed.has(node.id));
-    const activeBranchId = nodes.some(node => node.branchId === state.activeBranchId)
-      ? state.activeBranchId
-      : longestBranchId(nodes);
-    const selectedId = state.selectedId && nodes.some(node => node.id === state.selectedId)
-      ? state.selectedId
-      : branchTip(nodes, activeBranchId)?.id ?? nodes[0].id;
-    return { nodes, selectedId, activeBranchId };
+    if (doomed.size === 0) return state;
+    return afterRemoval(state, state.nodes.filter(node => !doomed.has(node.id)));
   }
   const source = state.nodes.find(node => node.id === action.sourceId);
   if (!source) return state;
