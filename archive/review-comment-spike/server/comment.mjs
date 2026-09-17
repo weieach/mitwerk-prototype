@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path';
 import { parseFigmaUrl } from './figmaUrl.mjs';
 import { resolveFrame, postComment } from './figmaRest.mjs';
 
-const ENV_FILE = join(dirname(fileURLToPath(import.meta.url)), '..', '.env.local');
+const ENV_FILE = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '.env.local');
 
 export const SAMPLE_TEXT =
   'Sample review comment from Mitwerk — posted programmatically via the Figma REST API.';

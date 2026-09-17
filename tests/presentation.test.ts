@@ -1,0 +1,281 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { createInitialGraphState, graphReducer } from '../src/features/version-tree/model.ts';
+import { frameVersionLevel, layoutGraph as logicalLayout, layoutBranchView, geometry } from '../src/features/version-tree/layout.ts';
+import { getBranchState, presentTree } from '../src/features/version-tree/presentation.ts';
+import { treeTheme } from '../src/features/version-tree/tokens.ts';
+import { createTestGraphState } from './graph-fixture.ts';
+
+const layoutGraph = (nodes, selectedId = null) => layoutBranchView(logicalLayout(nodes), selectedId);
+const present = state => presentTree(layoutGraph(state.nodes, state.selectedId), state.selectedId);
+
+const pathPoints = path => {
+  const numbers = path.match(/-?\d+(?:\.\d+)?/g).map(Number);
+  return Array.from({ length: numbers.length / 2 }, (_, index) => numbers.slice(index * 2, index * 2 + 2));
+};
+
+test('fork routes run as full lines from the preceding station, share the stem, then peel off one by one', () => {
+  for (const count of [2, 3, 4, 7, 12]) {
+    let state = graphReducer(createInitialGraphState(), { type: 'add-commit', sourceId: 'v1' });
+    const sourceId = state.selectedId;
+    for (let i = 1; i < count; i++) state = graphReducer(state, { type: 'add-branch', sourceId });
+    const layout = layoutGraph(state.nodes);
+    const fork = layout.forks[0];
+    const parent = layout.nodes.find(node => node.id === fork.parentId);
+    assert.equal(parent.x, fork.x, 'Preceding version sits directly over the fork');
+    assert.equal(fork.y - parent.y, geometry.gridRise * geometry.forkSharedStemRows, 'Count sits at the shared minimum distance');
+    const directions = new Set();
+    const departures = { [-1]: [], [1]: [] };
+    for (const edge of layout.edges.filter(edge => edge.id.startsWith('arm:'))) {
+      const points = pathPoints(edge.path);
+      const node = layout.nodes.find(node => node.id === edge.targetId);
+      assert.equal(edge.branchId, node.branchId, 'Each arm carries its own branch');
+      assert.deepEqual(points[0], [parent.x, parent.y], 'Full line starts at the preceding station');
+      assert.deepEqual(points.at(-1), [node.x, node.y]);
+      const departure = [...points].reverse().find(([x]) => x === fork.x);
+      assert.ok(departure[1] >= fork.y - 0.00001, 'Arm stays on the stem through the count before diverging');
+      departures[Math.sign(node.x - fork.x)].push({ offset: departure[1] - fork.y, distance: Math.abs(node.x - fork.x) });
+      for (const [x, y] of points) {
+        assert.ok(y <= node.y, 'Connector never passes below its endpoint');
+        const col = x / geometry.gridUnit;
+        const row = y / geometry.gridRise;
+        assert.ok(Math.abs(col - Math.round(col)) < 0.00001);
+        assert.ok(Math.abs(row - Math.round(row)) < 0.00001);
+        assert.equal((Math.round(col) + Math.round(row)) % 2, 0);
+      }
+      for (let i = 1; i < points.length; i++) {
+        const dx = Math.abs(points[i][0] - points[i - 1][0]);
+        const dy = points[i][1] - points[i - 1][1];
+        assert.ok(dy >= -0.00001, 'Route never doubles back upward');
+        if (dx < 0.00001 && dy < 0.00001) continue;
+        if (dx < 0.00001) directions.add('vertical');
+        else if (dy < 0.00001) directions.add('horizontal');
+        else {
+          directions.add('diagonal');
+          assert.ok(Math.abs(dy / dx - 1 / Math.sqrt(3)) < 0.00001);
+        }
+      }
+    }
+    assert.ok(directions.has('vertical') && directions.has('diagonal'));
+    if (count > 2) assert.ok(directions.has('horizontal'));
+    for (const side of Object.values(departures)) {
+      side.sort((a, b) => b.distance - a.distance);
+      side.forEach((arm, index) => assert.ok(
+        Math.abs(arm.offset - index * geometry.gridRise * geometry.forkDivergeRows) < 0.00001,
+        'Arms leave the stem one by one, farthest first, at the shared divergence spacing'));
+    }
+  }
+});
+
+test('selection preserves the exact default wiring and count position beneath its overlay', () => {
+  let state = graphReducer(createInitialGraphState(), { type: 'add-commit', sourceId: 'v1' });
+  const sourceId = state.selectedId;
+  for (let i = 0; i < 4; i++) state = graphReducer(state, { type: 'add-branch', sourceId });
+  const defaultLayout = layoutGraph(state.nodes);
+  const selectedLayout = layoutGraph(state.nodes, state.selectedId);
+  assert.deepEqual(selectedLayout.nodes, defaultLayout.nodes);
+  assert.deepEqual(selectedLayout.edges, defaultLayout.edges);
+  const neutral = presentTree(defaultLayout, null);
+  const selected = presentTree(selectedLayout, state.selectedId);
+  assert.equal(selected.groups[0].x, neutral.groups[0].x);
+  assert.equal(selected.groups[0].y, neutral.groups[0].y);
+  for (const route of neutral.routes.filter(route => route.kind === 'branch')) {
+    const retained = selected.routes.find(candidate => candidate.id === route.id);
+    assert.equal(retained.path, route.path);
+    const own = route.id === `arm:${state.selectedId}`;
+    assert.equal(retained.active, own, own ? 'Selected alternative\'s own line rises to the top layer'
+      : 'Other default arms stay in the default layer');
+    assert.equal(retained.branchId, route.branchId, 'Selection never recolors default wiring');
+  }
+  assert.ok(selected.routes.every(route => route.kind === 'horizontal-branch' || route.id.startsWith('trunk:') || route.id.startsWith('arm:')));
+  assert.ok(!selected.routes.some(route => route.id.startsWith('selected-stem:')), 'No selected stem overlay');
+  assert.ok(selected.routes.some(route => route.kind === 'horizontal-branch' && route.active));
+  assert.equal(selected.routes.at(-1).id, `arm:${state.selectedId}`, 'Selected line is painted on top of the overlap');
+  assert.equal(selected.routes.at(-1).active, true);
+});
+
+test('adding branches frames the count inside the viewport, even at minimum zoom', () => {
+  let state = createInitialGraphState();
+  for (let i = 0; i < 12; i++) {
+    state = graphReducer(state, { type: 'add-branch', sourceId: state.selectedId });
+    if (i === 0) continue;
+    const layout = layoutGraph(state.nodes);
+    const level = layout.levels[0];
+    for (const width of [280, 640, 1200]) {
+      const frame = frameVersionLevel(layout, level, width, 1, treeTheme.minZoom, treeTheme.branchCountDiameter);
+      const left = (level.x - treeTheme.branchCountDiameter / 2) * frame.zoom - frame.left;
+      const right = left + treeTheme.branchCountDiameter * frame.zoom;
+      assert.ok(left >= 0 && right <= width, 'Count is fully visible without Fit all');
+      if (frame.zoom > treeTheme.minZoom) {
+        const last = layout.nodes.at(-1);
+        assert.ok((last.x + geometry.cardOffsetX + geometry.cardWidth) * frame.zoom - frame.left <= width);
+      }
+    }
+  }
+});
+
+test('upper-level forks stay compact when later levels fan out', () => {
+  let state = graphReducer(createInitialGraphState(), { type: 'add-commit', sourceId: 'v1' });
+  const sourceId = state.selectedId;
+  state = graphReducer(state, { type: 'add-branch', sourceId });
+  state = graphReducer(state, { type: 'add-branch', sourceId });
+  const before = layoutGraph(state.nodes);
+  const parentRow = before.nodes.find(node => node.id === sourceId).row;
+  const original = Object.fromEntries(before.nodes.filter(node => node.row === parentRow).map(node => [node.id, node.x]));
+  const upperSpan = Math.max(...Object.values(original)) - Math.min(...Object.values(original));
+  state = graphReducer(state, { type: 'add-commit', sourceId });
+  const lowerSource = state.selectedId;
+  for (let i = 0; i < 6; i++) state = graphReducer(state, { type: 'add-branch', sourceId: lowerSource });
+  const after = layoutGraph(state.nodes);
+  for (const node of after.nodes.filter(node => node.row === parentRow)) {
+    assert.equal(node.x - after.nodes[0].x, original[node.id] - before.nodes[0].x,
+      'Ancestor spacing does not change when descendants fan out');
+  }
+  const lower = after.nodes.filter(node => node.row === parentRow + 1);
+  assert.ok(Math.max(...lower.map(node => node.x)) - Math.min(...lower.map(node => node.x)) > upperSpan,
+    'Later levels may span wider than their parent fork');
+  assert.equal(after.forks.find(fork => fork.parentId === 'v1').x, after.nodes.find(node => node.id === 'v1').x);
+  assert.equal(before.forks[0].x, before.nodes.find(node => node.id === 'v1').x);
+});
+
+test('level labels include original alternatives and the count begins at two', () => {
+  let state = graphReducer(createInitialGraphState(), { type: 'add-commit', sourceId: 'v1' });
+  const sourceId = state.selectedId;
+  state = graphReducer(state, { type: 'add-branch', sourceId });
+  let layout = layoutGraph(state.nodes);
+  assert.deepEqual(layout.nodes.map(node => node.label), ['V1', 'V2.1', 'V2.2']);
+  assert.equal(present(state).groups[0].nodeIds.length, 2);
+  state = graphReducer(state, { type: 'add-branch', sourceId });
+  layout = layoutGraph(state.nodes);
+  assert.deepEqual(layout.nodes.map(node => node.label), ['V1', 'V2.1', 'V2.2', 'V2.3']);
+  const group = present(state).groups[0];
+  assert.equal(group.nodeIds.length, 3);
+  assert.equal(group.x, layout.nodes[0].x);
+  assert.ok(group.y > layout.nodes[0].y && group.y < layout.nodes[1].y);
+});
+
+test('collapse preserves selection, descendants and data, and expansion restores routes', () => {
+  let state = graphReducer(createInitialGraphState(), { type: 'add-commit', sourceId: 'v1' });
+  const sourceId = state.selectedId;
+  state = graphReducer(state, { type: 'add-branch', sourceId });
+  state = graphReducer(state, { type: 'add-branch', sourceId });
+  state = graphReducer(state, { type: 'add-commit', sourceId: state.selectedId });
+  const before = JSON.stringify(state);
+  const layout = layoutGraph(state.nodes);
+  const expanded = presentTree(layout, state.selectedId);
+  const collapsed = presentTree(layout, state.selectedId, new Set([expanded.groups[0].id]));
+  assert.equal(collapsed.hiddenNodeIds.size, 3);
+  assert.equal(collapsed.hiddenNodeIds.has(state.selectedId), false);
+  assert.equal(collapsed.tip.id, state.selectedId);
+  assert.equal(collapsed.selectedBranchId, expanded.selectedBranchId);
+  assert.equal(collapsed.routes.length, 2);
+  assert.equal(JSON.stringify(state), before);
+  assert.deepEqual(presentTree(layout, state.selectedId), expanded);
+});
+
+test('root-level branches can collapse without a predecessor', () => {
+  let state = createInitialGraphState();
+  state = graphReducer(state, { type: 'add-branch', sourceId: 'v1' });
+  state = graphReducer(state, { type: 'add-branch', sourceId: 'v1' });
+  const layout = layoutGraph(state.nodes);
+  const result = presentTree(layout, state.selectedId, new Set(['v1']));
+  assert.equal(result.hiddenNodeIds.size, 3);
+  assert.equal(result.routes.length, 0);
+  assert.equal(result.tip, null);
+  assert.equal(result.groups[0].nodeIds.length, 3);
+});
+
+test('one empty station is open with no connectors and no endpoint marker', () => {
+  const result = present(createInitialGraphState());
+  assert.equal(result.routes.length, 0);
+  assert.equal(result.tip, null);
+  assert.equal(result.nodesWithChildren.size, 0);
+});
+
+test('selection identifies the whole branch and places the marker at its tip', () => {
+  const graph = createTestGraphState();
+  const first = present({ ...graph, selectedId: 'v1' });
+  const middle = present({ ...graph, selectedId: 'v2' });
+  assert.equal(first.selectedBranchId, 'main');
+  assert.equal(first.tip.id, 'v3');
+  assert.deepEqual(first.activeNodeIds, middle.activeNodeIds);
+  assert.ok(first.routes.some(route => route.id === 'v2:v3' && route.active));
+  assert.deepEqual([...first.nodesWithChildren].sort(), ['v1', 'v2']);
+  assert.ok(!first.nodesWithChildren.has('v3'), 'Selected terminal status is independent of selection');
+});
+
+test('every branch contributes one endpoint, ordered left to right, omitting collapsed stations', () => {
+  const graph = createTestGraphState();
+  const expanded = present(graph);
+  assert.deepEqual(expanded.endpoints.map(node => node.branchId), ['main', 'alternative']);
+  assert.equal(expanded.endpoints.find(node => node.branchId === 'main').id, 'v3');
+  assert.equal(expanded.endpoints.find(node => node.branchId === 'alternative').id, 'v2-1');
+  assert.ok(expanded.endpoints.every((node, index) => index === 0 || node.x >= expanded.endpoints[index - 1].x));
+  const layout = layoutGraph(graph.nodes);
+  const fork = presentTree(layout, graph.selectedId).groups[0];
+  const collapsed = presentTree(layout, graph.selectedId, new Set([fork.id]));
+  assert.equal(collapsed.endpoints.some(node => node.id === 'v2-1'), false);
+  assert.ok(collapsed.endpoints.some(node => node.id === 'v3'));
+});
+
+test('selected sibling branches become one horizontal connector; unselected ones fork', () => {
+  let graph = createTestGraphState();
+  graph = graphReducer(graph, { type: 'add-branch', sourceId: 'v2' });
+  const selected = present(graph);
+  const row = layoutGraph(graph.nodes).nodes.find(node => node.id === 'v2').row;
+  const horizontal = selected.routes.filter(route => route.kind === 'horizontal-branch');
+  assert.equal(horizontal.length, 1);
+  assert.equal((horizontal[0].path.match(/ L /g) || []).length, 1);
+  assert.equal(selected.routes.filter(route => route.kind === 'branch').length, 3, 'Default fork remains underneath the selected route');
+  assert.ok(selected.horizontalRows.has(row));
+  const inactive = present({ ...graph, selectedId: 'v1' });
+  assert.equal(inactive.horizontalRows.size, 0);
+  assert.equal(inactive.routes.filter(route => route.kind === 'branch').length, 3);
+});
+
+test('nested same-level branches merge into one line and keep leaf state correct', () => {
+  let graph = createTestGraphState();
+  graph = graphReducer(graph, { type: 'add-branch', sourceId: 'v2-1' });
+  const leaf = graph.selectedId;
+  const result = present(graph);
+  assert.equal(result.routes.filter(route => route.kind === 'horizontal-branch').length, 1);
+  assert.ok(result.nodesWithChildren.has('v2-1'));
+  assert.ok(!result.nodesWithChildren.has(leaf));
+  assert.equal(result.tip.id, leaf);
+});
+
+test('a branch continuation remains highlighted after selecting its earlier version', () => {
+  let graph = createTestGraphState();
+  graph = graphReducer(graph, { type: 'add-commit', sourceId: 'v2-1' });
+  const tipId = graph.selectedId;
+  graph = graphReducer(graph, { type: 'select', id: 'v2-1' });
+  const result = present(graph);
+  assert.equal(result.tip.id, tipId);
+  assert.ok(result.activeNodeIds.has(tipId));
+  assert.equal(result.routes.at(-1).active, true);
+  assert.equal(getBranchState(graph.nodes, tipId).selectedBranchId, 'alternative');
+});
+
+test('clearing selection drops branch highlight and sibling flattening', () => {
+  let graph = createTestGraphState();
+  graph = graphReducer(graph, { type: 'add-branch', sourceId: 'v2' });
+  const selected = present(graph);
+  const cleared = present({ ...graph, selectedId: null });
+  assert.ok(selected.activeNodeIds.size > 0);
+  assert.equal(cleared.activeNodeIds.size, 0);
+  assert.equal(cleared.selectedBranchId, '');
+  assert.equal(cleared.tip, null);
+  assert.ok(cleared.routes.every(route => !route.active));
+  assert.equal(cleared.horizontalRows.size, 0);
+  assert.ok(cleared.routes.some(route => route.kind === 'branch'));
+});
+
+test('connector width tracks node diameter and horizontal cards clear both routing levels', () => {
+  assert.equal(treeTheme.routeWidth, treeTheme.stationInnerDiameter);
+  assert.equal(treeTheme.stationInnerDiameter, treeTheme.stationDiameter - treeTheme.stationBorderWidth * 2);
+  const strokeRadius = treeTheme.routeWidth / 2 + treeTheme.routeClearance;
+  assert.ok(geometry.horizontalCardOffsetY > strokeRadius);
+  assert.ok(geometry.gridRise * geometry.branchRouteRows - strokeRadius > geometry.horizontalCardOffsetY + geometry.cardHeight);
+  assert.ok(geometry.rowGap + geometry.cardOffsetY > geometry.gridRise * geometry.branchRouteRows + strokeRadius);
+  assert.ok(treeTheme.endpointTriangleGap > 0);
+});

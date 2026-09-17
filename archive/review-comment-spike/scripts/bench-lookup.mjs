@@ -1,5 +1,5 @@
 // Measures what it costs to resolve a frame name three different ways, so the
-// escalation ladder in server/figmaRest.mjs can be judged on numbers rather
+// escalation ladder in ../server/figmaRest.mjs can be judged on numbers rather
 // than on argument.
 //
 //   npm run bench                       # the default test file

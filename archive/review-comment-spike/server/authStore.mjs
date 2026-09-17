@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const FILE = join(here, '..', '.mitwerk-auth.json');
+const FILE = join(here, '..', '..', '..', '.mitwerk-auth.json');
 
 function readAll() {
   if (!existsSync(FILE)) return {};

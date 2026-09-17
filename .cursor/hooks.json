@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeSubmitPrompt": [
+      {
+        "command": ".cursor/hooks/screenshot-prompt.sh",
+        "timeout": 5
+      }
+    ],
+    "stop": [
+      {
+        "command": ".cursor/hooks/screenshot-prompt.sh",
+        "timeout": 20,
+        "failClosed": false
+      }
+    ]
+  }
+}

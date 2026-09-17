@@ -1,25 +1,14 @@
-// The hosted server: serves the built front end and the same API handler that
-// runs under `vite dev`.
+// Serves the built front end.
 //
 //   npm run build && npm start
-//
-// This is what makes the app deployable. Nothing here is Vite-specific, so it
-// runs anywhere Node runs.
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, normalize, extname } from 'node:path';
-import { handleApi } from './api.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const DIST = join(here, '..', 'dist');
-const PORT = Number(process.env.PORT ?? 5173);
-
-try {
-  process.loadEnvFile(join(here, '..', '.env.local'));
-} catch {
-  // In real hosting the environment supplies these directly.
-}
+const PORT = 5173;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -49,7 +38,6 @@ async function serveStatic(req, res) {
     const info = await stat(filePath);
     if (info.isDirectory()) filePath = join(filePath, 'index.html');
   } catch {
-    // Unknown path: hand back index.html so client-side routing works.
     filePath = join(DIST, 'index.html');
   }
 
@@ -65,8 +53,7 @@ async function serveStatic(req, res) {
 }
 
 createServer(async (req, res) => {
-  const handled = await handleApi(req, res);
-  if (!handled) await serveStatic(req, res);
+  await serveStatic(req, res);
 }).listen(PORT, () => {
   console.log('Mitwerk listening on http://localhost:' + PORT);
 });

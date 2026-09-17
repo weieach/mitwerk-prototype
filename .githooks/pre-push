@@ -1,0 +1,51 @@
+#!/bin/sh
+# Capture the running app on git push and include the PNG in that push.
+set -e
+
+if [ "${MITWERK_SCREENSHOT_HOOK:-}" = "1" ] || [ "${MITWERK_SCREENSHOT_SKIP:-}" = "1" ]; then
+  exit 0
+fi
+
+remote="$1"
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+zeros="0000000000000000000000000000000000000000"
+local_sha=""
+remote_ref=""
+has_update=0
+
+while read -r _local_ref _local_sha _remote_ref _remote_sha; do
+  if [ -z "$_local_sha" ] || [ "$_local_sha" = "$zeros" ]; then
+    continue
+  fi
+  if [ "$_local_sha" = "$_remote_sha" ]; then
+    continue
+  fi
+  has_update=1
+  local_sha="$_local_sha"
+  remote_ref="$_remote_ref"
+  break
+done
+
+while read -r _; do
+  :
+done
+
+if [ "$has_update" -eq 0 ]; then
+  exit 0
+fi
+
+file="$(node "$root/scripts/screenshot-progress.mjs" --tag push --sha="$local_sha")"
+
+git commit --no-verify -m "chore: progress screenshot" -- "$file"
+
+export MITWERK_SCREENSHOT_HOOK=1
+git push --no-verify "$remote" "HEAD:$remote_ref"
+
+echo "" >&2
+echo "Progress screenshot saved and pushed:" >&2
+echo "  $file" >&2
+echo "Git may print a 'failed to push' error next; the push already succeeded." >&2
+echo "" >&2
+exit 1
