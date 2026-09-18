@@ -30,7 +30,42 @@ export type VersionNode = {
 };
 
 /** `activeBranchId` is the checked-out branch, like `git branch`; it is independent of `selectedId`. */
-export type GraphState = { nodes: VersionNode[]; selectedId: string | null; activeBranchId: string };
+export type GraphState = {
+  nodes: VersionNode[];
+  selectedId: string | null;
+  activeBranchId: string;
+  /** Later versions grayed by revert; they stay in the graph until restored. */
+  revertedIds: string[];
+};
+
+/** Card action that replaces Add commit, derived from endpoint and revert state. */
+export type VersionCommitAction = 'commit' | 'revert' | 'restore';
+
+export function versionCommitAction(hasDescendants: boolean, reverted: boolean): VersionCommitAction {
+  if (reverted) return 'restore';
+  if (hasDescendants) return 'revert';
+  return 'commit';
+}
+
+export function versionCommitActionLabel(action: VersionCommitAction) {
+  if (action === 'restore') return 'Restore change';
+  if (action === 'revert') return 'Revert change';
+  return 'Add commit';
+}
+
+/** Restore is the primary card action; Add branch / Revert stay secondary. */
+export function isPrimaryCommitAction(action: VersionCommitAction) {
+  return action === 'restore';
+}
+
+export function isReverted(revertedIds: string[], id: string) {
+  return revertedIds.includes(id);
+}
+
+/** Incoming connector to a reverted station. */
+export function isRevertedRoute(revertedIds: string[], targetId?: string) {
+  return Boolean(targetId && isReverted(revertedIds, targetId));
+}
 
 export const graphStorageKey = 'mitwerk.version-tree.graph';
 
@@ -43,6 +78,8 @@ export type GraphAction =
   | { type: 'add-commit'; sourceId: string }
   | { type: 'delete-current'; sourceId: string }
   | { type: 'delete-future'; sourceId: string }
+  | { type: 'revert'; sourceId: string }
+  | { type: 'restore'; sourceId: string }
   | { type: 'reset' };
 
 function hasAncestor(nodes: VersionNode[], node: VersionNode, ancestorId: string) {
@@ -78,13 +115,33 @@ function adoptParent(child: VersionNode, parent: VersionNode | undefined): Versi
   return { ...child, parentId: parent.id };
 }
 
+function pruneRevertedIds(revertedIds: string[], nodes: VersionNode[]) {
+  const ids = new Set(nodes.map(node => node.id));
+  return revertedIds.filter(id => ids.has(id));
+}
+
+/** Restore this change and any reverted ancestors so the path to it is live. */
+export function restoreNodeIds(nodes: VersionNode[], revertedIds: string[], sourceId: string) {
+  if (!revertedIds.includes(sourceId)) return [];
+  const byId = new Map(nodes.map(node => [node.id, node]));
+  const restored = new Set<string>([sourceId]);
+  let current = byId.get(sourceId);
+  while (current?.parentId) {
+    current = byId.get(current.parentId);
+    if (!current) break;
+    if (revertedIds.includes(current.id)) restored.add(current.id);
+    else break;
+  }
+  return [...restored];
+}
+
 function afterRemoval(state: GraphState, nodes: VersionNode[], preferredId?: string | null): GraphState {
   const activeBranchId = nodes.some(node => node.branchId === state.activeBranchId)
     ? state.activeBranchId
     : longestBranchId(nodes);
   const selectedId = [preferredId, state.selectedId].find(id => id && nodes.some(node => node.id === id))
     ?? branchTip(nodes, activeBranchId)?.id ?? nodes[0].id;
-  return { nodes, selectedId, activeBranchId };
+  return { nodes, selectedId, activeBranchId, revertedIds: pruneRevertedIds(state.revertedIds, nodes) };
 }
 
 /** Off-current-branch cards stay abbreviated until that node is selected. */
@@ -216,6 +273,7 @@ export function createInitialGraphState(): GraphState {
   return {
     selectedId: 'v1',
     activeBranchId: 'main',
+    revertedIds: [],
     nodes: [fillPrototypeVersion({
       id: 'v1', label: 'V1', title: '', saveType: 'manual', createdAt: '',
       branchId: 'main', parentId: null, relation: 'root',
@@ -299,7 +357,10 @@ export function parseStoredGraphState(value: unknown): GraphState | null {
   const activeBranchId = typeof value.activeBranchId === 'string' && branchIds.has(value.activeBranchId)
     ? value.activeBranchId
     : longestBranchId(nodes);
-  return { nodes, selectedId, activeBranchId };
+  const revertedIds = Array.isArray(value.revertedIds)
+    ? value.revertedIds.filter((id): id is string => typeof id === 'string' && ids.has(id))
+    : [];
+  return { nodes, selectedId, activeBranchId, revertedIds };
 }
 
 export function loadGraphState(storage: GraphStorage | null = browserStorage()): GraphState {
@@ -381,6 +442,20 @@ export function graphReducer(state: GraphState, action: GraphAction): GraphState
     const doomed = new Set(futureNodeIds(state.nodes, action.sourceId));
     if (doomed.size === 0) return state;
     return afterRemoval(state, state.nodes.filter(node => !doomed.has(node.id)));
+  }
+  if (action.type === 'revert') {
+    const extra = futureNodeIds(state.nodes, action.sourceId);
+    if (extra.length === 0) return state;
+    const revertedIds = [...new Set([...state.revertedIds, ...extra])];
+    if (revertedIds.length === state.revertedIds.length && extra.every(id => state.revertedIds.includes(id))
+      && state.selectedId === action.sourceId) return state;
+    return { ...state, revertedIds, selectedId: action.sourceId };
+  }
+  if (action.type === 'restore') {
+    const restored = new Set(restoreNodeIds(state.nodes, state.revertedIds, action.sourceId));
+    if (restored.size === 0) return state;
+    const revertedIds = state.revertedIds.filter(id => !restored.has(id));
+    return { ...state, revertedIds, selectedId: action.sourceId };
   }
   const source = state.nodes.find(node => node.id === action.sourceId);
   if (!source) return state;

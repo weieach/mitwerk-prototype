@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Icon, type IconName } from '../../components/Icon';
-import { isCompactVersionCard, isPictureFile, type VersionFile, type VersionNode } from './model';
+import { isCompactVersionCard, isPictureFile, isPrimaryCommitAction, versionCommitAction, versionCommitActionLabel, type VersionFile, type VersionNode } from './model';
 
 function fileChipIcon(file: Pick<VersionFile, 'name' | 'kind'>): IconName {
   if (file.kind === 'skill') return 'spark';
@@ -18,9 +18,12 @@ type Props = {
   canDeleteCurrent: boolean;
   canDeleteFuture: boolean;
   color: string;
+  reverted: boolean;
   onSelect: () => void;
   onBranch: () => void;
   onCommit: () => void;
+  onRevert: () => void;
+  onRestore: () => void;
   onSwitchBranch: () => void;
   onDeleteCurrent: () => void;
   onDeleteFuture: () => void;
@@ -28,13 +31,20 @@ type Props = {
 };
 
 export function VersionCard({
-  node, selected, hasDescendants, onActivePath, isCurrentBranch, canDeleteCurrent, canDeleteFuture, color,
-  onSelect, onBranch, onCommit, onSwitchBranch, onDeleteCurrent, onDeleteFuture, forceMenuOpen = false,
+  node, selected, hasDescendants, onActivePath, isCurrentBranch, canDeleteCurrent, canDeleteFuture, color, reverted,
+  onSelect, onBranch, onCommit, onRevert, onRestore, onSwitchBranch, onDeleteCurrent, onDeleteFuture, forceMenuOpen = false,
 }: Props) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(forceMenuOpen);
   const menu = useRef<HTMLDivElement>(null);
   const compact = isCompactVersionCard(onActivePath, selected) && !forceMenuOpen;
+  const commitAction = versionCommitAction(hasDescendants, reverted);
+  const commitActionLabel = versionCommitActionLabel(commitAction);
+  const commitActionIcon = commitAction === 'restore' ? 'restore' : commitAction === 'revert' ? 'revert' : 'plus';
+  const onCommitAction = commitAction === 'restore' ? onRestore : commitAction === 'revert' ? onRevert : onCommit;
+  const restorePrimary = isPrimaryCommitAction(commitAction);
+  const branchButton = <button onClick={onBranch} aria-label={`Add branch from ${node.label}`}><Icon name="branch" size={13}/>Add branch</button>;
+  const commitButton = <button className={restorePrimary ? 'is-primary' : undefined} onClick={onCommitAction} aria-label={`${commitActionLabel} ${node.label}`}><Icon name={commitActionIcon} size={13}/>{commitActionLabel}</button>;
   const references = node.files.filter(file => file.kind !== 'code');
   const codeFiles = node.files.filter(file => file.kind === 'code');
   const added = node.files.reduce((sum, file) => sum + file.added, 0);
@@ -60,7 +70,7 @@ export function VersionCard({
     };
   }, [menuOpen, forceMenuOpen]);
 
-  return <article className={`version-card ${selected ? 'is-selected' : ''} ${onActivePath ? 'is-active-branch' : ''} ${compact ? 'is-compact' : ''}`} style={{ '--route-color': color } as CSSProperties} data-node-id={node.id} data-active-branch={onActivePath} data-compact={compact || undefined} onClick={compact ? onSelect : undefined}>
+  return <article className={`version-card ${selected ? 'is-selected' : ''} ${onActivePath ? 'is-active-branch' : ''} ${compact ? 'is-compact' : ''} ${reverted ? 'is-reverted' : ''}`} style={{ '--route-color': color } as CSSProperties} data-node-id={node.id} data-active-branch={onActivePath} data-compact={compact || undefined} data-reverted={reverted || undefined} onClick={compact ? onSelect : undefined}>
     <button className={`station ${hasDescendants ? 'has-descendants' : 'is-terminal'}`} aria-label={`Select ${node.label}`} aria-pressed={selected} onClick={onSelect}>
       <span />
     </button>
@@ -74,9 +84,6 @@ export function VersionCard({
           <button role="menuitem" disabled={isCurrentBranch} onClick={() => { setMenuOpen(false); onSwitchBranch(); }}>
             Switch to this branch
           </button>
-        </li>
-        <li role="none">
-          <button role="menuitem" disabled>Revert to version</button>
         </li>
         <li role="none">
           <button role="menuitem" disabled={!canDeleteCurrent} onClick={() => { setMenuOpen(false); onDeleteCurrent(); }}>
@@ -101,7 +108,7 @@ export function VersionCard({
     {!compact && <>
       <div className="version-stats"><span><Icon name="code" size={13}/>{codeFiles.length} {codeFiles.length === 1 ? 'file' : 'files'} changed</span><span className="stat-divider"/><button onClick={onSelect}>{node.prompts.length} {node.prompts.length === 1 ? 'prompt' : 'prompts'}<Icon name="arrow" size={11}/></button></div>
       <div className="version-card-bottom"><button className="details-toggle" onClick={() => setDetailsOpen(!detailsOpen)} aria-expanded={detailsOpen}><Icon name="chevron" size={10} style={{ transform: detailsOpen ? 'rotate(90deg)' : undefined }}/>{detailsOpen ? 'Hide details' : 'Show details'}</button><span className="line-count"><span>+{added}</span><span>−{removed}</span></span></div>
-      <div className="node-actions"><button onClick={onBranch} aria-label={`Add branch from ${node.label}`}><Icon name="branch" size={13}/>Add branch</button><button onClick={onCommit} aria-label={`Add commit after ${node.label}`}><Icon name="plus" size={13}/>Add commit</button></div>
+      <div className="node-actions">{restorePrimary ? <>{commitButton}{branchButton}</> : <>{branchButton}{commitButton}</>}</div>
       {detailsOpen && <div className="node-details"><div className="node-details-label">VERSION DETAILS<button onClick={() => setDetailsOpen(false)} aria-label={`Close details for ${node.label}`}><Icon name="close" size={13}/></button></div><p>{node.summary || 'This version is empty. Its summary and file changes will appear here.'}</p><div className="detail-file-list">{node.files.map(file => <div key={file.name}><Icon name={fileChipIcon(file)} size={12}/><span>{file.name}</span><small>{file.kind}</small></div>)}</div></div>}
     </>}
   </article>;

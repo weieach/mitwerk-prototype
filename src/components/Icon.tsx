@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-export type IconName = 'branch' | 'commit' | 'plus' | 'minus' | 'expand' | 'grid' | 'arrow' | 'chevron' | 'caret' | 'code' | 'file' | 'image' | 'spark' | 'play' | 'pause' | 'close' | 'locate' | 'check' | 'layers' | 'more';
+export type IconName = 'branch' | 'commit' | 'plus' | 'minus' | 'expand' | 'grid' | 'arrow' | 'chevron' | 'caret' | 'code' | 'file' | 'image' | 'spark' | 'play' | 'pause' | 'close' | 'locate' | 'check' | 'layers' | 'more' | 'revert' | 'restore';
 
 const paths: Record<IconName, React.ReactNode> = {
   branch: <><circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="6" r="2"/><path d="M6 7v10m0-5h5a7 7 0 0 0 7-4"/></>,
@@ -23,6 +23,8 @@ const paths: Record<IconName, React.ReactNode> = {
   check: <path d="m5 12 4 4L19 6"/>,
   layers: <><path d="m12 3 10 6-10 6L2 9Zm-10 11 10 6 10-6M2 19l10 6 10-6" transform="translate(0 -1) scale(1 .9)"/></>,
   more: <><circle cx="12" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="18" r="1.5" fill="currentColor" stroke="none"/></>,
+  revert: <><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6.7 2.9L3 13"/></>,
+  restore: <><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6.7 2.9L21 13"/></>,
 };
 
 export function Icon({ name, size = 16, style }: { name: IconName; size?: number; style?: CSSProperties }) {

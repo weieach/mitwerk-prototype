@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canDeleteCurrent, canDeleteFuture, createInitialGraphState, filledVersionTemplate, graphReducer, graphStorageKey, isCompactVersionCard, isPictureFile, loadGraphState, parseStoredGraphState, saveGraphState, screenshotFocusId, screenshotInteractFromPrompt, screenshotInteractQuery, screenshotQueryFlags } from '../src/features/version-tree/model.ts';
+import { canDeleteCurrent, canDeleteFuture, createInitialGraphState, filledVersionTemplate, graphReducer, graphStorageKey, isCompactVersionCard, isPictureFile, isPrimaryCommitAction, isRevertedRoute, loadGraphState, parseStoredGraphState, restoreNodeIds, saveGraphState, screenshotFocusId, screenshotInteractFromPrompt, screenshotInteractQuery, screenshotQueryFlags, versionCommitAction, versionCommitActionLabel } from '../src/features/version-tree/model.ts';
 import { createTestGraphState } from './graph-fixture.ts';
 import { geometry, layoutGraph } from '../src/features/version-tree/layout.ts';
 import { treeTheme } from '../src/features/version-tree/tokens.ts';
@@ -272,6 +272,35 @@ test('graph state is restored from storage and ignores corrupt snapshots', () =>
   assert.equal(graphReducer(initial, { type: 'delete-current', sourceId: 'v1' }), initial);
   const missingParent = { nodes: grown.nodes.map(node => node.id === grown.selectedId ? { ...node, parentId: 'missing' } : node), selectedId: grown.selectedId };
   assert.equal(parseStoredGraphState(missingParent), null);
+});
+
+test('revert grays later versions without removing them, and restore brings a change back', () => {
+  const before = createTestGraphState();
+  assert.deepEqual(versionCommitAction(true, false), 'revert');
+  assert.deepEqual(versionCommitAction(false, false), 'commit');
+  assert.deepEqual(versionCommitAction(false, true), 'restore');
+  assert.deepEqual(versionCommitAction(true, true), 'restore');
+  assert.equal(versionCommitActionLabel('revert'), 'Revert change');
+  assert.equal(versionCommitActionLabel('restore'), 'Restore change');
+  assert.equal(isPrimaryCommitAction('restore'), true);
+  assert.equal(isPrimaryCommitAction('revert'), false);
+  assert.equal(isRevertedRoute(['v3'], 'v3'), true);
+  assert.equal(isRevertedRoute(['v3'], 'v2'), false);
+  const reverted = graphReducer(before, { type: 'revert', sourceId: 'v2' });
+  assert.equal(before.nodes.length, reverted.nodes.length);
+  assert.deepEqual(reverted.nodes.map(node => node.id), before.nodes.map(node => node.id));
+  assert.deepEqual([...reverted.revertedIds].sort(), ['v2-1', 'v3']);
+  assert.equal(reverted.selectedId, 'v2');
+  assert.equal(graphReducer(reverted, { type: 'revert', sourceId: 'v2' }).revertedIds, reverted.revertedIds);
+  assert.equal(graphReducer(before, { type: 'revert', sourceId: 'v3' }), before);
+  const restored = graphReducer(reverted, { type: 'restore', sourceId: 'v3' });
+  assert.deepEqual(restored.revertedIds, ['v2-1']);
+  assert.equal(restored.selectedId, 'v3');
+  assert.ok(restored.nodes.some(node => node.id === 'v3'));
+  assert.deepEqual(restoreNodeIds(reverted.nodes, reverted.revertedIds, 'v2-1'), ['v2-1']);
+  const missing = { nodes: before.nodes, selectedId: before.selectedId, activeBranchId: before.activeBranchId };
+  assert.deepEqual(parseStoredGraphState(missing)?.revertedIds, []);
+  assert.deepEqual(parseStoredGraphState({ ...reverted, revertedIds: ['v3', 'missing'] })?.revertedIds, ['v3']);
 });
 
 test('off-current-branch cards stay compact until that node is selected', () => {

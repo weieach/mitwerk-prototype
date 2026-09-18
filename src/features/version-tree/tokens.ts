@@ -17,6 +17,11 @@ export const treeTheme = {
   /** Grayed look for the horizontal connector across a selected level. */
   levelConnectorColor: '#b9bdba',
   levelConnectorOpacity: 0.4,
+  /** Reverted version titles only: gray plus strikethrough. */
+  revertedTitleColor: '#9a9a9a',
+  /** Incoming connectors to reverted stations. */
+  revertedRouteColor: '#b9bdba',
+  revertedRouteOpacity: 0.4,
   stationBorderWidth,
   stationClearance: 3,
   stationSelectedBorderWidth: 3,

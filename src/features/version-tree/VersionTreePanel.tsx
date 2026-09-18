@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, Dispatch, PointerEvent as ReactPointerEvent } from 'react';
 import { Icon } from '../../components/Icon';
-import { branchPathIds, canDeleteCurrent, canDeleteFuture, screenshotFocusId, screenshotQueryFlags, type GraphAction, type GraphState } from './model';
+import { branchPathIds, canDeleteCurrent, canDeleteFuture, isReverted, isRevertedRoute, screenshotFocusId, screenshotQueryFlags, type GraphAction, type GraphState } from './model';
 import { frameScreenshotTargets, frameVersionLevel, geometry, layoutBranchView, layoutGraph, screenshotNodeTargets } from './layout';
 import { activeRouteColor, levelColorLookup, stationLabelOffset, treeTheme, versionLabelZoomScale } from './tokens';
 import { IsometricGrid } from './IsometricGrid';
@@ -258,8 +258,10 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
     '--version-label-zoom': versionLabelZoomScale(zoom),
     '--station-offset-x': `${-geometry.cardOffsetX - treeTheme.stationRadius - 1}px`,
     '--station-offset-y': `${-geometry.cardOffsetY - treeTheme.stationRadius - 1}px`,
+    '--reverted-title-color': treeTheme.revertedTitleColor,
+    '--reverted-route-color': treeTheme.revertedRouteColor,
   } as CSSProperties}>
-    <div className="panel-header"><div className="panel-heading"><h2 id="tree-title">Version stream</h2></div><div className="panel-header-actions"><button className={`icon-button ${grid ? 'is-active' : ''}`} onClick={() => setGrid(!grid)} aria-label={grid ? 'Hide grid' : 'Show grid'} aria-pressed={grid} title={grid ? 'Hide grid' : 'Show grid'}><Icon name="grid"/>{grid ? 'Hide grid' : 'Show grid'}</button><button className="icon-button" onClick={fitAll} aria-label="Fit all versions" title="Fit all versions"><Icon name="expand"/>Fit all</button></div></div>
+    <div className="panel-header"><div className="panel-heading"><h2 id="tree-title">Version stream</h2></div><div className="panel-header-actions"><button className="icon-button" onClick={() => setGrid(!grid)} aria-label={grid ? 'Hide grid' : 'Show grid'} title={grid ? 'Hide grid' : 'Show grid'}><Icon name="grid"/>{grid ? 'Hide grid' : 'Show grid'}</button><button className="icon-button" onClick={fitAll} aria-label="Fit all versions" title="Fit all versions"><Icon name="expand"/>Fit all</button></div></div>
     <div className="canvas-shell">
       <div ref={viewport} className={`tree-viewport ${isPanning ? 'is-panning' : ''}`} tabIndex={0} aria-label="Version tree canvas. Scroll in any direction to pan. Control plus scroll to zoom. Click empty canvas to deselect." onPointerDown={startPan} onPointerMove={pan} onPointerUp={endPan} onPointerCancel={endPan} onLostPointerCapture={endPan}>
         <div className="canvas-size" style={{ width: worldWidth * zoom, height: worldHeight * zoom }}>
@@ -269,12 +271,19 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
               {/* Paint clearance first so connected segments do not erase each other's junctions. */}
               {presentation.routes.map(route => <path key={`clearance:${route.id}`} d={route.path} fill="none" stroke="var(--canvas-bg)" strokeWidth={treeTheme.routeWidth + treeTheme.routeClearance * 2} strokeLinejoin="round" strokeLinecap="round"/>)}
               {/* Routes arrive pre-sorted: later versions, Vx.1, then the checked-out branch on top. */}
-              {presentation.routes.map(route => <g key={route.id} className="route" data-route-kind={route.kind} data-active={route.active} data-spine={route.spine || undefined}
-                opacity={route.kind === 'horizontal-branch' ? treeTheme.levelConnectorOpacity : 1}>
-                <path d={route.path} fill="none" stroke={route.kind === 'horizontal-branch' ? treeTheme.levelConnectorColor : route.spine ? 'var(--active-branch-color)' : levelColor(route.branchId, layout.nodes.find(node => node.id === route.targetId)?.row ?? layout.forks?.find(fork => fork.id === route.targetId)?.row ?? 0)} strokeWidth={treeTheme.routeWidth} strokeLinejoin="round" strokeLinecap="round"/>
-                <path d={route.path} fill="none" stroke={treeTheme.routeStripeColor} strokeWidth={treeTheme.routeStripeWidth} opacity={treeTheme.routeStripeOpacity} strokeLinejoin="round" strokeLinecap="round"/>
-              </g>)}
-              {presentation.tip && <path data-branch-end={presentation.tip.id} fill={treeTheme.stationFill}
+              {presentation.routes.map(route => {
+                const routeReverted = isRevertedRoute(graph.revertedIds, route.targetId);
+                const stroke = route.kind === 'horizontal-branch' ? treeTheme.levelConnectorColor
+                  : routeReverted ? treeTheme.revertedRouteColor
+                  : route.spine ? 'var(--active-branch-color)'
+                  : levelColor(route.branchId, layout.nodes.find(node => node.id === route.targetId)?.row ?? layout.forks?.find(fork => fork.id === route.targetId)?.row ?? 0);
+                return <g key={route.id} className="route" data-route-kind={route.kind} data-active={route.active} data-spine={route.spine || undefined} data-reverted={routeReverted || undefined}
+                  opacity={route.kind === 'horizontal-branch' ? treeTheme.levelConnectorOpacity : routeReverted ? treeTheme.revertedRouteOpacity : 1}>
+                  <path d={route.path} fill="none" stroke={stroke} strokeWidth={treeTheme.routeWidth} strokeLinejoin="round" strokeLinecap="round"/>
+                  <path d={route.path} fill="none" stroke={treeTheme.routeStripeColor} strokeWidth={treeTheme.routeStripeWidth} opacity={treeTheme.routeStripeOpacity} strokeLinejoin="round" strokeLinecap="round"/>
+                </g>;
+              })}
+              {presentation.tip && <path data-branch-end={presentation.tip.id} fill={isReverted(graph.revertedIds, presentation.tip.id) ? treeTheme.revertedRouteColor : treeTheme.stationFill}
                 d={`M ${presentation.tip.x} ${presentation.tip.y + treeTheme.stationRadius + treeTheme.endpointTriangleGap}
                   l ${treeTheme.endpointTriangleWidth / 2} ${treeTheme.endpointTriangleHeight}
                   h ${-treeTheme.endpointTriangleWidth} Z`}/>}
@@ -298,6 +307,7 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
             {layout.nodes.filter(node => !presentation.hiddenNodeIds.has(node.id)).map(node => {
               const cardOffsetY = presentation.cardBelowRows.has(node.row) ? geometry.horizontalCardOffsetY : geometry.cardOffsetY;
               const onSpine = activePath.has(node.id);
+              const reverted = isReverted(graph.revertedIds, node.id);
               const color = activeRouteColor(levelColor(node.branchId, node.row), onSpine);
               const label = stationLabelOffset();
               return <div className="version-position" key={node.id} style={{
@@ -315,10 +325,12 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
                   isCurrentBranch={node.branchId === graph.activeBranchId}
                   canDeleteCurrent={canDeleteCurrent(graph.nodes, node.id)}
                   canDeleteFuture={canDeleteFuture(graph.nodes, node.id)}
-                  color={color}
+                  color={color} reverted={reverted}
                   onSelect={() => dispatch({ type: 'select', id: node.id })}
                   onBranch={() => dispatch({ type: 'add-branch', sourceId: node.id })}
                   onCommit={() => dispatch({ type: 'add-commit', sourceId: node.id })}
+                  onRevert={() => dispatch({ type: 'revert', sourceId: node.id })}
+                  onRestore={() => dispatch({ type: 'restore', sourceId: node.id })}
                   onSwitchBranch={() => dispatch({ type: 'set-active-branch', branchId: node.branchId })}
                   onDeleteCurrent={() => dispatch({ type: 'delete-current', sourceId: node.id })}
                   onDeleteFuture={() => dispatch({ type: 'delete-future', sourceId: node.id })}

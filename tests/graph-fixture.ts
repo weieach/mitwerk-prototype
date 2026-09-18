@@ -5,6 +5,7 @@ export function createTestGraphState(): GraphState {
   return {
     selectedId: 'v2',
     activeBranchId: 'main',
+    revertedIds: [],
     nodes: [
       {
         id: 'v1', label: 'V1', title: 'Finish project setup', saveType: 'auto',
