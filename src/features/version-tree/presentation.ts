@@ -1,5 +1,5 @@
-import { branchPathIds, branchTip, longestBranchId, type VersionNode } from './model.ts';
-import type { GraphLayout } from './layout';
+import { branchPathIds, branchTip, isEmptyVersion, longestBranchId, type VersionNode } from './model.ts';
+import { versionLabelParts, type GraphLayout } from './layout.ts';
 
 /** Selection follows the whole branch, not only the currently focused station. */
 export function getBranchState(nodes: VersionNode[], selectedId: string | null) {
@@ -121,9 +121,15 @@ export function presentTree(
       branchId: selection.selectedBranchId,
       path: `M ${Math.min(...xs)} ${y} L ${Math.max(...xs)} ${y}` });
   }
-  // Grayed level connector, default wiring, selected branch, then the checked-out spine on top.
-  const layer = (route: DisplayRoute) => route.spine ? 4 : route.kind === 'horizontal-branch' ? 0 : !route.active ? 1 : route.kind === 'commit' ? 2 : 3;
-  routes.sort((a, b) => layer(a) - layer(b));
+  // Level connector, then later versions, then Vx.1, then the checked-out branch on top.
+  const layer = (route: DisplayRoute) => route.spine ? 4 : route.kind === 'horizontal-branch' ? 0 : route.kind === 'commit' ? 1 : 2;
+  const versionOrder = (route: DisplayRoute) => {
+    const node = route.targetId ? byId.get(route.targetId) : undefined;
+    if (!node) return 0;
+    const [level, alt] = versionLabelParts(node.label);
+    return (isEmptyVersion(node) ? -10000 : 0) - level * 100 - alt;
+  };
+  routes.sort((a, b) => layer(a) - layer(b) || versionOrder(a) - versionOrder(b));
   const hiddenNodeIds = new Set(hiddenById.keys());
   const endpoints = getBranchEndpoints(layout.nodes)
     .flatMap(node => hiddenNodeIds.has(node.id) ? [] : [byId.get(node.id)!])

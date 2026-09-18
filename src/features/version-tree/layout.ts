@@ -1,12 +1,15 @@
-import type { VersionNode } from './model';
+import { isEmptyVersion, type VersionNode } from './model.ts';
 
 const gridUnit = 24;
 const gridRise = gridUnit / Math.sqrt(3);
+/** Side of one equilateral lattice triangle (one diagonal or vertical step). */
+const gridTriangleSide = gridRise * 2;
 
 /** Shared geometry for the board, station components, routing, and its grid. */
 export const geometry = {
   gridUnit,
   gridRise,
+  gridTriangleSide,
   columnGap: gridUnit * 16,
   rowGap: gridRise * 28,
   originX: gridUnit * 3,
@@ -27,8 +30,8 @@ export const geometry = {
   /** Longest outward diagonal; farther alternatives continue horizontally. */
   forkDepartureUnits: 8,
   forkLandingUnits: 2,
-  /** Stem distance between successive departures on one side of the count. */
-  forkDivergeRows: 4,
+  /** Stem distance between successive peels. One lattice grid: no skipped slot, no shared Y. */
+  forkDivergeRows: 2,
   /** First peel sits one visible grid below the count (two lattice rows, so it stays on the lattice). */
   forkDivergeStartRows: 2,
 } as const;
@@ -63,6 +66,18 @@ function forkApproach(x: number, y: number, targetX: number) {
 /** Stem offset below the count where the arm with this departure index peels away. */
 const departureOffset = (index: number) =>
   geometry.gridRise * (geometry.forkDivergeStartRows + index * geometry.forkDivergeRows);
+
+export const versionLabelParts = (label: string) => {
+  const match = /^V(\d+)(?:\.(\d+))?$/.exec(label);
+  return [match ? Number(match[1]) : 0, match?.[2] ? Number(match[2]) : 0] as const;
+};
+
+/** Displayed version numbers, top to bottom: V2.1 before V2.2. */
+export function compareVersionLabels(a: string, b: string) {
+  const [aLevel, aAlt] = versionLabelParts(a);
+  const [bLevel, bAlt] = versionLabelParts(b);
+  return aLevel - bLevel || aAlt - bAlt;
+}
 
 const toPath = (points: number[][]) => points.map(([x, y], index) => `${index ? 'L' : 'M'} ${x} ${y}`).join(' ');
 
@@ -199,14 +214,17 @@ export function layoutBranchView(
   }
   const rowYs = new Map<number, number>();
   const junctionYs = new Map<number, number>();
-  // Arms peel off the stem one by one per side: the farthest alternative leaves at
-  // the count, each nearer one leaves a little lower and runs parallel beneath it.
+  // Diverging arms leave top to bottom in version-number order. Empty unfinished
+  // versions are left out of that sequence and peel after the numbered ones.
   const departureIndex = (id: string, node: PositionedNode) => {
-    const x = centers.get(id)!;
-    const side = Math.sign(positions.get(node.id)! - x);
-    return families.get(id)!.filter(member => Math.sign(positions.get(member.id)! - x) === side)
-      .sort((a, b) => Math.abs(positions.get(b.id)! - x) - Math.abs(positions.get(a.id)! - x))
-      .findIndex(member => member.id === node.id);
+    const stemX = centers.get(id)!;
+    const leaves = (member: PositionedNode) => Math.abs(positions.get(member.id)! - stemX) > 0.00001;
+    if (!leaves(node)) return 0;
+    const ordered = families.get(id)!.filter(leaves).sort((a, b) => {
+      const empty = Number(isEmptyVersion(a)) - Number(isEmptyVersion(b));
+      return empty || compareVersionLabels(a.label, b.label);
+    });
+    return ordered.findIndex(member => member.id === node.id);
   };
   const armFromCount = (id: string, node: PositionedNode, countY: number) =>
     forkApproach(centers.get(id)!, countY + departureOffset(departureIndex(id, node)), positions.get(node.id)!);
@@ -249,9 +267,7 @@ export function layoutBranchView(
     for (const id of fork.nodeIds) {
       const node = positioned.get(id)!;
       const stem = parent ? [[parent.x, parent.y]] : [];
-      const points = activePath.has(id)
-        ? [...stem, [fork.x, fork.y], [node.x, node.y]]
-        : [...stem, ...armFromCount(fork.id, node, fork.y), [node.x, node.y]];
+      const points = [...stem, ...armFromCount(fork.id, node, fork.y), [node.x, node.y]];
       edges.push({ id: `arm:${id}`, sourceId: fork.id, targetId: id, branchId: node.branchId, path: toPath(points) });
     }
     // The continuing branch's trunk is painted after the arms so it owns the shared stem's color.

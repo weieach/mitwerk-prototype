@@ -283,7 +283,7 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
               <IsometricGrid width={worldWidth} height={worldHeight} visible={grid}/>
               {/* Paint clearance first so connected segments do not erase each other's junctions. */}
               {presentation.routes.map(route => <path key={`clearance:${route.id}`} d={route.path} fill="none" stroke="var(--canvas-bg)" strokeWidth={treeTheme.routeWidth + treeTheme.routeClearance * 2} strokeLinejoin="round" strokeLinecap="round"/>)}
-              {/* Routes arrive pre-sorted: default wiring, the level connector, the selected branch, then the checked-out spine on top. */}
+              {/* Routes arrive pre-sorted: later versions, Vx.1, then the checked-out branch on top. */}
               {presentation.routes.map(route => <g key={route.id} className="route" data-route-kind={route.kind} data-active={route.active} data-spine={route.spine || undefined}
                 opacity={route.kind === 'horizontal-branch' ? treeTheme.levelConnectorOpacity : 1}>
                 <path d={route.path} fill="none" stroke={route.kind === 'horizontal-branch' ? treeTheme.levelConnectorColor : route.spine ? 'var(--active-branch-color)' : levelColor(route.branchId, layout.nodes.find(node => node.id === route.targetId)?.row ?? layout.forks?.find(fork => fork.id === route.targetId)?.row ?? 0)} strokeWidth={treeTheme.routeWidth} strokeLinejoin="round" strokeLinecap="round"/>

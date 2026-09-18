@@ -158,9 +158,14 @@ export const filledVersionTemplate = {
   ] satisfies VersionFile[],
 };
 
+/** A version with no authored title, summary, files, or prompts. */
+export function isEmptyVersion(node: Pick<VersionNode, 'title' | 'summary' | 'files' | 'prompts'>) {
+  return !node.title && !node.summary && !node.files.length && !node.prompts.length;
+}
+
 export function fillPrototypeVersion(node: VersionNode): VersionNode {
   // Preserve existing authored or already populated content.
-  if (node.title || node.summary || node.files.length || node.prompts.length) return node;
+  if (!isEmptyVersion(node)) return node;
   return {
     ...node,
     title: filledVersionTemplate.title,

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { branchPathIds, createInitialGraphState, graphReducer, longestBranchId, parseStoredGraphState } from '../src/features/version-tree/model.ts';
-import { frameScreenshotTargets, frameVersionLevel, layoutGraph as logicalLayout, layoutBranchView, geometry } from '../src/features/version-tree/layout.ts';
+import { branchPathIds, createInitialGraphState, graphReducer, isEmptyVersion, longestBranchId, parseStoredGraphState } from '../src/features/version-tree/model.ts';
+import { compareVersionLabels, frameScreenshotTargets, frameVersionLevel, layoutGraph as logicalLayout, layoutBranchView, geometry } from '../src/features/version-tree/layout.ts';
 import { branchName, getBranchState, presentTree } from '../src/features/version-tree/presentation.ts';
 import { levelColorLookup, stationLabelOffset, treeTheme } from '../src/features/version-tree/tokens.ts';
 import { createTestGraphState } from './graph-fixture.ts';
@@ -25,7 +25,7 @@ test('fork routes run as full lines from the preceding station, share the stem, 
     assert.equal(parent.x, fork.x, 'Preceding version sits directly over the fork');
     assert.equal(fork.y - parent.y, geometry.gridRise * geometry.forkSharedStemRows, 'Count sits at the shared minimum distance');
     const directions = new Set();
-    const departures = { [-1]: [], [1]: [] };
+    const departures = [];
     for (const edge of layout.edges.filter(edge => edge.id.startsWith('arm:'))) {
       const points = pathPoints(edge.path);
       const node = layout.nodes.find(node => node.id === edge.targetId);
@@ -35,7 +35,11 @@ test('fork routes run as full lines from the preceding station, share the stem, 
       const departure = [...points].reverse().find(([x]) => x === fork.x);
       assert.ok(departure[1] >= fork.y + geometry.gridRise * geometry.forkDivergeStartRows - 0.00001,
         'Arm stays on the stem through the count and one grid below it before diverging');
-      departures[Math.sign(node.x - fork.x)].push({ offset: departure[1] - fork.y, distance: Math.abs(node.x - fork.x) });
+      departures.push({
+        offset: departure[1] - fork.y,
+        label: node.label,
+        empty: isEmptyVersion(node),
+      });
       for (const [x, y] of points) {
         assert.ok(y <= node.y, 'Connector never passes below its endpoint');
         const col = x / geometry.gridUnit;
@@ -59,13 +63,40 @@ test('fork routes run as full lines from the preceding station, share the stem, 
     }
     assert.ok(directions.has('vertical') && directions.has('diagonal'));
     if (count > 2) assert.ok(directions.has('horizontal'));
-    for (const side of Object.values(departures)) {
-      side.sort((a, b) => b.distance - a.distance);
-      side.forEach((arm, index) => assert.ok(
-        Math.abs(arm.offset - geometry.gridRise * (geometry.forkDivergeStartRows + index * geometry.forkDivergeRows)) < 0.00001,
-        'Arms leave the stem one by one, farthest first, at the shared divergence spacing'));
-    }
+    const ys = departures.map(arm => arm.offset);
+    assert.equal(new Set(ys).size, ys.length, 'No two connectors originate on the same horizontal');
+    departures.sort((a, b) => Number(a.empty) - Number(b.empty) || compareVersionLabels(a.label, b.label));
+    departures.forEach((arm, index) => assert.ok(
+      Math.abs(arm.offset - geometry.gridRise * (geometry.forkDivergeStartRows + index * geometry.forkDivergeRows)) < 0.00001,
+      'Arms leave top to bottom in version-number order, empty current versions last'));
   }
+});
+
+test('an empty current version is left out of the numbered peel order', () => {
+  let state = graphReducer(createInitialGraphState(), { type: 'add-commit', sourceId: 'v1' });
+  const sourceId = state.selectedId;
+  state = graphReducer(state, { type: 'add-branch', sourceId });
+  state = graphReducer(state, { type: 'add-branch', sourceId });
+  const draft = layoutGraph(state.nodes);
+  const earlierEmpty = draft.nodes.find(node => node.label.endsWith('.2'));
+  const laterEmpty = draft.nodes.find(node => node.label.endsWith('.3'));
+  assert.ok(earlierEmpty && laterEmpty && isEmptyVersion(earlierEmpty));
+  state = {
+    ...state,
+    nodes: state.nodes.map(node => node.id === laterEmpty.id
+      ? { ...node, title: 'Named alternative', summary: 'Filled' }
+      : node),
+  };
+  const layout = layoutGraph(state.nodes);
+  const fork = layout.forks[0];
+  const offset = (id: string) => {
+    const points = pathPoints(layout.edges.find(edge => edge.id === `arm:${id}`).path);
+    return [...points].reverse().find(([x]) => x === fork.x)[1] - fork.y;
+  };
+  const first = layout.nodes.find(node => node.label.endsWith('.1'));
+  assert.ok(offset(laterEmpty.id) > offset(first.id));
+  assert.ok(offset(earlierEmpty.id) > offset(laterEmpty.id),
+    'Empty current version peels after later numbered versions');
 });
 
 test('selection preserves the exact default wiring and count position beneath its overlay', () => {
@@ -91,8 +122,8 @@ test('selection preserves the exact default wiring and count position beneath it
   assert.ok(selected.routes.every(route => route.kind === 'horizontal-branch' || route.id.startsWith('trunk:') || route.id.startsWith('arm:')));
   assert.ok(!selected.routes.some(route => route.id.startsWith('selected-stem:')), 'No selected stem overlay');
   assert.ok(selected.routes.some(route => route.kind === 'horizontal-branch' && route.active));
-  assert.equal(selected.routes.at(-1).id, `arm:${state.selectedId}`, 'Selected line is painted on top of the overlap');
-  assert.equal(selected.routes.at(-1).active, true);
+  const first = selectedLayout.nodes.find(node => node.label.endsWith('.1'));
+  assert.equal(selected.routes.at(-1).id, `arm:${first.id}`, 'Vx.1 sits on top of later versions');
 });
 
 test('adding branches frames the count inside the viewport, even at minimum zoom', () => {
@@ -287,8 +318,31 @@ test('a branch continuation remains highlighted after selecting its earlier vers
   const result = present(graph);
   assert.equal(result.tip.id, tipId);
   assert.ok(result.activeNodeIds.has(tipId));
-  assert.equal(result.routes.at(-1).active, true);
+  assert.ok(result.routes.some(route => route.active && route.targetId === tipId));
   assert.equal(getBranchState(graph.nodes, tipId).selectedBranchId, 'alternative');
+});
+
+test('overlap paints later versions first, Vx.1 next, then the current branch', () => {
+  let state = graphReducer(createInitialGraphState(), { type: 'add-commit', sourceId: 'v1' });
+  const sourceId = state.selectedId;
+  for (let i = 0; i < 3; i++) state = graphReducer(state, { type: 'add-branch', sourceId });
+  const spine = branchPathIds(state.nodes, 'main');
+  const layout = layoutBranchView(logicalLayout(state.nodes), state.selectedId, spine);
+  const presented = presentTree(layout, state.selectedId, new Set(), 'main');
+  const arms = presented.routes.filter(route => route.kind === 'branch');
+  assert.ok(arms.at(-1).spine, 'Current branch is on top');
+  const numbered = arms.filter(route => !route.spine);
+  const labelOf = (route) => layout.nodes.find(node => node.id === route.targetId);
+  const expected = [...numbered].sort((a, b) => {
+    const left = labelOf(a);
+    const right = labelOf(b);
+    return Number(isEmptyVersion(right)) - Number(isEmptyVersion(left))
+      || compareVersionLabels(right.label, left.label);
+  });
+  assert.deepEqual(numbered.map(route => route.id), expected.map(route => route.id));
+  assert.equal(labelOf(numbered.at(-1)).label, [...numbered].map(labelOf)
+    .filter(node => !isEmptyVersion(node)).sort((a, b) => compareVersionLabels(a.label, b.label))[0]?.label
+    ?? labelOf(numbered.at(-1)).label, 'Earliest numbered version sits just below the current branch');
 });
 
 test('clearing selection drops branch highlight and sibling flattening', () => {
@@ -324,8 +378,9 @@ test('the checked-out branch stays on a straight vertical spine through a fork',
   assert.ok(presented.routes.some(route => route.spine && route.id === arm.id));
 });
 
-test('connector width tracks node diameter and horizontal cards clear both routing levels', () => {
-  assert.equal(treeTheme.routeWidth, treeTheme.stationInnerDiameter);
+test('connector width matches one grid triangle and cards clear both routing levels', () => {
+  assert.equal(treeTheme.routeWidth, geometry.gridTriangleSide);
+  assert.equal(treeTheme.routeWidth, geometry.gridRise * 2);
   assert.equal(treeTheme.stationInnerDiameter, treeTheme.stationDiameter - treeTheme.stationBorderWidth * 2);
   const strokeRadius = treeTheme.routeWidth / 2 + treeTheme.routeClearance;
   assert.ok(geometry.horizontalCardOffsetY > strokeRadius);

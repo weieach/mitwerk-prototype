@@ -1,4 +1,6 @@
-/** Shared system tokens. Connector width follows the station's inner circle. */
+import { geometry } from './layout.ts';
+
+/** Shared system tokens. Connector width is one isometric grid-triangle side. */
 const stationDiameter = 28;
 const stationBorderWidth = 5;
 const stationInnerDiameter = stationDiameter - stationBorderWidth * 2;
@@ -7,7 +9,7 @@ export const treeTheme = {
   stationDiameter,
   stationRadius: stationDiameter / 2,
   stationInnerDiameter,
-  routeWidth: stationInnerDiameter,
+  routeWidth: geometry.gridTriangleSide,
   routeClearance: 3,
   routeStripeWidth: 2,
   routeStripeOpacity: 0.25,

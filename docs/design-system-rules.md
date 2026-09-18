@@ -26,17 +26,17 @@ This file is reserved for project-wide design-system rules requested by the user
 - When the selected path includes a branching group, connect its same-level alternatives with one continuous horizontal line, following the supplied reference. Draw each sibling group once, rather than overlapping one line per sibling.
 - Unselected branching groups use a shared fork junction. Fork wiring follows the "Fork divergence" section below, which supersedes the earlier split/lane description.
 - Default wiring is independent of selection and stays visible beneath the selected horizontal route. Gray it using the shared inactive-route color and opacity tokens; restore branch color when selection is cleared. Do not replace, move, or hide the default routes on selection.
-- Selection brings the selected branch's own rendered line to the top of the overlap: at each fork on the selected path, the arm of the path's last alternative on that row moves to the active layer in the selected color and is painted last. Same-row ancestors (the alternative a sibling was branched from) and all other arms stay grayed beneath. Paths are unchanged; only layer and color move.
+- Selection still marks the selected branch's own line as active for color. Overlap order is version order plus the current branch on top, not selection. Same-row ancestors stay grayed. Paths are unchanged; only color and shared version-order layering move.
 - Routes approach endpoints from above and end at their centers. Do not dip below an endpoint and come back up.
 - Render selected connectors above unselected connectors.
 - Metadata must not obscure a horizontal connector. Move cards on a horizontal-connector row below the line using shared geometry, with sufficient clearance for other routes.
 
 ## Fork divergence — 2026-09-17
 
-- Draw every alternative at a fork as one full line from the preceding station to its own station, in its own branch color. The lines overlap along the shared stem; the continuing branch's trunk is painted last so the stem shows the parent's color.
+- Draw every alternative at a fork as one full line from the preceding station to its own station, in its own branch color. The lines overlap along the shared stem. Paint order matches version order: later versions sit underneath, `Vx.1` is immediately under the current (checked-out) branch, and the current branch is on top.
 - The stem is shared for a minimum distance (`forkSharedStemRows`) before the count appears at the junction. Divergence never begins above the count.
-- Arms begin peeling `forkDivergeStartRows` (one grid: two lattice rows) below the count so the first bend stays on the isometric lattice. The farthest alternative on a side leaves there; each nearer one leaves `forkDivergeRows` lower and runs parallel beneath it, so arms nest without crossing.
-- Every arm leaves on the same isometric slope. Near alternatives take one diagonal to above their station; alternatives beyond `forkDepartureUnits` cap the diagonal, run horizontally, and land on a `forkLandingUnits` diagonal. Two alternatives are the same rule with one arm per side, which yields the plain V for adjacent columns.
+- Arms peel one by one off the shared stem. No two connectors originate at the same horizontal Y, including opposite sides. Divergent points run top to bottom in displayed version-number order (`V2.1`, then `V2.2`, …). Empty unfinished versions are left out of that sequence and peel after the numbered arms. The first peel is at `forkDivergeStartRows` (one grid) below the count; each next arm leaves immediately below it at `forkDivergeRows` (one lattice grid, no skipped slot) and runs parallel beneath the previous. A station that stays on the stem does not consume a peel slot.
+- Every arm leaves on the same isometric slope. Near alternatives take one diagonal to above their station; alternatives beyond `forkDepartureUnits` cap the diagonal, run horizontally, and land on a `forkLandingUnits` diagonal.
 - Row spacing is derived from the longest arm plus `forkTerminalRows`, so each arm still arrives vertically from above. Collapsed levels route from the count using the same approach geometry.
 - These are shared tokens in `geometry`; do not special-case alternative counts, node IDs, or screenshots.
 
@@ -46,7 +46,7 @@ This file is reserved for project-wide design-system rules requested by the user
 - End connectors at station centers with rounded caps. Never append a connector tail below a leaf, including a one-node tree.
 - When the graph has more than one node, show one small black, upward-pointing triangle below the last commit on the selected branch. It is separated from the station by a gap and has no connecting segment.
 - Hide the triangle for a one-node tree.
-- Connector width equals the station's **inner circle** diameter, derived from the outer diameter minus twice the ring thickness. This supersedes the earlier outer-diameter rule.
+- Connector width equals the side of one isometric grid triangle (`gridTriangleSide` = `2 * gridRise`). This supersedes the inner-circle diameter rule. Station size stays on its own tokens.
 - A canvas control to the right of zoom lists every branch endpoint (the last commit on each `branchId`), left to right. Arrow buttons and the middle button all select that endpoint and zoom to 100% centered on that station. The middle button reads `Endpoint k/N` with no outside caption. Derive the list from graph structure; skip endpoints hidden by collapse.
 
 ## Node and connector appearance — 2026-09-17 revision
@@ -77,7 +77,7 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Implementation locations
 
-- `src/features/version-tree/tokens.ts`: station diameters, derived connector width, ring and stripe styling, fills, opacity, triangle dimensions/gap, count-hint triangle size/gap/fade, version-label size/gap/`stationLabelOffset`, `activeBranchColor`, and per-level unique branch colors.
+- `src/features/version-tree/tokens.ts`: station diameters, connector width (`gridTriangleSide`), ring and stripe styling, fills, opacity, triangle dimensions/gap, count-hint triangle size/gap/fade, version-label size/gap/`stationLabelOffset`, `activeBranchColor`, and per-level unique branch colors.
 - `src/features/version-tree/layout.ts`: lattice geometry, card offsets, row spacing, inactive-route clearance, origin stations for root-level forks, and fork divergence tokens (`forkSharedStemRows`, `originStemRows`, `forkDivergeStartRows`, `forkDivergeRows`, `forkDepartureUnits`, `forkLandingUnits`, `forkTerminalRows`) with `forkApproach`.
 - `src/features/version-tree/presentation.ts`: selected branch, full selected path, terminal detection, sibling connectors, branch endpoint, the ordered endpoint list for traversal, and the checked-out spine.
 - `src/features/version-tree/model.ts`: `activeBranchId`, `longestBranchId`, current-node and future-node deletion, and the path from root to that branch's last commit.
