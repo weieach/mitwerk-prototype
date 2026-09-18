@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-export type IconName = 'branch' | 'commit' | 'plus' | 'minus' | 'expand' | 'grid' | 'arrow' | 'chevron' | 'caret' | 'code' | 'file' | 'spark' | 'play' | 'pause' | 'close' | 'locate' | 'check' | 'layers' | 'more';
+export type IconName = 'branch' | 'commit' | 'plus' | 'minus' | 'expand' | 'grid' | 'arrow' | 'chevron' | 'caret' | 'code' | 'file' | 'image' | 'spark' | 'play' | 'pause' | 'close' | 'locate' | 'check' | 'layers' | 'more';
 
 const paths: Record<IconName, React.ReactNode> = {
   branch: <><circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="6" r="2"/><path d="M6 7v10m0-5h5a7 7 0 0 0 7-4"/></>,
@@ -14,6 +14,7 @@ const paths: Record<IconName, React.ReactNode> = {
   caret: <path d="m7 9 5 5 5-5"/>,
   code: <path d="m7 7-5 5 5 5m10-10 5 5-5 5M14 4l-4 16"/>,
   file: <><path d="M14 3H5v18h14V8Zm0 0v5h5M8 12h8m-8 4h5"/></>,
+  image: <><rect x="4" y="5" width="16" height="14" rx="1.5"/><circle cx="9" cy="10" r="1.6"/><path d="m5 17 4.5-4.5 2.5 2.5L16 11l4 4"/></>,
   spark: <path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"/>,
   play: <path d="m8 4 12 8-12 8Z"/>,
   pause: <><path d="M8 4v16M16 4v16"/></>,

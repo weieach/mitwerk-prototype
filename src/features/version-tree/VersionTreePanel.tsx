@@ -91,9 +91,9 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
       if (!initialFit.current && width > 0) {
         initialFit.current = true;
         if (screenshotCapture) {
-          const targets = screenshotNodeTargets(layout, presentation.hiddenNodeIds);
+          const targets = screenshotNodeTargets(layout, presentation.hiddenNodeIds, activePath, graph.selectedId);
           if (targets.length) {
-            const frame = frameScreenshotTargets(targets, width, height, treeTheme.minZoom);
+            const frame = frameScreenshotTargets(targets, width, height, treeTheme.minZoom, treeTheme.screenshotZoom);
             zoomRef.current = frame.zoom;
             setZoom(frame.zoom);
             requestAnimationFrame(() => {
@@ -104,14 +104,14 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
             requestAnimationFrame(() => requestAnimationFrame(markScreenshotReady));
           }
         } else {
-          const next = Math.max(0.55, Math.min(1, (width - 24) / layout.width));
+          const next = Math.max(treeTheme.screenshotZoom, Math.min(1, (width - 24) / layout.width));
           setZoom(next); zoomRef.current = next;
         }
       }
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, [layout, screenshotCapture, presentation.hiddenNodeIds]);
+  }, [layout, screenshotCapture, presentation.hiddenNodeIds, activePath, graph.selectedId]);
 
   useEffect(() => {
     if (!screenshotCapture) return;
@@ -259,7 +259,7 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
     '--station-offset-x': `${-geometry.cardOffsetX - treeTheme.stationRadius - 1}px`,
     '--station-offset-y': `${-geometry.cardOffsetY - treeTheme.stationRadius - 1}px`,
   } as CSSProperties}>
-    <div className="panel-header"><div className="panel-heading"><h2 id="tree-title">Version stream</h2></div><div className="panel-header-actions"><button className={`icon-button ${grid ? 'is-active' : ''}`} onClick={() => setGrid(!grid)} aria-label="Toggle isometric grid" aria-pressed={grid} title="Toggle grid"><Icon name="grid"/></button><button className="icon-button" onClick={fitAll} aria-label="Fit all versions" title="Fit all versions"><Icon name="expand"/></button></div></div>
+    <div className="panel-header"><div className="panel-heading"><h2 id="tree-title">Version stream</h2></div><div className="panel-header-actions"><button className={`icon-button ${grid ? 'is-active' : ''}`} onClick={() => setGrid(!grid)} aria-label={grid ? 'Hide grid' : 'Show grid'} aria-pressed={grid} title={grid ? 'Hide grid' : 'Show grid'}><Icon name="grid"/>{grid ? 'Hide grid' : 'Show grid'}</button><button className="icon-button" onClick={fitAll} aria-label="Fit all versions" title="Fit all versions"><Icon name="expand"/>Fit all</button></div></div>
     <div className="canvas-shell">
       <div ref={viewport} className={`tree-viewport ${isPanning ? 'is-panning' : ''}`} tabIndex={0} aria-label="Version tree canvas. Scroll in any direction to pan. Control plus scroll to zoom. Click empty canvas to deselect." onPointerDown={startPan} onPointerMove={pan} onPointerUp={endPan} onPointerCancel={endPan} onLostPointerCapture={endPan}>
         <div className="canvas-size" style={{ width: worldWidth * zoom, height: worldHeight * zoom }}>

@@ -7,6 +7,14 @@ export type VersionFile = {
   removed: number;
 };
 
+const pictureExtensions = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'avif']);
+
+/** Planning pictures and other image references share this check. */
+export function isPictureFile(name: string) {
+  const ext = name.split('.').pop()?.toLowerCase();
+  return Boolean(ext && pictureExtensions.has(ext));
+}
+
 export type VersionNode = {
   id: string;
   label: string;
@@ -77,6 +85,11 @@ function afterRemoval(state: GraphState, nodes: VersionNode[], preferredId?: str
   const selectedId = [preferredId, state.selectedId].find(id => id && nodes.some(node => node.id === id))
     ?? branchTip(nodes, activeBranchId)?.id ?? nodes[0].id;
   return { nodes, selectedId, activeBranchId };
+}
+
+/** Off-current-branch cards stay abbreviated until that node is selected. */
+export function isCompactVersionCard(onCurrentBranch: boolean, selected: boolean) {
+  return !onCurrentBranch && !selected;
 }
 
 /** Station the progress screenshot should frame: selection, else the active tip. */
@@ -176,7 +189,7 @@ export const filledVersionTemplate = {
   ],
   files: [
     { name: 'versiontree-plan-1.png', kind: 'reference', added: 0, removed: 0 },
-    { name: 'versiontree-plan-2.png', kind: 'reference', added: 0, removed: 0 },
+    { name: 'DESIGN.md', kind: 'reference', added: 0, removed: 0 },
     { name: 'VersionTreePanel.tsx', kind: 'code', added: 84, removed: 12 },
   ] satisfies VersionFile[],
 };

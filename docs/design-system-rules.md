@@ -57,7 +57,8 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Prototype node content — 2026-09-17
 
-- Start with one filled-in example using the reusable `filledVersionTemplate` in `model.ts`, titled "Implemented landing page layout", including two planning-reference file entries, prompts, summary, and sample code-change counts.
+- Start with one filled-in example using the reusable `filledVersionTemplate` in `model.ts`, titled "Implemented landing page layout", including two planning-reference file entries (`versiontree-plan-1.png` and `DESIGN.md`), prompts, summary, and sample code-change counts.
+- File chips share the remaining card width and ellipsize their names. Derive the chip icon from file kind and name: pictures (`isPictureFile`) use the picture icon, skills use spark, code uses the code icon, and other references use the file icon. Do not special-case a node ID.
 - Adding a branch or commit fills the source node with that template if its content is empty. Newly added nodes remain empty until extended themselves.
 - Preserve existing populated content, version identity, and graph relationships. Clone template arrays for each node; never use node-specific content exceptions.
 - Reference entries and change counts are prototype metadata, not uploaded files or actual repository diffs. Station fill continues to depend on descendants, independently of whether metadata is populated.
@@ -71,14 +72,25 @@ This file is reserved for project-wide design-system rules requested by the user
 - Keep that junction fixed when selection changes; the selected horizontal route is drawn as an additional path from the junction to the alternatives' row.
 - Hover or keyboard focus on a count fades in a small downward caret to its right, using shared count-hint tokens. Counter-scale the caret with the same zoom compensation as version numbers so it stays readable at low zoom. The caret is decorative.
 - The count toggles the level's stations and cards. Preserve data and selection; leave later levels visible and connect them through the collapsed count. Do not hide the station on the current (checked-out) branch. Expanding restores the level. Counts remain available in both states and support keyboard activation.
-- Progress screenshots stay in the idle diagram state. Turn on hover, focus, or an open action menu only when that component changed in the prompt (`interact=count` or `interact=menu` from `screenshotInteractFromPrompt`). Frame most stations and cards (`screenshotNodeTargets`) so the capture scale includes the tree, not only one card. Do not depend on a real pointer hover in headless capture.
+- Progress screenshots stay in the idle diagram state. Turn on hover, focus, or an open action menu only when that component changed in the prompt (`interact=count` or `interact=menu` from `screenshotInteractFromPrompt`). The default full-diagram capture uses `screenshotZoom` (55%) and centers the tree (`frameScreenshotTargets`); do not auto-fit the scale to the viewport. Frame most stations and cards (`screenshotNodeTargets`) so the capture includes the tree, not only one card. Do not depend on a real pointer hover in headless capture.
 - Use shared count diameter/font tokens. Keep graph relationships, node population, and selected-branch logic independent of collapse state.
 - When adding to a level with a count, automatically frame the level and its count together rather than scrolling only to the newest node. At the minimum zoom limit, keep the count visible and allow horizontal scrolling to reach farther alternatives.
 
+## Canvas inset and header actions — 2026-09-17
+
+- Keep shared left inset on the canvas (`originX`, `padding`, `stationLabelReserve`) so the map — including version labels — is not flush with the canvas’s left edge. Frame that label reserve with stations and cards; do not special-case a node or screenshot.
+- Header actions next to the panel title show a short label beside the icon. The grid control reads Hide grid when the grid is visible and Show grid when it is hidden. The fit control reads Fit all.
+
+## Compact cards on other branches — 2026-09-17
+
+- Nodes that are not on the current (checked-out) branch use an abbreviated info card: save label, title, and file chips only. Hide the overflow menu and everything below the chips (change stats, details, line counts, add branch/commit).
+- Selecting that node — by its station, card, or any other select action — shows the full card. Deselecting or leaving the current branch returns it to the abbreviated form. Current-branch cards stay full.
+- Derive compact vs full from the checked-out path and selection (`isCompactVersionCard`). Use `compactCardHeight` when framing abbreviated cards. Do not special-case node IDs.
+
 ## Implementation locations
 
-- `src/features/version-tree/tokens.ts`: station diameters, connector width (`gridTriangleSide`), ring and stripe styling, fills, opacity, triangle dimensions/gap, count-hint caret size/gap/fade, version-label size/weight/color/zoom compensation/`stationLabelOffset`, `activeBranchColor`, and per-level unique branch colors.
-- `src/features/version-tree/layout.ts`: lattice geometry, card offsets, row spacing, inactive-route clearance, origin stations for root-level forks, fork divergence tokens (`forkSharedStemRows`, `originStemRows`, `forkDivergeStartRows`, `forkDivergeRows`, `forkDepartureUnits`, `forkLandingUnits`, `forkTerminalRows`) with `forkApproach`, version-label formatting, and `screenshotNodeTargets` / `frameScreenshotTargets`.
+- `src/features/version-tree/tokens.ts`: station diameters, connector width (`gridTriangleSide`), ring and stripe styling, fills, opacity, triangle dimensions/gap, count-hint caret size/gap/fade, version-label size/weight/color/zoom compensation/`stationLabelOffset`, `activeBranchColor`, per-level unique branch colors, and the default full-diagram capture zoom (`screenshotZoom`).
+- `src/features/version-tree/layout.ts`: lattice geometry, card offsets, row spacing, inactive-route clearance, canvas left inset (`originX`, `padding`, `stationLabelReserve`), compact vs full card heights, origin stations for root-level forks, fork divergence tokens (`forkSharedStemRows`, `originStemRows`, `forkDivergeStartRows`, `forkDivergeRows`, `forkDepartureUnits`, `forkLandingUnits`, `forkTerminalRows`) with `forkApproach`, version-label formatting, and `screenshotNodeTargets` / `frameScreenshotTargets`.
 - `src/features/version-tree/presentation.ts`: selected branch, full selected path, terminal detection, sibling connectors, branch endpoint, the ordered endpoint list for traversal, and the checked-out spine.
-- `src/features/version-tree/model.ts`: `activeBranchId`, `longestBranchId`, current-node and future-node deletion, the path from root to that branch's last commit, and screenshot interact flags derived from the prompt.
+- `src/features/version-tree/model.ts`: `activeBranchId`, `longestBranchId`, current-node and future-node deletion, the path from root to that branch's last commit, compact-card state (`isCompactVersionCard`), picture-file detection (`isPictureFile`), the reusable filled-version template, and screenshot interact flags derived from the prompt.
 - `VersionTreePanel.tsx` and `VersionCard.tsx`: render these shared decisions; do not independently infer branch or terminal state.

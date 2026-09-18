@@ -151,13 +151,19 @@ test('progress screenshots frame most stations and cards', () => {
   const sourceId = state.selectedId;
   for (let i = 0; i < 3; i++) state = graphReducer(state, { type: 'add-branch', sourceId });
   const layout = layoutGraph(state.nodes);
-  const frame = frameScreenshotTargets(screenshotNodeTargets(layout), 720, 640, treeTheme.minZoom);
+  const frame = frameScreenshotTargets(screenshotNodeTargets(layout), 720, 640, treeTheme.minZoom, treeTheme.screenshotZoom);
   const worldLeft = frame.left / frame.zoom;
   const worldRight = (frame.left + 720) / frame.zoom;
   const xs = layout.nodes.map(node => node.x);
-  assert.ok(frame.zoom <= 1);
+  assert.equal(frame.zoom, treeTheme.screenshotZoom);
   assert.ok(worldLeft <= Math.min(...xs) + geometry.padding);
   assert.ok(worldRight >= Math.max(...xs) - geometry.padding);
+  const path = new Set([layout.nodes[0].id]);
+  const compact = screenshotNodeTargets(layout, new Set(), path, layout.nodes[0].id);
+  const full = screenshotNodeTargets(layout);
+  const offPath = compact.find((_, index) => index > 0 && index < layout.nodes.length);
+  const same = full.find((_, index) => index > 0 && index < layout.nodes.length);
+  assert.ok(offPath && same && offPath.height < same.height);
 });
 
 test('upper-level forks stay compact when later levels fan out', () => {

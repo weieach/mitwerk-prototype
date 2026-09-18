@@ -45,6 +45,8 @@ export const treeTheme = {
   minZoom: 0.25,
   maxZoom: 1.5,
   zoomStep: 0.1,
+  /** Default full-diagram progress capture. */
+  screenshotZoom: 0.55,
 };
 
 export function branchColor(branchId: string, branchIds: string[]) {

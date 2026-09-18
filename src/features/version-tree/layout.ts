@@ -12,14 +12,18 @@ export const geometry = {
   gridTriangleSide,
   columnGap: gridUnit * 16,
   rowGap: gridRise * 28,
-  originX: gridUnit * 3,
+  originX: gridUnit * 13,
   originY: gridRise * 7,
   cardOffsetX: 34,
   cardOffsetY: -20,
   horizontalCardOffsetY: 32,
   cardWidth: 264,
   cardHeight: 244,
-  padding: gridUnit * 3,
+  /** Abbreviated off-current-branch card: heading and file chips only. */
+  compactCardHeight: 132,
+  padding: gridUnit * 4,
+  /** World space reserved left of a station for its version label. */
+  stationLabelReserve: 56,
   branchRouteRows: 23,
   branchCountOffsetY: gridRise * 4,
   /** Minimum distance every alternative shares on the stem before the count and divergence. */
@@ -296,27 +300,39 @@ export function layoutBranchView(
 }
 
 /** World boxes that cover stations, cards, counts, and origins for a wide screenshot. */
-export function screenshotNodeTargets(layout: GraphLayout, hiddenNodeIds: ReadonlySet<string> = new Set()) {
+export function screenshotNodeTargets(
+  layout: GraphLayout,
+  hiddenNodeIds: ReadonlySet<string> = new Set(),
+  currentBranchIds: ReadonlySet<string> = new Set(),
+  selectedId: string | null = null,
+) {
   const cardExtent = Math.max(Math.abs(geometry.cardOffsetY), geometry.horizontalCardOffsetY);
   const visible = layout.nodes.filter(node => !hiddenNodeIds.has(node.id));
+  const nodeWidth = geometry.stationLabelReserve + geometry.cardOffsetX + geometry.cardWidth;
   return [
-    ...visible.map(node => ({
-      x: node.x + geometry.cardOffsetX / 2 + geometry.cardWidth / 2,
-      y: node.y + cardExtent / 2 + geometry.cardHeight / 2,
-      width: geometry.cardOffsetX + geometry.cardWidth,
-      height: cardExtent + geometry.cardHeight,
-    })),
+    ...visible.map(node => {
+      const cardHeight = !currentBranchIds.size || currentBranchIds.has(node.id) || node.id === selectedId
+        ? geometry.cardHeight
+        : geometry.compactCardHeight;
+      return {
+        x: node.x + (geometry.cardOffsetX + geometry.cardWidth - geometry.stationLabelReserve) / 2,
+        y: node.y + cardExtent / 2 + cardHeight / 2,
+        width: nodeWidth,
+        height: cardExtent + cardHeight,
+      };
+    }),
     ...(layout.origins ?? []).map(origin => ({ x: origin.x, y: origin.y, width: geometry.gridUnit, height: geometry.gridUnit })),
     ...(layout.forks ?? []).map(fork => ({ x: fork.x, y: fork.y, width: geometry.gridUnit * 2, height: geometry.gridUnit * 2 })),
   ];
 }
 
-/** Fit a set of world-space boxes into the viewport for a progress screenshot. */
+/** Center a set of world-space boxes in the viewport at the default capture scale. */
 export function frameScreenshotTargets(
   targets: { x: number; y: number; width?: number; height?: number }[],
   viewportWidth: number,
   viewportHeight: number,
   minZoom: number,
+  captureZoom: number,
 ) {
   const boxes = targets.map(target => {
     const width = target.width ?? 0;
@@ -333,7 +349,7 @@ export function frameScreenshotTargets(
   const right = Math.max(...boxes.map(box => box.right)) + pad;
   const top = Math.min(...boxes.map(box => box.top)) - pad;
   const bottom = Math.max(...boxes.map(box => box.bottom)) + pad;
-  const zoom = Math.max(minZoom, Math.min(1, viewportWidth / Math.max(1, right - left), viewportHeight / Math.max(1, bottom - top)));
+  const zoom = Math.max(minZoom, captureZoom);
   return {
     zoom,
     left: Math.max(0, ((left + right) / 2) * zoom - viewportWidth / 2),

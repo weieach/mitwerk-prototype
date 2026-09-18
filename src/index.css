@@ -49,7 +49,7 @@ button svg { flex: 0 0 auto; }
 .panel-heading { display: flex; align-items: center; gap: 11px; }
 .panel-header h2 { font-size: 12px; font-weight: 700; margin: 0; letter-spacing: .05px; }
 .panel-header-actions { display: flex; align-items: center; gap: 8px; }
-.icon-button { width: 29px; height: 29px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); }
+.icon-button { height: 29px; padding: 0 8px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font-size: 11px; white-space: nowrap; }
 .icon-button:hover, .icon-button.is-active { background: var(--fill); color: var(--ink); }
 .canvas-shell { flex: 1; position: relative; min-height: 0; overflow: hidden; background: none; }
 .mono { font-family: var(--mono); font-size: 8px; letter-spacing: .6px; }
@@ -67,6 +67,7 @@ button svg { flex: 0 0 auto; }
 html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .version-position { position: absolute; width: var(--node-card-width); }
 .version-card { position: relative; width: var(--node-card-width); padding: 11px 13px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); cursor: default; }
+.version-card.is-compact { cursor: pointer; }
 .version-card.is-selected { background: var(--paper); border-color: var(--line-strong); }
 .version-card:hover { border-color: #b5b5b5; }
 .station { width: var(--station-size); height: var(--station-size); border-radius: 50%; display: grid; place-items: center; padding: 0; position: absolute; left: var(--station-offset-x); top: var(--station-offset-y); border: var(--station-border-width) solid var(--route-color); background: var(--route-color); box-shadow: 0 0 0 var(--station-clearance) var(--canvas-bg); }
@@ -86,14 +87,16 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .version-card.is-active-branch { border-color: var(--route-color); }
 .station-label { position: absolute; z-index: 4; transform: translate(-100%, -50%) scale(var(--version-label-zoom, 1)); transform-origin: right center; font: var(--version-label-weight, 700) var(--version-label-size) var(--sans); color: var(--version-label-color, #000); pointer-events: none; white-space: nowrap; }
 .version-heading { padding: 0 22px 0 0; width: 100%; display: block; text-align: left; }
+.version-card.is-compact .version-heading { padding-right: 0; }
 .version-position:has(.card-menu-panel) { z-index: 9 !important; }
 .version-meta { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
 .save-label { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 10px; }
 .version-title { font-size: 17px; font-weight: 700; letter-spacing: -.4px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .version-title.untitled { color: var(--faint); font-weight: 400; }
-.reference-files { margin-top: 12px; min-height: 23px; display: flex; align-items: center; gap: 4px; overflow: hidden; }
-.file-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 5px; border: 1px solid var(--line); background: var(--fill); border-radius: 3px; color: var(--muted); font: 9px var(--mono); white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.reference-files { margin-top: 12px; min-height: 23px; display: flex; align-items: center; gap: 4px; overflow: hidden; width: 100%; }
+.file-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 5px; border: 1px solid var(--line); background: var(--fill); border-radius: 3px; color: var(--muted); font: 9px var(--mono); flex: 1 1 0; min-width: 0; overflow: hidden; }
 .file-chip svg { flex-shrink: 0; }
+.file-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .empty-reference { color: var(--faint); font-size: 10px; }
 .version-stats { display: flex; align-items: center; gap: 9px; margin-top: 11px; color: var(--muted); font-size: 11px; }
 .version-stats>span:first-child, .version-stats button { display: inline-flex; align-items: center; gap: 5px; }

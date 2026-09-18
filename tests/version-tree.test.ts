@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canDeleteCurrent, canDeleteFuture, createInitialGraphState, graphReducer, graphStorageKey, loadGraphState, parseStoredGraphState, saveGraphState, screenshotFocusId, screenshotInteractFromPrompt, screenshotInteractQuery, screenshotQueryFlags } from '../src/features/version-tree/model.ts';
+import { canDeleteCurrent, canDeleteFuture, createInitialGraphState, filledVersionTemplate, graphReducer, graphStorageKey, isCompactVersionCard, isPictureFile, loadGraphState, parseStoredGraphState, saveGraphState, screenshotFocusId, screenshotInteractFromPrompt, screenshotInteractQuery, screenshotQueryFlags } from '../src/features/version-tree/model.ts';
 import { createTestGraphState } from './graph-fixture.ts';
 import { geometry, layoutGraph } from '../src/features/version-tree/layout.ts';
 import { treeTheme } from '../src/features/version-tree/tokens.ts';
@@ -19,6 +19,10 @@ const routePoints = path => {
 test('prototype starts with two references and fills only the extended empty node', () => {
   const initial = createInitialGraphState();
   assert.equal(initial.nodes[0].files.filter(file => file.kind === 'reference').length, 2);
+  assert.deepEqual(filledVersionTemplate.files.filter(file => file.kind === 'reference').map(file => file.name),
+    ['versiontree-plan-1.png', 'DESIGN.md']);
+  assert.equal(isPictureFile('versiontree-plan-1.png'), true);
+  assert.equal(isPictureFile('DESIGN.md'), false);
   for (const type of ['add-branch', 'add-commit']) {
     const first = graphReducer(initial, { type, sourceId: initial.selectedId });
     const empty = getNode(first, first.selectedId);
@@ -268,6 +272,13 @@ test('graph state is restored from storage and ignores corrupt snapshots', () =>
   assert.equal(graphReducer(initial, { type: 'delete-current', sourceId: 'v1' }), initial);
   const missingParent = { nodes: grown.nodes.map(node => node.id === grown.selectedId ? { ...node, parentId: 'missing' } : node), selectedId: grown.selectedId };
   assert.equal(parseStoredGraphState(missingParent), null);
+});
+
+test('off-current-branch cards stay compact until that node is selected', () => {
+  assert.equal(isCompactVersionCard(true, false), false);
+  assert.equal(isCompactVersionCard(true, true), false);
+  assert.equal(isCompactVersionCard(false, true), false);
+  assert.equal(isCompactVersionCard(false, false), true);
 });
 
 test('progress screenshots frame the selected station, else the active tip', () => {
