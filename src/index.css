@@ -60,10 +60,11 @@ button svg { flex: 0 0 auto; }
 .route-layer { position: absolute; inset: 0; pointer-events: none; }
 .route { transition: opacity .2s; }
 .branch-count { position: absolute; z-index: 4; transform: translate(-50%, -50%); width: var(--branch-count-size); height: var(--branch-count-size); padding: 0; border-radius: 50%; border: 1px solid var(--station-fill); background: var(--station-open-fill); color: var(--station-fill); font: 500 var(--branch-count-font-size) var(--sans); display: grid; place-items: center; cursor: pointer; }
-.branch-count-hint { position: absolute; left: calc(100% + var(--count-hint-gap)); top: 50%; width: 0; height: 0; transform: translateY(-50%); border-style: solid; border-width: calc(var(--count-hint-height) / 2) 0 calc(var(--count-hint-height) / 2) var(--count-hint-width); border-color: transparent transparent transparent var(--station-fill); opacity: 0; pointer-events: none; transition: opacity var(--count-hint-fade) ease; }
+.branch-count-hint { position: absolute; left: calc(100% + var(--count-hint-gap)); top: 50%; width: var(--count-hint-width); height: var(--count-hint-height); transform: translateY(-50%) scale(var(--version-label-zoom, 1)); transform-origin: left center; display: grid; place-items: center; color: var(--station-fill); opacity: 0; pointer-events: none; transition: opacity var(--count-hint-fade) ease; }
+.branch-count-hint svg { display: block; stroke-width: 2.2; }
 .branch-count:hover .branch-count-hint,
 .branch-count:focus-visible .branch-count-hint,
-html[data-screenshot-interact] .branch-count-hint { opacity: 1; }
+html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .version-position { position: absolute; width: var(--node-card-width); }
 .version-card { position: relative; width: var(--node-card-width); padding: 11px 13px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); cursor: default; }
 .version-card.is-selected { background: var(--paper); border-color: var(--line-strong); }
@@ -83,7 +84,7 @@ html[data-screenshot-interact] .branch-count-hint { opacity: 1; }
 .version-card.is-selected .station { border-color: var(--route-color); background: var(--route-color); box-shadow: 0 0 0 var(--station-selected-ring) var(--station-fill), 0 0 0 calc(var(--station-selected-ring) + var(--station-clearance)) var(--canvas-bg); }
 .version-card.is-selected .station span { background: var(--station-open-fill); box-shadow: none; }
 .version-card.is-active-branch { border-color: var(--route-color); }
-.station-label { position: absolute; z-index: 4; transform: translate(-100%, -50%); font: 700 var(--version-label-size) var(--sans); color: var(--route-color); pointer-events: none; white-space: nowrap; }
+.station-label { position: absolute; z-index: 4; transform: translate(-100%, -50%) scale(var(--version-label-zoom, 1)); transform-origin: right center; font: var(--version-label-weight, 700) var(--version-label-size) var(--sans); color: var(--version-label-color, #000); pointer-events: none; white-space: nowrap; }
 .version-heading { padding: 0 22px 0 0; width: 100%; display: block; text-align: left; }
 .version-position:has(.card-menu-panel) { z-index: 9 !important; }
 .version-meta { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }

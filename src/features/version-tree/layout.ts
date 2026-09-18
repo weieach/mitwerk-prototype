@@ -68,9 +68,13 @@ const departureOffset = (index: number) =>
   geometry.gridRise * (geometry.forkDivergeStartRows + index * geometry.forkDivergeRows);
 
 export const versionLabelParts = (label: string) => {
-  const match = /^V(\d+)(?:\.(\d+))?$/.exec(label);
+  const match = /^V ?(\d+)(?:\.(\d+))?$/.exec(label);
   return [match ? Number(match[1]) : 0, match?.[2] ? Number(match[2]) : 0] as const;
 };
+
+export function formatVersionLabel(level: number, alternative?: number) {
+  return alternative ? `V${level}.${alternative}` : `V${level}`;
+}
 
 /** Displayed version numbers, top to bottom: V2.1 before V2.2. */
 export function compareVersionLabels(a: string, b: string) {
@@ -243,7 +247,7 @@ export function layoutBranchView(
   const positioned = new Map(nodes.map(node => [node.id, node]));
   const forks: Fork[] = [...families].filter(([, members]) => members.length > 1).map(([id, members]) => {
     const horizontal = members.some(node => selectedAncestors.has(node.id));
-    return { id, row: members[0].row, label: `V${members[0].row + 1}`, nodeIds: members.map(node => node.id),
+    return { id, row: members[0].row, label: formatVersionLabel(members[0].row + 1), nodeIds: members.map(node => node.id),
       parentId: byId.get(id)!.parentId, branchId: byId.get(id)!.branchId, horizontal,
       x: centers.get(id)!, y: junctionYs.get(members[0].row)! };
   });
@@ -291,7 +295,22 @@ export function layoutBranchView(
     height: Math.max(...nodes.map(node => node.y)) + geometry.horizontalCardOffsetY + geometry.cardHeight + geometry.padding };
 }
 
-/** Keep a level's collapse control visible when navigating to a new alternative. */
+/** World boxes that cover stations, cards, counts, and origins for a wide screenshot. */
+export function screenshotNodeTargets(layout: GraphLayout, hiddenNodeIds: ReadonlySet<string> = new Set()) {
+  const cardExtent = Math.max(Math.abs(geometry.cardOffsetY), geometry.horizontalCardOffsetY);
+  const visible = layout.nodes.filter(node => !hiddenNodeIds.has(node.id));
+  return [
+    ...visible.map(node => ({
+      x: node.x + geometry.cardOffsetX / 2 + geometry.cardWidth / 2,
+      y: node.y + cardExtent / 2 + geometry.cardHeight / 2,
+      width: geometry.cardOffsetX + geometry.cardWidth,
+      height: cardExtent + geometry.cardHeight,
+    })),
+    ...(layout.origins ?? []).map(origin => ({ x: origin.x, y: origin.y, width: geometry.gridUnit, height: geometry.gridUnit })),
+    ...(layout.forks ?? []).map(fork => ({ x: fork.x, y: fork.y, width: geometry.gridUnit * 2, height: geometry.gridUnit * 2 })),
+  ];
+}
+
 /** Fit a set of world-space boxes into the viewport for a progress screenshot. */
 export function frameScreenshotTargets(
   targets: { x: number; y: number; width?: number; height?: number }[],
@@ -415,12 +434,14 @@ export function layoutGraph(nodes: VersionNode[]): GraphLayout {
   for (const node of positioned) rows.set(node.row, [...(rows.get(node.row) ?? []), node]);
   const levels = [...rows].map(([row, members]) => {
     members.sort((a, b) => a.column - b.column);
-    const label = `V${row + 1}`;
-    members.forEach((node, index) => { node.label = members.length > 1 ? `${label}.${index + 1}` : label; });
+    const levelNumber = row + 1;
+    members.forEach((node, index) => {
+      node.label = members.length > 1 ? formatVersionLabel(levelNumber, index + 1) : formatVersionLabel(levelNumber);
+    });
     const first = members[0];
     const previous = members.map(node => node.parentId ? positionedById.get(node.parentId) : undefined)
       .find(node => node && node.row < row);
-    return { id: first.id, row, label, nodeIds: members.map(node => node.id),
+    return { id: first.id, row, label: formatVersionLabel(levelNumber), nodeIds: members.map(node => node.id),
       x: previous?.x ?? first.x, y: first.y - geometry.branchCountOffsetY };
   });
   const edges: GraphEdge[] = positioned.flatMap(target => {

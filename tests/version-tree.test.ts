@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canDeleteCurrent, canDeleteFuture, createInitialGraphState, graphReducer, graphStorageKey, loadGraphState, parseStoredGraphState, saveGraphState, screenshotFocusId } from '../src/features/version-tree/model.ts';
+import { canDeleteCurrent, canDeleteFuture, createInitialGraphState, graphReducer, graphStorageKey, loadGraphState, parseStoredGraphState, saveGraphState, screenshotFocusId, screenshotInteractFromPrompt, screenshotInteractQuery, screenshotQueryFlags } from '../src/features/version-tree/model.ts';
 import { createTestGraphState } from './graph-fixture.ts';
 import { geometry, layoutGraph } from '../src/features/version-tree/layout.ts';
 import { treeTheme } from '../src/features/version-tree/tokens.ts';
@@ -278,6 +278,15 @@ test('progress screenshots frame the selected station, else the active tip', () 
   assert.equal(screenshotFocusId({ ...state, selectedId: null }), 'v1');
   state = graphReducer(state, { type: 'select', id: side.id });
   assert.equal(screenshotFocusId(state), side.id);
+});
+
+test('progress screenshots only force hover or menus when that component changed', () => {
+  assert.deepEqual(screenshotInteractFromPrompt('make the text slightly smaller and use medium weight'), { count: false, menu: false });
+  assert.equal(screenshotInteractQuery('replace triangle next to circled number with downward caret'), 'count');
+  assert.equal(screenshotInteractQuery('open the floating panel on the action menu'), 'menu');
+  assert.deepEqual(screenshotQueryFlags('?screenshot=1'), { capture: true, countHover: false, menuOpen: false });
+  assert.deepEqual(screenshotQueryFlags('?screenshot=1&interact=count'), { capture: true, countHover: true, menuOpen: false });
+  assert.deepEqual(screenshotQueryFlags('?screenshot=1&interact=menu'), { capture: true, countHover: false, menuOpen: true });
 });
 
 test('invalid ancestry gives a clear error instead of an infinite layout traversal', () => {

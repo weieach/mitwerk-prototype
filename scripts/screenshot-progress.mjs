@@ -289,9 +289,19 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function screenshotUrl() {
+function screenshotInteractFromPrompt(prompt) {
+  const text = String(prompt).toLowerCase();
+  const count = /\b(circled number|count hint|branch count)\b/.test(text)
+    || (/\b(caret|triangle)\b/.test(text) && /\b(circled|count)\b/.test(text));
+  const menu = /\b(action menu|overflow control|floating panel|card menu)\b/.test(text);
+  return [count ? 'count' : '', menu ? 'menu' : ''].filter(Boolean).join(',');
+}
+
+function screenshotUrl(prompt = '') {
   const target = new URL(url);
   target.searchParams.set('screenshot', '1');
+  const interact = screenshotInteractFromPrompt(prompt);
+  if (interact) target.searchParams.set('interact', interact);
   return target.href;
 }
 
@@ -358,7 +368,7 @@ async function waitForScreenshotReady(cdp, timeoutMs) {
   throw new Error('Timed out waiting for the tree to frame the selected station');
 }
 
-async function capture(chrome, outFile) {
+async function capture(chrome, outFile, prompt = '') {
   if (typeof WebSocket !== 'function') {
     throw new Error('Node WebSocket is required to capture focused progress screenshots.');
   }
@@ -385,7 +395,7 @@ async function capture(chrome, outFile) {
       '--high-dpi-support=1',
       '--force-device-scale-factor=2',
       '--window-size=1440,900',
-      screenshotUrl(),
+      screenshotUrl(prompt),
     ],
     { detached: true, stdio: ['ignore', 'ignore', 'pipe'] },
   );
@@ -559,7 +569,7 @@ async function takeScreenshot({ tag, label, sha, base }) {
   const files = countChangedFiles(tag, sha, base);
   const filename = `[${tag} #${count}] ${fileLabel(files)} · ${message}-${timecode()}.png`;
   const outFile = join(screenshotsDir, filename);
-  await capture(chrome, outFile);
+  await capture(chrome, outFile, label);
   return outFile;
 }
 

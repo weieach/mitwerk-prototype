@@ -85,6 +85,29 @@ export function screenshotFocusId(state: GraphState) {
   return branchTip(state.nodes, state.activeBranchId)?.id ?? state.nodes[0]?.id ?? null;
 }
 
+/** Hover, focus, and open-menu screenshot states only when that component changed. */
+export function screenshotInteractFromPrompt(prompt: string) {
+  const text = prompt.toLowerCase();
+  const count = /\b(circled number|count hint|branch count)\b/.test(text)
+    || (/\b(caret|triangle)\b/.test(text) && /\b(circled|count)\b/.test(text));
+  const menu = /\b(action menu|overflow control|floating panel|card menu)\b/.test(text);
+  return { count, menu };
+}
+
+export function screenshotInteractQuery(prompt: string) {
+  const { count, menu } = screenshotInteractFromPrompt(prompt);
+  return [count ? 'count' : '', menu ? 'menu' : ''].filter(Boolean).join(',');
+}
+
+export function screenshotQueryFlags(search: string) {
+  const params = search.startsWith('http')
+    ? new URL(search).searchParams
+    : new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  const capture = params.get('screenshot') === '1';
+  const flags = new Set((params.get('interact') ?? '').split(',').map(flag => flag.trim()).filter(Boolean));
+  return { capture, countHover: capture && flags.has('count'), menuOpen: capture && flags.has('menu') };
+}
+
 /** Last commit on a branch: its first station followed along direct commit children. */
 export function branchTip(nodes: VersionNode[], branchId: string): VersionNode | undefined {
   const byId = new Map(nodes.map(node => [node.id, node]));
@@ -303,7 +326,7 @@ export function persistGraphState(state: GraphState, storage: GraphStorage | nul
 function createEmptyVersion(state: GraphState, source: VersionNode, relation: 'branch' | 'commit'): VersionNode {
   // Keep an internal creation ordinal; layout derives the displayed level labels.
   const ordinal = state.nodes.reduce((max, node) => {
-    const match = /^V(\d+)$/.exec(node.label);
+    const match = /^V ?(\d+)$/.exec(node.label);
     return match ? Math.max(max, Number(match[1])) : max;
   }, 0) + 1;
   let idOrdinal = state.nodes.length + 1;

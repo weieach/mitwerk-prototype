@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { branchPathIds, createInitialGraphState, graphReducer, isEmptyVersion, longestBranchId, parseStoredGraphState } from '../src/features/version-tree/model.ts';
-import { compareVersionLabels, frameScreenshotTargets, frameVersionLevel, layoutGraph as logicalLayout, layoutBranchView, geometry } from '../src/features/version-tree/layout.ts';
+import { compareVersionLabels, frameScreenshotTargets, frameVersionLevel, layoutGraph as logicalLayout, layoutBranchView, geometry, screenshotNodeTargets } from '../src/features/version-tree/layout.ts';
 import { branchName, getBranchState, presentTree } from '../src/features/version-tree/presentation.ts';
-import { levelColorLookup, stationLabelOffset, treeTheme } from '../src/features/version-tree/tokens.ts';
+import { levelColorLookup, stationLabelOffset, treeTheme, versionLabelZoomScale } from '../src/features/version-tree/tokens.ts';
 import { createTestGraphState } from './graph-fixture.ts';
 
 const layoutGraph = (nodes, selectedId = null) => layoutBranchView(logicalLayout(nodes), selectedId);
@@ -146,13 +146,18 @@ test('adding branches frames the count inside the viewport, even at minimum zoom
   }
 });
 
-test('progress screenshots frame a count hint and a card together', () => {
-  const frame = frameScreenshotTargets([
-    { x: 80, y: 40, width: 40, height: 32 },
-    { x: 200, y: 180, width: 264, height: 360 },
-  ], 720, 640, treeTheme.minZoom);
+test('progress screenshots frame most stations and cards', () => {
+  let state = graphReducer(createInitialGraphState(), { type: 'add-commit', sourceId: 'v1' });
+  const sourceId = state.selectedId;
+  for (let i = 0; i < 3; i++) state = graphReducer(state, { type: 'add-branch', sourceId });
+  const layout = layoutGraph(state.nodes);
+  const frame = frameScreenshotTargets(screenshotNodeTargets(layout), 720, 640, treeTheme.minZoom);
+  const worldLeft = frame.left / frame.zoom;
+  const worldRight = (frame.left + 720) / frame.zoom;
+  const xs = layout.nodes.map(node => node.x);
   assert.ok(frame.zoom <= 1);
-  assert.ok(frame.left >= 0 && frame.top >= 0);
+  assert.ok(worldLeft <= Math.min(...xs) + geometry.padding);
+  assert.ok(worldRight >= Math.max(...xs) - geometry.padding);
 });
 
 test('upper-level forks stay compact when later levels fan out', () => {
@@ -387,9 +392,15 @@ test('connector width matches one grid triangle and cards clear both routing lev
   assert.ok(geometry.gridRise * geometry.branchRouteRows - strokeRadius > geometry.horizontalCardOffsetY + geometry.cardHeight);
   assert.ok(geometry.rowGap + geometry.cardOffsetY > geometry.gridRise * geometry.branchRouteRows + strokeRadius);
   assert.ok(treeTheme.endpointTriangleGap > 0);
+  assert.deepEqual(treeTheme.routes, ['#7A9EF7', '#FFC629', '#00A66A', '#EA66B7', '#ED6A2C', '#9A85F0']);
   assert.equal(treeTheme.activeBranchColor, '#000000');
   assert.equal(stationLabelOffset().x, -(treeTheme.stationRadius + treeTheme.versionLabelGap));
   assert.equal(stationLabelOffset().y, 0);
+  assert.equal(treeTheme.versionLabelColor, '#000000');
+  assert.equal(treeTheme.versionLabelFontWeight, 700);
+  assert.equal(versionLabelZoomScale(1), 1);
+  assert.ok(versionLabelZoomScale(0.41) > versionLabelZoomScale(treeTheme.versionLabelLowZoom));
+  assert.ok(versionLabelZoomScale(treeTheme.minZoom) > 1);
   assert.equal(geometry.forkDivergeStartRows, 2);
 });
 

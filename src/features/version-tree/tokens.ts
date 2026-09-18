@@ -5,7 +5,7 @@ const stationDiameter = 28;
 const stationBorderWidth = 5;
 const stationInnerDiameter = stationDiameter - stationBorderWidth * 2;
 export const treeTheme = {
-  routes: ['#246b52', '#c16a42', '#576e9a', '#9a6381', '#ac8b38', '#40898b'],
+  routes: ['#7A9EF7', '#FFC629', '#00A66A', '#EA66B7', '#ED6A2C', '#9A85F0'],
   stationDiameter,
   stationRadius: stationDiameter / 2,
   stationInnerDiameter,
@@ -29,11 +29,18 @@ export const treeTheme = {
   endpointTriangleWidth: 10,
   endpointTriangleHeight: 9,
   endpointTriangleGap: 10,
-  countHintWidth: 6,
-  countHintHeight: 8,
+  countHintWidth: 14,
+  countHintHeight: 14,
   countHintGap: 6,
   countHintFadeMs: 160,
   versionLabelFontSize: 11,
+  versionLabelFontWeight: 700,
+  versionLabelColor: '#000000',
+  /** How much label size ignores canvas zoom. 0 follows the board; 1 stays constant on screen. */
+  versionLabelZoomCompensation: 0.85,
+  /** At this zoom and below, labels shrink slightly after compensation. */
+  versionLabelLowZoom: 0.4,
+  versionLabelLowZoomScale: 0.88,
   versionLabelGap: 8,
   minZoom: 0.25,
   maxZoom: 1.5,
@@ -82,6 +89,14 @@ export function levelColorLookup(nodes: { branchId: string; row: number }[]) {
 /** Stations and connectors on the checked-out branch share one color. */
 export function activeRouteColor(color: string, onActiveBranch: boolean) {
   return onActiveBranch ? treeTheme.activeBranchColor : color;
+}
+
+/** Extra scale so version numbers stay closer to their screen size as the board zooms. */
+export function versionLabelZoomScale(zoom: number) {
+  const compensated = zoom ** -treeTheme.versionLabelZoomCompensation;
+  return zoom <= treeTheme.versionLabelLowZoom
+    ? compensated * treeTheme.versionLabelLowZoomScale
+    : compensated;
 }
 
 /** Label sits to the left of the station, vertically centered on it. */

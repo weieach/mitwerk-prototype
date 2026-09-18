@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-export type IconName = 'branch' | 'commit' | 'plus' | 'minus' | 'expand' | 'grid' | 'arrow' | 'chevron' | 'code' | 'file' | 'spark' | 'play' | 'pause' | 'close' | 'locate' | 'check' | 'layers' | 'more';
+export type IconName = 'branch' | 'commit' | 'plus' | 'minus' | 'expand' | 'grid' | 'arrow' | 'chevron' | 'caret' | 'code' | 'file' | 'spark' | 'play' | 'pause' | 'close' | 'locate' | 'check' | 'layers' | 'more';
 
 const paths: Record<IconName, React.ReactNode> = {
   branch: <><circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="6" r="2"/><path d="M6 7v10m0-5h5a7 7 0 0 0 7-4"/></>,
@@ -11,6 +11,7 @@ const paths: Record<IconName, React.ReactNode> = {
   grid: <path strokeLinecap="butt" d="M6 5v14M12 5v14M18 5v14M6 5l12 7M6 12l12 7M6 12 18 5M6 19 18 12"/>,
   arrow: <path d="M5 12h14m-6-6 6 6-6 6"/>,
   chevron: <path d="m8 5 7 7-7 7"/>,
+  caret: <path d="m7 9 5 5 5-5"/>,
   code: <path d="m7 7-5 5 5 5m10-10 5 5-5 5M14 4l-4 16"/>,
   file: <><path d="M14 3H5v18h14V8Zm0 0v5h5M8 12h8m-8 4h5"/></>,
   spark: <path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"/>,
