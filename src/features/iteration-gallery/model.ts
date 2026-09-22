@@ -124,3 +124,10 @@ export function playbackStep(index: number, count: number, direction: number, mo
 
 export const formatDate = (timestamp: number) => new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 export const formatTime = (timestamp: number) => new Date(timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+/** Compact local timestamp shared by the saved-frame menu and highlighted caption. */
+export function formatFrameLabel(frame: Pick<GalleryFrame, 'version' | 'timestamp'>) {
+  const parts = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }).formatToParts(frame.timestamp);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(value => value.type === type)?.value ?? '';
+  return `[V${frame.version}] - ${part('month')} ${part('day')}, ${part('hour')}:${part('minute')}`;
+}

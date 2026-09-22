@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildVersions, dateTicks, edgePanArmed, edgePanStrength, representativeFrames, inRange, parseCaptureName, playbackStep, rangeCounts, rangeStart, ratioLabel } from '../src/features/iteration-gallery/model.ts';
+import { buildVersions, formatFrameLabel, dateTicks, edgePanArmed, edgePanStrength, representativeFrames, inRange, parseCaptureName, playbackStep, rangeCounts, rangeStart, ratioLabel } from '../src/features/iteration-gallery/model.ts';
 import type { Capture } from '../src/features/iteration-gallery/model.ts';
-import { albumBlockBounds, albumEnvelope, albumFloorY, buildAlbum, coverRadius, dateLabelPose, frameFocus, imageSize, resetLook, versionLabelPose } from '../src/features/iteration-gallery/geometry.ts';
+import { albumBlockBounds, albumEnvelope, albumFloorY, buildAlbum, coverRadius, dateLabelPose, frameFocus, hoverCaptionHeight, imageSize, resetCameraDestination, resetLook, versionLabelPose } from '../src/features/iteration-gallery/geometry.ts';
 import { galleryTokens as t } from '../src/features/iteration-gallery/tokens.ts';
 import { readCaptureCatalog } from '../server/gallery-catalog.ts';
 
@@ -60,7 +60,7 @@ test('date ranges include local calendar boundaries and exclude future frames', 
   assert.equal(inRange(capture('old', 17), '7', now), true);
 });
 
-test('image geometry preserves portrait and landscape ratios with padding on all sides', () => {
+test('image geometry preserves portrait and landscape ratios; frames have shared padding inside every block', () => {
   const portrait = { ...capture('portrait', 21), width: 400, height: 900 };
   for (const frame of [portrait, capture('landscape', 22)]) {
     const size = imageSize(frame);
@@ -72,11 +72,14 @@ test('image geometry preserves portrait and landscape ratios with padding on all
   assert.ok(album.blocks.every(block => block.width === envelope.width && block.height === envelope.height));
   for (const plane of album.planes) {
     const block = album.blocks.find(item => item.version === plane.frame.version)!;
-    assert.ok(plane.x >= t.padding && plane.y >= t.padding);
-    assert.ok(plane.x + plane.width <= block.width - t.padding);
-    assert.ok(plane.y + plane.height <= block.height - t.padding);
+    assert.equal(plane.x, t.padding);
+    assert.equal(plane.y, t.padding);
+    assert.equal(plane.width + plane.x * 2, block.width);
+    assert.equal(plane.height + plane.y * 2, block.height);
     assert.ok(plane.depth > block.start + t.padding && plane.depth < block.end - t.padding);
   }
+  assert.ok(hoverCaptionHeight(240, 400) >= 240 * t.hoverCaptionFrame);
+  assert.ok(hoverCaptionHeight(40, 800) >= 800 * t.hoverCaptionViewport);
 });
 
 test('date filtering splits blocks without changing frame depth or version identity', () => {
@@ -143,22 +146,26 @@ test('reset look stays on the block volume even when guides extend farther out',
   const album = buildAlbum(versions, 'all', date(22));
   const bounds = albumBlockBounds(album);
   const look = resetLook(album);
+  const dest = resetCameraDestination(album);
+  assert.deepEqual({ center: dest.center, span: dest.span }, look);
+  assert.ok(dest.position.x !== dest.center.x || dest.position.z !== dest.center.z);
   assert.equal(look.center.x, bounds.center.x);
   assert.equal(look.center.z, bounds.center.z);
-  assert.ok(look.center.y > bounds.center.y);
+  assert.equal(look.center.y, bounds.center.y);
   assert.ok(look.center.x > 0 && look.center.x < album.width);
   assert.ok(look.span > 0);
   const far = { x: bounds.center.x + 800, y: bounds.center.y + 800, z: bounds.center.z };
   assert.ok(coverRadius(bounds.center, [far]) > coverRadius(bounds.center, [{ x: bounds.max.x, y: bounds.max.y, z: bounds.max.z }]));
   const plane = album.planes[0];
-  assert.deepEqual(frameFocus(plane), { x: plane.x + plane.width / 2, y: -plane.y - plane.height / 2, z: -plane.depth });
+  assert.deepEqual(frameFocus(plane), { x: plane.x + plane.width / 2, y: -plane.y - plane.height / 2 + plane.height * t.webgl.frontViewLift, z: -plane.depth });
   const versionPose = versionLabelPose(album, 0);
   assert.equal(versionPose.face, 'ground');
   assert.equal(versionPose.y, albumFloorY(album));
   assert.ok(versionPose.x > album.width);
-  const datePose = dateLabelPose(20, album.blocks[0].height);
+  const datePose = dateLabelPose(20);
   assert.equal(datePose.face, 'wall');
-  assert.ok(datePose.x < 0);
+  assert.equal(datePose.x, 0);
+  assert.ok(datePose.y > 0);
   assert.equal(datePose.z, -20);
 });
 
@@ -172,4 +179,10 @@ test('edge travel ramps toward the border and waits for the dwell delay', () => 
   assert.equal(edgePanArmed(0), false);
   assert.equal(edgePanArmed(t.edgePan.delayMs - 1), false);
   assert.equal(edgePanArmed(t.edgePan.delayMs), true);
+});
+
+test('saved-frame labels use bracketed versions and dashed local times', () => {
+  assert.equal(formatFrameLabel({ version: 10, timestamp: new Date(2026, 8, 17, 16, 41).getTime() }), '[V10] - Sep 17, 4:41');
+  assert.equal(formatFrameLabel({ version: 11, timestamp: new Date(2026, 8, 22, 10, 7).getTime() }), '[V11] - Sep 22, 10:07');
+  assert.equal(formatFrameLabel({ version: 2, timestamp: new Date(2026, 8, 17, 0, 5).getTime() }), '[V2] - Sep 17, 12:05');
 });

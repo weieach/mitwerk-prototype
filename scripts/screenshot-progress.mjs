@@ -1,3 +1,4 @@
+import { captureSummaryMaxLength } from '../src/shared/capture-format.mjs';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { appendFileSync, closeSync, constants, cpSync, existsSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -51,7 +52,7 @@ function sanitizeMessage(message, fallback) {
     .replace(/\s+/g, ' ')
     .replace(/[. ]+$/g, '')
     .trim();
-  return (cleaned || fallback).slice(0, 120);
+  return (cleaned || fallback).slice(0, captureSummaryMaxLength);
 }
 
 function fileLabel(count) {
@@ -431,6 +432,14 @@ function wantsResetCapture(prompt = '') {
   return argValue('gallery-view') === 'reset' || /\bcapture\b[\s\S]{0,80}\breset view\b/i.test(prompt) || /\breset view\b[\s\S]{0,40}\bcapture\b/i.test(prompt);
 }
 
+function wantsTheaterCapture(prompt = '') {
+  return argValue('gallery-view') === 'theater' || /\bcaptur(?:e|ed)\b[\s\S]{0,80}\btheater view\b/i.test(prompt) || /\btheater view\b[\s\S]{0,80}\bcaptur(?:e|ed)\b/i.test(prompt);
+}
+
+function wantsTransitionCapture(prompt = '') {
+  return argValue('gallery-view') === 'transition' || /\bmidway\b[\s\S]{0,80}\btransition\b/i.test(prompt) || /\btransition\b[\s\S]{0,80}\bmidway\b/i.test(prompt) || /\bmid-transition\b/i.test(prompt);
+}
+
 function wantsGalleryHover(prompt = '') {
   return hasFlag('gallery-hover') || (/\bhover(?:ing|ed)?\b/i.test(prompt) && !wantsResetCapture(prompt));
 }
@@ -439,8 +448,11 @@ function screenshotUrl(prompt = '') {
   const target = new URL(url);
   target.searchParams.set('screenshot', '1');
   const hover = wantsGalleryHover(prompt);
+  if (wantsTransitionCapture(prompt)) { target.searchParams.set('galleryView', 'transition'); return target.href; }
   if (hover) target.searchParams.set('galleryHover', '1');
-  if (wantsResetCapture(prompt)) {
+  if (wantsTheaterCapture(prompt)) {
+    target.searchParams.set('galleryView', 'theater');
+  } else if (wantsResetCapture(prompt)) {
     target.searchParams.set('galleryView', 'reset');
   } else if (argValue('gallery-view') === 'center' || hover || /\bcenter(?:ed)? view\b/i.test(prompt)) {
     target.searchParams.set('galleryView', 'center');
@@ -504,7 +516,11 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
     const result = await cdp('Runtime.evaluate', {
-      expression: wantsGalleryHover(prompt)
+      expression: wantsTransitionCapture(prompt)
+        ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.transitionReady === "true"'
+        : wantsTheaterCapture(prompt)
+        ? 'document.documentElement.dataset.screenshotReady === "1" && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete'
+        : wantsGalleryHover(prompt)
         ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.inspectionReady === "true"'
         : 'document.documentElement.dataset.screenshotReady === "1"',
       returnByValue: true,

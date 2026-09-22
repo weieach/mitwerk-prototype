@@ -1,8 +1,9 @@
 import type { CSSProperties } from 'react';
 
-export type IconName = 'branch' | 'commit' | 'plus' | 'minus' | 'expand' | 'grid' | 'arrow' | 'chevron' | 'caret' | 'code' | 'file' | 'image' | 'spark' | 'play' | 'pause' | 'close' | 'locate' | 'check' | 'layers' | 'more' | 'revert' | 'restore';
+export type IconName = 'info' | 'branch' | 'commit' | 'plus' | 'minus' | 'expand' | 'grid' | 'arrow' | 'chevron' | 'caret' | 'code' | 'file' | 'image' | 'spark' | 'play' | 'pause' | 'close' | 'locate' | 'check' | 'layers' | 'more' | 'revert' | 'restore';
 
 const paths: Record<IconName, React.ReactNode> = {
+  info: <><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></>,
   branch: <><circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="6" r="2"/><path d="M6 7v10m0-5h5a7 7 0 0 0 7-4"/></>,
   commit: <><circle cx="12" cy="12" r="4"/><path d="M12 2v6m0 8v6"/></>,
   plus: <path d="M12 5v14M5 12h14"/>,

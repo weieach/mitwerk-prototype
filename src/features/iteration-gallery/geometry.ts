@@ -21,7 +21,6 @@ export function buildAlbum(versions: GalleryVersion[], range: RangeKey, now: num
   const blocks: AlbumBlock[] = [], planes: FramePlane[] = [];
   const { width, height } = albumEnvelope(versions);
   for (const version of versions) {
-    const sizes = version.frames.map(imageSize);
     const start = version.index * t.versionDepth;
     const end = start + t.versionDepth - t.blockGap;
     const step = (end - start - t.padding * 2) / version.frames.length;
@@ -33,7 +32,7 @@ export function buildAlbum(versions: GalleryVersion[], range: RangeKey, now: num
         blocks.push({ key: `${version.number}:${chunkIndex++}`, version: version.number, width, height, start: chunkStart, end: boundary, active: chunkActive });
         chunkStart = boundary; chunkActive = active;
       }
-      planes.push({ frame, ...sizes[i], x: (width - sizes[i].width) / 2, y: (height - sizes[i].height) / 2,
+      planes.push({ frame, width: width - t.padding * 2, height: height - t.padding * 2, x: t.padding, y: t.padding,
         depth: boundary + step / 2, active, hitStart: i === 0 ? start : boundary,
         hitEnd: i === version.frames.length - 1 ? end : boundary + step });
     });
@@ -45,7 +44,7 @@ export function buildAlbum(versions: GalleryVersion[], range: RangeKey, now: num
 export type Vec3 = { x: number; y: number; z: number };
 
 export function frameFocus(plane: Pick<FramePlane, 'x' | 'y' | 'width' | 'height' | 'depth'>): Vec3 {
-  return { x: plane.x + plane.width / 2, y: -plane.y - plane.height / 2, z: -plane.depth };
+  return { x: plane.x + plane.width / 2, y: -plane.y - plane.height / 2 + plane.height * t.webgl.frontViewLift, z: -plane.depth };
 }
 
 export function albumBlockBounds(album: Pick<ReturnType<typeof buildAlbum>, 'blocks'>) {
@@ -90,8 +89,12 @@ export function versionLabelPose(album: Pick<ReturnType<typeof buildAlbum>, 'wid
   return { x: album.width + t.rulerTickLength + t.rulerLabelGap, y: albumFloorY(album), z: -(index + .5) * t.versionDepth, face: 'ground' as const };
 }
 
-export function dateLabelPose(depth: number, height: number) {
-  return { x: -(t.rulerTickLength + t.rulerLabelGap), y: -height / 2, z: -depth, face: 'wall' as const };
+export function dateLabelPose(depth: number) {
+  return { x: 0, y: t.rulerTickLength + t.rulerLabelGap, z: -depth, face: 'wall' as const };
+}
+
+export function hoverCaptionHeight(frameHeight: number, viewHeight: number) {
+  return Math.max(frameHeight * t.hoverCaptionFrame, viewHeight * t.hoverCaptionViewport);
 }
 
 /** Reset looks at the blocks. Nearby ground/wall labels participate in the fit without pulling the look-at sideways. */
@@ -99,9 +102,24 @@ export function resetLook(album: ReturnType<typeof buildAlbum>) {
   const bounds = albumBlockBounds(album);
   const points = [
     ...boxCorners(bounds),
-    { x: bounds.max.x + t.rulerTickLength + t.rulerTitleGap, y: bounds.min.y, z: bounds.center.z },
-    { x: bounds.min.x, y: bounds.max.y, z: bounds.center.z },
+    { x: bounds.max.x + t.rulerTickLength + t.versionTitleGap, y: bounds.min.y, z: bounds.center.z },
+    { x: bounds.min.x, y: bounds.max.y + t.rulerTickLength + t.rulerTitleGap, z: bounds.center.z },
   ];
   const span = coverRadius(bounds.center, points) * 2 * t.overviewPadding / t.overviewFitScale;
-  return { center: { ...bounds.center, y: bounds.center.y + span * t.resetDrop }, span };
+  return { center: bounds.center, span };
+}
+
+/** Camera pose for Reset view, including the shared counterclockwise ground-plane orbit. */
+export function resetCameraDestination(album: ReturnType<typeof buildAlbum>) {
+  const look = resetLook(album);
+  const distance = Math.max(look.span, album.depth) * 2;
+  const yaw = -t.webgl.groundRotationDegrees * Math.PI / 180;
+  const [x, y, z] = t.webgl.initialDirection;
+  const cos = Math.cos(yaw), sin = Math.sin(yaw);
+  const dx = x * cos + z * sin, dz = -x * sin + z * cos;
+  const length = Math.hypot(dx, y, dz) || 1;
+  return {
+    ...look,
+    position: { x: look.center.x + dx / length * distance, y: look.center.y + y / length * distance, z: look.center.z + dz / length * distance },
+  };
 }

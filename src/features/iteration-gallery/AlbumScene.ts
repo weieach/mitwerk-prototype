@@ -1,14 +1,18 @@
 import * as THREE from 'three';
+import { dragAngles, transitionProgress } from './theater-transition';
+import type { TheaterOrbit, TheaterTarget } from './theater-transition';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { GalleryVersion } from './model';
-import { dateTicks, edgePanArmed, edgePanStrength, formatDate, formatTime } from './model';
+import { dateTicks, edgePanArmed, edgePanStrength, formatDate, formatFrameLabel } from './model';
 import type { buildAlbum, FramePlane, LabelFace } from './geometry';
-import { albumFloorY, dateLabelPose, frameFocus, resetLook, versionLabelPose } from './geometry';
+import { albumFloorY, dateLabelPose, frameFocus, hoverCaptionHeight, resetCameraDestination, versionLabelPose } from './geometry';
 import { galleryTokens as t } from './tokens';
+import { projectAxisLabels } from './axis-label-layout';
+import type { AxisAnchor, AxisLabel } from './axis-label-layout';
 
 type Album = ReturnType<typeof buildAlbum>;
 type FrameObject = { plane: FramePlane; group: THREE.Group; image: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>; outline: THREE.LineBasicMaterial };
-type Callbacks = { hover: (id: string | null) => void; open: (id: string) => void; zoom: (value: number) => void; error: (message: string) => void };
+type Callbacks = { hover: (id: string | null) => void; open: (id: string) => void; zoom: (value: number) => void; error: (message: string) => void; labels: (labels: AxisLabel[]) => void };
 
 /** Owns GPU resources and controls; React owns the data, filters and theater selection. */
 export class AlbumScene {
@@ -17,6 +21,7 @@ export class AlbumScene {
   private camera = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 100_000);
   private controls: OrbitControls;
   private content = new THREE.Group();
+  private axisAnchors: AxisAnchor[] = [];
   private frames = new Map<string, FrameObject>();
   private pickTargets: THREE.Mesh[] = [];
   private textures = new Map<string, THREE.Texture>();
@@ -40,6 +45,8 @@ export class AlbumScene {
   private framing: 'center' | 'reset' = 'center';
   private buttons = 0;
   private initialized = false;
+  private restoreAlbum: (() => void) | null = null;
+  private theaterTurn: ((time: number) => void) | null = null;
   private caption: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | null = null;
   private failedTextures = new Set<string>();
   private reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -61,6 +68,7 @@ export class AlbumScene {
     this.controls.minZoom = t.zoomMin;
     this.controls.maxZoom = t.zoomMax;
     this.controls.rotateSpeed = t.webgl.rotateSpeed;
+    this.controls.zoomSpeed = t.webgl.zoomSpeed;
     this.controls.addEventListener('change', this.controlChange);
     canvas.addEventListener('pointerdown', this.pointerDown);
     canvas.addEventListener('pointermove', this.pointerMove);
@@ -78,6 +86,7 @@ export class AlbumScene {
   private render = (time: number) => {
     this.tick = 0;
     if (this.dead) return;
+    if (this.theaterTurn) { this.theaterTurn(time); return; }
     const dt = Math.min(64, time - (this.lastTime || time));
     this.lastTime = time;
     const blend = this.reducedMotion ? 1 : 1 - Math.exp(-dt / (t.transitionMs / 3));
@@ -113,14 +122,144 @@ export class AlbumScene {
       if (Math.abs(target - frame.group.position.y) < .05) frame.group.position.y = target; else moving = true;
     }
     this.renderer.render(this.scene, this.camera);
+    this.callbacks.labels(projectAxisLabels(this.axisAnchors, this.camera, this.host.clientWidth, this.host.clientHeight));
     const hovered = this.hovered ? this.frames.get(this.hovered) : undefined;
     this.host.dataset.inspectionReady = String(!!hovered && this.textures.has(hovered.plane.frame.id) && hovered.group.position.y === t.hoverLift && (!edgePanArmed(this.edgeHoldMs) || this.lookSettled(hovered.plane)));
     if (moving) this.invalidate();
   };
+  turnToTheater(id: string, target: TheaterTarget, complete: () => void, freezeAt?: number, reverse = false, started?: () => void) {
+    if (reverse) {
+      this.restoreAlbum?.();
+      this.theaterTurn = null;
+      this.applyResetCamera();
+    }
+    const selected = this.frames.get(id);
+    if (!selected) { complete(); return; }
+    if (this.theaterTurn) return;
+    this.pointer = null; this.down = null; this.edgeVelocity = 0; this.controls.enabled = false;
+    this.inspect(id);
+    this.caption && (this.caption.visible = false);
+    this.callbacks.labels([]);
+    const rect = this.host.getBoundingClientRect();
+    const centerX = target.left + target.width / 2 - rect.left;
+    const centerY = target.top + target.height / 2 - rect.top;
+    const unit = selected.plane.height / target.height;
+    const fromPosition = this.camera.position.clone(), fromRotation = this.camera.quaternion.clone();
+    const originalZoom = this.camera.zoom;
+    const fromFrustum = [this.camera.left, this.camera.right, this.camera.top, this.camera.bottom].map(value => value / this.camera.zoom);
+    const toFrustum = [-centerX * unit, (rect.width - centerX) * unit, centerY * unit, -(rect.height - centerY) * unit];
+    const destination = selected.image.position.clone().add(new THREE.Vector3(0, 0, Math.max(this.span, this.album?.depth ?? 0) * 2));
+    const originalLift = selected.group.position.y;
+    const originalOpacity = selected.image.material.opacity;
+    const imageScale = selected.plane.height * selected.plane.frame.width / selected.plane.frame.height / selected.plane.width;
+    const otherMaterials = new Map<THREE.Material, number>();
+    this.content.traverse(object => {
+      if (!(object instanceof THREE.Mesh || object instanceof THREE.Line)) return;
+      for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+        if (material !== selected.image.material) { material.transparent = true; otherMaterials.set(material, material.opacity); }
+      }
+    });
+    const restore = () => {
+      this.camera.position.copy(fromPosition); this.camera.quaternion.copy(fromRotation);
+      this.camera.zoom = originalZoom;
+      [this.camera.left, this.camera.right, this.camera.top, this.camera.bottom] = fromFrustum.map(value => value * originalZoom);
+      this.camera.updateProjectionMatrix();
+      selected.group.position.y = originalLift; selected.image.scale.x = 1;
+      selected.image.material.opacity = originalOpacity;
+      for (const [material, opacity] of otherMaterials) material.opacity = opacity;
+    };
+    this.restoreAlbum = restore;
+    let start: number | null = null;
+    this.theaterTurn = time => {
+      const ready = this.textures.has(id) || this.failedTextures.has(id);
+      // Keep the DOM theater image visible until its GPU counterpart is ready.
+      if (reverse && !ready) { this.invalidate(); return; }
+      if (start === null) { start = time; started?.(); }
+      const { progress, eased: forwardEase, complete: finished } = transitionProgress(time - start, this.reducedMotion ? 0 : t.theaterMotion.rotateMs, freezeAt);
+      const eased = reverse ? 1 - forwardEase : forwardEase;
+      this.camera.position.lerpVectors(fromPosition, destination, eased);
+      this.camera.quaternion.slerpQuaternions(fromRotation, new THREE.Quaternion(), eased);
+      this.camera.zoom = 1;
+      [this.camera.left, this.camera.right, this.camera.top, this.camera.bottom] = fromFrustum.map((value, i) => THREE.MathUtils.lerp(value, toFrustum[i], eased));
+      this.camera.updateProjectionMatrix();
+      selected.group.position.y = originalLift * (1 - eased);
+      selected.image.scale.x = THREE.MathUtils.lerp(1, imageScale, eased);
+      selected.image.material.opacity = THREE.MathUtils.lerp(originalOpacity, 1, eased);
+      const axisOpacity = 1 - transitionProgress((reverse ? 1 - progress : progress) * t.theaterMotion.rotateMs, t.theaterMotion.verticalAxisFadeMs).eased;
+      for (const [material, opacity] of otherMaterials) {
+        material.opacity = opacity * (material.userData.axisFace === 'wall' ? axisOpacity : 1 - eased);
+      }
+      this.renderer.render(this.scene, this.camera);
+      this.host.dataset.transitionProgress = String(progress);
+      this.host.dataset.transitionReady = String(freezeAt !== undefined && progress === freezeAt && ready);
+      if (finished && ready) {
+        if (reverse) {
+          restore(); this.restoreAlbum = null; this.theaterTurn = null;
+          this.reset(); this.controls.enabled = true; this.placeCaption();
+          delete this.host.dataset.transitionProgress;
+          this.invalidate();
+        } else this.theaterTurn = () => {};
+        complete(); return;
+      }
+      this.invalidate();
+    };
+    this.invalidate();
+  }
+
+  /** Hand off the contained DOM image to a freely orbiting camera, with no timed rotation. */
+  beginTheaterOrbit(id: string, target: TheaterTarget, ready: () => void, complete: () => void): TheaterOrbit | null {
+    this.restoreAlbum?.(); this.restoreAlbum = null; this.theaterTurn = null;
+    const selected = this.frames.get(id);
+    if (!selected || this.failedTextures.has(id)) return null;
+    this.pointer = null; this.down = null; this.edgeVelocity = 0;
+    this.controls.enabled = false;
+    this.inspect(id);
+    this.caption && (this.caption.visible = false);
+    this.callbacks.labels([]);
+    const rect = this.host.getBoundingClientRect();
+    const unit = selected.plane.height / target.height;
+    const height = rect.height * unit;
+    const offset = new THREE.Vector3(
+      (rect.left + rect.width / 2 - target.left - target.width / 2) * unit,
+      (target.top + target.height / 2 - rect.top - rect.height / 2) * unit, 0);
+    selected.group.position.y = t.hoverLift;
+    const pivot = selected.image.position.clone().add(new THREE.Vector3(0, t.hoverLift, 0));
+    selected.image.scale.x = selected.plane.height * selected.plane.frame.width / selected.plane.frame.height / selected.plane.width;
+    const distance = Math.max(this.span, this.album?.depth ?? 0) * 2;
+    this.span = height * Math.min(1, rect.width / rect.height);
+    this.camera.zoom = 1;
+    this.camera.left = -rect.width * unit / 2; this.camera.right = rect.width * unit / 2;
+    this.camera.top = height / 2; this.camera.bottom = -height / 2;
+    this.camera.updateProjectionMatrix();
+    let dx = 0, dy = 0, revealed = false, ended = false;
+    const render = () => {
+      if (!this.textures.has(id) && !this.failedTextures.has(id)) { this.invalidate(); return; }
+      const angles = dragAngles(dx, dy, rect.width, rect.height, t.theaterDrag.radiansPerViewport, t.theaterDrag.pitchLimit);
+      const rotation = new THREE.Quaternion().setFromEuler(new THREE.Euler(angles.pitch, angles.yaw, 0, 'YXZ'));
+      const focus = pivot.clone().add(offset.clone().applyQuaternion(rotation));
+      this.camera.position.copy(focus).add(new THREE.Vector3(0, 0, distance).applyQuaternion(rotation));
+      this.camera.quaternion.copy(rotation);
+      this.controls.target.copy(focus);
+      this.renderer.render(this.scene, this.camera);
+      this.host.dataset.orbitAngles = JSON.stringify(angles);
+      if (!revealed) { revealed = true; ready(); }
+      if (ended) {
+        delete this.host.dataset.orbitAngles;
+        this.animateToReset(complete);
+      }
+    };
+    this.theaterTurn = render;
+    this.invalidate();
+    return {
+      move: (x, y) => { dx = x; dy = y; this.invalidate(); },
+      end: () => { ended = true; this.invalidate(); },
+    };
+  }
+
   private controlChange = () => { this.callbacks.zoom(this.camera.zoom); this.invalidate(); };
   private resize = () => {
     const width = this.host.clientWidth, height = this.host.clientHeight;
-    if (!width || !height) return;
+    if (!width || !height || this.theaterTurn) return;
     const aspect = width / height;
     const vertical = this.span / Math.min(1, aspect);
     this.camera.left = -vertical * aspect / 2;
@@ -129,6 +268,7 @@ export class AlbumScene {
     this.camera.bottom = -vertical / 2;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
+    if (this.hovered) this.placeCaption();
     this.invalidate();
   };
   private contextLost = (event: Event) => { event.preventDefault(); this.callbacks.error('The 3D view lost its graphics connection. Reload the page to restore it. You can still open frames below.'); };
@@ -198,6 +338,7 @@ export class AlbumScene {
   }
 
   inspect(id: string | null) {
+    if (this.theaterTurn) return;
     if (id && !this.frames.get(id)?.plane.active) id = null;
     if (id === this.hovered) return;
     this.hovered = id;
@@ -207,8 +348,10 @@ export class AlbumScene {
     this.invalidate();
   }
   setZoom(zoom: number) {
+    if (this.theaterTurn) return;
     this.camera.zoom = THREE.MathUtils.clamp(zoom, t.zoomMin, t.zoomMax);
     this.camera.updateProjectionMatrix();
+    if (this.hovered) this.placeCaption();
     this.invalidate();
   }
   private lookAt(point: { x: number; y: number; z: number }) {
@@ -217,9 +360,6 @@ export class AlbumScene {
   private lookSettled(plane: FramePlane) {
     if (this.framing !== 'center') return true;
     return this.controls.target.distanceTo(this.lookAt(frameFocus(plane))) <= t.edgePan.settle;
-  }
-  private snapLook(point: { x: number; y: number; z: number }) {
-    this.followLook(point, Number.POSITIVE_INFINITY);
   }
   private followLook(point: { x: number; y: number; z: number }, dt: number) {
     const target = this.lookAt(point);
@@ -238,7 +378,10 @@ export class AlbumScene {
     this.span = span;
     this.controls.target.copy(center);
     const distance = Math.max(span, this.album?.depth ?? 0) * 2;
-    this.camera.position.copy(center).add(new THREE.Vector3(...t.webgl.initialDirection).normalize().multiplyScalar(distance));
+    // Orbit the camera oppositely to give the album a counterclockwise ground-plane turn.
+    const direction = new THREE.Vector3(...t.webgl.initialDirection)
+      .applyAxisAngle(new THREE.Vector3(0, 1, 0), -THREE.MathUtils.degToRad(t.webgl.groundRotationDegrees));
+    this.camera.position.copy(center).add(direction.normalize().multiplyScalar(distance));
     this.camera.zoom = 1;
     this.controls.update();
     this.callbacks.zoom(1);
@@ -252,8 +395,71 @@ export class AlbumScene {
   }
   reset() {
     if (!this.album) return;
-    const look = resetLook(this.album);
-    this.frameView(this.lookAt(look.center), look.span, 'reset');
+    this.inspect(null);
+    this.applyResetCamera();
+    this.resize();
+  }
+
+  private resetDestination() {
+    if (!this.album) return null;
+    const dest = resetCameraDestination(this.album);
+    return { center: this.lookAt(dest.center), position: this.lookAt(dest.position), span: dest.span };
+  }
+
+  private applyResetCamera() {
+    const dest = this.resetDestination();
+    if (!dest) return;
+    this.framing = 'reset';
+    this.span = dest.span;
+    this.pointer = null; this.edgeVelocity = 0; this.edgeHoldMs = 0;
+    this.controls.target.copy(dest.center);
+    this.camera.position.copy(dest.position);
+    this.camera.zoom = 1;
+    this.controls.update();
+    this.callbacks.zoom(1);
+  }
+
+  private animateToReset(complete: () => void) {
+    const dest = this.resetDestination();
+    if (!dest) {
+      this.theaterTurn = null; this.controls.enabled = true; this.resize(); this.placeCaption(); complete();
+      return;
+    }
+    this.inspect(null);
+    const fromPosition = this.camera.position.clone();
+    const fromRotation = this.camera.quaternion.clone();
+    const fromTarget = this.controls.target.clone();
+    const fromSpan = this.span;
+    const toRotation = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(dest.position, dest.center, new THREE.Vector3(0, 1, 0)));
+    let start: number | null = null;
+    this.theaterTurn = time => {
+      if (start === null) start = time;
+      const { eased, complete: finished } = transitionProgress(time - start, this.reducedMotion ? 0 : t.theaterMotion.rotateMs);
+      this.camera.position.lerpVectors(fromPosition, dest.position, eased);
+      this.camera.quaternion.slerpQuaternions(fromRotation, toRotation, eased);
+      this.controls.target.lerpVectors(fromTarget, dest.center, eased);
+      this.span = THREE.MathUtils.lerp(fromSpan, dest.span, eased);
+      this.camera.zoom = 1;
+      const width = this.host.clientWidth, height = this.host.clientHeight;
+      if (width && height) {
+        const vertical = this.span / Math.min(1, width / height);
+        this.camera.left = -vertical * width / height / 2;
+        this.camera.right = vertical * width / height / 2;
+        this.camera.top = vertical / 2;
+        this.camera.bottom = -vertical / 2;
+        this.camera.updateProjectionMatrix();
+      }
+      this.renderer.render(this.scene, this.camera);
+      this.host.dataset.transitionProgress = String(eased);
+      if (finished) {
+        this.theaterTurn = null; this.reset(); this.controls.enabled = true; this.placeCaption();
+        delete this.host.dataset.transitionProgress;
+        complete();
+        return;
+      }
+      this.invalidate();
+    };
+    this.invalidate();
   }
 
   private fade(material: THREE.Material, opacity: number, old?: Map<string, number>, key = '') {
@@ -264,63 +470,80 @@ export class AlbumScene {
     this.fades.set(material, { opacity: start, target: opacity });
     material.userData.fadeKey = key;
   }
-  private plate(text: string, x: number, y: number, z: number, face: LabelFace, ink = this.colors.muted, paper = '') {
-    const mesh = this.makePlate(text, ink, paper);
-    mesh.position.set(x, y, z);
-    if (face === 'ground') mesh.rotation.x = -Math.PI / 2;
-    if (face === 'wall') { mesh.rotation.y = Math.PI / 2; mesh.rotation.z = -Math.PI / 2; }
-    this.content.add(mesh);
-    return mesh;
+  private axisLabel(text: string, x: number, y: number, z: number, face: LabelFace) {
+    this.axisAnchors.push({ id: `${face}:${text}:${z}`, text, position: new THREE.Vector3(x, y, z), face });
   }
-  private makePlate(text: string, ink: string, paper: string) {
-    const { texture, width, height } = this.paintPlate(text, ink, paper);
+
+  private makePlate(text: string, ink: string, worldH: number) {
+    const { texture, width, height } = this.paintPlate(text, ink, worldH);
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshBasicMaterial({
       map: texture, transparent: true, depthWrite: false, side: THREE.DoubleSide,
     }));
     mesh.userData.plate = { width, height };
     return mesh;
   }
-  private paintPlate(text: string, ink: string, paper: string) {
-    const scale = 2;
+  private paintPlate(text: string, ink: string, worldH: number) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
-    const font = `${t.labelFontSize * scale}px ${getComputedStyle(this.host).fontFamily || 'sans-serif'}`;
-    ctx.font = font;
-    const pad = 4 * scale;
+    const viewH = Math.max(1e-6, (this.camera.top - this.camera.bottom) / this.camera.zoom);
+    const hostH = this.host.clientHeight || 1;
+    const dpr = Math.min(devicePixelRatio, t.webgl.pixelRatioMax);
+    const targetPx = Math.min(t.labelTextureMax, Math.max(t.labelTextureMin, worldH / viewH * hostH * dpr));
+    const family = getComputedStyle(this.host).fontFamily || 'sans-serif';
     const lines = text.split('\n');
-    const line = t.labelFontSize * scale * 1.25;
-    const width = Math.ceil(Math.max(...lines.map(item => ctx.measureText(item).width)) + pad * 2);
-    const height = Math.ceil(line * lines.length + pad * 2);
-    canvas.width = width; canvas.height = height;
-    ctx.font = font;
-    if (paper) { ctx.fillStyle = paper; ctx.fillRect(0, 0, width, height); }
-    ctx.fillStyle = ink;
+    const line = t.labelFontSize * 1.25;
+    const pad = t.captionShadow.pad;
+    ctx.font = `${t.labelFontSize}px ${family}`;
+    const cssW = Math.max(...lines.map(item => ctx.measureText(item).width)) + pad * 2;
+    const cssH = line * lines.length + pad * 2;
+    const scale = targetPx / cssH;
+    canvas.width = Math.ceil(cssW * scale);
+    canvas.height = Math.ceil(cssH * scale);
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.font = `${t.labelFontSize}px ${family}`;
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
+    // Transparent texture: a white halo follows only the glyphs, never a label rectangle.
+    ctx.strokeStyle = t.captionShadow.color;
+    ctx.lineWidth = t.captionShadow.stroke;
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = t.captionShadow.color;
+    ctx.shadowBlur = t.captionShadow.blur * scale;
+    for (let pass = 0; pass < t.captionShadow.passes; pass++) {
+      lines.forEach((item, index) => ctx.strokeText(item, pad, pad + line * (index + .5)));
+    }
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = ink;
     lines.forEach((item, index) => ctx.fillText(item, pad, pad + line * (index + .5)));
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
-    const worldH = t.labelWorldHeight + (paper ? 6 : 0);
-    return { texture, width: worldH * width / height, height: worldH };
+    texture.anisotropy = Math.min(t.webgl.anisotropyMax, this.renderer.capabilities.getMaxAnisotropy());
+    texture.generateMipmaps = true;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    return { texture, width: worldH * cssW / cssH, height: worldH };
   }
   private placeCaption() {
     this.caption?.removeFromParent();
     const frame = this.hovered ? this.frames.get(this.hovered) : undefined;
     if (!frame) { if (this.caption) this.caption.visible = false; return; }
-    const text = `V${frame.plane.frame.version} · ${formatTime(frame.plane.frame.timestamp)}\n${frame.plane.frame.summary.slice(0, t.labelSummaryLength)}`;
+    const text = `${formatFrameLabel(frame.plane.frame)}\n${frame.plane.frame.summary.slice(0, t.labelSummaryLength)}`;
     if (this.caption) {
       this.caption.geometry.dispose();
       this.caption.material.map?.dispose();
       this.caption.material.dispose();
     }
-    this.caption = this.makePlate(text, this.colors.ink, this.colors.paper);
+    const viewH = Math.max(1e-6, (this.camera.top - this.camera.bottom) / this.camera.zoom);
+    this.caption = this.makePlate(text, this.colors.ink, hoverCaptionHeight(frame.plane.height, viewH));
     const { plane } = frame;
     const size = this.caption.userData.plate as { width: number; height: number };
-    this.caption.position.set(plane.x + plane.width / 2, -plane.y + size.height / 2 + 3, -plane.depth);
+    this.caption.position.set(plane.x + size.width / 2, -plane.y + t.hoverCaptionGap + size.height / 2, -plane.depth);
     frame.group.add(this.caption);
     this.caption.visible = true;
   }
-  private line(points: THREE.Vector3[]) {
+  private line(points: THREE.Vector3[], face: LabelFace) {
     const material = new THREE.LineBasicMaterial({ color: this.colors.line });
+    material.userData.axisFace = face;
     this.content.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material));
   }
 
@@ -364,27 +587,32 @@ export class AlbumScene {
       this.content.add(group);
       this.frames.set(plane.frame.id, { plane, group, image, outline });
     }
-    const floor = albumFloorY(album);
-    const wallHeight = Math.max(...album.blocks.map(block => block.height));
-    this.plate('Date', -(t.rulerTickLength + t.rulerTitleGap), -t.rulerTitleGap, -album.depth / 2, 'wall');
-    this.plate('Version', album.width + t.rulerTickLength + t.rulerTitleGap, floor, -album.depth / 2, 'ground');
-    for (const tick of dateTicks(versions.flatMap(version => version.frames))) {
-      const depth = this.frames.get(tick.id)?.plane.depth ?? 0;
-      this.line([new THREE.Vector3(0, 0, -depth), new THREE.Vector3(0, -t.rulerTickLength, -depth)]);
-      const pose = dateLabelPose(depth, wallHeight);
-      this.plate(formatDate(tick.timestamp), pose.x, pose.y, pose.z, pose.face);
-    }
-    for (const version of versions) {
-      const pose = versionLabelPose(album, version.index);
-      this.line([new THREE.Vector3(album.width, floor, pose.z), new THREE.Vector3(album.width + t.rulerTickLength, floor, pose.z)]);
-      this.plate(`V${version.number}`, pose.x, pose.y, pose.z, pose.face);
-    }
     this.updateImages();
     if (!this.initialized) {
       this.center();
       this.initialized = true;
     }
     this.resize();
+    this.paintGuides(versions);
+  }
+
+  private paintGuides(versions: GalleryVersion[]) {
+    if (!this.album) return;
+    const album = this.album;
+    const floor = albumFloorY(album);
+    this.axisLabel('Date', 0, t.rulerTickLength + t.rulerTitleGap, -album.depth / 2, 'wall');
+    this.axisLabel('Version', album.width + t.rulerTickLength + t.versionTitleGap, floor, -album.depth / 2, 'ground');
+    for (const tick of dateTicks(versions.flatMap(version => version.frames))) {
+      const depth = this.frames.get(tick.id)?.plane.depth ?? 0;
+      this.line([new THREE.Vector3(0, 0, -depth), new THREE.Vector3(0, t.rulerTickLength, -depth)], 'wall');
+      const pose = dateLabelPose(depth);
+      this.axisLabel(formatDate(tick.timestamp), pose.x, pose.y, pose.z, pose.face);
+    }
+    for (const version of versions) {
+      const pose = versionLabelPose(album, version.index);
+      this.line([new THREE.Vector3(album.width, floor, pose.z), new THREE.Vector3(album.width + t.rulerTickLength, floor, pose.z)], 'ground');
+      this.axisLabel(`V${version.number}`, pose.x, pose.y, pose.z, pose.face);
+    }
   }
 
   private updateImages() {
@@ -428,6 +656,7 @@ export class AlbumScene {
         });
       }
     });
+    this.axisAnchors = [];
     this.content.clear(); this.frames.clear(); this.pickTargets = []; this.fades.clear(); this.caption = null;
   }
   dispose() {
