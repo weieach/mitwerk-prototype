@@ -1,3 +1,5 @@
+import { galleryTokens as t } from './tokens.ts';
+
 export type Capture = {
   id: string; filename: string; url: string; width: number; height: number;
   kind: 'prompt' | 'push' | 'capture'; number: number | null; branch: string | null;
@@ -63,6 +65,22 @@ export function rangeStart(range: RangeKey, now = Date.now()) {
 export function inRange(frame: Capture, range: RangeKey, now = Date.now()) {
   return frame.timestamp >= rangeStart(range, now) && frame.timestamp <= now;
 }
+
+export function ratioLabel(visible: number, total: number, singular: string, plural: string) {
+  const unit = total === 1 ? singular : plural;
+  return visible === total ? `${total} ${unit}` : `${visible}/${total} ${unit}`;
+}
+
+export function rangeCounts(versions: GalleryVersion[], range: RangeKey, now: number) {
+  const frames = versions.flatMap(version => version.frames);
+  const visibleFrames = frames.filter(frame => inRange(frame, range, now));
+  return {
+    frames: visibleFrames.length,
+    frameTotal: frames.length,
+    versions: versions.filter(version => version.frames.some(frame => inRange(frame, range, now))).length,
+    versionTotal: versions.length,
+  };
+}
 export function dateTicks(frames: GalleryFrame[]) {
   const days = new Map<string, GalleryFrame>();
   for (const frame of frames) {
@@ -70,6 +88,29 @@ export function dateTicks(frames: GalleryFrame[]) {
     if (!days.has(day)) days.set(day, frame);
   }
   return [...days.values()].map(frame => ({ id: frame.id, timestamp: frame.timestamp, position: frame.position }));
+}
+
+/** Sample versions, not captures, so busy versions cannot dominate the album. */
+export function representativeFrames(versions: GalleryVersion[], range: RangeKey, now: number) {
+  const eligible = versions.map(version => version.frames.filter(frame => inRange(frame, range, now))).filter(frames => frames.length);
+  const count = Math.ceil(eligible.length / t.representativeVersionStride);
+  return Array.from({ length: count }, (_, i) => {
+    const frames = eligible[count === 1 ? 0 : Math.floor(i * (eligible.length - 1) / (count - 1))];
+    return frames.filter(frame => frame.kind === 'push').at(-1) ?? frames.at(-1)!;
+  });
+}
+
+/** Edge travel is intentional only inside the viewport, with a gentle speed ramp. */
+export function edgePanStrength(x: number, y: number, width: number, height: number) {
+  if (x < 0 || y < 0 || x > width || y > height) return 0;
+  const band = Math.min(t.edgePan.bandPx, width / 4, height / 4);
+  if (band <= 0) return 0;
+  const proximity = Math.max(0, 1 - Math.min(x, y, width - x, height - y) / band);
+  return proximity * proximity;
+}
+
+export function edgePanArmed(heldMs: number) {
+  return heldMs >= t.edgePan.delayMs;
 }
 export type LoopMode = 'once' | 'loop' | 'ping-pong';
 export function playbackStep(index: number, count: number, direction: number, mode: LoopMode) {

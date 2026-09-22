@@ -118,9 +118,9 @@ This file is reserved for project-wide design-system rules requested by the user
 - Rename the former Preview Panel to Iteration Gallery. Reuse the Version stream's typography, colors and simple controls; add no external design system.
 - Read all recognized PNG captures from `[frame capture] screenshots/`. Derive timestamp, capture type/number, summary and optional line counts from filenames, and dimensions from image headers. Never maintain a screenshot-specific fixture list.
 - A push closes a version containing the prompt frames since the previous push. Frames after the latest push form the next, unfinished version. This is the prototype grouping rule; capture version numbers are not mappings to the independently editable Version stream graph.
-- Give every version an equal depth slot. Space its frames within the padded slot. Keep image aspect ratios, with each enclosing block sized to contain its frames; heterogeneous sizes use the largest required envelope. The depth axis is chronological, the version ruler is evenly spaced, and date marks align to the first saved frame of each day, so their intervals vary.
+- Give every version an equal depth slot. Space its frames within the padded slot. Keep image aspect ratios. Every enclosing block uses the same shared envelope: the largest padded fit required by any saved frame. Different screenshot aspect ratios must not produce different block sizes. The depth axis is chronological, the version ruler is evenly spaced, and date marks align to the first saved frame of each day, so their intervals vary.
 - Render translucent wireframe blocks with padding on every side. Keep out-of-range chunks in place but disabled. Default to Last 7 days; support Today, Last 3 days, Last 30 days and All time. Interpret date ranges as local calendar days through the current instant.
-- Render only the first and last in-range image at stronger opacity at rest. Keep intermediate slice outlines available for browsing. Hover or keyboard focus lifts and highlights a frame and displays its version, date and summary; click or Enter/Space opens that frame in theater view.
+- Render evenly spaced representative in-range images at stronger opacity at rest, following the sampling rule below. Keep intermediate slice outlines available for browsing. Hover or keyboard focus lifts and highlights a frame and displays its version, date and summary; click or Enter/Space opens that frame in theater view.
 - Date changes transition disabled opacity, without changing version identity. Respect reduced-motion preferences. Use shared tokens for depth, spacing, padding, lift, opacity, zoom, labels, transition and playback timing.
 - Theater provides previous/next, play/pause, playback speed, once/loop/ping-pong modes and a scrubber, restricted to the chosen date range and source. Stop playback when its sequence changes. Return to the gallery without losing filters.
 - Viewport presets and custom dimensions preserve the requested viewport aspect ratio and contain saved images without cropping. These are static captures: resizing cannot reflow historical pages.
@@ -129,8 +129,32 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Iteration Gallery 3D interaction — 2026-09-22
 
 - Render the album with Three.js/WebGL and an orthographic camera, using the existing filename-derived frame dimensions, padded block geometry and version/time spacing.
-- Drag the viewport to orbit the album in 3D. Right-drag pans; scroll and the header zoom controls share the same zoom state. Provide Reset view to restore the initial isometric angle.
+- Drag the viewport to orbit the album in 3D. Right-drag pans; scroll and the header zoom controls share the same zoom state. Provide Reset view to restore the initial isometric angle at 100% zoom.
 - Distinguish a drag from a click using a shared movement threshold, so rotating does not open theater view. Raycast the block slices to inspect and open frames at any viewing angle.
 - Keep filters, disabled chunks, first/last images, hover lift and theater playback. Respect reduced motion. Centralize camera, control, opacity and texture-budget settings in gallery tokens.
 - Support keyboard rotation and a labeled frame selector. If WebGL is unavailable, keep frame selection and theater playback usable with an explanatory message.
 - Dispose scene resources on unmount; load textures only for displayed frames and keep the cache bounded. Preserve Version stream behavior and styling.
+
+## Iteration Gallery rulers — 2026-09-22
+
+- Do not draw continuous date/version baselines parallel to the blocks’ chronological depth. Draw one short edge mark per date or version label instead.
+- Version labels sit on the ground plane, outside the blocks with a shared label-gap so they do not crowd the volume, with their text parallel to block width. Date labels sit outside the left wall at that day’s depth and face outward so the text is not mirrored into the blocks. Hovered-frame captions are coplanar with the frame so they share its angle. All of these rotate with the album.
+- Use shared tick-length and label-gap tokens; derive guide positions from frame dates and the shared block envelope.
+- When a progress capture explicitly requests gallery hover, use the normal frame-inspection state on an in-range frame nearest the album center. Wait for its texture and lift transition before saving. Ordinary captures remain idle.
+
+## Gallery controls and front framing — 2026-09-22
+
+- Remove the Project preview / capture-source row. Show all saved captures. Beside the date-range dropdown, show `x/y saved frames` and `x/y versions`, where x is the count inside the selected range and y is the catalog total. When x equals y, show only that one number.
+- The album instruction bar uses the shared fill background. The caption under the viewport has no border. Center view and Reset view are separate buttons with fill and border.
+- Place the frame dropdown under the viewport. Put the drag/zoom/pan instruction line in a filled row below that dropdown, near the bottom left. Put Center view and Reset view on the header zoom row, at the far right. Do not repeat the footer frame/version counts in the caption.
+- Enlarge the default album by framing the front block instead of fitting the entire chronological depth. Center the front face in the viewport; later blocks may extend outside it and remain accessible through orbit, pan and zoom.
+- Derive camera scale and target from the shared block envelope and the `frontViewPadding` token. Appending history must not shrink the blocks. Center view restores this front-centered composition; Reset view fits the blocks at `overviewFitScale` and shifts the look-at up by `resetDrop` so the volume sits lower in the viewport rather than perfectly centered. Ruler guides may participate in the fit radius, but label positions must not pull the look-at sideways off the blocks.
+
+## Gallery sampling, navigation and ruler titles — 2026-09-22
+
+- Keep Date and Version titles on the same wall and ground planes as their ticks, aligned with the middle of the album depth.
+- At rest, display `ceil(in-range version count / 3)` representative images, at least one for a nonempty range. Sample version indices evenly from first to last using floor rounding: 12 versions select V1, V4, V8 and V12. Within each sampled version prefer the latest in-range push frame; use its latest in-range capture when no push exists. This replaces the first/last-only image rule.
+- Center view focuses the first in-range frame at the larger scale (or the first historical frame when the range is empty). Reset view restores the isometric angle, fits the blocks at `overviewFitScale` (1.27× the previous full fit), and drops them lower in the viewport (`resetDrop`). That fitted scale is 100%; the zoom control always reads 100% after Reset view. Both use shared geometry and camera tokens.
+- Hovering a frame in the middle of the panel only inspects it. Edge travel starts after the pointer stays inside the edge band on a block for `delayMs`. Then the camera advances toward the chronological end at the shared `edgePan.speed`; speed grows with proximity to the edge. In Center view, follow the highlighted frame only while that travel is armed. Stop on leaving the edge or viewport, dragging, or reaching the end. Do not alter frame selection or dates.
+- Frame image outlines use `frameOutlineOpacity` so the inner borders stay readable against the block faces.
+- A requested reset-view capture uses the same Reset view behavior as the button. Normal startup remains centered on the first frame.

@@ -427,9 +427,24 @@ function screenshotInteractFromPrompt(prompt) {
   return [count ? 'count' : '', menu ? 'menu' : ''].filter(Boolean).join(',');
 }
 
+function wantsResetCapture(prompt = '') {
+  return argValue('gallery-view') === 'reset' || /\bcapture\b[\s\S]{0,80}\breset view\b/i.test(prompt) || /\breset view\b[\s\S]{0,40}\bcapture\b/i.test(prompt);
+}
+
+function wantsGalleryHover(prompt = '') {
+  return hasFlag('gallery-hover') || (/\bhover(?:ing|ed)?\b/i.test(prompt) && !wantsResetCapture(prompt));
+}
+
 function screenshotUrl(prompt = '') {
   const target = new URL(url);
   target.searchParams.set('screenshot', '1');
+  const hover = wantsGalleryHover(prompt);
+  if (hover) target.searchParams.set('galleryHover', '1');
+  if (wantsResetCapture(prompt)) {
+    target.searchParams.set('galleryView', 'reset');
+  } else if (argValue('gallery-view') === 'center' || hover || /\bcenter(?:ed)? view\b/i.test(prompt)) {
+    target.searchParams.set('galleryView', 'center');
+  }
   const interact = screenshotInteractFromPrompt(prompt);
   if (interact) target.searchParams.set('interact', interact);
   return target.href;
@@ -485,17 +500,19 @@ function createCdp(ws) {
   });
 }
 
-async function waitForScreenshotReady(cdp, timeoutMs) {
+async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
     const result = await cdp('Runtime.evaluate', {
-      expression: 'document.documentElement.dataset.screenshotReady === "1"',
+      expression: wantsGalleryHover(prompt)
+        ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.inspectionReady === "true"'
+        : 'document.documentElement.dataset.screenshotReady === "1"',
       returnByValue: true,
     });
     if (result.result?.value === true) return;
     await delay(100);
   }
-  throw new Error('Timed out waiting for the tree to frame the selected station');
+  throw new Error('Timed out waiting for the requested diagram and gallery capture state');
 }
 
 async function capture(chrome, outFile, prompt = '') {
@@ -546,7 +563,7 @@ async function capture(chrome, outFile, prompt = '') {
     const ws = new WebSocket(page.webSocketDebuggerUrl);
     await waitForSocket(ws);
     const cdp = createCdp(ws);
-    await waitForScreenshotReady(cdp, 10000);
+    await waitForScreenshotReady(cdp, 10000, prompt);
     await delay(150);
     const shot = await cdp('Page.captureScreenshot', { format: 'png', fromSurface: true });
     writeFileSync(outFile, Buffer.from(shot.data, 'base64'));

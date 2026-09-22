@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildVersions, dateTicks, inRange, parseCaptureName, playbackStep, rangeStart } from '../src/features/iteration-gallery/model.ts';
+import { buildVersions, dateTicks, edgePanArmed, edgePanStrength, representativeFrames, inRange, parseCaptureName, playbackStep, rangeCounts, rangeStart, ratioLabel } from '../src/features/iteration-gallery/model.ts';
 import type { Capture } from '../src/features/iteration-gallery/model.ts';
-import { buildAlbum, imageSize } from '../src/features/iteration-gallery/geometry.ts';
+import { albumBlockBounds, albumEnvelope, albumFloorY, buildAlbum, coverRadius, dateLabelPose, frameFocus, imageSize, resetLook, versionLabelPose } from '../src/features/iteration-gallery/geometry.ts';
 import { galleryTokens as t } from '../src/features/iteration-gallery/tokens.ts';
 import { readCaptureCatalog } from '../server/gallery-catalog.ts';
 
@@ -36,6 +36,21 @@ test('push boundaries group frames chronologically and leave a pending version',
   assert.equal(buildVersions([a])[0].number, 1);
 });
 
+test('range counts collapse to one number when the filter includes everything', () => {
+  const versions = buildVersions([
+    capture('old', 17), capture('p6', 18, 'push', 6), capture('mid', 21), capture('p10', 22, 'push', 10),
+  ]);
+  const now = date(22);
+  const today = rangeCounts(versions, 'today', now);
+  assert.equal(today.frames, 1); assert.equal(today.frameTotal, 4);
+  assert.equal(today.versions, 1); assert.equal(today.versionTotal, 2);
+  assert.equal(ratioLabel(today.frames, today.frameTotal, 'saved frame', 'saved frames'), '1/4 saved frames');
+  assert.equal(ratioLabel(today.versions, today.versionTotal, 'version', 'versions'), '1/2 versions');
+  const all = rangeCounts(versions, 'all', now);
+  assert.equal(ratioLabel(all.frames, all.frameTotal, 'saved frame', 'saved frames'), '4 saved frames');
+  assert.equal(ratioLabel(all.versions, all.versionTotal, 'version', 'versions'), '2 versions');
+});
+
 test('date ranges include local calendar boundaries and exclude future frames', () => {
   const now = date(22);
   assert.equal(rangeStart('3', now), new Date(2026, 8, 20).getTime());
@@ -51,9 +66,12 @@ test('image geometry preserves portrait and landscape ratios with padding on all
     const size = imageSize(frame);
     assert.ok(Math.abs(size.width / size.height - frame.width / frame.height) < 1e-9);
   }
-  const album = buildAlbum(buildVersions([portrait, capture('landscape', 22)]), 'all', date(23));
-  const block = album.blocks[0];
+  const mixed = buildVersions([portrait, capture('p', 21, 'push', 1), capture('landscape', 22)]);
+  const album = buildAlbum(mixed, 'all', date(23));
+  const envelope = albumEnvelope(mixed);
+  assert.ok(album.blocks.every(block => block.width === envelope.width && block.height === envelope.height));
   for (const plane of album.planes) {
+    const block = album.blocks.find(item => item.version === plane.frame.version)!;
     assert.ok(plane.x >= t.padding && plane.y >= t.padding);
     assert.ok(plane.x + plane.width <= block.width - t.padding);
     assert.ok(plane.y + plane.height <= block.height - t.padding);
@@ -99,4 +117,59 @@ test('local catalog discovers real PNG dimensions and safely encodes filenames',
     assert.ok(Number.isFinite(frame.timestamp));
   }
   assert.deepEqual(readCaptureCatalog('/nonexistent-iteration-gallery-test'), { frames: [], ignored: 0 });
+});
+
+
+test('representative frames sample versions evenly and prefer their in-range push', () => {
+  const versions = Array.from({ length: 12 }, (_, index) => ({ number: index + 1, index,
+    frames: [
+      { ...capture(`prompt-${index}`, 22), version: index + 1, position: index },
+      { ...capture(`push-${index}`, 22, 'push'), version: index + 1, position: index + .5 },
+    ],
+  }));
+  const selected = representativeFrames(versions, 'today', date(22, 23));
+  assert.deepEqual(selected.map(frame => frame.version), [1, 4, 8, 12]);
+  assert.ok(selected.every(frame => frame.kind === 'push'));
+  versions[11].frames.pop();
+  assert.equal(representativeFrames(versions, 'today', date(22, 23)).at(-1)?.id, 'prompt-11');
+  assert.deepEqual(representativeFrames(versions, 'today', date(23)), []);
+  assert.equal(representativeFrames(versions.slice(0, 2), 'all', date(22, 23)).length, 1);
+  versions[0].frames[1].timestamp = date(23);
+  assert.equal(representativeFrames(versions, 'today', date(22, 23))[0].id, 'prompt-0');
+});
+
+test('reset look stays on the block volume even when guides extend farther out', () => {
+  const versions = buildVersions([capture('a', 17), capture('push', 18, 'push', 6), capture('b', 19)]);
+  const album = buildAlbum(versions, 'all', date(22));
+  const bounds = albumBlockBounds(album);
+  const look = resetLook(album);
+  assert.equal(look.center.x, bounds.center.x);
+  assert.equal(look.center.z, bounds.center.z);
+  assert.ok(look.center.y > bounds.center.y);
+  assert.ok(look.center.x > 0 && look.center.x < album.width);
+  assert.ok(look.span > 0);
+  const far = { x: bounds.center.x + 800, y: bounds.center.y + 800, z: bounds.center.z };
+  assert.ok(coverRadius(bounds.center, [far]) > coverRadius(bounds.center, [{ x: bounds.max.x, y: bounds.max.y, z: bounds.max.z }]));
+  const plane = album.planes[0];
+  assert.deepEqual(frameFocus(plane), { x: plane.x + plane.width / 2, y: -plane.y - plane.height / 2, z: -plane.depth });
+  const versionPose = versionLabelPose(album, 0);
+  assert.equal(versionPose.face, 'ground');
+  assert.equal(versionPose.y, albumFloorY(album));
+  assert.ok(versionPose.x > album.width);
+  const datePose = dateLabelPose(20, album.blocks[0].height);
+  assert.equal(datePose.face, 'wall');
+  assert.ok(datePose.x < 0);
+  assert.equal(datePose.z, -20);
+});
+
+test('edge travel ramps toward the border and waits for the dwell delay', () => {
+  assert.equal(edgePanStrength(300, 300, 600, 600), 0);
+  assert.equal(edgePanStrength(-1, 300, 600, 600), 0);
+  assert.equal(edgePanStrength(601, 300, 600, 600), 0);
+  assert.ok(edgePanStrength(590, 300, 600, 600) > edgePanStrength(550, 300, 600, 600));
+  assert.equal(edgePanStrength(600, 300, 600, 600), 1);
+  assert.equal(edgePanStrength(0, 0, 0, 0), 0);
+  assert.equal(edgePanArmed(0), false);
+  assert.equal(edgePanArmed(t.edgePan.delayMs - 1), false);
+  assert.equal(edgePanArmed(t.edgePan.delayMs), true);
 });
