@@ -1,7 +1,7 @@
 # Idea 2 — Project Context
 
 **Source:** FigJam board [*Capstone research*](https://www.figma.com/board/im0O0k4DLrdOmlk5NJjMaq/Capstone-research?node-id=143-559), section **“Idea 2 - project proposal”** (node `143:559`)  
-**Reviewed:** 2026-09-17
+**Reviewed:** 2026-09-17; Iteration Gallery naming and implementation update 2026-09-22
 
 ## Project in one sentence
 
@@ -26,7 +26,7 @@ The central user need is therefore broader than rollback: users need a legible m
 The proposed experience combines two linked representations of project history:
 
 1. A **Version Tree** records the procedural history and branches of the project.
-2. A **Preview Panel** turns the outputs of that history into a visual sequence that can be browsed or played back.
+2. A **Iteration Gallery** turns the outputs of that history into a visual sequence that can be browsed or played back.
 
 The proposal uses a flipbook metaphor to connect them:
 
@@ -44,11 +44,11 @@ The interface is divided into four visible areas:
 | Area | Role |
 |---|---|
 | Side navigation | Project, file, or conversation navigation; the exact model is unresolved. |
-| Preview Panel | Visual playback and inspection of past versions. |
+| Iteration Gallery | Visual playback and inspection of past versions. |
 | Version Tree | Branching map of versions, prompts, files, and project decisions. |
 | Chat | The prompting conversation that produced the work. |
 
-The **Preview Panel and Version Tree together form the main workspace and the primary design scope**. The side navigation and chat can borrow established interaction patterns from tools such as Cursor, Claude, or Codex.
+The **Iteration Gallery and Version Tree together form the main workspace and the primary design scope**. The side navigation and chat can borrow established interaction patterns from tools such as Cursor, Claude, or Codex.
 
 The board imagines this workspace as a pinned tab inside an IDE-like shell. Other tabs could hold code files, image previews, or a live browser.
 
@@ -78,9 +78,9 @@ Each version node may contain:
 
 The tree should support branching so users can test different plans, return to an earlier state, and understand how alternatives relate.
 
-## Preview Panel
+## Iteration Gallery
 
-The Preview Panel visualizes previous versions as a sequence. It is intended to help users recall the day’s work and revisit an earlier result without first reconstructing it from messages or commits.
+The Iteration Gallery visualizes previous versions as a sequence. It is intended to help users recall the day’s work and revisit an earlier result without first reconstructing it from messages or commits.
 
 The proposal explores three views with different purposes.
 
@@ -115,9 +115,9 @@ A side-on version sequence doubles as a token-consumption visualization. Each ve
 
 ## Handling branches in playback
 
-A branching project cannot be represented by one universal linear movie. The current proposal resolves this by generating the sequence from the **dominant branch relative to the selected version**. Selecting another node changes which path through the tree is shown in the Preview Panel.
+A branching project cannot be represented by one universal linear movie. The current proposal resolves this by generating the sequence from the **dominant branch relative to the selected version**. Selecting another node changes which path through the tree is shown in the Iteration Gallery.
 
-This dependency is fundamental: the Version Tree defines the available histories, while the Preview Panel renders the currently selected history as a navigable sequence.
+This dependency is fundamental: the Version Tree defines the available histories, while the Iteration Gallery renders the currently selected history as a navigable sequence.
 
 ## Research signal behind the proposal
 
@@ -148,7 +148,7 @@ The board leaves several decisions unresolved:
 
 ## Current scope and likely MVP
 
-The proposal gives the clearest priority to the linked **Version Tree + Preview Panel** workspace. A focused first prototype could validate the core relationship with:
+The proposal gives the clearest priority to the linked **Version Tree + Iteration Gallery** workspace. A focused first prototype could validate the core relationship with:
 
 1. a small branching history of captured versions;
 2. version nodes containing prompt, file-change, and summary metadata;
@@ -163,7 +163,13 @@ The isometric catalogue, video playback, responsive preview controls, and token 
 This repository is in the middle of the Idea 2 pivot:
 
 - The earlier design-review/comment prototype has been moved under `archive/review-comment-spike/`.
-- The active React surface is currently an empty shell, leaving the new product direction ready to implement.
+- The active React workspace now contains the Iteration Gallery on the left and the Version stream on the right. The gallery reads the local capture folder and offers an isometric album and frontal playback; see `docs/iteration-gallery.md` for the current data contract and implementation boundaries.
 - `docs/project-proposal.md` and the README still describe the earlier design-review concept and should be treated as historical context until the project-level documentation is updated.
 
 The working product direction established by this FigJam section is visual iteration memory and branching for AI-assisted coding, rather than automated design review.
+
+## Iteration Gallery preliminary render — 2026-09-22
+
+The former Preview Panel is now called **Iteration Gallery**. The current prototype uses screenshot files as its source: one capture is one frame, and a numbered push closes a version containing the intervening captures. It renders padded translucent wireframe blocks, equal version spacing, an independent date ruler, date-range filtering with disabled historical chunks, hover/focus frame inspection and click-through theater playback. Today, Last 3 days, Last 7 days (default), Last 30 days and All time are available.
+
+The theater includes playback speed, once/loop/ping-pong, previous/next and scrubbing, plus original, device and custom viewport dimensions. Saved images remain static when resized. The broader proposal above remains a product direction: interactive historical pages, branch synchronization, commit/chat navigation and token usage require source data not present in the capture filenames. These are not simulated as working integrations.

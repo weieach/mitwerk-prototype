@@ -47,6 +47,9 @@ button svg { flex: 0 0 auto; }
 .tree-panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .panel-header { height: 62px; flex: 0 0 62px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 28px; gap: 12px; background: var(--paper); }
 .panel-heading { display: flex; align-items: center; gap: 11px; }
+.tree-header { height: auto; min-height: 62px; flex-basis: auto; flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; }
+.tree-mode-switch { font: inherit; font-size: 11px; color: var(--ink); background: var(--paper); border: 1px solid var(--line-strong); border-radius: 4px; padding: 5px 7px; }
+.tree-mode-switch:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .panel-header h2 { font-size: 12px; font-weight: 700; margin: 0; letter-spacing: .05px; }
 .panel-header-actions { display: flex; align-items: center; gap: 8px; }
 .icon-button { height: 29px; padding: 0 8px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font-size: 11px; white-space: nowrap; }

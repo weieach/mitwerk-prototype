@@ -1,0 +1,85 @@
+export type Capture = {
+  id: string; filename: string; url: string; width: number; height: number;
+  kind: 'prompt' | 'push' | 'capture'; number: number | null; branch: string | null;
+  timestamp: number; summary: string; added: string | null; removed: string | null;
+};
+export type GalleryFrame = Capture & { version: number; position: number };
+export type GalleryVersion = { number: number; index: number; frames: GalleryFrame[] };
+export type RangeKey = 'today' | '3' | '7' | '30' | 'all';
+export const ranges: { value: RangeKey; label: string }[] = [
+  { value: 'today', label: 'Today' }, { value: '3', label: 'Last 3 days' },
+  { value: '7', label: 'Last 7 days' }, { value: '30', label: 'Last 30 days' }, { value: 'all', label: 'All time' },
+];
+
+/** Metadata comes from capture names, never a per-image fixture or lookup table. */
+export function parseCaptureName(filename: string) {
+  const timestamp = /-(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})(\d{2})(?:-v\d+)?\.png$/i.exec(filename)
+    ?? /Screenshot (\d{4})-(\d{2})-(\d{2}) at (\d{2})\.(\d{2})\.(\d{2})\.png$/i.exec(filename);
+  if (!timestamp) return null;
+  const [, year, month, day, hour, minute, second] = timestamp;
+  const date = new Date(+year, +month - 1, +day, +hour, +minute, +second);
+  if (date.getFullYear() !== +year || date.getMonth() !== +month - 1 || date.getDate() !== +day
+    || +hour > 23 || +minute > 59 || +second > 59) return null;
+  const tag = /^\[(prompt|push)(?: #(\d+))?\]\s*/i.exec(filename);
+  const body = filename.slice(tag?.[0].length ?? 0, timestamp.index).trim();
+  const changes = /\+([\d.]+[km]?)\s*-\s*([\d.]+[km]?)/i.exec(body);
+  const isFiles = (piece: string) => /^\d+ files?$/.test(piece);
+  const isDelta = (piece: string) => /^\+[\d.]+[km]?\s*-\s*[\d.]+[km]?$/i.test(piece);
+  const isBranch = (piece: string) => /^[A-Za-z][A-Za-z0-9._/-]*$/.test(piece);
+  const pieces = body.split(' · ');
+  const rest = pieces.filter(piece => !isFiles(piece) && !isDelta(piece));
+  const branch = rest.length > 1 && isBranch(rest[0]) ? rest[0] : null;
+  const summary = rest.filter(piece => piece !== branch).join(' · ');
+  return { kind: (tag?.[1].toLowerCase() ?? 'capture') as Capture['kind'], number: tag?.[2] ? +tag[2] : null,
+    branch, timestamp: date.getTime(), summary: summary || 'Saved project frame',
+    added: changes?.[1] ?? null, removed: changes?.[2] ?? null };
+}
+
+/** A push closes a version. Captures after the latest push belong to the next version. */
+export function buildVersions(captures: Capture[]): GalleryVersion[] {
+  const ordered = [...captures].sort((a, b) => a.timestamp - b.timestamp || a.filename.localeCompare(b.filename));
+  const pushes = ordered.filter(frame => frame.kind === 'push' && frame.number !== null);
+  const pending = Math.max(0, ...pushes.map(frame => frame.number!)) + 1;
+  const groups = new Map<number, Capture[]>();
+  let pushIndex = 0;
+  for (const frame of ordered) {
+    while (pushIndex < pushes.length && pushes[pushIndex].timestamp < frame.timestamp) pushIndex++;
+    const version = frame.kind === 'push' && frame.number !== null ? frame.number
+      : pushes[pushIndex]?.number ?? pending;
+    if (!groups.has(version)) groups.set(version, []);
+    groups.get(version)!.push(frame);
+  }
+  return [...groups].sort(([a], [b]) => a - b).map(([number, frames], index) => ({ number, index,
+    frames: frames.map((frame, i) => ({ ...frame, version: number, position: index + (i + 0.5) / frames.length })) }));
+}
+
+export function rangeStart(range: RangeKey, now = Date.now()) {
+  if (range === 'all') return -Infinity;
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - (range === 'today' ? 0 : Number(range) - 1));
+  return start.getTime();
+}
+export function inRange(frame: Capture, range: RangeKey, now = Date.now()) {
+  return frame.timestamp >= rangeStart(range, now) && frame.timestamp <= now;
+}
+export function dateTicks(frames: GalleryFrame[]) {
+  const days = new Map<string, GalleryFrame>();
+  for (const frame of frames) {
+    const day = new Date(frame.timestamp).toLocaleDateString('en-CA');
+    if (!days.has(day)) days.set(day, frame);
+  }
+  return [...days.values()].map(frame => ({ id: frame.id, timestamp: frame.timestamp, position: frame.position }));
+}
+export type LoopMode = 'once' | 'loop' | 'ping-pong';
+export function playbackStep(index: number, count: number, direction: number, mode: LoopMode) {
+  if (count < 2) return { index: 0, direction: 1, playing: false };
+  const next = index + direction;
+  if (next >= 0 && next < count) return { index: next, direction, playing: true };
+  if (mode === 'once') return { index, direction, playing: false };
+  if (mode === 'loop') return { index: direction > 0 ? 0 : count - 1, direction, playing: true };
+  return { index: index - direction, direction: -direction, playing: true };
+}
+
+export const formatDate = (timestamp: number) => new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+export const formatTime = (timestamp: number) => new Date(timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });

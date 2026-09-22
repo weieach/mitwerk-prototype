@@ -7,8 +7,9 @@ import { activeRouteColor, levelColorLookup, stationLabelOffset, treeTheme, vers
 import { IsometricGrid } from './IsometricGrid';
 import { VersionCard } from './VersionCard';
 import { branchName, presentTree } from './presentation';
+import { canEditTree, treeModes, type TreeMode } from './panel-state';
 
-type Props = { graph: GraphState; dispatch: Dispatch<GraphAction> };
+type Props = { graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; onModeChange: (mode: TreeMode) => void };
 
 const screenshotFlags = typeof window !== 'undefined'
   ? screenshotQueryFlags(window.location.search)
@@ -16,7 +17,7 @@ const screenshotFlags = typeof window !== 'undefined'
 const screenshotCapture = screenshotFlags.capture;
 if (screenshotFlags.countHover) document.documentElement.dataset.screenshotCountHover = '1';
 
-export function VersionTreePanel({ graph, dispatch }: Props) {
+export function VersionTreePanel({ graph, dispatch, mode, onModeChange }: Props) {
   const activePath = useMemo(() => branchPathIds(graph.nodes, graph.activeBranchId), [graph.nodes, graph.activeBranchId]);
   const layout = useMemo(() => layoutBranchView(layoutGraph(graph.nodes), graph.selectedId, activePath), [graph.nodes, graph.selectedId, activePath]);
   const levelColor = useMemo(() => levelColorLookup(layout.nodes), [layout.nodes]);
@@ -35,7 +36,6 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
   const screenshotReady = useRef(false);
   const previousCount = useRef(graph.nodes.length);
   const focusId = screenshotFocusId(graph);
-  const focusNode = layout.nodes.find(node => node.id === focusId);
   const drag = useRef<{ x: number; y: number; left: number; top: number; moved: boolean } | null>(null);
   const selected = layout.nodes.find(node => node.id === graph.selectedId);
   const presentation = useMemo(() => presentTree(layout, graph.selectedId, collapsedLevels, graph.activeBranchId),
@@ -277,7 +277,12 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
     '--reverted-title-color': treeTheme.revertedTitleColor,
     '--reverted-route-color': treeTheme.revertedRouteColor,
   } as CSSProperties}>
-    <div className="panel-header"><div className="panel-heading"><h2 id="tree-title">Version stream</h2></div><div className="panel-header-actions"><button className="icon-button" onClick={() => setGrid(!grid)} aria-label={grid ? 'Hide grid' : 'Show grid'} title={grid ? 'Hide grid' : 'Show grid'}><Icon name="grid"/>{grid ? 'Hide grid' : 'Show grid'}</button><button className="icon-button" onClick={fitAll} aria-label="Fit all versions" title="Fit all versions"><Icon name="expand"/>Fit all</button></div></div>
+    <div className="panel-header tree-header"><div className="panel-heading"><h2 id="tree-title">Version stream</h2>
+      <select className="tree-mode-switch" aria-label="Version stream panel" value={mode} onChange={event => onModeChange(event.target.value as TreeMode)}
+        title={mode === 'test' ? 'Independent sandbox. Edits stay in Test visual.' : 'Saved-tree baseline for capture-folder history. Editing is disabled.'}>
+        {treeModes.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+      </select>
+    </div><div className="panel-header-actions"><button className="icon-button" onClick={() => setGrid(!grid)} aria-label={grid ? 'Hide grid' : 'Show grid'} title={grid ? 'Hide grid' : 'Show grid'}><Icon name="grid"/>{grid ? 'Hide grid' : 'Show grid'}</button><button className="icon-button" onClick={fitAll} aria-label="Fit all versions" title="Fit all versions"><Icon name="expand"/>Fit all</button></div></div>
     <div className="canvas-shell">
       <div ref={viewport} className={`tree-viewport ${isPanning ? 'is-panning' : ''}`} tabIndex={0} aria-label="Version tree canvas. Scroll in any direction to pan. Control plus scroll to zoom. Click empty canvas to deselect." onPointerDown={startPan} onPointerMove={pan} onPointerUp={endPan} onPointerCancel={endPan} onLostPointerCapture={endPan}>
         <div className="canvas-size" style={{ width: worldWidth * zoom, height: worldHeight * zoom }}>
@@ -342,7 +347,7 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
                   isCurrentBranch={node.branchId === graph.activeBranchId}
                   canDeleteCurrent={canDeleteCurrent(graph.nodes, node.id)}
                   canDeleteFuture={canDeleteFuture(graph.nodes, node.id)}
-                  color={color} reverted={reverted}
+                  color={color} reverted={reverted} readOnly={!canEditTree(mode)}
                   onSelect={() => dispatch({ type: 'select', id: node.id })}
                   onBranch={() => dispatch({ type: 'add-branch', sourceId: node.id })}
                   onCommit={() => dispatch({ type: 'add-commit', sourceId: node.id })}

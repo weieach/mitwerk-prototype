@@ -88,11 +88,27 @@ function parentSha(sha) {
   }
 }
 
-function frameStem({ tag, count, files = 0, added = 0, deleted = 0, message }) {
-  if (tag === 'prompt') {
-    return `[${tag} #${count}] ${compactLineDelta(added, deleted)} · ${message}`;
+function currentBranch() {
+  try {
+    return git(['rev-parse', '--abbrev-ref', 'HEAD']);
+  } catch {
+    return '';
   }
-  return `[${tag} #${count}] ${fileLabel(files)} · ${lineLabel(added, deleted)} · ${message}`;
+}
+
+function branchSegment(branch = currentBranch()) {
+  const name = sanitizeMessage(branch, '');
+  if (!name || /^(main|master|HEAD)$/i.test(name)) return '';
+  return name;
+}
+
+function frameStem({ tag, count, files = 0, added = 0, deleted = 0, message, branch = currentBranch() }) {
+  const extra = branchSegment(branch);
+  const lead = extra ? `${extra} · ` : '';
+  if (tag === 'prompt') {
+    return `[${tag} #${count}] ${lead}${compactLineDelta(added, deleted)} · ${message}`;
+  }
+  return `[${tag} #${count}] ${lead}${fileLabel(files)} · ${lineLabel(added, deleted)} · ${message}`;
 }
 
 function listedPaths(output) {
@@ -209,9 +225,15 @@ function skipPath(conversationId) {
   return join(stashDir, `${conversationId || 'latest'}.skip`);
 }
 
+function conversationId(payload) {
+  return payload.conversation_id || payload.conversationId || payload.session_id || payload.sessionId || '';
+}
+
 function composerMode(payload) {
+  const nested = payload.composer && typeof payload.composer === 'object' ? payload.composer : {};
   const raw = payload.composer_mode
     ?? payload.composerMode
+    ?? nested.mode
     ?? payload.mode
     ?? payload.session_mode
     ?? payload.current_mode
@@ -225,14 +247,24 @@ function isAskMode(payload) {
   return mode === 'ask' || mode === 'chat';
 }
 
-function saveSkip(conversationId) {
-  mkdirSync(stashDir, { recursive: true });
-  writeFileSync(skipPath(conversationId), 'ask', 'utf8');
-  writeFileSync(skipPath('latest'), 'ask', 'utf8');
+function projectSkipPath(id) {
+  return join(screenshotsDir, `.ask-skip-${id || 'latest'}`);
 }
 
-function clearSkip(conversationId) {
-  for (const path of [skipPath(conversationId), skipPath('latest')]) {
+function skipMarkerPaths(id) {
+  return [skipPath(id), skipPath('latest'), projectSkipPath(id), projectSkipPath('latest')];
+}
+
+function saveSkip(id) {
+  mkdirSync(stashDir, { recursive: true });
+  mkdirSync(screenshotsDir, { recursive: true });
+  for (const path of skipMarkerPaths(id)) {
+    writeFileSync(path, 'ask', 'utf8');
+  }
+}
+
+function clearSkip(id) {
+  for (const path of skipMarkerPaths(id)) {
     try {
       unlinkSync(path);
     } catch {
@@ -241,14 +273,15 @@ function clearSkip(conversationId) {
   }
 }
 
+function hasSkipMarker(id) {
+  if (id && (existsSync(skipPath(id)) || existsSync(projectSkipPath(id)))) return true;
+  if (!id && (existsSync(skipPath('latest')) || existsSync(projectSkipPath('latest')))) return true;
+  return false;
+}
+
 function shouldSkipAskScreenshot(payload) {
-  if (isAskMode(payload)) {
-    return true;
-  }
-  if (existsSync(skipPath(payload.conversation_id))) {
-    return true;
-  }
-  return !payload.conversation_id && existsSync(skipPath('latest'));
+  if (isAskMode(payload)) return true;
+  return hasSkipMarker(conversationId(payload));
 }
 
 function saveStash(conversationId, prompt) {
@@ -317,7 +350,7 @@ function labelFromHook(payload) {
   if (fromPrompt) {
     return fromPrompt;
   }
-  const stashed = readStash(payload.conversation_id);
+  const stashed = readStash(conversationId(payload));
   if (stashed) {
     return stashed;
   }
@@ -908,15 +941,17 @@ async function main() {
   const event = payload.hook_event_name ?? '';
 
   if (hookMode && event === 'beforeSubmitPrompt') {
-    captureLog(`prompt submit mode=${composerMode(payload) || 'unknown'}`);
+    const id = conversationId(payload);
+    const mode = composerMode(payload) || 'unknown';
+    captureLog(`prompt submit mode=${mode}${mode === 'unknown' ? ` keys=${Object.keys(payload).join(',')}` : ''}`);
     if (isAskMode(payload)) {
-      saveSkip(payload.conversation_id);
-      captureLog(`skip ask prompt (${composerMode(payload) || 'ask'})`);
+      saveSkip(id);
+      captureLog(`skip ask prompt (${mode})`);
       emitHook({ continue: true });
       return;
     }
-    clearSkip(payload.conversation_id);
-    saveStash(payload.conversation_id, textFromUnknown(payload.prompt) || 'prompt');
+    clearSkip(id);
+    saveStash(id, textFromUnknown(payload.prompt) || 'prompt');
     emitHook({ continue: true });
     return;
   }
@@ -958,7 +993,7 @@ async function main() {
 
   try {
     if (hookMode && tag === 'prompt' && shouldSkipAskScreenshot(payload)) {
-      clearSkip(payload.conversation_id);
+      clearSkip(conversationId(payload));
       captureLog(`skip ask screenshot (${composerMode(payload) || 'stashed'})`);
       emitHook({});
       return;

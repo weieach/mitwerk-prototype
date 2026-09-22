@@ -1,0 +1,59 @@
+.iteration-gallery { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--paper); }
+.iteration-gallery select, .iteration-gallery input[type=number] { font: inherit; font-size: 11px; color: var(--ink); background: var(--paper); border: 1px solid var(--line-strong); border-radius: 4px; padding: 5px 7px; max-width: 100%; }
+.iteration-gallery select:focus-visible, .iteration-gallery input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.gallery-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 11px; }
+.gallery-toolbar label { display: inline-flex; align-items: center; gap: 8px; }
+.gallery-toolbar button { font-size: 11px; }
+.gallery-source { padding: 12px 24px; border-bottom: 1px solid var(--line); justify-content: space-between; }
+.gallery-small { color: var(--muted); font-size: 10px; }
+.gallery-footer { min-height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); padding: 10px 24px; }
+.gallery-empty { flex: 1; min-height: 100px; display: grid; place-items: center; padding: 24px; color: var(--muted); font-size: 12px; text-align: center; }
+.gallery-message { font-size: 11px; color: var(--muted); padding: 10px 24px; }
+.gallery-message button { text-decoration: underline; }
+.album-scroll { flex: 1; min-height: 0; overflow: auto; position: relative; scrollbar-width: thin; overscroll-behavior: contain; }
+.album-zoom { min-height: 300px; display: flex; align-items: center; justify-content: center; transition: width var(--gallery-transition), height var(--gallery-transition); }
+.album-scene { width: 100%; height: 100%; overflow: visible; }
+.album-block { fill: var(--line); fill-opacity: .09; stroke: var(--muted); stroke-width: .8; transition: opacity var(--gallery-transition); }
+.album-block polygon, .album-block line { vector-effect: non-scaling-stroke; }
+.album-plane { transition: transform var(--gallery-transition), opacity var(--gallery-transition); }
+.album-plane.is-hovered { animation: gallery-lift var(--gallery-transition) ease-out; cursor: pointer; }
+@keyframes gallery-lift { from { transform: translateY(0); } }
+.album-hover-label { font-size: 11px; fill: var(--ink); paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; }
+.album-frame-outline { fill: var(--paper); fill-opacity: .04; stroke: var(--line-strong); stroke-width: .6; vector-effect: non-scaling-stroke; }
+.album-plane.is-hovered .album-frame-outline { fill-opacity: 1; stroke: var(--ink); stroke-width: 1.5; }
+.album-hit { cursor: pointer; }
+.album-hit:focus { outline: none; }
+.album-hit polygon { fill: transparent; stroke: transparent; vector-effect: non-scaling-stroke; }
+.album-hit:hover polygon, .album-hit:focus-visible polygon { fill: var(--ink); fill-opacity: .04; stroke: var(--ink); stroke-width: .8; }
+.album-hit.is-disabled { cursor: default; }
+.album-hit.is-disabled:hover polygon { fill: transparent; stroke: transparent; }
+.album-scene .is-disabled { opacity: var(--gallery-disabled-opacity); transition: opacity var(--gallery-transition); }
+.album-rulers { fill: var(--muted); font-size: 11px; font-family: var(--sans); }
+.album-rulers line { stroke: var(--line-strong); stroke-width: .8; vector-effect: non-scaling-stroke; }
+.album-caption { position: sticky; left: 0; bottom: 0; padding: 12px 24px; min-height: 84px; background: var(--paper); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); }
+.album-caption strong { color: var(--ink); font-weight: 500; }
+.album-caption span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.theater-view { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; padding: 16px 24px; gap: 16px; }
+.theater-stage { flex: 1; min-height: 220px; display: flex; align-items: center; justify-content: center; overflow: auto; }
+.theater-screen { flex-shrink: 0; background: var(--fill); border: 1px solid var(--line-strong); display: grid; place-items: center; overflow: hidden; }
+.theater-screen img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+.theater-metadata { display: flex; flex-direction: column; gap: 8px; font-size: 11px; }
+.theater-metadata p { line-height: 1.5; overflow-wrap: anywhere; }
+.theater-version { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.theater-version strong { font-size: 11px; font-weight: 500; }
+.theater-version time { color: var(--muted); font-size: 10px; }
+.gallery-file { color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 4px 7px; text-decoration: none; }
+.gallery-file:hover { background: var(--fill); }
+.gallery-custom-size { display: flex; align-items: center; gap: 4px; }
+.gallery-custom-size input { width: 64px; }
+.theater-playback { display: flex; flex-direction: column; gap: 10px; }
+.playback-controls { justify-content: center; }
+.gallery-play { background: var(--fill); border: 1px solid var(--line); border-radius: 4px; padding: 5px 14px; min-width: 62px; }
+.gallery-play:hover { background: var(--fill-hover); }
+.gallery-timeline { position: relative; height: 34px; border: 1px solid var(--line-strong); border-radius: 4px; overflow: hidden; }
+.gallery-timeline-ticks { display: flex; position: absolute; inset: 4px; pointer-events: none; }
+.gallery-timeline-ticks i { flex: 1; border-left: 1px solid var(--line-strong); }
+.gallery-timeline-ticks .is-current { border-left: 2px solid var(--ink); background: var(--fill); }
+.gallery-timeline input { position: relative; margin: 0; width: 100%; height: 100%; accent-color: var(--ink); background: transparent; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .iteration-gallery * { transition: none !important; animation: none !important; } }
+@media (max-width: 800px) { .iteration-gallery .panel-header { padding: 0 14px; } .gallery-source, .gallery-footer { padding-left: 14px; padding-right: 14px; } .theater-view { padding: 12px 14px; } }

@@ -29,11 +29,12 @@ type Props = {
   onDeleteCurrent: () => void;
   onDeleteFuture: () => void;
   forceMenuOpen?: boolean;
+  readOnly?: boolean;
 };
 
 export function VersionCard({
   node, selected, hasDescendants, isEndpoint, onActivePath, isCurrentBranch, canDeleteCurrent, canDeleteFuture, color, reverted,
-  onSelect, onBranch, onCommit, onRevert, onRestore, onSwitchBranch, onDeleteCurrent, onDeleteFuture, forceMenuOpen = false,
+  onSelect, onBranch, onCommit, onRevert, onRestore, onSwitchBranch, onDeleteCurrent, onDeleteFuture, forceMenuOpen = false, readOnly = false,
 }: Props) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(forceMenuOpen);
@@ -44,8 +45,8 @@ export function VersionCard({
   const commitActionIcon = commitAction === 'restore' ? 'restore' : commitAction === 'revert' ? 'revert' : 'plus';
   const onCommitAction = commitAction === 'restore' ? onRestore : commitAction === 'revert' ? onRevert : onCommit;
   const restorePrimary = isPrimaryCommitAction(commitAction);
-  const branchButton = <button onClick={onBranch} aria-label={`Add branch from ${node.label}`}><Icon name="branch" size={13}/>Add branch</button>;
-  const commitButton = <button className={restorePrimary ? 'is-primary' : undefined} onClick={onCommitAction} aria-label={`${commitActionLabel} ${node.label}`}><Icon name={commitActionIcon} size={13}/>{commitActionLabel}</button>;
+  const branchButton = <button disabled={readOnly} title={readOnly ? 'Switch to Test visual to experiment.' : undefined} onClick={onBranch} aria-label={`Add branch from ${node.label}`}><Icon name="branch" size={13}/>Add branch</button>;
+  const commitButton = <button disabled={readOnly} title={readOnly ? 'Switch to Test visual to experiment.' : undefined} className={restorePrimary ? 'is-primary' : undefined} onClick={onCommitAction} aria-label={`${commitActionLabel} ${node.label}`}><Icon name={commitActionIcon} size={13}/>{commitActionLabel}</button>;
   const references = node.files.filter(file => file.kind !== 'code');
   const codeFiles = node.files.filter(file => file.kind === 'code');
   const added = node.files.reduce((sum, file) => sum + file.added, 0);
@@ -87,12 +88,12 @@ export function VersionCard({
           </button>
         </li>
         <li role="none">
-          <button role="menuitem" disabled={!canDeleteCurrent} onClick={() => { setMenuOpen(false); onDeleteCurrent(); }}>
+          <button role="menuitem" disabled={readOnly || !canDeleteCurrent} onClick={() => { setMenuOpen(false); onDeleteCurrent(); }}>
             {hasDescendants ? 'Delete current node' : 'Delete current endpoint'}
           </button>
         </li>
         {hasDescendants && <li role="none">
-          <button role="menuitem" disabled={!canDeleteFuture} onClick={() => { setMenuOpen(false); onDeleteFuture(); }}>
+          <button role="menuitem" disabled={readOnly || !canDeleteFuture} onClick={() => { setMenuOpen(false); onDeleteFuture(); }}>
             Delete future nodes
           </button>
         </li>}

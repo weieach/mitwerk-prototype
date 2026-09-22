@@ -1,7 +1,9 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { VersionTreePanel } from './features/version-tree/VersionTreePanel';
-import { graphReducer, loadGraphState, persistGraphState } from './features/version-tree/model';
+import { loadGraphState } from './features/version-tree/model';
+import { loadTreePanels, panelBrowserStorage, panelReducer, saveTreePanels } from './features/version-tree/panel-state';
+import { IterationGallery } from './features/iteration-gallery/IterationGallery';
 
 const MIN_PANEL = 280;
 const KEY_STEP = 24;
@@ -12,7 +14,7 @@ function clampLeftWidth(width: number, total: number) {
 }
 
 export default function App() {
-  const [graph, dispatch] = useReducer(graphReducer, undefined, loadGraphState);
+  const [panels, dispatchPanel] = useReducer(panelReducer, undefined, () => loadTreePanels(loadGraphState(), panelBrowserStorage()));
   const workspace = useRef<HTMLElement>(null);
   const divider = useRef<HTMLDivElement>(null);
   const [leftWidth, setLeftWidth] = useState<number | null>(null);
@@ -23,8 +25,8 @@ export default function App() {
   leftWidthRef.current = leftWidth;
 
   useEffect(() => {
-    persistGraphState(graph);
-  }, [graph]);
+    saveTreePanels(panels, panelBrowserStorage());
+  }, [panels]);
 
   function totalWidth() {
     return workspace.current?.clientWidth || workspaceWidth;
@@ -112,8 +114,10 @@ export default function App() {
     style={{ '--split': leftWidth === null ? '50%' : `${leftWidth}px` } as CSSProperties}
   >
     <div className="workspace-split" style={{ gridTemplateColumns: leftWidth === null ? 'minmax(0, 1fr) minmax(0, 1fr)' : `${leftWidth}px minmax(0, 1fr)` }}>
-      <div className="blank-panel" aria-hidden="true" />
-      <VersionTreePanel graph={graph} dispatch={dispatch} />
+      <IterationGallery />
+      <VersionTreePanel key={panels.mode} graph={panels[panels.mode]}
+        mode={panels.mode} onModeChange={mode => dispatchPanel({ type: 'switch', mode })}
+        dispatch={action => dispatchPanel({ type: 'graph', mode: panels.mode, action })} />
     </div>
     <div
       ref={divider}

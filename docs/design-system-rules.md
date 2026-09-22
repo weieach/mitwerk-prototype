@@ -4,9 +4,17 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Scope
 
-- Keep the left panel completely blank until requested otherwise.
+- The left panel contains the Iteration Gallery (requested 2026-09-22), replacing the earlier blank-panel rule. The right panel remains the Version stream.
 - Use local components and CSS; do not add an external design system.
 - Preserve existing design outside the requested changes and bug fixes.
+
+## Version stream panel modes — 2026-09-22
+
+- Place a Test visual / Commit history switch in the Version stream header, using the existing control styling.
+- Initially seed both modes from independent copies of the currently saved tree. Do not replace either with a generated linear tree in this step. Commit history is the reserved capture-folder history view; importing actual captured history is a subsequent data connection, not fabricated branch ancestry.
+- Test visual is an editable sandbox. Adding commits, branching, deleting, reverting and restoring affect only its graph. Commit history permits selection, branch navigation, collapse and zoom, but no graph edits.
+- Enforce edit permissions in shared state logic as well as controls. Persist both graphs and mode independently from the legacy saved tree. Sandbox changes must never write to the canonical graph file, capture folders, gallery data or Git.
+- Seed once, then preserve each mode across switching and reloads. Test visual is the initial mode. Shared graph geometry and Version stream styling remain identical in both modes.
 
 ## Active branch — 2026-09-17
 
@@ -97,8 +105,23 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Implementation locations
 
+- `src/features/iteration-gallery/`: shared gallery tokens, filename-derived version model, isometric geometry, album and theater components. `server/gallery-catalog.ts` discovers screenshots and publishes the same catalog for development and builds.
+
 - `src/features/version-tree/tokens.ts`: station diameters, connector width (`gridTriangleSide`), ring and stripe styling, fills, opacity, triangle dimensions/gap, count-hint caret size/gap/fade, version-label size/weight/color/zoom compensation/`stationLabelOffset`, `activeBranchColor`, per-level unique branch colors, reverted title color (`revertedTitleColor`), reverted stations and incoming connectors (`revertedRouteColor`, `revertedRouteOpacity`), and the default full-diagram capture zoom (`screenshotZoom`).
 - `src/features/version-tree/layout.ts`: lattice geometry, card offsets, row spacing, inactive-route clearance, canvas left inset (`originX`, `padding`, `stationLabelReserve`), compact vs full card heights, origin stations for root-level forks, fork divergence tokens (`forkSharedStemRows`, `originStemRows`, `forkDivergeStartRows`, `forkDivergeRows`, `forkDepartureUnits`, `forkLandingUnits`, `forkTerminalRows`) with `forkApproach`, version-label formatting, and `screenshotNodeTargets` / `frameScreenshotTargets`.
 - `src/features/version-tree/presentation.ts`: selected branch, full selected path, terminal detection, sibling connectors, branch endpoint, the ordered endpoint list for traversal, and the checked-out spine.
 - `src/features/version-tree/model.ts`: `activeBranchId`, `longestBranchId`, current-node and future-node deletion, revert/restore (`revertedIds`, `versionCommitAction`, `versionCommitActionLabel`, `isPrimaryCommitAction`, `isBranchEndpoint`, `restoreNodeIds`, `isRevertedRoute`), the path from root to that branch's last commit, compact-card state (`isCompactVersionCard`), picture-file detection (`isPictureFile`), the reusable filled-version template, and screenshot interact flags derived from the prompt.
 - `VersionTreePanel.tsx` and `VersionCard.tsx`: render these shared decisions; do not independently infer branch or terminal state.
+
+## Iteration Gallery — 2026-09-22
+
+- Rename the former Preview Panel to Iteration Gallery. Reuse the Version stream's typography, colors and simple controls; add no external design system.
+- Read all recognized PNG captures from `[frame capture] screenshots/`. Derive timestamp, capture type/number, summary and optional line counts from filenames, and dimensions from image headers. Never maintain a screenshot-specific fixture list.
+- A push closes a version containing the prompt frames since the previous push. Frames after the latest push form the next, unfinished version. This is the prototype grouping rule; capture version numbers are not mappings to the independently editable Version stream graph.
+- Give every version an equal depth slot. Space its frames within the padded slot. Keep image aspect ratios, with each enclosing block sized to contain its frames; heterogeneous sizes use the largest required envelope. The depth axis is chronological, the version ruler is evenly spaced, and date marks align to the first saved frame of each day, so their intervals vary.
+- Render translucent wireframe blocks with padding on every side. Keep out-of-range chunks in place but disabled. Default to Last 7 days; support Today, Last 3 days, Last 30 days and All time. Interpret date ranges as local calendar days through the current instant.
+- Render only the first and last in-range image at stronger opacity at rest. Keep intermediate slice outlines available for browsing. Hover or keyboard focus lifts and highlights a frame and displays its version, date and summary; click or Enter/Space opens that frame in theater view.
+- Date changes transition disabled opacity, without changing version identity. Respect reduced-motion preferences. Use shared tokens for depth, spacing, padding, lift, opacity, zoom, labels, transition and playback timing.
+- Theater provides previous/next, play/pause, playback speed, once/loop/ping-pong modes and a scrubber, restricted to the chosen date range and source. Stop playback when its sequence changes. Return to the gallery without losing filters.
+- Viewport presets and custom dimensions preserve the requested viewport aspect ratio and contain saved images without cropping. These are static captures: resizing cannot reflow historical pages.
+- Show only real metadata. Commit navigation, chat attachment and token usage remain unavailable until those sources are connected. Do not infer commit IDs, related files or token costs from screenshots.

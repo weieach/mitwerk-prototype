@@ -1,5 +1,11 @@
 # Mitwerk
 
+The active prototype now follows **Idea 2: visual iteration history**. Run `npm run dev` and open `http://localhost:5173/` for the Iteration Gallery and Version stream. The gallery reads PNGs in `[frame capture] screenshots/`, provides isometric browsing and theater playback, and includes its capture assets in `npm run build`.
+
+See [Idea 2](docs/idea-2-project-proposal.md), [gallery implementation](docs/iteration-gallery.md), and [shared design rules](docs/design-system-rules.md). Run `npm test` for the graph and gallery suites. The earlier review prototype described below is retained as historical context under `archive/review-comment-spike/`.
+
+## Earlier proposal
+
 An agentic project management platform for running design reviews and gathering feedback — with AI
 agents and remote colleagues — to cut the delay and coordination friction of asynchronous,
 distributed review.
