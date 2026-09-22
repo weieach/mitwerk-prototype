@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canDeleteCurrent, canDeleteFuture, createInitialGraphState, filledVersionTemplate, graphReducer, graphStorageKey, isCompactVersionCard, isPictureFile, isPrimaryCommitAction, isRevertedRoute, loadGraphState, parseStoredGraphState, restoreNodeIds, saveGraphState, screenshotFocusId, screenshotInteractFromPrompt, screenshotInteractQuery, screenshotQueryFlags, versionCommitAction, versionCommitActionLabel } from '../src/features/version-tree/model.ts';
+import { canDeleteCurrent, canDeleteFuture, createInitialGraphState, filledVersionTemplate, graphReducer, graphStorageKey, isBranchEndpoint, isCompactVersionCard, isPictureFile, isPrimaryCommitAction, isRevertedRoute, loadGraphState, parseStoredGraphState, restoreNodeIds, saveGraphState, screenshotFocusId, screenshotInteractFromPrompt, screenshotInteractQuery, screenshotQueryFlags, versionCommitAction, versionCommitActionLabel } from '../src/features/version-tree/model.ts';
 import { createTestGraphState } from './graph-fixture.ts';
 import { geometry, layoutGraph } from '../src/features/version-tree/layout.ts';
 import { treeTheme } from '../src/features/version-tree/tokens.ts';
@@ -276,10 +276,16 @@ test('graph state is restored from storage and ignores corrupt snapshots', () =>
 
 test('revert grays later versions without removing them, and restore brings a change back', () => {
   const before = createTestGraphState();
-  assert.deepEqual(versionCommitAction(true, false), 'revert');
-  assert.deepEqual(versionCommitAction(false, false), 'commit');
+  assert.deepEqual(versionCommitAction(true, false), 'commit');
+  assert.deepEqual(versionCommitAction(false, false), 'revert');
   assert.deepEqual(versionCommitAction(false, true), 'restore');
   assert.deepEqual(versionCommitAction(true, true), 'restore');
+  const branchedTip = graphReducer(before, { type: 'add-branch', sourceId: 'v3' });
+  assert.equal(isBranchEndpoint(before.nodes, 'v3'), true);
+  assert.equal(isBranchEndpoint(before.nodes, 'v2-1'), true);
+  assert.equal(isBranchEndpoint(before.nodes, 'v2'), false);
+  assert.equal(isBranchEndpoint(branchedTip.nodes, 'v3'), true);
+  assert.equal(versionCommitAction(isBranchEndpoint(branchedTip.nodes, 'v3'), false), 'commit');
   assert.equal(versionCommitActionLabel('revert'), 'Revert change');
   assert.equal(versionCommitActionLabel('restore'), 'Restore change');
   assert.equal(isPrimaryCommitAction('restore'), true);

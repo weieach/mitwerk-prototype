@@ -41,10 +41,16 @@ export type GraphState = {
 /** Card action that replaces Add commit, derived from endpoint and revert state. */
 export type VersionCommitAction = 'commit' | 'revert' | 'restore';
 
-export function versionCommitAction(hasDescendants: boolean, reverted: boolean): VersionCommitAction {
+/** Last commit on a node's own branch, including tips that still have branch children. */
+export function isBranchEndpoint(nodes: VersionNode[], nodeId: string) {
+  const node = nodes.find(item => item.id === nodeId);
+  return Boolean(node && branchTip(nodes, node.branchId)?.id === nodeId);
+}
+
+export function versionCommitAction(isEndpoint: boolean, reverted: boolean): VersionCommitAction {
   if (reverted) return 'restore';
-  if (hasDescendants) return 'revert';
-  return 'commit';
+  if (isEndpoint) return 'commit';
+  return 'revert';
 }
 
 export function versionCommitActionLabel(action: VersionCommitAction) {

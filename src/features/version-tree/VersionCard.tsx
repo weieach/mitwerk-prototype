@@ -13,6 +13,7 @@ type Props = {
   node: VersionNode;
   selected: boolean;
   hasDescendants: boolean;
+  isEndpoint: boolean;
   onActivePath: boolean;
   isCurrentBranch: boolean;
   canDeleteCurrent: boolean;
@@ -31,14 +32,14 @@ type Props = {
 };
 
 export function VersionCard({
-  node, selected, hasDescendants, onActivePath, isCurrentBranch, canDeleteCurrent, canDeleteFuture, color, reverted,
+  node, selected, hasDescendants, isEndpoint, onActivePath, isCurrentBranch, canDeleteCurrent, canDeleteFuture, color, reverted,
   onSelect, onBranch, onCommit, onRevert, onRestore, onSwitchBranch, onDeleteCurrent, onDeleteFuture, forceMenuOpen = false,
 }: Props) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(forceMenuOpen);
   const menu = useRef<HTMLDivElement>(null);
   const compact = isCompactVersionCard(onActivePath, selected) && !forceMenuOpen;
-  const commitAction = versionCommitAction(hasDescendants, reverted);
+  const commitAction = versionCommitAction(isEndpoint, reverted);
   const commitActionLabel = versionCommitActionLabel(commitAction);
   const commitActionIcon = commitAction === 'restore' ? 'restore' : commitAction === 'revert' ? 'revert' : 'plus';
   const onCommitAction = commitAction === 'restore' ? onRestore : commitAction === 'revert' ? onRevert : onCommit;

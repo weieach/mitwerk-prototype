@@ -1,13 +1,16 @@
-import { spawn } from 'node:child_process';
-import { appendFileSync, closeSync, constants, existsSync, mkdirSync, openSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
+import { appendFileSync, closeSync, constants, cpSync, existsSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { execFileSync } from 'node:child_process';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const url = process.env.SCREENSHOT_URL ?? 'http://localhost:5173';
-const screenshotsDir = join(root, 'screenshots');
+const frameCaptureDirName = '[frame capture] screenshots';
+const verCaptureDirName = '[ver capture] codebase';
+const minArchivePush = 6;
+const screenshotsDir = join(root, frameCaptureDirName);
+const archivesDir = join(root, verCaptureDirName);
 const pushMarkerFile = join(screenshotsDir, '.last-push-sha');
 const captureLockFile = join(screenshotsDir, '.capture.lock');
 const captureLogFile = join(screenshotsDir, '.capture.log');
@@ -55,12 +58,53 @@ function fileLabel(count) {
   return count === 1 ? '1 file' : `${count} files`;
 }
 
+function lineLabel(added, deleted) {
+  return `+${added} -${deleted}`;
+}
+
+function compactCount(value) {
+  const n = Math.abs(Math.round(Number(value) || 0));
+  if (n === 0) return '0';
+  if (n < 1000) return String(n);
+  const exp = Math.floor(Math.log10(n));
+  const rounded = Math.round(n / 10 ** (exp - 1)) * 10 ** (exp - 1);
+  if (rounded >= 1_000_000) {
+    const millions = rounded / 1_000_000;
+    return millions >= 10 ? `${Math.round(millions)}M` : `${millions.toFixed(1)}M`;
+  }
+  const thousands = rounded / 1000;
+  return thousands >= 10 ? `${Math.round(thousands)}k` : `${thousands.toFixed(1)}k`;
+}
+
+function compactLineDelta(added, deleted) {
+  return `+${compactCount(added)}-${compactCount(deleted)}`;
+}
+
+function parentSha(sha) {
+  try {
+    return git(['rev-parse', `${sha}^`]);
+  } catch {
+    return '';
+  }
+}
+
+function frameStem({ tag, count, files = 0, added = 0, deleted = 0, message }) {
+  if (tag === 'prompt') {
+    return `[${tag} #${count}] ${compactLineDelta(added, deleted)} · ${message}`;
+  }
+  return `[${tag} #${count}] ${fileLabel(files)} · ${lineLabel(added, deleted)} · ${message}`;
+}
+
 function listedPaths(output) {
   return output.split('\n').map((line) => line.trim()).filter(Boolean);
 }
 
 function isCountedPath(name) {
-  return Boolean(name) && !name.startsWith('screenshots/') && name !== '.mitwerk-graph.json';
+  return Boolean(name)
+    && !name.startsWith(`${frameCaptureDirName}/`)
+    && !name.startsWith(`${verCaptureDirName}/`)
+    && !name.startsWith('screenshots/')
+    && name !== '.mitwerk-graph.json';
 }
 
 function countChangedFiles(tag, sha, base) {
@@ -81,6 +125,59 @@ function countChangedFiles(tag, sha, base) {
   } catch {
     return 0;
   }
+}
+
+function addNumstat(output, totals) {
+  for (const line of output.split('\n')) {
+    const match = line.match(/^(\d+|-)\t(\d+|-)\t(.+)$/);
+    if (!match || !isCountedPath(match[3])) continue;
+    if (match[1] !== '-') totals.added += Number(match[1]);
+    if (match[2] !== '-') totals.deleted += Number(match[2]);
+  }
+}
+
+function countLineChanges(sha, base) {
+  try {
+    const zeros = '0000000000000000000000000000000000000000';
+    const output = base && base !== zeros
+      ? git(['diff', '--numstat', `${base}...${sha}`])
+      : git(['diff-tree', '--no-commit-id', '--numstat', '-r', sha]);
+    const totals = { added: 0, deleted: 0 };
+    addNumstat(output, totals);
+    return totals;
+  } catch {
+    return { added: 0, deleted: 0 };
+  }
+}
+
+function countFileLines(path) {
+  const buf = readFileSync(path);
+  if (buf.includes(0)) return 0;
+  const text = buf.toString('utf8');
+  if (!text) return 0;
+  const lines = text.split(/\r\n|\n/);
+  if (lines.at(-1) === '') lines.pop();
+  return lines.length;
+}
+
+function countWorkingTreeLineChanges() {
+  const totals = { added: 0, deleted: 0 };
+  try {
+    addNumstat(git(['diff', 'HEAD', '--numstat']), totals);
+  } catch {
+    // no HEAD or empty tree
+  }
+  try {
+    for (const name of listedPaths(git(['ls-files', '--others', '--exclude-standard']))) {
+      if (!isCountedPath(name)) continue;
+      const path = join(root, name);
+      if (!existsSync(path) || statSync(path).isDirectory()) continue;
+      totals.added += countFileLines(path);
+    }
+  } catch {
+    // ignore untracked scan failures
+  }
+  return totals;
 }
 
 function nextTagCount(dir, tag) {
@@ -448,26 +545,236 @@ function writePushMarker(sha) {
   writeFileSync(pushMarkerFile, `${sha}\n`);
 }
 
-function gitLiteral(args) {
-  return execFileSync('git', args, {
-    cwd: root,
-    encoding: 'utf8',
-    env: { ...process.env, GIT_LITERAL_PATHSPECS: '1' },
-  }).trim();
-}
-
 function newestUntrackedPushScreenshot(subject) {
   try {
+    if (!existsSync(screenshotsDir)) return '';
     const needle = sanitizeMessage(subject, 'commit');
-    const names = git(['ls-files', '--others', '--exclude-standard', '--', 'screenshots'])
-      .split('\n')
-      .filter((name) => name.startsWith('screenshots/[push') && name.includes(needle));
+    const names = readdirSync(screenshotsDir)
+      .filter((name) => name.startsWith('[push') && name.includes(needle));
     if (!names.length) return '';
     names.sort();
-    return join(root, names.at(-1));
+    return join(screenshotsDir, names.at(-1));
   } catch {
     return '';
   }
+}
+
+function pushCountFromName(name) {
+  const match = String(name).match(/\[push #(\d+)\]/i);
+  return match ? Number(match[1]) : 0;
+}
+
+function pushMessageFromFilename(name) {
+  const trimmed = String(name).replace(/-\d{4}-\d{2}-\d{2}-\d{6}(?:\.png)?$/, '');
+  const parts = trimmed.split(' · ');
+  return parts.length > 1 ? parts.at(-1) : '';
+}
+
+function existingArchive(count) {
+  if (!existsSync(archivesDir)) return '';
+  const prefix = `[push #${count}]`;
+  return readdirSync(archivesDir).find((name) => name.startsWith(prefix)) ?? '';
+}
+
+function githubRepo() {
+  const remote = git(['remote', 'get-url', 'origin']);
+  const match = remote.match(/github\.com[:/]([^/]+)\/([^/.]+?)(?:\.git)?$/i);
+  if (!match) {
+    throw new Error(`Origin is not a GitHub URL: ${remote}`);
+  }
+  return { owner: match[1], repo: match[2] };
+}
+
+function gitArchiveTo(sha, dest) {
+  mkdirSync(dest, { recursive: true });
+  const archive = spawnSync('git', ['archive', sha], {
+    cwd: root,
+    encoding: 'buffer',
+    maxBuffer: 256 * 1024 * 1024,
+  });
+  if (archive.status !== 0) {
+    throw new Error(archive.stderr?.toString().trim() || `git archive failed for ${sha}`);
+  }
+  const untar = spawnSync('tar', ['-x', '-C', dest], { input: archive.stdout });
+  if (untar.status !== 0) {
+    throw new Error(untar.stderr?.toString().trim() || `tar extract failed for ${sha}`);
+  }
+}
+
+async function downloadGithubZip(sha, dest) {
+  const { owner, repo } = githubRepo();
+  const zipUrl = `https://codeload.github.com/${owner}/${repo}/zip/${sha}`;
+  const tmp = mkdtempSync(join(tmpdir(), 'mitwerk-ver-'));
+  try {
+    const response = await fetch(zipUrl, { signal: AbortSignal.timeout(60000) });
+    if (!response.ok) {
+      throw new Error(`GitHub zip ${response.status} for ${sha}`);
+    }
+    writeFileSync(join(tmp, 'repo.zip'), Buffer.from(await response.arrayBuffer()));
+    const unzip = spawnSync('unzip', ['-q', join(tmp, 'repo.zip'), '-d', tmp]);
+    if (unzip.status !== 0) {
+      throw new Error(unzip.stderr?.toString().trim() || `unzip failed for ${sha}`);
+    }
+    const extracted = readdirSync(tmp).find((name) => name !== 'repo.zip');
+    if (!extracted) {
+      throw new Error(`GitHub zip for ${sha} was empty`);
+    }
+    mkdirSync(dest, { recursive: true });
+    cpSync(join(tmp, extracted), dest, { recursive: true });
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+async function archivePushTree({ sha, label, count, files, added = 0, deleted = 0, date = new Date(), preferGithub = false }) {
+  const resolved = git(['rev-parse', sha]);
+  if (!count || count < minArchivePush) {
+    return '';
+  }
+  const already = existingArchive(count);
+  if (already) {
+    captureLog(`archive skip: ${already}`);
+    return join(archivesDir, already);
+  }
+  const message = sanitizeMessage(label, 'commit');
+  const folder = `${frameStem({ tag: 'push', count, files, added, deleted, message })}-${timecode(date)}`;
+  const dest = join(archivesDir, folder);
+  mkdirSync(archivesDir, { recursive: true });
+  try {
+    if (preferGithub) {
+      await downloadGithubZip(resolved, dest);
+      captureLog(`archive github ${resolved} ${folder}`);
+    } else {
+      gitArchiveTo(resolved, dest);
+      captureLog(`archive git ${resolved} ${folder}`);
+    }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    if (preferGithub) {
+      captureLog(`archive github failed, using git archive: ${detail}`);
+      if (existsSync(dest)) {
+        rmSync(dest, { recursive: true, force: true });
+      }
+      gitArchiveTo(resolved, dest);
+      captureLog(`archive git ${resolved} ${folder}`);
+    } else {
+      if (existsSync(dest)) {
+        rmSync(dest, { recursive: true, force: true });
+      }
+      throw error;
+    }
+  }
+  return dest;
+}
+
+function findCommitBySubject(message) {
+  const needle = sanitizeMessage(message, 'commit');
+  if (!needle) return null;
+  const rows = git(['log', '--pretty=%H%x09%s']).split('\n').filter(Boolean);
+  for (const row of rows) {
+    const tab = row.indexOf('\t');
+    const sha = tab >= 0 ? row.slice(0, tab) : row;
+    const subject = tab >= 0 ? row.slice(tab + 1) : '';
+    if (subject === 'chore: progress screenshot') continue;
+    const cleaned = sanitizeMessage(subject, 'commit');
+    if (cleaned === needle || cleaned.startsWith(needle) || needle.startsWith(cleaned)) {
+      return { sha, subject };
+    }
+  }
+  return null;
+}
+
+async function backfillArchives() {
+  mkdirSync(archivesDir, { recursive: true });
+  if (!existsSync(screenshotsDir)) {
+    throw new Error(`Missing ${frameCaptureDirName}`);
+  }
+  const entries = readdirSync(screenshotsDir)
+    .map((name) => ({ name, count: pushCountFromName(name) }))
+    .filter((entry) => entry.count >= minArchivePush && entry.name.startsWith('[push'));
+  entries.sort((a, b) => a.count - b.count);
+  const saved = [];
+  for (const entry of entries) {
+    if (existingArchive(entry.count)) {
+      captureLog(`backfill skip: push #${entry.count}`);
+      continue;
+    }
+    const message = pushMessageFromFilename(entry.name);
+    const commit = findCommitBySubject(message);
+    if (!commit) {
+      captureLog(`backfill miss: push #${entry.count} ${message}`);
+      continue;
+    }
+    const base = parentSha(commit.sha);
+    const files = countChangedFiles('push', commit.sha, base);
+    const { added, deleted } = countLineChanges(commit.sha, base);
+    const date = new Date(git(['log', '-1', '--format=%cI', commit.sha]));
+    const dest = await archivePushTree({
+      sha: commit.sha,
+      label: commit.subject,
+      count: entry.count,
+      files,
+      added,
+      deleted,
+      date,
+      preferGithub: hasFlag('from-github'),
+    });
+    if (dest) saved.push(dest);
+  }
+  return saved;
+}
+
+function renameIfNeeded(from, to) {
+  if (from === to || !existsSync(from)) return '';
+  if (existsSync(to)) {
+    captureLog(`relabel skip exists ${basename(to)}`);
+    return '';
+  }
+  renameSync(from, to);
+  return to;
+}
+
+function relabelFrames() {
+  const renamed = [];
+  if (existsSync(screenshotsDir)) {
+    for (const name of readdirSync(screenshotsDir)) {
+      if (name.startsWith('[prompt') && /\] \d+ files? · /.test(name)) {
+        const next = name.replace(/^(\[prompt(?: #\d+)?\]) \d+ files? · /, '$1 ');
+        const dest = renameIfNeeded(join(screenshotsDir, name), join(screenshotsDir, next));
+        if (dest) renamed.push(dest);
+        continue;
+      }
+      if (!name.startsWith('[push') || /· \+\d+ -\d+ ·/.test(name)) continue;
+      const message = pushMessageFromFilename(name);
+      const commit = findCommitBySubject(message);
+      if (!commit) {
+        captureLog(`relabel miss push ${name}`);
+        continue;
+      }
+      const base = parentSha(commit.sha);
+      const { added, deleted } = countLineChanges(commit.sha, base);
+      const next = name.replace(/^(\[push #\d+\] \d+ files? · )(?!\+)/, `$1${lineLabel(added, deleted)} · `);
+      const dest = renameIfNeeded(join(screenshotsDir, name), join(screenshotsDir, next));
+      if (dest) renamed.push(dest);
+    }
+  }
+  if (existsSync(archivesDir)) {
+    for (const name of readdirSync(archivesDir)) {
+      if (!name.startsWith('[push') || /· \+\d+ -\d+ ·/.test(name)) continue;
+      const message = pushMessageFromFilename(name);
+      const commit = findCommitBySubject(message);
+      if (!commit) {
+        captureLog(`relabel miss archive ${name}`);
+        continue;
+      }
+      const base = parentSha(commit.sha);
+      const { added, deleted } = countLineChanges(commit.sha, base);
+      const next = name.replace(/^(\[push #\d+\] \d+ files? · )(?!\+)/, `$1${lineLabel(added, deleted)} · `);
+      const dest = renameIfNeeded(join(archivesDir, name), join(archivesDir, next));
+      if (dest) renamed.push(dest);
+    }
+  }
+  return renamed;
 }
 
 function acquireCaptureLock() {
@@ -526,30 +833,30 @@ async function reconcilePush({ commitAndPush }) {
     return '';
   }
   try {
+    const base = parentSha(sha);
     let outFile = pending;
     if (!outFile) {
-      let base = '';
-      try {
-        base = git(['rev-parse', `${sha}^`]);
-      } catch {
-        base = '';
-      }
       captureLog(`reconcile capture ${sha} ${subject}`);
       outFile = await takeScreenshot({ tag: 'push', label: subject, sha, base });
     } else {
       captureLog(`reconcile reuse ${outFile}`);
+      const { added, deleted } = countLineChanges(sha, base);
+      try {
+        await archivePushTree({
+          sha,
+          label: subject,
+          count: pushCountFromName(basename(outFile)),
+          files: countChangedFiles('push', sha, base),
+          added,
+          deleted,
+        });
+      } catch (error) {
+        captureLog(`archive failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
+    writePushMarker(sha);
     if (commitAndPush) {
-      gitLiteral(['add', '--', outFile]);
-      gitLiteral(['commit', '--no-verify', '-m', 'chore: progress screenshot', '--', outFile]);
-      execFileSync('git', ['push', '--no-verify'], {
-        cwd: root,
-        env: { ...process.env, MITWERK_SCREENSHOT_HOOK: '1' },
-      });
-      writePushMarker(git(['rev-parse', 'HEAD']));
-      captureLog(`reconcile pushed screenshot ${outFile}`);
-    } else {
-      writePushMarker(sha);
+      captureLog(`reconcile saved local screenshot ${outFile}`);
     }
     return outFile;
   } finally {
@@ -566,16 +873,36 @@ async function takeScreenshot({ tag, label, sha, base }) {
   mkdirSync(screenshotsDir, { recursive: true });
   const message = sanitizeMessage(label, tag === 'prompt' ? 'prompt' : 'commit');
   const count = nextTagCount(screenshotsDir, tag);
-  const files = countChangedFiles(tag, sha, base);
-  const filename = `[${tag} #${count}] ${fileLabel(files)} · ${message}-${timecode()}.png`;
+  const files = tag === 'push' ? countChangedFiles(tag, sha, base) : 0;
+  const lines = tag === 'push' ? countLineChanges(sha, base) : countWorkingTreeLineChanges();
+  const filename = `${frameStem({ tag, count, files, ...lines, message })}-${timecode()}.png`;
   const outFile = join(screenshotsDir, filename);
   await capture(chrome, outFile, label);
+  if (tag === 'push') {
+    try {
+      await archivePushTree({ sha, label, count, files, ...lines });
+    } catch (error) {
+      captureLog(`archive failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
   return outFile;
 }
 
 async function main() {
   const hookMode = hasFlag('hook-mode');
   const failOpen = hookMode || hasFlag('fail-open');
+  if (hasFlag('backfill-archives')) {
+    const saved = await backfillArchives();
+    for (const dest of saved) console.log(dest);
+    if (!saved.length) console.log('No new version archives.');
+    return;
+  }
+  if (hasFlag('relabel-frames')) {
+    const saved = relabelFrames();
+    for (const dest of saved) console.log(dest);
+    if (!saved.length) console.log('No frame names to update.');
+    return;
+  }
   const raw = hasFlag('from-stdin') || hookMode ? await readStdin() : '';
   const payload = parsePayload(raw);
   const event = payload.hook_event_name ?? '';

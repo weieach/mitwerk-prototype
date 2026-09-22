@@ -19,6 +19,9 @@ build/
 .mitwerk-auth.json
 # Saved version-stream graph used by local screenshots
 .mitwerk-graph.json
-screenshots/.last-push-sha
-screenshots/.capture.lock
+
+# Local progress captures — never commit
+\[frame capture\] screenshots/
+\[ver capture\] codebase/
+
 dist/

@@ -58,15 +58,7 @@ fi
 echo "pre-push: capturing progress screenshot for $local_sha" >&2
 file="$("$NODE" "$root/scripts/screenshot-progress.mjs" --tag push --sha "$local_sha" --base "$remote_sha")"
 
-GIT_LITERAL_PATHSPECS=1 git add -- "$file"
-GIT_LITERAL_PATHSPECS=1 git commit --no-verify -m "chore: progress screenshot" -- "$file"
-
-export MITWERK_SCREENSHOT_HOOK=1
-git push --no-verify "$remote" "HEAD:$remote_ref"
-
 echo "" >&2
-echo "Progress screenshot saved and pushed:" >&2
+echo "Progress screenshot saved locally:" >&2
 echo "  $file" >&2
-echo "Git may print a 'failed to push' error next; the push already succeeded." >&2
 echo "" >&2
-exit 1

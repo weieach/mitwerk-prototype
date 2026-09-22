@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, Dispatch, PointerEvent as ReactPointerEvent } from 'react';
 import { Icon } from '../../components/Icon';
-import { branchPathIds, canDeleteCurrent, canDeleteFuture, isReverted, isRevertedRoute, screenshotFocusId, screenshotQueryFlags, type GraphAction, type GraphState } from './model';
+import { branchPathIds, canDeleteCurrent, canDeleteFuture, isBranchEndpoint, isReverted, isRevertedRoute, screenshotFocusId, screenshotQueryFlags, type GraphAction, type GraphState } from './model';
 import { frameScreenshotTargets, frameVersionLevel, geometry, layoutBranchView, layoutGraph, screenshotNodeTargets } from './layout';
 import { activeRouteColor, levelColorLookup, stationLabelOffset, treeTheme, versionLabelZoomScale } from './tokens';
 import { IsometricGrid } from './IsometricGrid';
@@ -29,7 +29,9 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
   const [branchMenuOpen, setBranchMenuOpen] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const [overviewReady, setOverviewReady] = useState(false);
   const initialFit = useRef(false);
+  const introEndpointZoom = useRef(false);
   const screenshotReady = useRef(false);
   const previousCount = useRef(graph.nodes.length);
   const focusId = screenshotFocusId(graph);
@@ -108,10 +110,11 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
           setZoom(next); zoomRef.current = next;
         }
       }
+      if (!screenshotCapture && width > 0) setOverviewReady(true);
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, [layout, screenshotCapture, presentation.hiddenNodeIds, activePath, graph.selectedId]);
+  }, [layout, screenshotCapture, presentation.hiddenNodeIds, activePath, graph.selectedId, graph.activeBranchId, graph.nodes]);
 
   useEffect(() => {
     if (!screenshotCapture) return;
@@ -202,6 +205,19 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
     dispatch({ type: 'select', id: node.id });
     focusAtZoom(node, 1);
   }
+
+  useEffect(() => {
+    if (screenshotCapture || !overviewReady || introEndpointZoom.current) return;
+    const endpoint = endpoints.find(node => node.branchId === graph.activeBranchId)
+      ?? layout.nodes.find(node => node.branchId === graph.activeBranchId && isBranchEndpoint(graph.nodes, node.id));
+    if (!endpoint) return;
+    const timer = window.setTimeout(() => {
+      if (introEndpointZoom.current) return;
+      introEndpointZoom.current = true;
+      focusAtZoom(endpoint, 1);
+    }, 160);
+    return () => window.clearTimeout(timer);
+  }, [overviewReady, screenshotCapture, graph.activeBranchId, layout.nodes]);
 
   function stepEndpoint(delta: number) {
     if (endpoints.length < 2) return;
@@ -321,7 +337,8 @@ export function VersionTreePanel({ graph, dispatch }: Props) {
                   top: -cardOffsetY + label.y,
                 }}>{node.label}</span>
                 <VersionCard node={node} selected={node.id === graph.selectedId}
-                  hasDescendants={presentation.nodesWithChildren.has(node.id)} onActivePath={onSpine}
+                  hasDescendants={presentation.nodesWithChildren.has(node.id)}
+                  isEndpoint={isBranchEndpoint(graph.nodes, node.id)} onActivePath={onSpine}
                   isCurrentBranch={node.branchId === graph.activeBranchId}
                   canDeleteCurrent={canDeleteCurrent(graph.nodes, node.id)}
                   canDeleteFuture={canDeleteFuture(graph.nodes, node.id)}
