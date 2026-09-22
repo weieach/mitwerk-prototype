@@ -2,9 +2,6 @@ import type { GalleryFrame, GalleryVersion, RangeKey } from './model.ts';
 import { inRange } from './model.ts';
 import { galleryTokens as t } from './tokens.ts';
 
-export type Point = { x: number; y: number };
-export const project = (x: number, y: number, depth: number): Point => ({ x: (x + depth) * Math.sqrt(3) / 2, y: y + (x - depth) / 2 });
-export const pointList = (points: Point[]) => points.map(p => `${p.x},${p.y}`).join(' ');
 export function imageSize(frame: Pick<GalleryFrame, 'width' | 'height'>) {
   const scale = Math.min(t.maxImageWidth / frame.width, t.maxImageHeight / frame.height);
   return { width: frame.width * scale, height: frame.height * scale };
@@ -37,8 +34,5 @@ export function buildAlbum(versions: GalleryVersion[], range: RangeKey, now: num
   }
   const width = Math.max(t.maxImageWidth, ...blocks.map(block => block.width));
   const depth = versions.length * t.versionDepth;
-  const bounds = { x: -t.canvasPadding, y: -depth / 2 - t.canvasPadding,
-    width: (width + depth) * Math.sqrt(3) / 2 + t.canvasPadding * 2,
-    height: (width + depth) / 2 + t.maxImageHeight + t.padding * 2 + t.canvasPadding * 2 };
-  return { blocks, planes, bounds, width, depth };
+  return { blocks, planes, width, depth };
 }

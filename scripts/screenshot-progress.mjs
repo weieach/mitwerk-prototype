@@ -508,7 +508,6 @@ async function capture(chrome, outFile, prompt = '') {
     chrome,
     [
       '--headless',
-      '--disable-gpu',
       '--hide-scrollbars',
       '--no-first-run',
       '--no-default-browser-check',
