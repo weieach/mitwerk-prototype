@@ -165,7 +165,7 @@ This file is reserved for project-wide design-system rules requested by the user
 - Feature the inspected or dropdown-selected frame as a pair of axis labels at that frame's depth: date on the wall using the compact local date, version on the ground as `Vn`. Featured ticks and label clearance use `featuredTickScale` (0.5× the standing ruler). Ink marks the featured pair; muted marks the standing ticks. The featured version label uses a strong white text shadow. Hide a standing tick only when it occupies the same face and depth. The pair follows hover while the pointer inspects a frame, then remains on the dropdown selection.
 - Use the same compact bracketed version/date format in the saved-frame dropdown.
 - Apply shared `padding` to the frame's horizontal, vertical and time-axis clearance inside the block; do not change version spacing or introduce frame-specific exceptions.
-- While a frame is hovered, darken that frame's containing block stroke to ink at `hoverEdgeOpacity` and thicken it to `hoverEdgeWidth` (3 px). Other blocks keep the muted `edgeOpacity` stroke at `edgeWidth` (1 px). Derive the container from shared album geometry, not a specific frame.
+- While a frame is hovered, darken that frame's containing block stroke to ink at `hoverEdgeOpacity` and thicken it slightly to `hoverEdgeWidth` (1.5 px). Other blocks keep the muted `edgeOpacity` stroke at `edgeWidth` (1 px). Derive the container from shared album geometry, not a specific frame.
 - A requested capture with selection, hover and reset view should include a valid dropdown selection, its floating Open frame action, and an in-range highlighted frame while using the normal Reset view camera.
 
 ## Gallery-to-theater transition — 2026-09-22

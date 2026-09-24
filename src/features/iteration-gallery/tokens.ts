@@ -3,7 +3,7 @@ export const galleryTokens = {
   theaterDrag: { radiansPerViewport: Math.PI, pitchLimit: Math.PI * .45 },
   interfaces: [{ value: 'index.html', label: 'index.html' }],
   webgl: { pixelRatioMax: 2, rotateSpeed: .7, zoomSpeed: .55, keyRotateRadians: .12, dragThreshold: 5,
-    blockOpacity: .035, edgeOpacity: .75, hoverEdgeOpacity: 1, edgeWidth: 1, hoverEdgeWidth: 3, frameOutlineOpacity: .92, frontViewPadding: 1.8, frontViewLift: .15,
+    blockOpacity: .035, edgeOpacity: .75, hoverEdgeOpacity: 1, edgeWidth: 1, hoverEdgeWidth: 1.5, frameOutlineOpacity: .92, frontViewPadding: 1.8, frontViewLift: .15,
     initialDirection: [1, .85, 1] as const, groundRotationDegrees: 12, textureCacheSize: 8, anisotropyMax: 4 },
   overviewPadding: 1.12, overviewFitScale: 1.2, representativeVersionStride: 3,
   edgePan: { bandPx: 64, speed: 32, accelerationMs: 420, delayMs: 480, followMs: 140, settle: 4 },
