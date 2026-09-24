@@ -327,6 +327,16 @@ export function screenshotNodeTargets(
   ];
 }
 
+/** Zoom and scroll toward a world box, never below the shared minimum scale. */
+export function fitAllFrame(bounds: { left: number; top: number; right: number; bottom: number }, viewportWidth: number, viewportHeight: number, minZoom: number) {
+  const pad = 16;
+  const spanW = Math.max(1, bounds.right - bounds.left);
+  const spanH = Math.max(1, bounds.bottom - bounds.top);
+  const zoom = Math.max(minZoom, Math.min(1, Math.min((viewportWidth - pad * 2) / spanW, (viewportHeight - pad * 2) / spanH)));
+  const spare = Math.max(0, viewportWidth - spanW * zoom - pad * 2);
+  return { zoom, left: Math.max(0, bounds.left * zoom - pad - spare * 0.4), top: Math.max(0, bounds.top * zoom - pad), inset: spare * 0.4 / zoom };
+}
+
 /** Center a set of world-space boxes in the viewport at the default capture scale. */
 export function frameScreenshotTargets(
   targets: { x: number; y: number; width?: number; height?: number }[],

@@ -8,7 +8,9 @@ import { galleryTokens as t } from './tokens';
 export function PlaybackTimeline({ frames, catalog, range, now, index, previewIndex, onPreview, onSelect }: { catalog: GalleryFrame[]; range: RangeKey; now: number; previewIndex: number; onPreview: (index: number | null) => void; frames: GalleryFrame[]; index: number; onSelect: (index: number) => void }) {
   const timeline = useMemo(() => buildTimeline(catalog.map(frame => ({ ...frame, enabled: inRange(frame, range, now) }))), [catalog, range, now]);
   const position = timeline.marks.find(mark => mark.index === index)?.position ?? 0;
-  const previewPosition = previewIndex >= 0 ? timeline.marks.find(mark => mark.index === previewIndex)?.position : undefined;
+  const tipIndex = previewIndex;
+  const tipPosition = tipIndex >= 0 ? timeline.marks.find(mark => mark.index === tipIndex)?.position : undefined;
+  const previewPosition = previewIndex >= 0 ? tipPosition : undefined;
   function pointerIndex(event: PointerEvent<HTMLDivElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
     return timelinePointerIndex(timeline, (event.clientX - rect.left) / rect.width);
@@ -42,8 +44,7 @@ export function PlaybackTimeline({ frames, catalog, range, now, index, previewIn
         const width = version.end - version.start;
         const progress = Math.max(0, Math.min(1, (position - version.start) / width));
         return <div className={`gallery-timeline-version${version.enabled ? '' : ' is-disabled'}`} key={version.number}
-          style={{ left: `${version.start * 100}%`, width: `${width * 100}%` }}
-          title={`${formatVersion(version.number)} · ${version.marks.length} saved frames${version.enabled ? '' : ' · outside the selected range'}`}>
+          style={{ left: `${version.start * 100}%`, width: `${width * 100}%` }}>
           <div className="gallery-timeline-progress" style={{ width: `${progress * 100}%` }}/>
           {version.marks.map(mark => <i className="gallery-timeline-mark" key={mark.id}
             style={{ left: `${(mark.position - version.start) / width * 100}%` }}/>) }
@@ -52,5 +53,6 @@ export function PlaybackTimeline({ frames, catalog, range, now, index, previewIn
     </div>
     <div className="gallery-timeline-playhead" aria-hidden="true"/>
     {previewPosition !== undefined && <div className="gallery-timeline-playhead gallery-timeline-preview" aria-hidden="true" style={{ left: `${previewPosition * 100}%` }}/> }
+    {tipPosition !== undefined && frames[tipIndex] && <span className="capsule-tooltip gallery-timeline-tip" role="tooltip" style={{ left: `${tipPosition * 100}%` }}>{formatVersion(frames[tipIndex].version)}</span>}
   </div>;
 }

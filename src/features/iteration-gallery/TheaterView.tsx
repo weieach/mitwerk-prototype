@@ -1,26 +1,35 @@
+import { BranchTag } from '../../components/BranchTag';
 import { formatVersion, galleryBranchPaint } from './model';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { GalleryFrame, LoopMode, RangeKey } from './model';
 import { formatTime, playbackStep } from './model';
 import { galleryTokens as t } from './tokens';
-import { presentedFrame, theaterFrameSize, wheelFrameDelta } from './theater-layout';
+import { aspectRatioLabel, presentedFrame, theaterFrameSize, wheelFrameDelta } from './theater-layout';
 import { FrameLoader } from './frame-loader';
 import { adjacentPushIndex } from './timeline';
 import { PlaybackTimeline } from './PlaybackTimeline';
 import { containedFrameTarget, reservedControlContains } from './theater-transition';
 import type { TheaterOrbit, TheaterTarget } from './theater-transition';
-import { theaterCaption } from './theater-layout';
+import { theaterCaption, theaterCaptionLead } from './theater-layout';
 import { Icon } from '../../components/Icon';
+import { TrackedInterface } from './TrackedInterface';
 
-export function TheaterView({ frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline }: { baseline: { width: number; height: number }; active: boolean; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string) => void }) {
+function PlaybackTip({ label, children }: { label: string; children: ReactNode }) {
+  const [hover, setHover] = useState(false);
+  return <span className="playback-tip" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+    {children}
+    {hover && <span className="capsule-tooltip" role="tooltip">{label}</span>}
+  </span>;
+}
+
+export function TheaterView({ frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline, interfaceId, onInterface }: { baseline: { width: number; height: number }; active: boolean; interfaceId: string; onInterface: (value: string) => void; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string) => void }) {
   const gesture = useRef<{ pointer: number; x: number; y: number; frameClick: boolean; orbit: TheaterOrbit | null } | null>(null);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [mode, setMode] = useState<LoopMode>('loop');
   const [direction, setDirection] = useState(1);
   const [preset, setPreset] = useState('original');
-  const [interfaceId, setInterfaceId] = useState<string>(t.interfaces[0].value);
   const [custom, setCustom] = useState({ width: 1280, height: 800 });
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -29,7 +38,8 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
   const metaRef = useRef<HTMLDivElement>(null);
   const wheel = useRef(0);
   const stepFrame = useRef<(move: number) => void>(() => {});
-  const [stageSize, setStageSize] = useState({ width: 600, height: 220 });
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  const [stageMeasured, setStageMeasured] = useState(false);
   const index = Math.max(0, frames.findIndex(frame => frame.id === selectedId));
   const branches = useMemo(() => [...new Set(catalog.map(item => item.branch).filter((branch): branch is string => !!branch))], [catalog]);
   const requested = frames[index];
@@ -78,13 +88,16 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
   useEffect(() => { if (!active) setPlaying(false); }, [active]);
   const sequence = frames.map(frame => frame.id).join('|');
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const body = bodyRef.current;
     if (!body) return;
     const measure = () => {
       const gap = parseFloat(getComputedStyle(body).rowGap || getComputedStyle(body).gap) || t.theater.metadataGap;
       const meta = metaRef.current?.offsetHeight ?? 0;
-      setStageSize({ width: body.clientWidth, height: Math.max(120, body.clientHeight - meta - gap - (actionsRef.current?.offsetHeight ?? 0) - t.theater.actionGap) });
+      const actions = (actionsRef.current?.offsetHeight ?? 0) + t.theater.actionGap;
+      const height = Math.max(0, body.clientHeight - meta - gap - actions);
+      setStageSize({ width: body.clientWidth, height });
+      setStageMeasured(body.clientWidth > 0 && height > 0);
     };
     const observer = new ResizeObserver(measure);
     observer.observe(body);
@@ -136,14 +149,16 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
     setDirection(1); selectFrame(next);
   }
 
-  // Shared placeholder for both frame clicks and the explicit action. Navigation is deferred.
-  function goToCommit() {}
+  function goToCommit() {
+    if (!frame) return;
+    window.dispatchEvent(new CustomEvent('mitwerk-go-to-commit', { detail: { version: frame.version } }));
+  }
   function pointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (!active || !event.isPrimary || event.button !== 0 || gesture.current) return;
     const root = event.currentTarget;
     if ((event.target as HTMLElement).closest('button, input, select, label, a, [data-orbit-blocked]')) return;
     // Control rows reserve their own box and margins; open gaps between them dismiss theater.
-    const blocked = [...root.querySelectorAll<HTMLElement>('[data-orbit-blocked]')].some(element => {
+    const blocked = [...root.querySelectorAll<HTMLElement>('[data-orbit-blocked]:not([data-orbit-inline])')].some(element => {
       const style = getComputedStyle(element);
       const margin = (side: string) => parseFloat(style.getPropertyValue(`margin-${side}`)) || 0;
       const bounds = element.getBoundingClientRect(), row = root.getBoundingClientRect();
@@ -184,13 +199,11 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
-  return <div className="theater-view" data-frame-id={frame?.id} data-selected-frame-id={requested?.id} data-preview-frame-id={previewFrame?.id} data-frame-ready={ready}
+  return <div className="theater-view" data-frame-id={frame?.id} data-selected-frame-id={requested?.id} data-preview-frame-id={previewFrame?.id} data-frame-ready={ready && stageMeasured}
     style={{ '--theater-footer-gap': `${t.theater.playbackFooterGap}px` } as CSSProperties}
     onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} onLostPointerCapture={pointerEnd}>
     <div className="gallery-toolbar" data-orbit-blocked>
-      <select aria-label="Tracked interface" value={interfaceId} onChange={event => setInterfaceId(event.target.value)}>
-        {t.interfaces.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
-      </select>
+      <TrackedInterface value={interfaceId} onChange={onInterface}/>
       <select value={preset} onChange={event => setPreset(event.target.value)} aria-label="Preview viewport">
         {t.viewportPresets.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
@@ -198,7 +211,7 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
         <input aria-label="Custom viewport width" type="number" min="120" max="4096" value={custom.width} onChange={event => setCustom({ ...custom, width: Math.max(120, Math.min(4096, +event.target.value || 120)) })}/>
         <span>×</span><input aria-label="Custom viewport height" type="number" min="120" max="4096" value={custom.height} onChange={event => setCustom({ ...custom, height: Math.max(120, Math.min(4096, +event.target.value || 120)) })}/>
       </div>}
-      <span className="gallery-small">{dimensions.width} × {dimensions.height}</span>
+      <span className="gallery-small">{aspectRatioLabel(dimensions.width, dimensions.height)}</span>
 
     </div>
     <div className="theater-body" ref={bodyRef} style={{ '--theater-metadata-height': `${t.theater.metadataHeight}px`, '--theater-metadata-gap': `${t.theater.metadataGap}px` } as CSSProperties}>
@@ -207,7 +220,7 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
         <button className="theater-text-action" onClick={goToCommit}><Icon name="commit"/>Go to commit</button>
         <button className="theater-text-action" onClick={event => event.stopPropagation()}><Icon name="plus"/>Add frame to chat</button>
       </div>
-        <div className="theater-screen" ref={screenRef} style={{ height: frameSize.height, width: '100%' }}>
+        <div className={`theater-screen${displayed?.kind === 'push' ? ' is-push' : ''}`} ref={screenRef} style={{ height: frameSize.height, width: '100%' }}>
           {displayed ? <img draggable={false} src={`${import.meta.env.BASE_URL}${displayed.url}`} alt={`${formatVersion(displayed.version)}: ${displayed.summary}`} aria-hidden={showingPreview}/>
             : <div className="gallery-empty">{failedImage ? 'This saved image could not be loaded.' : 'Loading frame…'}</div>}
           {showingPreview && <img draggable={false} className="theater-preview-image" src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`Preview ${formatVersion(frame.version)}: ${frame.summary}`}/>}
@@ -215,20 +228,23 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
       </div>
       <div className="theater-metadata" ref={metaRef} style={{ '--line-added': t.theater.addedColor, '--line-removed': t.theater.removedColor, '--theater-row-gap': `${t.theater.metadataRowGap}px`, '--theater-summary-gap': `${t.theater.metadataRowGap * (t.theater.summaryGapScale - 1)}px` } as CSSProperties}>
         {failedImage && displayed && <span role="status" data-orbit-blocked>The next image could not be loaded. The previous frame is still shown.</span>}
-        <div className="theater-version" data-orbit-blocked><strong>{formatVersion(frame.version)} · {frame.kind} {frame.number ?? ''}</strong><time dateTime={new Date(frame.timestamp).toISOString()}>{formatTime(frame.timestamp)}</time></div>
-        <p className="theater-summary"><em>{theaterCaption(frame)}</em></p>
-        {(frame.branch || frame.added) && <div className="theater-branch-row">
-          {frame.branch && <span className="theater-branch-tag" style={{ borderColor: galleryBranchPaint(frame.branch, branches) }}><Icon name="branch" size={12}/>{frame.branch}</span>}
-          {frame.added ? <span className="gallery-small theater-lines"><span className="is-added">+{frame.added}</span> <span className="is-removed">−{frame.removed}</span> lines</span> : null}
-        </div>}
+        <div className="theater-version" data-orbit-blocked>
+          <span className="theater-version-group">
+            <span className="theater-version-tag">{formatVersion(frame.version)}</span>
+            {frame.branch && <BranchTag name={frame.branch} color={galleryBranchPaint(frame.branch, branches)}/>}
+            {frame.added ? <span className="gallery-small theater-lines"><span className="is-added">+{frame.added}</span> <span className="is-removed">−{frame.removed}</span> lines</span> : null}
+          </span>
+          <time dateTime={new Date(frame.timestamp).toISOString()}>{formatTime(frame.timestamp)}</time>
+        </div>
+        <p className="theater-summary"><span data-orbit-blocked data-orbit-inline>{frame.kind === 'push' ? <strong>{theaterCaptionLead(frame)}</strong> : theaterCaptionLead(frame)}{theaterCaption(frame)}</span></p>
       </div>
     </div>
     <div className="theater-playback" data-orbit-blocked>
       <div className="gallery-toolbar playback-controls">
         <div className="playback-transport">
-        <button className="icon-button" onClick={() => skipPush(previousPush)} disabled={previousPush === null} aria-label="Previous push">◀◀</button>
-        <button className="icon-button playback-toggle" onClick={() => { if (!playing && mode === 'once' && index === frames.length - 1) onSelect(frames[0].id); setPlaying(!playing); }} disabled={frames.length < 2} aria-label={playing ? 'Pause playback' : 'Play frames'}><Icon name={playing ? 'pause' : 'play'} size={20}/></button>
-        <button className="icon-button" onClick={() => skipPush(nextPush)} disabled={nextPush === null} aria-label="Next push">▶▶</button>
+        <PlaybackTip label="Jump to last push"><button className="icon-button" onClick={() => skipPush(previousPush)} disabled={previousPush === null} aria-label="Previous push"><span className="skip-marks is-previous"><Icon name="play" size={16}/><Icon name="play" size={16}/></span></button></PlaybackTip>
+        <PlaybackTip label={playing ? 'Pause' : 'Play'}><button className="icon-button playback-toggle" onClick={() => { if (!playing && mode === 'once' && index === frames.length - 1) onSelect(frames[0].id); setPlaying(!playing); }} disabled={frames.length < 2} aria-label={playing ? 'Pause playback' : 'Play frames'}><Icon name={playing ? 'pause' : 'play'} size={26}/></button></PlaybackTip>
+        <PlaybackTip label="Jump to next push"><button className="icon-button" onClick={() => skipPush(nextPush)} disabled={nextPush === null} aria-label="Next push"><span className="skip-marks"><Icon name="play" size={16}/><Icon name="play" size={16}/></span></button></PlaybackTip>
         </div>
         <div className="playback-options">
         <label><span className="sr-only">Playback speed</span><select aria-label="Playback speed" value={speed} onChange={event => setSpeed(+event.target.value)}>{t.speeds.map(value => <option key={value} value={value}>{value}×</option>)}</select></label>

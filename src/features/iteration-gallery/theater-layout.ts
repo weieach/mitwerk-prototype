@@ -6,11 +6,17 @@ export function referenceCapture<T extends Capture>(frames: T[], reference: Pick
   return frames.find(frame => frame.kind === reference.kind && frame.number === reference.number) ?? frames[0];
 }
 
-/** Reference proportions determine the stable height; viewport changes can still constrain width. */
-export function theaterFrameSize(available: Size, baseline: Size, viewport: Size) {
-  const ratio = viewport.width / viewport.height;
-  const height = Math.max(0, Math.min(available.height, available.width * baseline.height / baseline.width, available.width / ratio));
-  return { width: height * ratio, height };
+export function aspectRatioLabel(width: number, height: number) {
+  const gcd = (a: number, b: number): number => b ? gcd(b, a % b) : a;
+  const w = Math.max(0, Math.round(width));
+  const h = Math.max(0, Math.round(height));
+  const divisor = gcd(w, h) || 1;
+  return `${w / divisor}:${h / divisor}`;
+}
+export function theaterFrameSize(available: Size, _baseline: Size, viewport: Size) {
+  const ratio = viewport.width / Math.max(viewport.height, 1);
+  const width = Math.max(0, available.width);
+  return { width, height: width / ratio };
 }
 
 /** Accumulate wheel pixels until one shared step; scroll down advances, scroll up goes back. */
@@ -23,6 +29,13 @@ export function wheelFrameDelta(deltaY: number, accumulated: number, step: numbe
 /** While the pointer moves, retain the last decoded preview until its replacement is ready. */
 export function presentedFrame(previewing: boolean, preview: GalleryFrame | null, selected: GalleryFrame | null, requested: GalleryFrame | undefined) {
   return (previewing ? preview : null) ?? selected ?? requested;
+}
+
+/** Prompt and push numbers lead the caption; other captures keep the summary alone. */
+export function theaterCaptionLead(frame: Pick<Capture, 'kind' | 'number'>) {
+  if (frame.number == null || (frame.kind !== 'prompt' && frame.kind !== 'push')) return '';
+  const label = frame.kind === 'prompt' ? 'Prompt' : 'Push';
+  return `${label} #${frame.number}: `;
 }
 
 /** Legacy filenames cannot distinguish exact-limit messages from truncated ones. */

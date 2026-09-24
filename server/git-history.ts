@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { parseGitLog } from '../src/features/version-tree/git-history.ts';
 import type { GitHistory } from '../src/features/version-tree/git-history.ts';
 
 /** Local Git parents/refs are authoritative; reflogs preserve fast-forward branch activity. */
@@ -21,10 +22,7 @@ export function readGitHistory(root: string): GitHistory {
         if (merge) merges.push({ branch: branch.name, source: merge[1], sha, fastForward: merge[2] === 'Fast-forward' });
       }
     }
-    const commits = run(['log', '--all', '--topo-order', '--reverse', '--format=%H%x09%P%x09%ct%x09%s']).split('\n').filter(Boolean).map(row => {
-      const [sha, parents, time, ...subject] = row.split('\t');
-      return { sha, parents: parents ? parents.split(' ') : [], timestamp: +time * 1000, subject: subject.join('\t'), branch: owners.get(sha) ?? null };
-    });
+    const commits = parseGitLog(run(['log', '--all', '--topo-order', '--reverse', '--format=%H%x09%P%x09%ct%x09%s', '--shortstat'])).map(commit => ({ ...commit, branch: owners.get(commit.sha) ?? null }));
     return { commits, branches, merges, currentBranch: run(['branch', '--show-current']), head: run(['rev-parse', 'HEAD']) };
   } catch { return { commits: [], branches: [], merges: [], currentBranch: '', head: '', error: 'Git history is unavailable.' }; }
 }

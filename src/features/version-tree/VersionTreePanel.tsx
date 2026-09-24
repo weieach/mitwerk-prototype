@@ -1,16 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, Dispatch, PointerEvent as ReactPointerEvent } from 'react';
+import { BranchTag } from '../../components/BranchTag';
 import { Icon } from '../../components/Icon';
 import { branchPathIds, canDeleteCurrent, canDeleteFuture, isBranchEndpoint, isReverted, isRevertedRoute, screenshotFocusId, screenshotQueryFlags, type GraphAction, type GraphState } from './model';
-import { frameScreenshotTargets, frameVersionLevel, geometry, layoutBranchView, layoutGraph, screenshotNodeTargets } from './layout';
+import { fitAllFrame, frameScreenshotTargets, frameVersionLevel, geometry, layoutBranchView, layoutGraph, screenshotNodeTargets } from './layout';
+import { galleryTokens } from '../iteration-gallery/tokens';
 import { activeRouteColor, levelColorLookup, palerAccent, stationLabelOffset, treeTheme, versionLabelZoomScale } from './tokens';
-import { layoutGitHistory, mergedStemDots } from './git-layout';
+import { commitBranchGap, layoutGitHistory, mergedStemDots } from './git-layout';
 import { IsometricGrid } from './IsometricGrid';
 import { VersionCard } from './VersionCard';
-import { branchName, mergedBranchIds, presentTree } from './presentation';
+import { branchName, isBranchDivergence, mergedBranchIds, presentTree } from './presentation';
 import { canEditTree, treeModes, type TreeMode } from './panel-state';
 
 type Props = { status?: string; graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; onModeChange: (mode: TreeMode) => void };
+
+function graphBounds(nodes: { x: number; y: number; title: string }[]) {
+  const label = stationLabelOffset();
+  let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+  for (const node of nodes) {
+    const cardTop = node.y + geometry.cardOffsetY;
+    left = Math.min(left, node.x + label.x - 360);
+    right = Math.max(right, node.x + geometry.cardOffsetX + geometry.cardWidth);
+    top = Math.min(top, cardTop);
+    bottom = Math.max(bottom, cardTop + Math.min(commitBranchGap(node.title), geometry.cardHeight));
+  }
+  return { left, top, right, bottom };
+}
 
 const screenshotFlags = typeof window !== 'undefined'
   ? screenshotQueryFlags(window.location.search)
@@ -26,6 +41,13 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
   const viewport = useRef<HTMLDivElement>(null);
   const branchMenu = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(0.8);
+  const [fitInset, setFitInset] = useState(0);
+  const [toast, setToast] = useState('');
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(''), 2400);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
   const zoomRef = useRef(zoom);
   const [grid, setGrid] = useState(true);
   const [collapsedLevels, setCollapsedLevels] = useState<Set<string>>(() => new Set());
@@ -95,6 +117,18 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
       if (!initialFit.current && width > 0) {
         initialFit.current = true;
         if (screenshotCapture) {
+          if (screenshotFlags.treeFit) {
+            const raw = graphBounds(layout.nodes);
+            const frame = fitAllFrame({ ...raw, left: raw.left + Math.max(0, -raw.left + 48) }, width, height, treeTheme.minZoom);
+            setFitInset(frame.inset);
+            zoomRef.current = frame.zoom;
+            setZoom(frame.zoom);
+            requestAnimationFrame(() => {
+              element.scrollTo({ left: frame.left, top: frame.top, behavior: 'instant' });
+              requestAnimationFrame(markScreenshotReady);
+            });
+            return;
+          }
           const captureZoom = screenshotFlags.treeZoom ?? treeTheme.screenshotZoom;
           if (screenshotFlags.treeFrame === 'bottom') {
             zoomRef.current = captureZoom;
@@ -106,7 +140,11 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
               requestAnimationFrame(markScreenshotReady);
             });
           } else {
-          const captureLayout = mode === 'history' ? { ...layout, nodes: layout.nodes.slice(-treeTheme.historyCaptureVersions) } : layout;
+          const centered = screenshotFlags.treeCenter
+            ? layout.nodes.filter(node => node.label.toLowerCase() === `v${screenshotFlags.treeCenter}`.toLowerCase())
+            : [];
+          const captureLayout = centered.length ? { ...layout, nodes: centered }
+            : mode === 'history' ? { ...layout, nodes: layout.nodes.slice(-treeTheme.historyCaptureVersions) } : layout;
           const targets = screenshotNodeTargets(captureLayout, presentation.hiddenNodeIds, activePath, graph.selectedId);
           if (targets.length) {
             const frame = frameScreenshotTargets(targets, width, height, treeTheme.minZoom, captureZoom);
@@ -138,6 +176,7 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
   }, []);
 
   function changeZoom(next: number, clientX?: number, clientY?: number) {
+    setFitInset(0);
     const element = viewport.current;
     if (!element) return;
     const clamped = Math.max(treeTheme.minZoom, Math.min(treeTheme.maxZoom, next));
@@ -194,12 +233,15 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
   function fitAll() {
     const element = viewport.current;
     if (!element) return;
-    const next = Math.max(treeTheme.minZoom, Math.min(1, (element.clientWidth - 24) / layout.width, (element.clientHeight - 60) / layout.height));
-    zoomRef.current = next; setZoom(next);
-    requestAnimationFrame(() => element.scrollTo({ left: 0, top: 0, behavior: 'smooth' }));
+    const frame = fitAllFrame({ ...graphBounds(layout.nodes), left: graphBounds(layout.nodes).left + worldShift }, element.clientWidth, element.clientHeight, treeTheme.minZoom);
+    setFitInset(frame.inset);
+    zoomRef.current = frame.zoom;
+    setZoom(frame.zoom);
+    requestAnimationFrame(() => element.scrollTo({ left: frame.left, top: frame.top, behavior: 'smooth' }));
   }
 
   function focusAtZoom(node: { x: number; y: number }, nextZoom: number, behavior: ScrollBehavior = 'smooth') {
+    setFitInset(0);
     const element = viewport.current;
     if (!element) return;
     const clamped = Math.max(treeTheme.minZoom, Math.min(treeTheme.maxZoom, nextZoom));
@@ -218,6 +260,18 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
     if (!selected) return;
     focusAtZoom(selected, zoom);
   }
+
+  useEffect(() => {
+    function onGoToCommit(event: Event) {
+      const version = (event as CustomEvent<{ version: number }>).detail?.version;
+      const node = layout.nodes.find(item => item.label.toLowerCase() === `v${version}`);
+      if (!node) return;
+      dispatch({ type: 'select', id: node.id });
+      focusAtZoom(node, 1);
+    }
+    window.addEventListener('mitwerk-go-to-commit', onGoToCommit);
+    return () => window.removeEventListener('mitwerk-go-to-commit', onGoToCommit);
+  }, [layout.nodes, dispatch]);
 
   function goToEndpoint(node: typeof jumperEndpoint) {
     if (!node) return;
@@ -268,7 +322,9 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
     if (start.moved) setIsPanning(false);
     else dispatch({ type: 'select', id: null });
   }
-  const worldWidth = Math.max(layout.width + 240, viewportSize.width / zoom);
+  const bounds = graphBounds(layout.nodes);
+  const worldShift = Math.max(0, -bounds.left + 48);
+  const worldWidth = Math.max(layout.width + 240, viewportSize.width / zoom) + worldShift + fitInset;
   const worldHeight = Math.max(layout.height + 240, viewportSize.height / zoom);
 
   return <section className="tree-panel" data-tree-mode={mode} aria-labelledby="tree-title" data-selected-branch={presentation.selectedBranchId || undefined} data-active-branch={graph.activeBranchId} style={{
@@ -295,6 +351,8 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
     '--version-label-zoom': versionLabelZoomScale(zoom),
     '--station-offset-x': `${-geometry.cardOffsetX - treeTheme.stationRadius - 1}px`,
     '--station-offset-y': `${-geometry.cardOffsetY - treeTheme.stationRadius - 1}px`,
+    '--line-added': galleryTokens.theater.addedColor,
+    '--line-removed': galleryTokens.theater.removedColor,
     '--reverted-title-color': treeTheme.revertedTitleColor,
     '--reverted-route-color': treeTheme.revertedRouteColor,
     '--merged-branch-opacity': treeTheme.mergedBranchOpacity,
@@ -307,10 +365,10 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
     </div><div className="panel-header-actions"><button className="icon-button" onClick={() => setGrid(!grid)} aria-label={grid ? 'Hide grid' : 'Show grid'} title={grid ? 'Hide grid' : 'Show grid'}><Icon name="grid"/>{grid ? 'Hide grid' : 'Show grid'}</button><button className="icon-button" onClick={fitAll} aria-label="Fit all versions" title="Fit all versions"><Icon name="expand"/>Fit all</button></div></div>
     {status ? <p className="tree-history-message" role="status">{status}</p> : <div className="canvas-shell">
       <div ref={viewport} className={`tree-viewport ${isPanning ? 'is-panning' : ''}`} tabIndex={0} aria-label="Version tree canvas. Scroll in any direction to pan. Control plus scroll to zoom. Click empty canvas to deselect." onPointerDown={startPan} onPointerMove={pan} onPointerUp={endPan} onPointerCancel={endPan} onLostPointerCapture={endPan}>
-        <div className="canvas-size" style={{ width: worldWidth * zoom, height: worldHeight * zoom }}>
-          <div className="canvas-world" style={{ width: worldWidth, height: worldHeight, transform: `scale(${zoom})` }}>
-            <svg className="route-layer" width={worldWidth} height={worldHeight} aria-hidden="true">
-              <IsometricGrid width={worldWidth} height={worldHeight} visible={grid}/>
+        <div className="canvas-size" style={{ width: (worldWidth + worldShift + fitInset) * zoom, height: worldHeight * zoom }}>
+          <div className="canvas-world" style={{ width: worldWidth, height: worldHeight, transform: `scale(${zoom}) translate(${worldShift + fitInset}px, 0)` }}>
+            <svg className="route-layer" width={worldWidth} height={worldHeight} style={{ overflow: 'visible' }} aria-hidden="true">
+              <IsometricGrid x={-(worldShift + fitInset)} width={worldWidth + worldShift + fitInset} height={worldHeight} visible={grid}/>
               {/* Paint clearance first so connected segments do not erase each other's junctions. */}
               {presentation.routes.filter(route => !route.dashed).map(route => <path key={`clearance:${route.id}`} d={route.path} fill="none" stroke="var(--canvas-bg)" strokeWidth={treeTheme.routeWidth + treeTheme.routeClearance * 2} strokeLinejoin="round" strokeLinecap="round"/>)}
               {/* Routes arrive pre-sorted: later versions, Vx.1, then the checked-out branch on top. */}
@@ -372,7 +430,7 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
                 <span className="station-label" style={{
                   left: -geometry.cardOffsetX + label.x,
                   top: -cardOffsetY + label.y,
-                }}>{node.label}</span>
+                }}>{isBranchDivergence(node, graph.nodes) && <BranchTag name={node.branchId} color={color}/>}<span className="version-header">{node.label.toLowerCase()}</span></span>
                 <VersionCard node={node} selected={node.id === graph.selectedId}
                   hasDescendants={presentation.nodesWithChildren.has(node.id)}
                   isEndpoint={isBranchEndpoint(graph.nodes, node.id)} onActivePath={onSpine}
@@ -388,7 +446,8 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
                   onSwitchBranch={() => dispatch({ type: 'set-active-branch', branchId: node.branchId })}
                   onDeleteCurrent={() => dispatch({ type: 'delete-current', sourceId: node.id })}
                   onDeleteFuture={() => dispatch({ type: 'delete-future', sourceId: node.id })}
-                  forceMenuOpen={screenshotFlags.menuOpen && node.id === focusId}/>
+                  forceMenuOpen={screenshotFlags.menuOpen && node.id === focusId}
+                  onDisconnected={() => setToast("Project isn't connected")}/>
               </div>;
             })}
           </div>
@@ -438,5 +497,6 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
     </div>
     }
     <div className="sr-only" role="status" aria-live="polite">{graph.nodes.length} versions. {selected ? `Selected ${selected.label}.` : 'No version selected.'}</div>
+    {toast && <div className="project-toast" role="status">{toast}</div>}
   </section>;
 }

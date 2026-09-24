@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { containedFrameTarget, timelineEntrance } from './theater-transition';
+import { containedFrameTarget, frameBorderEntrance, timelineEntrance } from './theater-transition';
 import type { GalleryCamera, TheaterTarget } from './theater-transition';
 import type { CSSProperties } from 'react';
 import { AlbumView } from './AlbumView';
@@ -17,6 +17,7 @@ export function IterationGallery() {
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const [range, setRange] = useState<RangeKey>('7');
+  const [interfaceId, setInterfaceId] = useState(t.interfaces[0].value);
   const [now, setNow] = useState(Date.now);
   const [zoom, setZoom] = useState(1);
   const [view, setView] = useState<'album' | 'turning' | 'theater' | 'returning' | 'orbiting'>('album');
@@ -28,6 +29,7 @@ export function IterationGallery() {
     const pose = timelineEntrance(progress);
     galleryRoot.current?.style.setProperty('--timeline-enter-opacity', String(pose.opacity));
     galleryRoot.current?.style.setProperty('--timeline-enter-offset', `${pose.offsetVh}vh`);
+    galleryRoot.current?.style.setProperty('--frame-border-opacity', String(frameBorderEntrance(progress).opacity));
   }, []);
   const [returnReady, setReturnReady] = useState(false);
   const startReturn = useCallback(() => setReturnReady(true), []);
@@ -82,7 +84,8 @@ export function IterationGallery() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('screenshot') !== '1' || !['theater', 'transition', 'timeline-transition'].includes(params.get('galleryView') ?? '')) return;
-    const featured = referenceCapture(versions.flatMap(version => version.frames), t.theaterReference);
+    const frames = versions.flatMap(version => version.frames);
+    const featured = params.get('frameKind') === 'push' ? frames.find(frame => frame.kind === 'push') : referenceCapture(frames, t.theaterReference);
     if (featured && !inRange(featured, range, now)) { setRange('all'); return; }
     const id = featured?.id;
     if (id) { setSelectedId(id); setView(params.get('galleryView') === 'theater' ? 'theater' : 'turning'); }
@@ -108,8 +111,8 @@ export function IterationGallery() {
     {!catalog ? <div className="gallery-empty">{error ? 'Screenshot catalog unavailable.' : 'Reading saved frames…'}</div>
       : !versions.length ? <div className="gallery-empty">No saved frames found.</div>
       : <div className="gallery-view-stack" ref={viewStack}>
-      {<><AlbumView onMotion={updateTimelineMotion} turning={view === 'turning'} returning={view === 'returning'} hidden={view === 'theater' || view === 'orbiting'} onReturnStarted={startReturn} theaterTarget={target} theaterId={selectedId} onTurnComplete={finishTurn} versions={versions} range={range} now={now} zoom={zoom} onOpen={open} onZoom={setZoom} onCamera={api => { camera.current = api; }}/>{!visibleFrames.length && <div className="gallery-message">No frames in this range. Earlier versions remain visible in gray.</div>}</>}
-      {view !== 'album' && <div className="gallery-theater-layer" inert={view === 'turning' || view === 'returning'} aria-hidden={view === 'turning' || view === 'returning'}><TheaterView baseline={baseline ?? t.viewportPresets[1]} frames={visibleFrames} catalog={versions.flatMap(version => version.frames)} range={range} now={now} selectedId={selectedId} onSelect={select} onOrbit={(id, rect) => camera.current?.orbit(id, rect, () => { setSelectedId(id); setView('orbiting'); }, () => { setView('album'); setTarget(null); }) ?? null} onDismiss={exit} active={view === 'theater'}/></div>}
+      {<><AlbumView onMotion={updateTimelineMotion} turning={view === 'turning'} returning={view === 'returning'} hidden={view === 'theater' || view === 'orbiting'} onReturnStarted={startReturn} theaterTarget={target} theaterId={selectedId} onTurnComplete={finishTurn} versions={versions} range={range} now={now} zoom={zoom} interfaceId={interfaceId} onInterface={setInterfaceId} onOpen={open} onZoom={setZoom} onCamera={api => { camera.current = api; }}/>{!visibleFrames.length && <div className="gallery-message">No frames in this range. Earlier versions remain visible in gray.</div>}</>}
+      {view !== 'album' && <div className="gallery-theater-layer" inert={view === 'turning' || view === 'returning'} aria-hidden={view === 'turning' || view === 'returning'}><TheaterView baseline={baseline ?? t.viewportPresets[1]} interfaceId={interfaceId} onInterface={setInterfaceId} frames={visibleFrames} catalog={versions.flatMap(version => version.frames)} range={range} now={now} selectedId={selectedId} onSelect={select} onOrbit={(id, rect) => camera.current?.orbit(id, rect, () => { setSelectedId(id); setView('orbiting'); }, () => { setView('album'); setTarget(null); }) ?? null} onDismiss={exit} active={view === 'theater'}/></div>}
       </div>}
     <footer className="gallery-footer" inert={view === 'turning' || view === 'returning' || view === 'orbiting'}>
       <div className="gallery-range">

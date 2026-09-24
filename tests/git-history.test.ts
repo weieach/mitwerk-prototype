@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildGitCaptureHistory } from '../src/features/version-tree/capture-history.ts';
-import { layoutGitHistory, mergedStemDots } from '../src/features/version-tree/git-layout.ts';
+import { commitBranchGap, layoutGitHistory, mergedStemDots } from '../src/features/version-tree/git-layout.ts';
 import { geometry } from '../src/features/version-tree/layout.ts';
 import { mergedBranchIds } from '../src/features/version-tree/presentation.ts';
 import { palerAccent } from '../src/features/version-tree/tokens.ts';
+import { parseGitLog } from '../src/features/version-tree/git-history.ts';
 import type { GitHistory } from '../src/features/version-tree/git-history.ts';
 import type { Capture } from '../src/features/iteration-gallery/model.ts';
 const commits = [
@@ -15,6 +16,21 @@ const commits = [
 ];
 const git: GitHistory = { commits, branches: [{ name: 'main', tip: 'd', base: null }, { name: 'feature', tip: 'b', base: 'a' }], merges: [], currentBranch: 'main', head: 'd' };
 const captures: Capture[] = [{ id: 'start-shot', filename: 'start-shot', url: 'start-shot', width: 100, height: 100, kind: 'push', number: 1, timestamp: 1, summary: 'start', branch: null, added: null, removed: null }];
+
+test('branch pitch stays short for a brief message and grows so a long expanded title clears the next card', () => {
+  const short = commitBranchGap('Fix screen capture on push');
+  const long = commitBranchGap('Add per-push repo capture hook and update capture filenames; fix add-commit button on endpoints');
+  assert.ok(short < geometry.rowGap);
+  assert.ok(long > short);
+  assert.ok(Math.abs(short / (geometry.gridRise * 2) - Math.round(short / (geometry.gridRise * 2))) < 1e-6);
+});
+
+test('shortstat lines become file and line totals', () => {
+  const parsed = parseGitLog('abc1234\t\t1\tstart\n\n 2 files changed, 10 insertions(+), 3 deletions(-)\n');
+  assert.equal(parsed[0].filesChanged, 2);
+  assert.equal(parsed[0].added, 10);
+  assert.equal(parsed[0].removed, 3);
+});
 
 test('real parent hashes produce forks and both merge-parent edges, including uncaptured commits', () => {
   const graph = buildGitCaptureHistory(captures, git);

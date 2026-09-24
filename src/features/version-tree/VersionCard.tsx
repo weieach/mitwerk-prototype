@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Icon, type IconName } from '../../components/Icon';
-import { isCompactVersionCard, isPictureFile, isPrimaryCommitAction, versionCommitAction, versionCommitActionLabel, type VersionFile, type VersionNode } from './model';
+import { isCaptureImage, isCompactVersionCard, isPictureFile, isPrimaryCommitAction, versionCommitAction, versionCommitActionLabel, type VersionFile, type VersionNode } from './model';
 
 function fileChipIcon(file: Pick<VersionFile, 'name' | 'kind'>): IconName {
   if (file.kind === 'skill') return 'spark';
@@ -31,24 +31,27 @@ type Props = {
   onDeleteFuture: () => void;
   forceMenuOpen?: boolean;
   readOnly?: boolean;
+  onDisconnected?: () => void;
 };
 
 export function VersionCard({
   node, selected, hasDescendants, isEndpoint, onActivePath, isCurrentBranch, canDeleteCurrent, canDeleteFuture, color, reverted, merged = false,
-  onSelect, onBranch, onCommit, onRevert, onRestore, onSwitchBranch, onDeleteCurrent, onDeleteFuture, forceMenuOpen = false, readOnly = false,
+  onSelect, onBranch, onCommit, onRevert, onRestore, onSwitchBranch, onDeleteCurrent, onDeleteFuture, forceMenuOpen = false, readOnly = false, onDisconnected,
 }: Props) {
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [titleExpanded, setTitleExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(forceMenuOpen);
   const menu = useRef<HTMLDivElement>(null);
   const compact = isCompactVersionCard(onActivePath, selected) && !forceMenuOpen;
   const commitAction = versionCommitAction(isEndpoint, reverted);
   const commitActionLabel = versionCommitActionLabel(commitAction);
-  const commitActionIcon = commitAction === 'restore' ? 'restore' : commitAction === 'revert' ? 'revert' : 'plus';
+  const commitActionIcon = commitAction === 'restore' ? 'restore' : 'reference';
   const onCommitAction = commitAction === 'restore' ? onRestore : commitAction === 'revert' ? onRevert : onCommit;
   const restorePrimary = isPrimaryCommitAction(commitAction);
-  const branchButton = <button disabled={readOnly} title={readOnly ? 'Switch to Test visual to experiment.' : undefined} onClick={onBranch} aria-label={`Add branch from ${node.label}`}><Icon name="branch" size={13}/>Add branch</button>;
-  const commitButton = <button disabled={readOnly} title={readOnly ? 'Switch to Test visual to experiment.' : undefined} className={restorePrimary ? 'is-primary' : undefined} onClick={onCommitAction} aria-label={`${commitActionLabel} ${node.label}`}><Icon name={commitActionIcon} size={13}/>{commitActionLabel}</button>;
-  const references = node.files.filter(file => file.kind !== 'code');
+  const blocked = (action: () => void) => readOnly ? () => onDisconnected?.() : action;
+  const branchButton = <button onClick={blocked(onBranch)} aria-label={`Add branch from ${node.label}`}><Icon name="branch" size={13}/>Add branch</button>;
+  const commitButton = <button className={restorePrimary ? 'is-primary' : undefined} onClick={blocked(onCommitAction)} aria-label={`${commitActionLabel} ${node.label}`}><Icon name={commitActionIcon} size={13}/>{commitActionLabel}</button>;
+  const references = node.files.filter(file => file.kind !== 'code' && !isCaptureImage(file));
   const codeFiles = node.files.filter(file => file.kind === 'code');
   const added = node.files.reduce((sum, file) => sum + file.added, 0);
   const removed = node.files.reduce((sum, file) => sum + file.removed, 0);
@@ -102,17 +105,15 @@ export function VersionCard({
     </div>}
     <button className="version-heading" onClick={onSelect} aria-label={`View ${node.label}: ${node.title || 'Untitled version'}`}>
       <span className="version-meta"><span className="save-label">{node.saveType === 'auto' ? <Icon name="spark" size={11}/> : <Icon name="commit" size={12}/>} {node.git ? 'Git commit' : node.capture ? node.capture.pushed ? 'Saved push' : 'Work in progress' : node.saveType === 'auto' ? 'Autosave' : 'Manual save'}</span></span>
-      <span className={`version-title ${!node.title ? 'untitled' : ''}`} title={node.title || 'Untitled version'}>{node.title || 'Untitled version'}</span>
+      <span className={`version-title ${!node.title ? 'untitled' : ''} ${titleExpanded ? 'is-expanded' : ''}`} title={node.title || 'Untitled version'} onClick={event => { event.stopPropagation(); setTitleExpanded(open => !open); }}>{node.title || 'Untitled version'}</span>
     </button>
-    {node.capture && !node.git && <div className="capture-branches">{node.capture.branches.map(branch => <span key={branch}><Icon name="branch" size={11}/>{branch}</span>)}</div>}
-    {node.git && <div className="capture-branches"><span title={node.git.sha}>{node.git.sha.slice(0, 7)}</span><span><Icon name="branch" size={11}/>{node.branchId}</span>{node.git.refs.map(ref => <span key={ref}>[{ref}]</span>)}</div>}
-    <div className="reference-files">
+    {(references.length > 0 || (node.capture && !node.capture.pushed)) && <div className="reference-files">
       {references.length > 0 ? references.slice(0, 2).map(file => <span className="file-chip" key={file.name} title={file.name}><Icon name={fileChipIcon(file)} size={12}/>{file.url ? <a className="file-chip-name capture-frame-link" href={`${import.meta.env.BASE_URL}${file.url}`} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()}>{file.name}</a> : <span className="file-chip-name">{file.name}</span>}</span>) : <span className="empty-reference">No references yet</span>}
       {references.length > 2 && <span className="mono">+{references.length - 2}</span>}
-    </div>
+    </div>}
     {!compact && <>
-      <div className="version-stats"><span><Icon name="code" size={13}/>{node.capture || node.git ? `${node.files.length} saved frames` : `${codeFiles.length} ${codeFiles.length === 1 ? 'file' : 'files'} changed`}</span><span className="stat-divider"/><button onClick={() => { onSelect(); if (node.capture) setDetailsOpen(true); }}>{node.prompts.length} {node.prompts.length === 1 ? 'prompt' : 'prompts'}<Icon name="arrow" size={11}/></button></div>
-      <div className="version-card-bottom"><button className="details-toggle" onClick={() => setDetailsOpen(!detailsOpen)} aria-expanded={detailsOpen}><Icon name="chevron" size={10} style={{ transform: detailsOpen ? 'rotate(90deg)' : undefined }}/>{detailsOpen ? 'Hide details' : 'Show details'}</button><span className="line-count"><span>+{node.capture || node.git ? node.capture?.added ?? '—' : added}</span><span>−{node.capture || node.git ? node.capture?.removed ?? '—' : removed}</span></span></div>
+      <div className="version-stats"><span><Icon name="code" size={13}/>{`${node.git ? node.git.filesChanged : codeFiles.length} ${(node.git ? node.git.filesChanged : codeFiles.length) === 1 ? 'file' : 'files'} changed`}</span><span className="stat-divider"/><button onClick={() => { onSelect(); if (node.capture) setDetailsOpen(true); }}>{node.prompts.length} {node.prompts.length === 1 ? 'prompt' : 'prompts'}<Icon name="arrow" size={11}/></button></div>
+      <div className="version-card-bottom"><button className="details-toggle" onClick={() => setDetailsOpen(!detailsOpen)} aria-expanded={detailsOpen}><Icon name="chevron" size={10} style={{ transform: detailsOpen ? 'rotate(90deg)' : undefined }}/>{detailsOpen ? 'Hide details' : 'Show details'}</button><span className="line-count"><span className="is-added">+{node.git ? node.git.added : node.capture ? node.capture.added ?? '—' : added}</span><span className="is-removed">−{node.git ? node.git.removed : node.capture ? node.capture.removed ?? '—' : removed}</span></span></div>
       <div className="node-actions">{restorePrimary ? <>{commitButton}{branchButton}</> : <>{branchButton}{commitButton}</>}</div>
       {detailsOpen && <div className="node-details"><div className="node-details-label">VERSION DETAILS<button onClick={() => setDetailsOpen(false)} aria-label={`Close details for ${node.label}`}><Icon name="close" size={13}/></button></div><p>{node.summary || 'This version is empty. Its summary and file changes will appear here.'}</p>{node.git?.merges.map(merge => <p key={merge}>{merge}</p>)}<time dateTime={node.createdAt}>{node.capture ? new Date(node.createdAt).toLocaleString() : null}</time>{node.capture && node.prompts.map(prompt => <p key={prompt.id}>{prompt.text}</p>)}<div className="detail-file-list">{node.files.map(file => <div key={file.name}><Icon name={fileChipIcon(file)} size={12}/><span>{file.url ? <a className="capture-frame-link" href={`${import.meta.env.BASE_URL}${file.url}`} target="_blank" rel="noreferrer">{file.name}</a> : file.name}</span><small>{file.kind}</small></div>)}</div></div>}
     </>}

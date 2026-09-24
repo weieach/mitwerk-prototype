@@ -1,5 +1,5 @@
 export const galleryTokens = {
-  theaterMotion: { rotateMs: 1100, verticalAxisFadeMs: 180, controlsFadeMs: 280, captureProgress: .5, timelineMs: 320, timelineOffsetVh: 5 },
+  theaterMotion: { rotateMs: 1100, verticalAxisFadeMs: 180, frameBorderMs: 180, controlsFadeMs: 280, captureProgress: .5, timelineMs: 320, timelineOffsetVh: 5 },
   theaterDrag: { radiansPerViewport: Math.PI, pitchLimit: Math.PI * .45 },
   interfaces: [{ value: 'index.html', label: 'index.html' }],
   webgl: { pixelRatioMax: 2, rotateSpeed: .7, zoomSpeed: .55, keyRotateRadians: .12, dragThreshold: 5,
@@ -20,10 +20,10 @@ export const galleryTokens = {
   captionShadow: { color: '#ffffff', blur: 6, stroke: 2, passes: 5, pad: 12 }, labelSummaryLength: 42,
   disabledOpacity: 0.14, endpointOpacity: 0.72, refreshMs: 30_000,
   zoomMin: 0.5, zoomMax: 3, zoomStep: 0.25,
-  playbackIntervalMs: 700, speeds: [0.5, 1, 2, 4],
+  playbackIntervalMs: 350, speeds: [0.5, 1, 2, 4],
   timeline: { height: 34, playheadOverhang: 5, playheadWidth: 2, minorTickHeight: 16, majorTickHeight: 22, inlinePadding: 6, disabledOpacity: .5, disabledBorderOpacity: .28, previewOpacity: .45, gapScale: .5, rangeLabelGap: 6 },
   theaterReference: { kind: 'prompt', number: 56 } as const,
-  theater: { focusBackground: '#fff', frameShadow: 'none', metadataHeight: 112, metadataGap: 16, metadataRowGap: 4, summaryGapScale: 1.5, playbackFooterGap: 4, actionGap: 8, imageCacheSize: 8, preloadFrames: 3, wheelStep: 80, addedColor: '#1f8a4c', removedColor: '#d12b2b' },
+  theater: { focusBackground: '#fff', frameShadow: 'none', metadataHeight: 112, metadataGap: 24, metadataRowGap: 4, summaryGapScale: 1.5, playbackFooterGap: 4, actionGap: 12, imageCacheSize: 8, preloadFrames: 3, wheelStep: 80, addedColor: '#1f8a4c', removedColor: '#d12b2b' },
   viewportPresets: [
     { value: 'original', label: 'Original size', width: 0, height: 0 },
     { value: 'desktop', label: 'Desktop', width: 1440, height: 900 },

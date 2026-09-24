@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-export type IconName = 'info' | 'branch' | 'commit' | 'plus' | 'minus' | 'expand' | 'grid' | 'arrow' | 'chevron' | 'caret' | 'code' | 'file' | 'image' | 'spark' | 'play' | 'pause' | 'close' | 'locate' | 'check' | 'layers' | 'more' | 'revert' | 'restore';
+export type IconName = 'info' | 'branch' | 'commit' | 'plus' | 'minus' | 'expand' | 'grid' | 'arrow' | 'chevron' | 'caret' | 'code' | 'file' | 'image' | 'reference' | 'spark' | 'play' | 'pause' | 'close' | 'locate' | 'check' | 'layers' | 'more' | 'revert' | 'restore';
 
 const paths: Record<IconName, React.ReactNode> = {
   info: <><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></>,
@@ -16,9 +16,10 @@ const paths: Record<IconName, React.ReactNode> = {
   code: <path d="m7 7-5 5 5 5m10-10 5 5-5 5M14 4l-4 16"/>,
   file: <><path d="M14 3H5v18h14V8Zm0 0v5h5M8 12h8m-8 4h5"/></>,
   image: <><rect x="4" y="5" width="16" height="14" rx="1.5"/><circle cx="9" cy="10" r="1.6"/><path d="m5 17 4.5-4.5 2.5 2.5L16 11l4 4"/></>,
+  reference: <><rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M12 9v6M9 12h6"/></>,
   spark: <path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"/>,
-  play: <path d="m8 4 12 8-12 8Z"/>,
-  pause: <><path d="M8 4v16M16 4v16"/></>,
+  play: <path d="m8 4 12 8-12 8Z" fill="currentColor" stroke="none"/>,
+  pause: <><rect x="7" y="4" width="3.5" height="16" fill="currentColor" stroke="none"/><rect x="13.5" y="4" width="3.5" height="16" fill="currentColor" stroke="none"/></>,
   close: <path d="m6 6 12 12M6 18 18 6"/>,
   locate: <><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 1v5m0 12v5M1 12h5m12 0h5"/></>,
   check: <path d="m5 12 4 4L19 6"/>,

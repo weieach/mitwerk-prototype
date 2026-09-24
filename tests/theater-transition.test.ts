@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { containedFrameTarget, transitionProgress, timelineEntrance, timelineCaptureProgress, theaterEntranceDuration, theaterRotationProgress, rotationCaptureProgress } from '../src/features/iteration-gallery/theater-transition.ts';
+import { containedFrameTarget, transitionProgress, frameBorderEntrance, timelineEntrance, timelineCaptureProgress, theaterEntranceDuration, theaterRotationProgress, rotationCaptureProgress } from '../src/features/iteration-gallery/theater-transition.ts';
 
 test('theater handoff only completes at the end of the transformation', () => {
   assert.equal(transitionProgress(0, 1100).eased, 0);
@@ -62,6 +62,10 @@ test('frame finishes before the timeline enters and UI handoff follows both stag
   assert.deepEqual(timelineEntrance(middle), { opacity: .5, offsetVh: -2.5 });
   assert.equal(transitionProgress(1100, theaterEntranceDuration()).complete, false);
   assert.equal(transitionProgress(theaterEntranceDuration(), theaterEntranceDuration()).complete, true);
+  assert.equal(frameBorderEntrance(0).opacity, 0);
+  assert.equal(frameBorderEntrance(frameEnd).opacity, 1);
+  assert.equal(timelineEntrance(frameEnd).opacity, 0);
+  assert.equal(frameBorderEntrance(middle).opacity, 1);
   assert.equal(timelineEntrance(1).opacity, 1);
   assert.equal(Math.abs(timelineEntrance(1).offsetVh), 0);
 });

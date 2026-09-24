@@ -16,8 +16,13 @@ export function isPictureFile(name: string) {
   return Boolean(ext && pictureExtensions.has(ext));
 }
 
+/** Saved frames from the capture catalog, not planning references. */
+export function isCaptureImage(file: Pick<VersionFile, 'name' | 'url'>) {
+  return Boolean(file.url) && isPictureFile(file.name);
+}
+
 export type VersionNode = {
-  git?: { sha: string; parents: string[]; refs: string[]; merges: string[] };
+  git?: { sha: string; parents: string[]; refs: string[]; merges: string[]; filesChanged: number; added: number; removed: number };
 
   capture?: { version: number; pushed: boolean; branches: string[]; added: string | null; removed: string | null };
   id: string;
@@ -59,8 +64,7 @@ export function versionCommitAction(isEndpoint: boolean, reverted: boolean): Ver
 
 export function versionCommitActionLabel(action: VersionCommitAction) {
   if (action === 'restore') return 'Restore change';
-  if (action === 'revert') return 'Revert change';
-  return 'Add commit';
+  return 'Add to reference';
 }
 
 /** Restore is the primary card action; Add branch / Revert stay secondary. */
@@ -193,7 +197,9 @@ export function screenshotQueryFlags(search: string) {
     menuOpen: capture && flags.has('menu'),
     treeZoom: capture && Number.isFinite(zoom) && zoom > 0 ? zoom : null,
     treeFrame: capture && params.get('treeFrame') === 'bottom' ? 'bottom' as const : null,
+    treeCenter: capture ? params.get('treeCenter') : null,
     treeLift: capture && Number.isFinite(lift) && lift > 0 ? lift : 0,
+    treeFit: capture && params.get('treeFit') === '1',
   };
 }
 

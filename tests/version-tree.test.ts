@@ -286,7 +286,8 @@ test('revert grays later versions without removing them, and restore brings a ch
   assert.equal(isBranchEndpoint(before.nodes, 'v2'), false);
   assert.equal(isBranchEndpoint(branchedTip.nodes, 'v3'), true);
   assert.equal(versionCommitAction(isBranchEndpoint(branchedTip.nodes, 'v3'), false), 'commit');
-  assert.equal(versionCommitActionLabel('revert'), 'Revert change');
+  assert.equal(versionCommitActionLabel('revert'), 'Add to reference');
+  assert.equal(versionCommitActionLabel('commit'), 'Add to reference');
   assert.equal(versionCommitActionLabel('restore'), 'Restore change');
   assert.equal(isPrimaryCommitAction('restore'), true);
   assert.equal(isPrimaryCommitAction('revert'), false);
@@ -330,9 +331,11 @@ test('progress screenshots only force hover or menus when that component changed
   assert.deepEqual(screenshotInteractFromPrompt('make the text slightly smaller and use medium weight'), { count: false, menu: false });
   assert.equal(screenshotInteractQuery('replace triangle next to circled number with downward caret'), 'count');
   assert.equal(screenshotInteractQuery('open the floating panel on the action menu'), 'menu');
-  assert.deepEqual(screenshotQueryFlags('?screenshot=1'), { capture: true, countHover: false, menuOpen: false, treeZoom: null, treeFrame: null });
-  assert.deepEqual(screenshotQueryFlags('?screenshot=1&interact=count'), { capture: true, countHover: true, menuOpen: false, treeZoom: null, treeFrame: null });
-  assert.deepEqual(screenshotQueryFlags('?screenshot=1&interact=menu'), { capture: true, countHover: false, menuOpen: true, treeZoom: null, treeFrame: null });
+  const base = { treeZoom: null, treeFrame: null, treeCenter: null, treeLift: 0, treeFit: false };
+  assert.deepEqual(screenshotQueryFlags('?screenshot=1'), { capture: true, countHover: false, menuOpen: false, ...base });
+  assert.deepEqual(screenshotQueryFlags('?screenshot=1&interact=count'), { capture: true, countHover: true, menuOpen: false, ...base });
+  assert.deepEqual(screenshotQueryFlags('?screenshot=1&interact=menu'), { capture: true, countHover: false, menuOpen: true, ...base });
+  assert.equal(screenshotQueryFlags('?screenshot=1&treeFit=1').treeFit, true);
 });
 
 test('invalid ancestry gives a clear error instead of an infinite layout traversal', () => {

@@ -4,15 +4,31 @@ import type { GraphEdge } from './layout.ts';
 import type { VersionNode } from './model.ts';
 import { mergedBranchIds } from './presentation.ts';
 
+/** Shorter than the shared row pitch. Extra rows keep an expanded commit message clear of the next card. */
+export function commitBranchGap(title: string) {
+  const line = 17 * 1.2;
+  const lines = Math.max(1, Math.ceil(Math.max(title.length, 1) / 24));
+  const needed = 168 + lines * line + 28;
+  const pitch = geometry.gridRise * 2;
+  const min = geometry.gridRise * 16;
+  return Math.max(min, Math.ceil(needed / pitch) * pitch);
+}
+
 /** Git lanes preserve branch ownership and every recorded parent, including merge parents. */
 export function layoutGitHistory(source: VersionNode[]) {
   const base = layoutGraph(source);
   const rows = new Map<string, number>();
+  const placed = new Map<string, number>();
+  const titleOf = new Map(source.map(node => [node.id, node.title]));
   const nodes = base.nodes.map(node => {
     const parents = node.git?.parents ?? (node.parentId ? [node.parentId] : []);
     const row = parents.length ? Math.max(...parents.map(id => rows.get(id) ?? -1)) + 1 : 0;
+    const y = parents.length
+      ? Math.max(...parents.map(id => (placed.get(id) ?? geometry.originY) + commitBranchGap(titleOf.get(id) ?? '')))
+      : geometry.originY;
     rows.set(node.id, row);
-    return { ...node, label: source.find(item => item.id === node.id)!.label, row, y: geometry.originY + row * geometry.rowGap };
+    placed.set(node.id, y);
+    return { ...node, label: source.find(item => item.id === node.id)!.label, row, y };
   });
   const byId = new Map(nodes.map(node => [node.id, node]));
   const merged = mergedBranchIds(nodes);
@@ -29,14 +45,14 @@ export function layoutGitHistory(source: VersionNode[]) {
     const parents = target.git?.parents ?? (target.parentId ? [target.parentId] : []);
     const branchStart = firstOfBranch.get(target.branchId) === target.id && parents.length <= 1;
     const branchId = from.branchId !== target.branchId && merged.has(from.branchId) && !branchStart ? from.branchId : target.branchId;
-    return [{ id: `${id}:${target.id}`, sourceId: id, targetId: target.id, branchId, path, dashed: dx === 0 && merged.has(branchId) }];
+    return [{ id: `${id}:${target.id}`, sourceId: id, targetId: target.id, branchId, path, dashed: false }];
   }));
   for (const branchId of merged) {
     const stations = nodes.filter(node => node.branchId === branchId).sort((a, b) => a.row - b.row || a.x - b.x);
     for (let index = 0; index < stations.length - 1; index++) {
       const from = stations[index], target = stations[index + 1];
       if (from.x !== target.x || edges.some(edge => edge.sourceId === from.id && edge.targetId === target.id)) continue;
-      edges.push({ id: `merged-stem:${from.id}:${target.id}`, sourceId: from.id, targetId: target.id, branchId, dashed: true, path: `M ${from.x} ${from.y} L ${target.x} ${target.y}` });
+      edges.push({ id: `merged-stem:${from.id}:${target.id}`, sourceId: from.id, targetId: target.id, branchId, dashed: false, path: `M ${from.x} ${from.y} L ${target.x} ${target.y}` });
     }
     for (const target of nodes) {
       const parents = target.git?.parents ?? (target.parentId ? [target.parentId] : []);
@@ -46,7 +62,7 @@ export function layoutGitHistory(source: VersionNode[]) {
       edges.push({ id: `merged-span:${anchor.id}:${target.id}`, sourceId: anchor.id, targetId: target.id, branchId: target.branchId, dashed: true, path: `M ${anchor.x} ${anchor.y} L ${target.x} ${target.y}` });
     }
   }
-  return { ...base, nodes, edges, levels: [], forks: [], height: geometry.originY + Math.max(0, ...rows.values()) * geometry.rowGap + geometry.cardHeight + geometry.padding };
+  return { ...base, nodes, edges, levels: [], forks: [], height: Math.max(...nodes.map(node => node.y)) + geometry.cardHeight + geometry.padding };
 }
 
 /** Square dots on grid intersections along a vertical re-merge stem, three grids apart. */

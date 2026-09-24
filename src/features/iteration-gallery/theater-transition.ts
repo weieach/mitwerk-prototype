@@ -46,6 +46,14 @@ export function theaterRotationProgress(entranceProgress: number) {
   return transitionProgress(entranceProgress * theaterEntranceDuration(), t.theaterMotion.rotateMs);
 }
 
+/** The frontal frame border finishes during the last slice of the rotation, before the timeline starts. */
+export function frameBorderEntrance(entranceProgress: number) {
+  const { rotateMs, frameBorderMs } = t.theaterMotion;
+  const elapsed = entranceProgress * theaterEntranceDuration();
+  const { eased } = transitionProgress(elapsed - (rotateMs - frameBorderMs), frameBorderMs);
+  return { opacity: eased };
+}
+
 export function timelineEntrance(entranceProgress: number) {
   const { rotateMs, timelineMs, timelineOffsetVh } = t.theaterMotion;
   const { eased } = transitionProgress(entranceProgress * theaterEntranceDuration() - rotateMs, timelineMs);

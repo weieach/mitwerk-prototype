@@ -66,6 +66,7 @@ export function buildGitCaptureHistory(captures: Capture[], git: GitHistory): Gr
       relation: parents.length ? 'commit' : 'root', branchId: branch,
       files: captured?.files ?? [], prompts: captured?.prompts ?? [], summary: commit.subject,
       git: { sha: commit.sha, parents, refs: git.branches.filter(ref => nearest(ref.tip).includes(commit.sha)).map(ref => ref.name),
+        filesChanged: commit.filesChanged ?? 0, added: commit.added ?? 0, removed: commit.removed ?? 0,
         merges: git.merges.filter(merge => merge.sha === commit.sha).map(merge => `${merge.source} → ${merge.branch}${merge.fastForward ? ' (fast-forward)' : ''}`) },
     };
   });
@@ -78,7 +79,38 @@ export function buildGitCaptureHistory(captures: Capture[], git: GitHistory): Gr
       summary: `${node.capture?.pushed ? 'Capture without a matching Git commit' : 'Unpushed work'} · ${node.summary}` });
   }
   assignInterimVersionLabels(nodes);
+  for (const node of nodes) {
+    const title = displayedCommitTitle(node.label);
+    if (!title) continue;
+    node.title = title;
+    if (node.git) node.summary = title;
+  }
   return { nodes, activeBranchId: git.currentBranch || nodes.at(-1)?.branchId || 'main', selectedId: nodes.at(-1)?.id ?? null, revertedIds: [] };
+}
+
+/** Curated wording for the recorded history. Versions without an entry keep the Git subject. */
+const displayedCommitTitles: Record<string, string> = {
+  v1: 'Add prototype version stream with subway-style branching and per-push screenshots',
+  v2: 'Improve screen capture mechanics',
+  v3: 'Fix screen capture on push',
+  v4: 'Implement git branching logic with current-branch highlight; add version panel actions',
+  v5: 'Enhance progress screenshots and version management',
+  v6: 'Clarify connector behavior and layering by version order in design system',
+  v7: 'Update branch color palette; improve version label readability on zoom',
+  v8: 'Refine file chips; add compact cards for off-current branches',
+  v9: 'Add revert commit and disabled node states; improve hide-grid button',
+  v10: 'Add per-push repo capture hook and update capture filenames; fix add-commit button on endpoints',
+  v11: 'Add initial iteration gallery, version tree test visuals, and capture logic',
+  'v11.1': 'Render iteration gallery with interactive WebGL blocks',
+  v12: 'Begin 3D view (WIP)',
+  v13: 'Add frontal theater view framework and 2D/3D transitions',
+  v14: 'Add XR integration; improve data viz labels',
+  v15: 'Quick change',
+  v16: 'Clarify branch coloring; show gallery labels in top view; add theater timeline side view',
+};
+
+export function displayedCommitTitle(label: string) {
+  return displayedCommitTitles[label.toLowerCase()] ?? null;
 }
 
 /** Uncaptured commits between saved versions keep a dotted number off the previous version. */

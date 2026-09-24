@@ -39,7 +39,12 @@ export function getBranchEndpoints(nodes: VersionNode[]) {
   });
 }
 
-/** Branch IDs in creation order, which stays stable as the graph grows. */
+/** A station diverges when its branch differs from a parent, including the first commit of a side lane. */
+export function isBranchDivergence(node: VersionNode, nodes: VersionNode[]) {
+  const byId = new Map(nodes.map(item => [item.id, item]));
+  const parents = (node.git?.parents ?? (node.parentId ? [node.parentId] : [])).map(id => byId.get(id)).filter((item): item is VersionNode => !!item);
+  return parents.some(parent => parent.branchId !== node.branchId);
+}
 export function getBranchIds(nodes: VersionNode[]) {
   return [...new Set(nodes.map(node => node.branchId))];
 }

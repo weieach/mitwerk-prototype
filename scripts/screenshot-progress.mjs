@@ -436,6 +436,9 @@ function wantsResetCapture(prompt = '') {
 function wantsTheaterCapture(prompt = '') {
   if (argValue('gallery-view') === 'theater') return true;
   if (/\bisometric\b/i.test(prompt) && !/\btheater\b/i.test(prompt)) return false;
+  const theaterSubject = prompt.split(/tree-panel|version-card/i)[0] ?? '';
+  if (/iteration-gallery|theater-view|theater-version|theater-branch/i.test(theaterSubject)) return true;
+  if (/tree-panel|version-card|version stream/i.test(prompt) && !/\bcaptur(?:e|ed|ing|this)\b[\s\S]{0,40}\btheater\b/i.test(prompt)) return false;
   return /\btheater\b/i.test(prompt) || /\bcaptur(?:e|ed)\b[\s\S]{0,80}\btheater view\b/i.test(prompt) || /\btheater view\b[\s\S]{0,80}\bcaptur(?:e|ed)\b/i.test(prompt);
 }
 
@@ -456,6 +459,7 @@ function screenshotUrl(prompt = '') {
   if (hover) target.searchParams.set('galleryHover', '1');
   if (wantsTheaterCapture(prompt)) {
     target.searchParams.set('galleryView', 'theater');
+    if (/push frame selected/i.test(prompt)) target.searchParams.set('frameKind', 'push');
   } else if (wantsResetCapture(prompt)) {
     target.searchParams.set('galleryView', 'reset');
   } else if (argValue('gallery-view') === 'center' || hover || /\bcenter(?:ed)? view\b/i.test(prompt)) {
@@ -463,18 +467,24 @@ function screenshotUrl(prompt = '') {
   }
   const interact = screenshotInteractFromPrompt(prompt);
   if (interact) target.searchParams.set('interact', interact);
-  const scale = /(\d+(?:\.\d+)?)\s*%(?:\s+in)?\s+scale/i.exec(prompt);
+  const scale = /(\d+(?:\.\d+)?)\s*%(?:\s+in)?\s+scale/i.exec(prompt) || /scale\b[\s\S]{0,80}?(\d+(?:\.\d+)?)\s*%/i.exec(prompt);
+  if (/fit all view/i.test(prompt)) target.searchParams.set('treeFit', '1');
   if (scale) target.searchParams.set('treeZoom', String(Number(scale[1]) / 100));
+  const centered = /\bv(\d+(?:\.\d+)?)(?:\s+\w+){0,3}\s+centered\b/i.exec(prompt);
+  if (centered) target.searchParams.set('treeCenter', centered[1]);
   if (/\b(?:near\s+)?bottom of (?:the )?(?:page|panel)\b/i.test(prompt) || /recapture last prompt/i.test(prompt)) target.searchParams.set('treeFrame', 'bottom');
   if (/a bit more upward/i.test(prompt)) target.searchParams.set('treeLift', '0.22');
-  if (/same spot as (?:the )?last prompt/i.test(prompt)) {
+  if (/same (?:spot|zone) as (?:the )?last (?:prompt|one)/i.test(prompt)) {
     try {
       const saved = JSON.parse(readFileSync(join(screenshotsDir, '.last-tree-frame'), 'utf8'));
       if (saved.treeZoom) target.searchParams.set('treeZoom', String(saved.treeZoom));
       if (saved.treeFrame) target.searchParams.set('treeFrame', String(saved.treeFrame));
+      if (saved.treeCenter) target.searchParams.set('treeCenter', String(saved.treeCenter));
+      if (saved.galleryView) target.searchParams.set('galleryView', String(saved.galleryView));
+      if (saved.frameKind) target.searchParams.set('frameKind', String(saved.frameKind));
     } catch { /* The first remembered frame is written after a framed capture. */ }
   }
-  const frame = { treeZoom: target.searchParams.get('treeZoom'), treeFrame: target.searchParams.get('treeFrame') };
+  const frame = { treeZoom: target.searchParams.get('treeZoom'), treeFrame: target.searchParams.get('treeFrame'), treeCenter: target.searchParams.get('treeCenter'), galleryView: target.searchParams.get('galleryView'), frameKind: target.searchParams.get('frameKind') };
   if (frame.treeZoom || frame.treeFrame) {
     mkdirSync(screenshotsDir, { recursive: true });
     writeFileSync(join(screenshotsDir, '.last-tree-frame'), JSON.stringify(frame));

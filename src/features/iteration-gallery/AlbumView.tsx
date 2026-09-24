@@ -7,13 +7,14 @@ import { formatFrameLabel, formatTime, representativeFrames } from './model';
 import { buildAlbum } from './geometry';
 import { AlbumScene } from './AlbumScene';
 import { InfoTooltip } from '../../components/InfoTooltip';
+import { TrackedInterface } from './TrackedInterface';
 import { galleryTokens as t } from './tokens';
 import { AxisLabels } from './AxisLabels';
 import type { AxisLabelsHandle } from './AxisLabels';
 
-export function AlbumView({ versions, range, now, zoom, onOpen, onZoom, onCamera, turning, returning, hidden, onReturnStarted, theaterTarget, theaterId, onTurnComplete, onMotion }: {
+export function AlbumView({ versions, range, now, zoom, interfaceId, onInterface, onOpen, onZoom, onCamera, turning, returning, hidden, onReturnStarted, theaterTarget, theaterId, onTurnComplete, onMotion }: {
   onMotion: (progress: number) => void; returning: boolean; hidden: boolean; onReturnStarted: () => void; turning: boolean; theaterTarget: TheaterTarget | null; theaterId: string; onTurnComplete: () => void;
-  versions: GalleryVersion[]; range: RangeKey; now: number; zoom: number;
+  versions: GalleryVersion[]; range: RangeKey; now: number; zoom: number; interfaceId: string; onInterface: (value: string) => void;
   onOpen: (id: string) => void; onZoom: (zoom: number) => void;
   onCamera?: (camera: GalleryCamera | null) => void;
 }) {
@@ -28,7 +29,6 @@ export function AlbumView({ versions, range, now, zoom, onOpen, onZoom, onCamera
   const [keyboardId, setKeyboardId] = useState('');
   const keyboardIdRef = useRef(keyboardId);
   keyboardIdRef.current = keyboardId;
-  const [interfaceId, setInterfaceId] = useState<string>(t.interfaces[0].value);
   const active = album.planes.filter(plane => plane.active);
   const hovered = active.find(plane => plane.frame.id === hoveredId);
   const chosen = active.find(plane => plane.frame.id === keyboardId);
@@ -69,9 +69,7 @@ export function AlbumView({ versions, range, now, zoom, onOpen, onZoom, onCamera
 
   return <div className="album-webgl" inert={turning || returning || hidden}>
     <div className="gallery-toolbar album-frame-bar">
-      <select aria-label="Tracked interface" value={interfaceId} onChange={event => setInterfaceId(event.target.value)}>
-        {t.interfaces.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
-      </select>
+      <TrackedInterface value={interfaceId} onChange={onInterface}/>
       <select aria-label="Saved frame" disabled={!active.length} value={chosen?.frame.id ?? ''} onChange={event => { setKeyboardId(event.target.value); scene.current?.pin(event.target.value || null); scene.current?.inspect(event.target.value || null); }}>
         <option value="">{active.length ? 'Select a saved frame' : 'No frames in range'}</option>
         {active.map(({ frame }) => <option key={frame.id} value={frame.id}>{formatFrameLabel(frame)}</option>)}
