@@ -5,6 +5,9 @@ const stationDiameter = 28;
 const stationBorderWidth = 5;
 const stationInnerDiameter = stationDiameter - stationBorderWidth * 2;
 export const treeTheme = {
+  historyCaptureVersions: 3,
+  debugBorderColor: '#00A66A',
+  debugBorderWidth: 2,
   routes: ['#7A9EF7', '#FFC629', '#00A66A', '#EA66B7', '#ED6A2C', '#9A85F0'],
   stationDiameter,
   stationRadius: stationDiameter / 2,

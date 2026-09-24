@@ -12,7 +12,8 @@
     "build": "tsc --noEmit && vite build",
     "spike": "node archive/review-comment-spike/scripts/spike.mjs",
     "start": "node server/standalone.mjs",
-    "bench": "node archive/review-comment-spike/scripts/bench-lookup.mjs"
+    "bench": "node archive/review-comment-spike/scripts/bench-lookup.mjs",
+    "export:xr": "node --experimental-strip-types scripts/export-xr.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

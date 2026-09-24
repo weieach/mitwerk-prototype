@@ -1,3 +1,4 @@
+import { readGitHistory } from './git-history.ts';
 import { closeSync, createReadStream, existsSync, openSync, readFileSync, readdirSync, readSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Plugin } from 'vite';
@@ -43,7 +44,11 @@ export function iterationGalleryCatalog(): Plugin {
       server.watcher.on('all', (_event, path) => invalidate(path));
       server.middlewares.use((req, res, next) => {
         const pathname = new URL(req.url ?? '/', 'http://localhost:5173').pathname;
-        if (pathname === manifestPath) {
+        if (pathname === '/gallery/git-history.json') {
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', 'no-cache');
+          res.end(JSON.stringify(readGitHistory(root)));
+        } else if (pathname === manifestPath) {
           res.setHeader('Content-Type', 'application/json');
           res.setHeader('Cache-Control', 'no-cache');
           cached ??= readCaptureCatalog(root);
@@ -67,6 +72,7 @@ export function iterationGalleryCatalog(): Plugin {
       });
     },
     generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'gallery/git-history.json', source: JSON.stringify(readGitHistory(root)) });
       const catalog = readCaptureCatalog(root);
       this.emitFile({ type: 'asset', fileName: 'gallery/manifest.json', source: JSON.stringify(catalog) });
       for (const frame of catalog.frames) this.emitFile({ type: 'asset', fileName: `gallery/images/${frame.filename}`,

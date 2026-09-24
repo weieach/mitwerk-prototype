@@ -6,12 +6,14 @@ The left panel now contains the Iteration Gallery, as requested on 2026-09-22. P
 
 The local app always runs on port **5173** (`http://localhost:5173`). Do not change this port, pick a fallback port, or point screenshots, OAuth redirects, or other local URLs at a different one.
 
+Version stream progress captures default to Commit history. Use `--tree-mode test` only when a debug/Test visual capture is explicitly requested.
+
 On git push, snapshot the pushed tree into `[ver capture] codebase/` as a folder named like the matching push screenshot. Start numbering at push #6; do not commit that folder.
 
 Do not take a progress screenshot or increment the prompt counter for Ask mode prompts.
 
 When the git branch is not `main`, include that branch name in prompt/push screenshot names and version-archive folder names.
 
-Progress counters (source of truth for agents working across chats): **push #12 · prompt #85**. Read this file at the start of every prompt to get the latest counters; never rely on conversation memory. As each Agent-mode prompt finishes, reread this file and confirm the highest `[push #N]` and `[prompt #N]` in `[frame capture] screenshots/` to account for other chats, then increment the latest prompt counter by exactly one and write it here. A capture for that prompt uses the same number, not a second increment. After a real git push, set the push number to the new `[push #N]`. Do not increment in Ask mode or when the user explicitly excludes the current prompt from counting. A requested catch-up capture belongs to the previous prompt and does not count the current request separately; reuse that previous prompt's reserved number if it has no frame, otherwise use the next available number without overwriting an existing capture.
+Progress counters (source of truth for agents working across chats): **push #13 · prompt #102**. Read this file at the start of every prompt to get the latest counters; never rely on conversation memory. As each Agent-mode prompt finishes, reread this file and confirm the highest `[push #N]` and `[prompt #N]` in `[frame capture] screenshots/` to account for other chats, then increment the latest prompt counter by exactly one and write it here. A capture for that prompt uses the same number, not a second increment. After a real git push, set the push number to the new `[push #N]`. Do not increment in Ask mode or when the user explicitly excludes the current prompt from counting. A requested catch-up capture belongs to the previous prompt and does not count the current request separately; reuse that previous prompt's reserved number if it has no frame, otherwise use the next available number without overwriting an existing capture.
 
 End every user-facing response with one line naming the current push number and the latest progress-screenshot prompt number, in the form `push #5 · prompt #25`. Use the counters in this file. If they look stale, reread `[frame capture] screenshots/` and update this file first. Do not print a version label here. Do not omit this footer.

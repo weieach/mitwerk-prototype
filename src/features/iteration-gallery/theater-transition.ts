@@ -29,3 +29,8 @@ export function containsPoint(rect: TheaterTarget, x: number, y: number, margin 
   return x >= rect.left - margin.left && x <= rect.left + rect.width + margin.right
     && y >= rect.top - margin.top && y <= rect.top + rect.height + margin.bottom;
 }
+
+/** A control row reserves its own box and margins across the panel, not neighboring layout gaps. */
+export function reservedControlContains(row: TheaterTarget, control: TheaterTarget, x: number, y: number, margin = { left: 0, right: 0, top: 0, bottom: 0 }) {
+  return containsPoint({ left: row.left, width: row.width, top: control.top, height: control.height }, x, y, margin);
+}

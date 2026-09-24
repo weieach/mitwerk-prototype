@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { projectAxisLabels } from '../src/features/iteration-gallery/axis-label-layout.ts';
+import { mergeAxisAnchors, projectAxisLabels } from '../src/features/iteration-gallery/axis-label-layout.ts';
 import type { AxisAnchor } from '../src/features/iteration-gallery/axis-label-layout.ts';
 
 const anchors: AxisAnchor[] = [{ id: 'date', text: 'Sep 22', position: new THREE.Vector3(0, 100, -200), face: 'wall' }];
@@ -32,6 +32,21 @@ test('date baselines follow the depth direction when the camera orbits', () => {
     assert.ok(Math.abs(values[0] * -direction.y - values[1] * direction.x) < 1e-8);
     assert.ok(values.every(Number.isFinite));
   }
+});
+
+test('featured labels replace a standing tick at the same face and depth', () => {
+  const date = new THREE.Vector3(0, 100, -200);
+  const version = new THREE.Vector3(300, -80, -200);
+  const merged = mergeAxisAnchors([
+    { id: 'title', text: 'Date', position: date, face: 'wall' },
+    { id: 'day', text: 'Sep 17', position: date, face: 'wall' },
+    { id: 'slot', text: 'V7', position: version, face: 'ground' },
+  ], [
+    { id: 'featured:date', text: 'Sep 17, 7:33', position: date.clone(), face: 'wall', featured: true },
+    { id: 'featured:version', text: 'V7', position: version.clone(), face: 'ground', featured: true },
+  ]);
+  assert.deepEqual(merged.map(anchor => anchor.id), ['title', 'featured:date', 'featured:version']);
+  assert.equal(merged.find(anchor => anchor.id === 'title')?.text, 'Date');
 });
 
 test('viewport-based label sizes stay bounded on small and large panels', () => {

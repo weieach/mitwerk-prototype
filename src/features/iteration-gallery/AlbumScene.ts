@@ -1,13 +1,16 @@
 import * as THREE from 'three';
 import { dragAngles, transitionProgress } from './theater-transition';
 import type { TheaterOrbit, TheaterTarget } from './theater-transition';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
+import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { GalleryVersion } from './model';
-import { dateTicks, edgePanArmed, edgePanStrength, formatDate, formatFrameLabel } from './model';
+import { captionLineBold, dateTicks, edgePanArmed, edgePanStrength, formatDate, hoverCaptionLines, wrapTextToWidth } from './model';
 import type { buildAlbum, FramePlane, LabelFace } from './geometry';
-import { albumFloorY, dateLabelPose, frameFocus, hoverCaptionHeight, resetCameraDestination, versionLabelPose } from './geometry';
+import { albumFloorY, containingBlock, dateLabelPose, featuredFrameAxis, featuredTickLength, frameFocus, hoverCaptionHeight, resetCameraDestination, versionLabelPose } from './geometry';
 import { galleryTokens as t } from './tokens';
-import { projectAxisLabels } from './axis-label-layout';
+import { mergeAxisAnchors, projectAxisLabels } from './axis-label-layout';
 import type { AxisAnchor, AxisLabel } from './axis-label-layout';
 
 type Album = ReturnType<typeof buildAlbum>;
@@ -22,7 +25,10 @@ export class AlbumScene {
   private controls: OrbitControls;
   private content = new THREE.Group();
   private axisAnchors: AxisAnchor[] = [];
+  private featuredAnchors: AxisAnchor[] = [];
+  private featuredGuides = new THREE.Group();
   private frames = new Map<string, FrameObject>();
+  private blockEdges = new Map<string, { block: Album['blocks'][number]; material: LineMaterial }>();
   private pickTargets: THREE.Mesh[] = [];
   private textures = new Map<string, THREE.Texture>();
   private pending = new Set<string>();
@@ -30,6 +36,7 @@ export class AlbumScene {
   private observer: ResizeObserver;
   private raycaster = new THREE.Raycaster();
   private hovered: string | null = null;
+  private pinned: string | null = null;
   private representatives = new Set<string>();
   private album: Album | null = null;
   private pointer: { clientX: number; clientY: number } | null = null;
@@ -122,7 +129,7 @@ export class AlbumScene {
       if (Math.abs(target - frame.group.position.y) < .05) frame.group.position.y = target; else moving = true;
     }
     this.renderer.render(this.scene, this.camera);
-    this.callbacks.labels(projectAxisLabels(this.axisAnchors, this.camera, this.host.clientWidth, this.host.clientHeight));
+    this.callbacks.labels(projectAxisLabels(mergeAxisAnchors(this.axisAnchors, this.featuredAnchors), this.camera, this.host.clientWidth, this.host.clientHeight));
     const hovered = this.hovered ? this.frames.get(this.hovered) : undefined;
     this.host.dataset.inspectionReady = String(!!hovered && this.textures.has(hovered.plane.frame.id) && hovered.group.position.y === t.hoverLift && (!edgePanArmed(this.edgeHoldMs) || this.lookSettled(hovered.plane)));
     if (moving) this.invalidate();
@@ -139,6 +146,7 @@ export class AlbumScene {
     this.pointer = null; this.down = null; this.edgeVelocity = 0; this.controls.enabled = false;
     this.inspect(id);
     this.caption && (this.caption.visible = false);
+    this.featuredGuides.visible = false;
     this.callbacks.labels([]);
     const rect = this.host.getBoundingClientRect();
     const centerX = target.left + target.width / 2 - rect.left;
@@ -215,6 +223,7 @@ export class AlbumScene {
     this.controls.enabled = false;
     this.inspect(id);
     this.caption && (this.caption.visible = false);
+    this.featuredGuides.visible = false;
     this.callbacks.labels([]);
     const rect = this.host.getBoundingClientRect();
     const unit = selected.plane.height / target.height;
@@ -268,6 +277,7 @@ export class AlbumScene {
     this.camera.bottom = -vertical / 2;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
+    this.syncEdgeResolution();
     if (this.hovered) this.placeCaption();
     this.invalidate();
   };
@@ -344,8 +354,65 @@ export class AlbumScene {
     this.hovered = id;
     this.callbacks.hover(id);
     this.placeCaption();
+    this.syncFeaturedLabels();
+    this.syncBlockStrokes();
     this.updateImages();
     this.invalidate();
+  }
+  pin(id: string | null) {
+    if (this.theaterTurn) return;
+    this.pinned = id && this.frames.get(id)?.plane.active ? id : null;
+    this.syncFeaturedLabels();
+    this.invalidate();
+  }
+  private featuredId() {
+    return this.hovered ?? this.pinned;
+  }
+  private hoveredBlockKey() {
+    const plane = this.hovered ? this.frames.get(this.hovered)?.plane : undefined;
+    return plane && this.album ? containingBlock(this.album, plane)?.key ?? null : null;
+  }
+  private syncBlockStrokes() {
+    const hoveredKey = this.hoveredBlockKey();
+    for (const [key, { block, material }] of this.blockEdges) {
+      const highlighted = key === hoveredKey;
+      material.color.set(highlighted ? this.colors.ink : this.colors.muted);
+      material.linewidth = highlighted ? t.webgl.hoverEdgeWidth : t.webgl.edgeWidth;
+      const target = !block.active ? t.disabledOpacity : highlighted ? t.webgl.hoverEdgeOpacity : t.webgl.edgeOpacity;
+      const fade = this.fades.get(material);
+      if (fade) fade.target = target;
+      else material.opacity = target;
+    }
+  }
+  private syncEdgeResolution() {
+    const { width, height } = this.renderer.domElement;
+    for (const { material } of this.blockEdges.values()) material.resolution.set(width, height);
+  }
+  private syncFeaturedLabels() {
+    this.clearFeaturedGuides();
+    this.featuredAnchors = [];
+    this.featuredGuides.visible = !this.theaterTurn;
+    const frame = this.featuredId() ? this.frames.get(this.featuredId()!) : undefined;
+    if (!frame || !this.album) return;
+    const pair = featuredFrameAxis(this.album, frame.plane);
+    this.featuredAnchors = [
+      { id: 'featured:date', text: pair.date.text, position: new THREE.Vector3(pair.date.x, pair.date.y, pair.date.z), face: pair.date.face, featured: true },
+      { id: 'featured:version', text: pair.version.text, position: new THREE.Vector3(pair.version.x, pair.version.y, pair.version.z), face: pair.version.face, featured: true },
+    ];
+    const floor = albumFloorY(this.album);
+    const tick = featuredTickLength();
+    this.line([new THREE.Vector3(0, 0, pair.date.z), new THREE.Vector3(0, tick, pair.date.z)], 'wall', this.featuredGuides);
+    this.line([new THREE.Vector3(this.album.width, floor, pair.version.z), new THREE.Vector3(this.album.width + tick, floor, pair.version.z)], 'ground', this.featuredGuides);
+  }
+  private clearFeaturedGuides() {
+    this.featuredGuides.traverse(object => {
+      if (object instanceof THREE.Line) {
+        object.geometry.dispose();
+        const material = object.material;
+        (Array.isArray(material) ? material : [material]).forEach(item => item.dispose());
+      }
+    });
+    this.featuredGuides.clear();
   }
   setZoom(zoom: number) {
     if (this.theaterTurn) return;
@@ -474,33 +541,39 @@ export class AlbumScene {
     this.axisAnchors.push({ id: `${face}:${text}:${z}`, text, position: new THREE.Vector3(x, y, z), face });
   }
 
-  private makePlate(text: string, ink: string, worldH: number) {
-    const { texture, width, height } = this.paintPlate(text, ink, worldH);
+  private makePlate(text: string, ink: string, worldLineH: number, maxWorldW?: number) {
+    const { texture, width, height } = this.paintPlate(text, ink, worldLineH, maxWorldW);
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshBasicMaterial({
       map: texture, transparent: true, depthWrite: false, side: THREE.DoubleSide,
     }));
     mesh.userData.plate = { width, height };
     return mesh;
   }
-  private paintPlate(text: string, ink: string, worldH: number) {
+  private paintPlate(text: string, ink: string, worldLineH: number, maxWorldW?: number) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
     const viewH = Math.max(1e-6, (this.camera.top - this.camera.bottom) / this.camera.zoom);
     const hostH = this.host.clientHeight || 1;
     const dpr = Math.min(devicePixelRatio, t.webgl.pixelRatioMax);
-    const targetPx = Math.min(t.labelTextureMax, Math.max(t.labelTextureMin, worldH / viewH * hostH * dpr));
     const family = getComputedStyle(this.host).fontFamily || 'sans-serif';
-    const lines = text.split('\n');
     const line = t.labelFontSize * 1.25;
     const pad = t.captionShadow.pad;
-    ctx.font = `${t.labelFontSize}px ${family}`;
-    const cssW = Math.max(...lines.map(item => ctx.measureText(item).width)) + pad * 2;
-    const cssH = line * lines.length + pad * 2;
+    const fontFor = (item: string) => `${captionLineBold(item) ? '700 ' : ''}${t.labelFontSize}px ${family}`;
+    const measure = (item: string) => { ctx.font = fontFor(item); return ctx.measureText(item).width; };
+    const maxCss = maxWorldW ? Math.max(line, maxWorldW * line / worldLineH - pad * 2) : Infinity;
+    const lines = text.split('\n').flatMap(item => {
+      ctx.font = fontFor(item);
+      return maxWorldW ? wrapTextToWidth(item, maxCss, value => { ctx.font = fontFor(item); return ctx.measureText(value).width; }) : [item];
+    });
+    const cssW = Math.min(maxCss === Infinity ? Number.POSITIVE_INFINITY : maxCss + pad * 2,
+      Math.max(0, ...lines.map(measure)) + pad * 2);
+    const cssH = line * Math.max(1, lines.length) + pad * 2;
+    const worldH = cssH * worldLineH / line;
+    const targetPx = Math.min(t.labelTextureMax, Math.max(t.labelTextureMin, worldH / viewH * hostH * dpr));
     const scale = targetPx / cssH;
     canvas.width = Math.ceil(cssW * scale);
     canvas.height = Math.ceil(cssH * scale);
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
-    ctx.font = `${t.labelFontSize}px ${family}`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     // Transparent texture: a white halo follows only the glyphs, never a label rectangle.
@@ -509,42 +582,46 @@ export class AlbumScene {
     ctx.lineJoin = 'round';
     ctx.shadowColor = t.captionShadow.color;
     ctx.shadowBlur = t.captionShadow.blur * scale;
-    for (let pass = 0; pass < t.captionShadow.passes; pass++) {
-      lines.forEach((item, index) => ctx.strokeText(item, pad, pad + line * (index + .5)));
-    }
+    const draw = (fill: boolean) => lines.forEach((item, index) => {
+      ctx.font = fontFor(item);
+      if (fill) ctx.fillText(item, pad, pad + line * (index + .5));
+      else ctx.strokeText(item, pad, pad + line * (index + .5));
+    });
+    for (let pass = 0; pass < t.captionShadow.passes; pass++) draw(false);
     ctx.shadowBlur = 0;
     ctx.fillStyle = ink;
-    lines.forEach((item, index) => ctx.fillText(item, pad, pad + line * (index + .5)));
+    draw(true);
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = Math.min(t.webgl.anisotropyMax, this.renderer.capabilities.getMaxAnisotropy());
     texture.generateMipmaps = true;
     texture.minFilter = THREE.LinearMipmapLinearFilter;
     texture.magFilter = THREE.LinearFilter;
-    return { texture, width: worldH * cssW / cssH, height: worldH };
+    return { texture, width: Math.min(maxWorldW ?? Number.POSITIVE_INFINITY, cssW * worldLineH / line), height: worldH };
   }
   private placeCaption() {
     this.caption?.removeFromParent();
     const frame = this.hovered ? this.frames.get(this.hovered) : undefined;
     if (!frame) { if (this.caption) this.caption.visible = false; return; }
-    const text = `${formatFrameLabel(frame.plane.frame)}\n${frame.plane.frame.summary.slice(0, t.labelSummaryLength)}`;
+    const text = hoverCaptionLines(frame.plane.frame).join('\n');
+    if (!text.replaceAll('"', '').trim()) { if (this.caption) this.caption.visible = false; return; }
     if (this.caption) {
       this.caption.geometry.dispose();
       this.caption.material.map?.dispose();
       this.caption.material.dispose();
     }
     const viewH = Math.max(1e-6, (this.camera.top - this.camera.bottom) / this.camera.zoom);
-    this.caption = this.makePlate(text, this.colors.ink, hoverCaptionHeight(frame.plane.height, viewH));
+    this.caption = this.makePlate(text, this.colors.ink, hoverCaptionHeight(frame.plane.height, viewH), frame.plane.width);
     const { plane } = frame;
     const size = this.caption.userData.plate as { width: number; height: number };
     this.caption.position.set(plane.x + size.width / 2, -plane.y + t.hoverCaptionGap + size.height / 2, -plane.depth);
     frame.group.add(this.caption);
     this.caption.visible = true;
   }
-  private line(points: THREE.Vector3[], face: LabelFace) {
+  private line(points: THREE.Vector3[], face: LabelFace, parent = this.content) {
     const material = new THREE.LineBasicMaterial({ color: this.colors.line });
     material.userData.axisFace = face;
-    this.content.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material));
+    parent.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material));
   }
 
   update(album: Album, versions: GalleryVersion[], representatives: string[]) {
@@ -565,11 +642,12 @@ export class AlbumScene {
       box.userData.end = block.end;
       this.content.add(box);
       this.pickTargets.push(box);
-      const edgeMaterial = new THREE.LineBasicMaterial({ color: this.colors.muted });
+      const edgeMaterial = new LineMaterial({ color: this.colors.muted, linewidth: t.webgl.edgeWidth, transparent: true, depthWrite: false, worldUnits: false });
       this.fade(edgeMaterial, block.active ? t.webgl.edgeOpacity : t.disabledOpacity, previous, `edge:${block.key}`);
-      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), edgeMaterial);
+      const edges = new LineSegments2(new LineSegmentsGeometry().fromEdgesGeometry(new THREE.EdgesGeometry(geometry)), edgeMaterial);
       edges.position.copy(box.position);
       this.content.add(edges);
+      this.blockEdges.set(block.key, { block, material: edgeMaterial });
     }
     for (const plane of album.planes) {
       const group = new THREE.Group();
@@ -587,6 +665,7 @@ export class AlbumScene {
       this.content.add(group);
       this.frames.set(plane.frame.id, { plane, group, image, outline });
     }
+    this.syncBlockStrokes();
     this.updateImages();
     if (!this.initialized) {
       this.center();
@@ -594,6 +673,10 @@ export class AlbumScene {
     }
     this.resize();
     this.paintGuides(versions);
+    this.featuredGuides = new THREE.Group();
+    this.content.add(this.featuredGuides);
+    if (this.pinned && !this.frames.get(this.pinned)?.plane.active) this.pinned = null;
+    this.syncFeaturedLabels();
   }
 
   private paintGuides(versions: GalleryVersion[]) {
@@ -657,7 +740,9 @@ export class AlbumScene {
       }
     });
     this.axisAnchors = [];
-    this.content.clear(); this.frames.clear(); this.pickTargets = []; this.fades.clear(); this.caption = null;
+    this.featuredAnchors = [];
+    this.content.clear(); this.frames.clear(); this.blockEdges.clear(); this.pickTargets = []; this.fades.clear(); this.caption = null;
+    this.featuredGuides = new THREE.Group();
   }
   dispose() {
     this.dead = true;

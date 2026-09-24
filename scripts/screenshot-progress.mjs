@@ -429,7 +429,8 @@ function screenshotInteractFromPrompt(prompt) {
 }
 
 function wantsResetCapture(prompt = '') {
-  return argValue('gallery-view') === 'reset' || /\bcapture\b[\s\S]{0,80}\breset view\b/i.test(prompt) || /\breset view\b[\s\S]{0,40}\bcapture\b/i.test(prompt);
+  return argValue('gallery-view') === 'reset' || /\bisometric\b/i.test(prompt)
+    || /\bcapture\b[\s\S]{0,80}\breset view\b/i.test(prompt) || /\breset view\b[\s\S]{0,40}\bcapture\b/i.test(prompt);
 }
 
 function wantsTheaterCapture(prompt = '') {
@@ -447,6 +448,7 @@ function wantsGalleryHover(prompt = '') {
 function screenshotUrl(prompt = '') {
   const target = new URL(url);
   target.searchParams.set('screenshot', '1');
+  target.searchParams.set('treeMode', argValue('tree-mode', 'history'));
   const hover = wantsGalleryHover(prompt);
   if (wantsTransitionCapture(prompt)) { target.searchParams.set('galleryView', 'transition'); return target.href; }
   if (hover) target.searchParams.set('galleryHover', '1');

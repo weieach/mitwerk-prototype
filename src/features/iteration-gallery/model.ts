@@ -125,9 +125,49 @@ export function playbackStep(index: number, count: number, direction: number, mo
 export const formatDate = (timestamp: number) => new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 export const formatTime = (timestamp: number) => new Date(timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
-/** Compact local timestamp shared by the saved-frame menu and highlighted caption. */
-export function formatFrameLabel(frame: Pick<GalleryFrame, 'version' | 'timestamp'>) {
-  const parts = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }).formatToParts(frame.timestamp);
+/** Compact local date used by featured date-axis labels and saved-frame names. */
+export function formatFrameDate(timestamp: number) {
+  const parts = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }).formatToParts(timestamp);
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(value => value.type === type)?.value ?? '';
-  return `[V${frame.version}] - ${part('month')} ${part('day')}, ${part('hour')}:${part('minute')}`;
+  return `${part('month')} ${part('day')}, ${part('hour')}:${part('minute')}`;
+}
+
+/** Compact local timestamp shared by the saved-frame menu. */
+export function formatFrameLabel(frame: Pick<GalleryFrame, 'version' | 'timestamp'>) {
+  return `[V${frame.version}] - ${formatFrameDate(frame.timestamp)}`;
+}
+
+/** Quoted hover summary with a bold version tag on the line above. */
+export function hoverCaptionLines(frame: Pick<GalleryFrame, 'kind' | 'version' | 'summary'>) {
+  return [`[V${frame.version}]`, `"${frame.summary.trim()}"`];
+}
+
+export function captionLineBold(text: string) {
+  return /^\[V\d+\]$/.test(text);
+}
+
+/** Word-wrap to a measured width, hard-breaking a token that cannot fit. */
+export function wrapTextToWidth(text: string, maxWidth: number, measure: (value: string) => number) {
+  if (maxWidth <= 0) return text ? [text] : [];
+  const lines: string[] = [];
+  const pushChunk = (value: string) => {
+    let chunk = '';
+    for (const ch of value) {
+      const trial = chunk + ch;
+      if (!chunk || measure(trial) <= maxWidth) chunk = trial;
+      else { lines.push(chunk); chunk = ch; }
+    }
+    return chunk;
+  };
+  let current = '';
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    const next = current ? `${current} ${word}` : word;
+    if (measure(next) <= maxWidth) current = next;
+    else {
+      if (current) lines.push(current);
+      current = measure(word) <= maxWidth ? word : pushChunk(word);
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
 }

@@ -3,6 +3,7 @@ export type VersionPrompt = { id: string; text: string };
 export type VersionFile = {
   name: string;
   kind: 'code' | 'reference' | 'skill';
+  url?: string;
   added: number;
   removed: number;
 };
@@ -16,6 +17,9 @@ export function isPictureFile(name: string) {
 }
 
 export type VersionNode = {
+  git?: { sha: string; parents: string[]; refs: string[]; merges: string[] };
+
+  capture?: { version: number; pushed: boolean; branches: string[]; added: string | null; removed: string | null };
   id: string;
   label: string;
   title: string;
@@ -186,6 +190,7 @@ export function screenshotQueryFlags(search: string) {
 
 /** Last commit on a branch: its first station followed along direct commit children. */
 export function branchTip(nodes: VersionNode[], branchId: string): VersionNode | undefined {
+  if (nodes.some(node => node.git)) return nodes.filter(node => !node.git && node.capture && node.branchId === branchId).at(-1) ?? nodes.find(node => node.git?.refs.includes(branchId)) ?? nodes.filter(node => node.branchId === branchId).at(-1);
   const byId = new Map(nodes.map(node => [node.id, node]));
   const start = nodes.find(node => node.branchId === branchId
     && (!node.parentId || byId.get(node.parentId)?.branchId !== branchId))

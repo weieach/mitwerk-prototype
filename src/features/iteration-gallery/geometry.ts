@@ -1,5 +1,5 @@
 import type { GalleryFrame, GalleryVersion, RangeKey } from './model.ts';
-import { inRange } from './model.ts';
+import { formatFrameDate, inRange } from './model.ts';
 import { galleryTokens as t } from './tokens.ts';
 
 export function imageSize(frame: Pick<GalleryFrame, 'width' | 'height'>) {
@@ -85,16 +85,47 @@ export function albumFloorY(album: Pick<ReturnType<typeof buildAlbum>, 'blocks'>
   return -Math.max(...album.blocks.map(block => block.height));
 }
 
+export function versionLabelPoseAtDepth(album: Pick<ReturnType<typeof buildAlbum>, 'width' | 'blocks'>, depth: number) {
+  return { x: album.width + t.rulerTickLength + t.rulerLabelGap, y: albumFloorY(album), z: -depth, face: 'ground' as const };
+}
+
 export function versionLabelPose(album: Pick<ReturnType<typeof buildAlbum>, 'width' | 'blocks'>, index: number) {
-  return { x: album.width + t.rulerTickLength + t.rulerLabelGap, y: albumFloorY(album), z: -(index + .5) * t.versionDepth, face: 'ground' as const };
+  return versionLabelPoseAtDepth(album, (index + .5) * t.versionDepth);
 }
 
 export function dateLabelPose(depth: number) {
   return { x: 0, y: t.rulerTickLength + t.rulerLabelGap, z: -depth, face: 'wall' as const };
 }
 
+export function featuredTickLength() {
+  return t.rulerTickLength * t.featuredTickScale;
+}
+
+export function featuredVersionPose(album: Pick<ReturnType<typeof buildAlbum>, 'width' | 'blocks'>, depth: number) {
+  return { x: album.width + featuredTickLength() + t.rulerLabelGap, y: albumFloorY(album), z: -depth, face: 'ground' as const };
+}
+
+export function featuredDatePose(depth: number) {
+  return { x: 0, y: featuredTickLength() + t.rulerLabelGap, z: -depth, face: 'wall' as const };
+}
+
+/** Date on the wall and version on the ground, both at the selected frame's depth. */
+export function featuredFrameAxis(album: Pick<ReturnType<typeof buildAlbum>, 'width' | 'blocks'>, plane: Pick<FramePlane, 'depth' | 'frame'>) {
+  return {
+    date: { ...featuredDatePose(plane.depth), text: formatFrameDate(plane.frame.timestamp) },
+    version: { ...featuredVersionPose(album, plane.depth), text: `V${plane.frame.version}` },
+  };
+}
+
 export function hoverCaptionHeight(frameHeight: number, viewHeight: number) {
-  return Math.max(frameHeight * t.hoverCaptionFrame, viewHeight * t.hoverCaptionViewport);
+  return Math.max(frameHeight * t.hoverCaptionFrame, viewHeight * t.hoverCaptionViewport) * t.hoverCaptionScale;
+}
+
+/** Block envelope that contains a frame. On a chunk boundary, take the later chunk. */
+export function containingBlock(album: Pick<ReturnType<typeof buildAlbum>, 'blocks'>, plane: Pick<FramePlane, 'depth' | 'frame'>) {
+  return album.blocks
+    .filter(block => block.version === plane.frame.version && plane.depth >= block.start && plane.depth <= block.end)
+    .sort((a, b) => b.start - a.start)[0];
 }
 
 /** Reset looks at the blocks. Nearby ground/wall labels participate in the fit without pulling the look-at sideways. */

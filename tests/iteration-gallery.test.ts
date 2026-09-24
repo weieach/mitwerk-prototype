@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildVersions, formatFrameLabel, dateTicks, edgePanArmed, edgePanStrength, representativeFrames, inRange, parseCaptureName, playbackStep, rangeCounts, rangeStart, ratioLabel } from '../src/features/iteration-gallery/model.ts';
+import { buildVersions, captionLineBold, formatFrameDate, formatFrameLabel, hoverCaptionLines, wrapTextToWidth, dateTicks, edgePanArmed, edgePanStrength, representativeFrames, inRange, parseCaptureName, playbackStep, rangeCounts, rangeStart, ratioLabel } from '../src/features/iteration-gallery/model.ts';
 import type { Capture } from '../src/features/iteration-gallery/model.ts';
-import { albumBlockBounds, albumEnvelope, albumFloorY, buildAlbum, coverRadius, dateLabelPose, frameFocus, hoverCaptionHeight, imageSize, resetCameraDestination, resetLook, versionLabelPose } from '../src/features/iteration-gallery/geometry.ts';
+import { albumBlockBounds, albumEnvelope, albumFloorY, boxCorners, buildAlbum, containingBlock, coverRadius, dateLabelPose, featuredFrameAxis, frameFocus, hoverCaptionHeight, imageSize, resetCameraDestination, resetLook, versionLabelPose } from '../src/features/iteration-gallery/geometry.ts';
 import { galleryTokens as t } from '../src/features/iteration-gallery/tokens.ts';
 import { readCaptureCatalog } from '../server/gallery-catalog.ts';
 
@@ -78,8 +78,9 @@ test('image geometry preserves portrait and landscape ratios; frames have shared
     assert.equal(plane.height + plane.y * 2, block.height);
     assert.ok(plane.depth > block.start + t.padding && plane.depth < block.end - t.padding);
   }
-  assert.ok(hoverCaptionHeight(240, 400) >= 240 * t.hoverCaptionFrame);
-  assert.ok(hoverCaptionHeight(40, 800) >= 800 * t.hoverCaptionViewport);
+  assert.ok(hoverCaptionHeight(240, 400) >= 240 * t.hoverCaptionFrame * t.hoverCaptionScale);
+  assert.ok(hoverCaptionHeight(40, 800) >= 800 * t.hoverCaptionViewport * t.hoverCaptionScale);
+  assert.ok(hoverCaptionHeight(240, 400) < 240 * t.hoverCaptionFrame);
 });
 
 test('date filtering splits blocks without changing frame depth or version identity', () => {
@@ -154,9 +155,21 @@ test('reset look stays on the block volume even when guides extend farther out',
   assert.equal(look.center.y, bounds.center.y);
   assert.ok(look.center.x > 0 && look.center.x < album.width);
   assert.ok(look.span > 0);
+  assert.equal(t.overviewFitScale, 1.2);
+  assert.ok(t.webgl.hoverEdgeWidth > t.webgl.edgeWidth);
+  const fitPoints = [
+    ...boxCorners(bounds),
+    { x: bounds.max.x + t.rulerTickLength + t.versionTitleGap, y: bounds.min.y, z: bounds.center.z },
+    { x: bounds.min.x, y: bounds.max.y + t.rulerTickLength + t.rulerTitleGap, z: bounds.center.z },
+  ];
+  assert.equal(look.span, coverRadius(bounds.center, fitPoints) * 2 * t.overviewPadding / t.overviewFitScale);
   const far = { x: bounds.center.x + 800, y: bounds.center.y + 800, z: bounds.center.z };
   assert.ok(coverRadius(bounds.center, [far]) > coverRadius(bounds.center, [{ x: bounds.max.x, y: bounds.max.y, z: bounds.max.z }]));
   const plane = album.planes[0];
+  const planeBlock = containingBlock(album, plane);
+  assert.ok(planeBlock);
+  assert.equal(planeBlock.version, plane.frame.version);
+  assert.ok(plane.depth >= planeBlock.start && plane.depth <= planeBlock.end);
   assert.deepEqual(frameFocus(plane), { x: plane.x + plane.width / 2, y: -plane.y - plane.height / 2 + plane.height * t.webgl.frontViewLift, z: -plane.depth });
   const versionPose = versionLabelPose(album, 0);
   assert.equal(versionPose.face, 'ground');
@@ -167,6 +180,15 @@ test('reset look stays on the block volume even when guides extend farther out',
   assert.equal(datePose.x, 0);
   assert.ok(datePose.y > 0);
   assert.equal(datePose.z, -20);
+  const featured = featuredFrameAxis(album, plane);
+  assert.equal(featured.date.face, 'wall');
+  assert.equal(featured.date.z, -plane.depth);
+  assert.equal(featured.date.text, 'Sep 17, 12:00');
+  assert.ok(featured.date.y < dateLabelPose(plane.depth).y);
+  assert.equal(featured.version.face, 'ground');
+  assert.equal(featured.version.z, -plane.depth);
+  assert.ok(featured.version.x < versionPose.x);
+  assert.equal(featured.version.text, `V${plane.frame.version}`);
 });
 
 test('edge travel ramps toward the border and waits for the dwell delay', () => {
@@ -182,7 +204,22 @@ test('edge travel ramps toward the border and waits for the dwell delay', () => 
 });
 
 test('saved-frame labels use bracketed versions and dashed local times', () => {
+  assert.equal(formatFrameDate(new Date(2026, 8, 17, 16, 41).getTime()), 'Sep 17, 4:41');
   assert.equal(formatFrameLabel({ version: 10, timestamp: new Date(2026, 8, 17, 16, 41).getTime() }), '[V10] - Sep 17, 4:41');
   assert.equal(formatFrameLabel({ version: 11, timestamp: new Date(2026, 8, 22, 10, 7).getTime() }), '[V11] - Sep 22, 10:07');
   assert.equal(formatFrameLabel({ version: 2, timestamp: new Date(2026, 8, 17, 0, 5).getTime() }), '[V2] - Sep 17, 12:05');
+});
+
+test('hover captions quote the summary and put a version tag above every frame', () => {
+  assert.deepEqual(hoverCaptionLines({ kind: 'prompt', version: 8, summary: '  short prompt  ' }), ['[V8]', '"short prompt"']);
+  assert.deepEqual(hoverCaptionLines({ kind: 'push', version: 11, summary: 'Commit message' }), ['[V11]', '"Commit message"']);
+  assert.equal(captionLineBold('[V8]'), true);
+  assert.equal(captionLineBold('"short prompt"'), false);
+});
+
+test('caption wrapping stays within the measured width', () => {
+  const measure = (value: string) => value.length;
+  assert.deepEqual(wrapTextToWidth('one two three', 7, measure), ['one two', 'three']);
+  assert.deepEqual(wrapTextToWidth('supercalifragilistic', 5, measure), ['super', 'calif', 'ragil', 'istic']);
+  assert.deepEqual(wrapTextToWidth('fits', 10, measure), ['fits']);
 });

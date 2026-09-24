@@ -131,6 +131,7 @@ export function layoutBranchView(
   selectedId: string | null,
   activePath: ReadonlySet<string> = new Set(),
 ): GraphLayout {
+  if (!base.nodes.length) return base;
   const byId = new Map(base.nodes.map(node => [node.id, node]));
   const familyId = (node: PositionedNode): string => node.relation === 'branch' && node.parentId
     ? familyId(byId.get(node.parentId)!) : node.id;
@@ -452,7 +453,7 @@ export function layoutGraph(nodes: VersionNode[]): GraphLayout {
     members.sort((a, b) => a.column - b.column);
     const levelNumber = row + 1;
     members.forEach((node, index) => {
-      node.label = members.length > 1 ? formatVersionLabel(levelNumber, index + 1) : formatVersionLabel(levelNumber);
+      node.label = node.git ? node.label : node.capture ? formatVersionLabel(node.capture.version) : members.length > 1 ? formatVersionLabel(levelNumber, index + 1) : formatVersionLabel(levelNumber);
     });
     const first = members[0];
     const previous = members.map(node => node.parentId ? positionedById.get(node.parentId) : undefined)

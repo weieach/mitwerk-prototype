@@ -79,7 +79,7 @@ export function IterationGallery() {
     if (id) { setSelectedId(id); setView(params.get('galleryView') === 'transition' ? 'turning' : 'theater'); }
   }, [versions, range, now]);
 
-  return <section data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-labelledby="gallery-title" style={{ '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px` } as CSSProperties}>
+  return <section data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-labelledby="gallery-title" style={{ '--theater-focus-background': t.theater.focusBackground, '--theater-frame-shadow': t.theater.frameShadow, '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px` } as CSSProperties}>
     <header className="panel-header">
       <div className="panel-heading">
         {(view === 'theater' || view === 'orbiting') && <button className="icon-button album-reset gallery-back" onClick={exit}>← Gallery</button>}

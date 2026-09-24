@@ -7,7 +7,7 @@ import { presentedFrame, theaterFrameSize, wheelFrameDelta } from './theater-lay
 import { FrameLoader } from './frame-loader';
 import { adjacentPushIndex } from './timeline';
 import { PlaybackTimeline } from './PlaybackTimeline';
-import { containedFrameTarget, containsPoint } from './theater-transition';
+import { containedFrameTarget, reservedControlContains } from './theater-transition';
 import type { TheaterOrbit, TheaterTarget } from './theater-transition';
 import { theaterCaption } from './theater-layout';
 import { Icon } from '../../components/Icon';
@@ -19,7 +19,7 @@ export function TheaterView({ frames, selectedId, onSelect, onOrbit, onDismiss, 
   const [mode, setMode] = useState<LoopMode>('loop');
   const [direction, setDirection] = useState(1);
   const [preset, setPreset] = useState('original');
-  const [interfaceId, setInterfaceId] = useState(t.interfaces[0].value);
+  const [interfaceId, setInterfaceId] = useState<string>(t.interfaces[0].value);
   const [custom, setCustom] = useState({ width: 1280, height: 800 });
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -140,15 +140,17 @@ export function TheaterView({ frames, selectedId, onSelect, onOrbit, onDismiss, 
     if (!active || !event.isPrimary || event.button !== 0 || gesture.current) return;
     const root = event.currentTarget;
     if ((event.target as HTMLElement).closest('button, input, select, label, a, [data-orbit-blocked]')) return;
-    // The whole control rows reserve their padding, margins and neighboring layout gaps.
+    // Control rows reserve their own box and margins; open gaps between them dismiss theater.
     const blocked = [...root.querySelectorAll<HTMLElement>('[data-orbit-blocked]')].some(element => {
-      const style = getComputedStyle(element), parent = getComputedStyle(element.parentElement!);
-      const gap = parseFloat(parent.rowGap) || 0;
+      const style = getComputedStyle(element);
       const margin = (side: string) => parseFloat(style.getPropertyValue(`margin-${side}`)) || 0;
       const bounds = element.getBoundingClientRect(), row = root.getBoundingClientRect();
-      return containsPoint({ left: row.left, width: row.width, top: bounds.top, height: bounds.height }, event.clientX, event.clientY, {
-        left: margin('left'), right: margin('right'), top: margin('top') + gap, bottom: margin('bottom') + gap,
-      });
+      return reservedControlContains(
+        { left: row.left, width: row.width, top: row.top, height: row.height },
+        { left: bounds.left, width: bounds.width, top: bounds.top, height: bounds.height },
+        event.clientX, event.clientY,
+        { left: margin('left'), right: margin('right'), top: margin('top'), bottom: margin('bottom') },
+      );
     });
     if (blocked) return;
     gesture.current = { pointer: event.pointerId, x: event.clientX, y: event.clientY, frameClick: !!(event.target as HTMLElement).closest('.theater-screen'), orbit: null };

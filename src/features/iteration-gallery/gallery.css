@@ -5,6 +5,13 @@
 .album-3d-viewport canvas:active { cursor: grabbing; }
 .album-axis-labels { position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
 .album-axis-label { position: absolute; left: 0; top: 0; transform-origin: 0 0; white-space: nowrap; color: var(--muted); line-height: 1.25; }
+.album-axis-label-featured { color: var(--ink); }
+.album-axis-label-featured-version {
+  text-shadow:
+    0 0 3px #fff, 0 0 6px #fff,
+    1px 0 2px #fff, -1px 0 2px #fff, 0 1px 2px #fff, 0 -1px 2px #fff,
+    1px 1px 2px #fff, -1px -1px 2px #fff, 1px -1px 2px #fff, -1px 1px 2px #fff;
+}
 .album-axis-label > span { display: block; transform: translate(-50%, -50%); }
 .gallery-toolbar.album-frame-bar { position: relative; z-index: 2; container-type: inline-size; flex-wrap: nowrap; flex-shrink: 0; padding: 8px 24px; border: none; background: none; }
 .iteration-gallery .panel-heading { gap: 8px; }
@@ -35,7 +42,7 @@
 .theater-view { container-type: inline-size; flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding: 16px 24px; gap: 16px; }
 .theater-body { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: var(--theater-metadata-gap, 16px); }
 .theater-stage { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--theater-action-gap); min-height: 0; max-width: 100%; }
-.theater-screen { position: relative; flex-shrink: 0; background: var(--fill); border: 1px solid var(--line-strong); display: grid; place-items: center; overflow: hidden; overscroll-behavior: none; }
+.theater-screen { position: relative; flex-shrink: 0; background: var(--fill); border: 1px solid var(--line-strong); display: grid; place-items: center; overflow: hidden; overscroll-behavior: none; box-shadow: var(--theater-frame-shadow); }
 .theater-screen img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; }
 .theater-frame-actions { width: 100%; flex-shrink: 0; display: flex; justify-content: flex-end; gap: 12px; flex-wrap: wrap; font-size: 11px; }
 .theater-text-action { display: inline-flex; align-items: center; gap: 4px; border: 0; background: transparent; padding: 0; color: var(--ink); font: inherit; cursor: pointer; }
@@ -113,3 +120,9 @@
 .gallery-phase-orbiting .album-frame-bar, .gallery-phase-orbiting .album-open-frame,
 .gallery-phase-orbiting .panel-header-actions { opacity: 0; pointer-events: none; }
 @keyframes theater-controls-out { from { opacity: 1; } to { opacity: 0; } }
+
+/* A shared surface transition signals theater focus without tinting saved images. */
+.iteration-gallery { --gallery-surface: var(--paper); background: var(--gallery-surface); transition: background-color var(--theater-controls-fade) ease; }
+.iteration-gallery > .panel-header { background: var(--gallery-surface); transition: background-color var(--theater-controls-fade) ease; }
+.gallery-phase-theater { --gallery-surface: var(--theater-focus-background); }
+@media (prefers-reduced-motion: reduce) { .iteration-gallery { transition: none; } }

@@ -2,8 +2,13 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { VersionTreePanel } from './features/version-tree/VersionTreePanel';
 import { loadGraphState } from './features/version-tree/model';
-import { loadTreePanels, panelBrowserStorage, panelReducer, saveTreePanels } from './features/version-tree/panel-state';
+import { captureTreeMode, loadTreePanels, panelBrowserStorage, panelReducer, saveTreePanels } from './features/version-tree/panel-state';
 import { IterationGallery } from './features/iteration-gallery/IterationGallery';
+
+import { buildGitCaptureHistory } from './features/version-tree/capture-history';
+import type { GitHistory } from './features/version-tree/git-history';
+import type { Capture } from './features/iteration-gallery/model';
+import { galleryTokens } from './features/iteration-gallery/tokens';
 
 const MIN_PANEL = 280;
 const KEY_STEP = 24;
@@ -15,6 +20,32 @@ function clampLeftWidth(width: number, total: number) {
 
 export default function App() {
   const [panels, dispatchPanel] = useReducer(panelReducer, undefined, () => loadTreePanels(loadGraphState(), panelBrowserStorage()));
+  const captureMode = captureTreeMode(location.search);
+  const mode = captureMode ?? panels.mode;
+  const [historyReady, setHistoryReady] = useState(false);
+  const [historyError, setHistoryError] = useState('');
+  useEffect(() => {
+    const abort = new AbortController();
+    async function refresh() {
+      try {
+        const [response, gitResponse] = await Promise.all([
+          fetch(`${import.meta.env.BASE_URL}gallery/manifest.json`, { signal: abort.signal, cache: 'no-cache' }),
+          fetch(`${import.meta.env.BASE_URL}gallery/git-history.json`, { signal: abort.signal, cache: 'no-cache' }),
+        ]);
+        if (!response.ok || !gitResponse.ok) throw new Error('Could not load captured history. Retrying automatically.');
+        const catalog = await response.json() as { frames: Capture[] };
+        const git = await gitResponse.json() as GitHistory;
+        if (!Array.isArray(catalog.frames)) throw new Error('The capture catalog is invalid.');
+        if (!abort.signal.aborted) {
+          dispatchPanel({ type: 'history', graph: buildGitCaptureHistory(catalog.frames, git) });
+          setHistoryReady(true); setHistoryError('');
+        }
+      } catch (error) { if (!abort.signal.aborted) setHistoryError(error instanceof Error ? error.message : 'Could not load history.'); }
+    }
+    void refresh();
+    const timer = setInterval(refresh, galleryTokens.refreshMs);
+    return () => { abort.abort(); clearInterval(timer); };
+  }, []);
   const workspace = useRef<HTMLElement>(null);
   const divider = useRef<HTMLDivElement>(null);
   const [leftWidth, setLeftWidth] = useState<number | null>(null);
@@ -115,9 +146,10 @@ export default function App() {
   >
     <div className="workspace-split" style={{ gridTemplateColumns: leftWidth === null ? 'minmax(0, 1fr) minmax(0, 1fr)' : `${leftWidth}px minmax(0, 1fr)` }}>
       <IterationGallery />
-      <VersionTreePanel key={panels.mode} graph={panels[panels.mode]}
-        mode={panels.mode} onModeChange={mode => dispatchPanel({ type: 'switch', mode })}
-        dispatch={action => dispatchPanel({ type: 'graph', mode: panels.mode, action })} />
+      <VersionTreePanel key={`${mode}-${mode === 'history' && historyReady}`} graph={panels[mode]}
+        status={mode === 'history' ? historyError || (!historyReady ? 'Reading capture history…' : !panels.history.nodes.length ? 'No saved captures found.' : '') : ''}
+        mode={mode} onModeChange={mode => dispatchPanel({ type: 'switch', mode })}
+        dispatch={action => dispatchPanel({ type: 'graph', mode, action })} />
     </div>
     <div
       ref={divider}

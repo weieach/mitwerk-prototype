@@ -11,10 +11,10 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Version stream panel modes — 2026-09-22
 
 - Place a Test visual / Commit history switch in the Version stream header, using the existing control styling.
-- Initially seed both modes from independent copies of the currently saved tree. Do not replace either with a generated linear tree in this step. Commit history is the reserved capture-folder history view; importing actual captured history is a subsequent data connection, not fabricated branch ancestry.
+- Commit history now derives from the screenshot catalog. Group captures by the same push/version boundaries as the Iteration Gallery; each push closes a version and later prompts form the next work-in-progress version. Display actual summaries, prompt lists, branch metadata, capture links and saved line deltas. Join capture summaries to local Git commits; connectors follow actual parent hashes, including all merge parents. Use local branch refs and reflogs to recover branch ownership and fast-forward activity. Preserve recorded version numbers even when the catalog has gaps.
 - Test visual is an editable sandbox. Adding commits, branching, deleting, reverting and restoring affect only its graph. Commit history permits selection, branch navigation, collapse and zoom, but no graph edits.
 - Enforce edit permissions in shared state logic as well as controls. Persist both graphs and mode independently from the legacy saved tree. Sandbox changes must never write to the canonical graph file, capture folders, gallery data or Git.
-- Seed once, then preserve each mode across switching and reloads. Test visual is the initial mode. Shared graph geometry and Version stream styling remain identical in both modes.
+- Preserve Test visual across switching, refreshes and reloads. Refresh Commit history from the capture catalog, retaining valid selection; never replace Test visual during a history refresh. Keep the common graph components and layout. A green border on the Test visual selector and panel identifies debugging, using shared debug-border tokens.
 
 ## Active branch — 2026-09-17
 
@@ -138,7 +138,7 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Iteration Gallery rulers — 2026-09-22
 
 - Do not draw continuous date/version baselines parallel to the blocks’ chronological depth. Draw one extended perpendicular guide per date or version label instead.
-- Version labels sit on the ground plane to the right of the blocks, past a long tick plus label-gap so they match the shared ruler clearance. Date labels sit on the left wall at that day’s depth — parallel to the wall, not the ground — above the top edge, with ticks rising from the wall. Hovered-frame captions are coplanar with the frame, left-aligned to it, and sized from the frame height and current viewport so they stay large and sharp as zoom changes. Frame planes are inset from the shared block face by the common padding token. All of these rotate with the album.
+- Version labels sit on the ground plane to the right of the blocks, past a long tick plus label-gap so they match the shared ruler clearance. Date labels sit on the left wall at that day’s depth — parallel to the wall, not the ground — above the top edge, with ticks rising from the wall. The current hover or dropdown selection adds a shorter featured date/version pair at that frame’s depth on the same planes. Hovered-frame captions are coplanar with the frame, left-aligned to it, quoted, 0.75× the previous caption size, wrapped to the frame width, and sized from the frame height and current viewport so they stay large and sharp as zoom changes. Frame planes are inset from the shared block face by the common padding token. All of these rotate with the album.
 - Extend the actual guide geometry along with label clearance, using `rulerTickLength`; labels sit beyond the line ends by `rulerLabelGap`. Derive guide positions from frame dates and the shared block envelope.
 - Render axis text as React DOM overlays with CSS 3D transforms projected from the album camera. Date labels are rotated a quarter turn on the wall so their baseline follows chronological depth. Keep Version labels on the ground plane. Use compact shared `axisText` viewport-size bounds (8–11 px, 9 px at the reference viewport) and projection compensation to keep text crisp and legible across zoom distances; orbiting must update anchors and orientation together.
 - When a progress capture explicitly requests gallery hover, use the normal frame-inspection state on an in-range frame nearest the album center. Wait for its texture and lift transition before saving. Ordinary captures remain idle.
@@ -154,16 +154,18 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Keep Date and Version titles on the same wall and ground planes as their ticks, aligned with the middle of the album depth. Give the Version title its own `versionTitleGap` (216 world units past the tick length), farther out than the date title, without moving the version tick labels. Include that title extent in Reset view fitting.
 - At rest, display `ceil(in-range version count / 3)` representative images, at least one for a nonempty range. Sample version indices evenly from first to last using floor rounding: 12 versions select V1, V4, V8 and V12. Within each sampled version prefer the latest in-range push frame; use its latest in-range capture when no push exists. This replaces the first/last-only image rule.
-- Center view focuses the first in-range frame at the larger scale (or the first historical frame when the range is empty). Reset view restores the default oblique angle, fits the blocks at `overviewFitScale` (0.95× the base full fit), and centers the block volume vertically without a camera lift. That fitted scale is 100%; the zoom control always reads 100% after Reset view. Both use shared geometry and camera tokens.
+- Center view focuses the first in-range frame at the larger scale (or the first historical frame when the range is empty). Reset view restores the default oblique angle, fits the blocks at `overviewFitScale` (1.2× the base full fit), and centers the block volume vertically without a camera lift. That fitted scale is the new 100% baseline; the zoom control always reads 100% after Reset view. Both use shared geometry and camera tokens.
 - Hovering a frame in the middle of the panel only inspects it. Edge travel starts after the pointer stays inside the edge band on a block for `delayMs`. Then the camera advances toward the chronological end at the shared `edgePan.speed` (32); speed grows with proximity to the edge. In Center view, follow the highlighted frame only while that travel is armed. Stop on leaving the edge or viewport, dragging, or reaching the end. Do not alter frame selection or dates.
 - Frame image outlines use `frameOutlineOpacity` so the inner borders stay readable against the block faces.
 - A requested reset-view capture uses the same Reset view behavior as the button. Normal startup remains centered on the first frame.
 
 ## Highlighted gallery frames — 2026-09-22
 
-- Keep highlighted captions coplanar and left-aligned with their frame, with their bottom edge a shared `hoverCaptionGap` above the frame's top edge. Lift the caption together with the hovered frame. Render no background rectangle; use a strong white glyph shadow/halo controlled by `captionShadow` tokens.
-- Use the same compact bracketed version/date format in highlighted captions and the saved-frame dropdown; retain the summary on a second line.
+- Keep highlighted captions coplanar and left-aligned with their frame, with their bottom edge a shared `hoverCaptionGap` (6) above the frame's top edge. Lift the caption together with the hovered frame. Render no background rectangle; use a strong white glyph shadow/halo controlled by `captionShadow` tokens. Quote the summary in straight double marks at `hoverCaptionScale` (0.375×, half the previous caption) and wrap so the plate is no wider than the frame. Put a bold `[Vn]` on the line above that quoted text for every highlighted frame.
+- Feature the inspected or dropdown-selected frame as a pair of axis labels at that frame's depth: date on the wall using the compact local date, version on the ground as `Vn`. Featured ticks and label clearance use `featuredTickScale` (0.5× the standing ruler). Ink marks the featured pair; muted marks the standing ticks. The featured version label uses a strong white text shadow. Hide a standing tick only when it occupies the same face and depth. The pair follows hover while the pointer inspects a frame, then remains on the dropdown selection.
+- Use the same compact bracketed version/date format in the saved-frame dropdown.
 - Apply shared `padding` to the frame's horizontal, vertical and time-axis clearance inside the block; do not change version spacing or introduce frame-specific exceptions.
+- While a frame is hovered, darken that frame's containing block stroke to ink at `hoverEdgeOpacity` and thicken it to `hoverEdgeWidth` (3 px). Other blocks keep the muted `edgeOpacity` stroke at `edgeWidth` (1 px). Derive the container from shared album geometry, not a specific frame.
 - A requested capture with selection, hover and reset view should include a valid dropdown selection, its floating Open frame action, and an in-range highlighted frame while using the normal Reset view camera.
 
 ## Gallery-to-theater transition — 2026-09-22
@@ -175,7 +177,7 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Theater playback and return — 2026-09-22
 
 - Decode upcoming frames in a bounded look-ahead cache. Keep the displayed image and its metadata visible until the requested image is decoded; start its playback interval only when it is ready. A failed load pauses playback and retains the last good frame. Keep one persistent image element across playback changes.
-- Clicking outside the rendered frame, without dragging, plays the full reverse transition and lands on Reset view. Dragging the theater frame or open surrounding space still orbits the live camera during the gesture; releasing starts the shared timed transition from that pose to Reset view. The explicit Gallery back button uses the same reverse transition to Reset view.
+- Clicking outside the rendered frame, without dragging, plays the full reverse transition and lands on Reset view. The open gap between the prompt metadata and the playback controls is dismissible space and uses that same click exit. Dragging the theater frame or open surrounding space still orbits the live camera during the gesture; releasing starts the shared timed transition from that pose to Reset view. The explicit Gallery back button uses the same reverse transition to Reset view.
 - Retain the album scene in theater view. Reverse from the currently displayed frame, even after playback or scrubbing, and land on Reset view; wait for its texture before handing off from the theater image. Preserve filters and honor reduced motion.
 - Keep frame actions immediately above the frame and aligned to its right edge, outside the image, using text and a leading shared icon without a button background or border. Go to commit and Add frame to chat have normal button text/icon contrast and accept clicks without performing any action or dismissing theater; token usage remains disabled.
 
@@ -211,6 +213,29 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Direct theater orbit and prompt captions — 2026-09-22
 
 - Dragging the displayed frame or open theater background controls horizontal and vertical camera angles directly from pointer displacement. Use shared drag-threshold and angle/sensitivity tokens, pointer capture, and cancellation handling. After release, interpolate from the released pose to Reset view with the shared `theaterMotion` timing; do not leave the camera at the drag angle.
-- Reserve complete control regions, including row gaps, padding and margins, from exit gestures. This includes viewport controls, frame action rows, playback/timeline controls, the header/footer, and the scrollable metadata area. An existing gesture may cross them without being interrupted.
+- Reserve complete control regions, including their own padding and margins, from exit gestures. This includes viewport controls, frame action rows, playback/timeline controls, the header/footer, and the scrollable metadata area. Do not reserve the open layout gap between metadata and playback. An existing gesture may cross reserved rows without being interrupted.
+- Use the shared `theater.focusBackground` (`#fff`) for the theater surface, matching paper. Do not add a shadow on the frame container (`theater.frameShadow` is `none`).
 - Fade theater UI out as the gesture takes over. Keep the DOM frame visible until its 3D texture is ready, then hand off to the same frame. A click without a drag on the frame invokes the same Go to commit placeholder as its text action; actual navigation remains unimplemented. A click without a drag outside the frame plays the full reverse transition to Reset view.
 - Wrap prompt summaries in straight double quotation marks. Add `...` inside the closing quote when the saved summary reaches the capture filename length limit. Share the limit with the filename writer. Legacy filenames lack original-length metadata, so reaching the limit is treated as truncation; shorter prompt summaries have no ellipsis, and push/commit summaries remain unquoted.
+
+
+## Version stream history captures — 2026-09-22
+
+- Version stream progress captures default to Commit history, independently of the user's saved dropdown preference. The capture script passes `treeMode=history`; only an explicit `--tree-mode test` debug capture overrides it. Wait for history data and layout before recording. Frame the latest `historyCaptureVersions` nodes so a growing history remains readable.
+- The screenshot catalog is the read-only source; sandbox operations cannot change its frames or derived history. Empty/error/loading states must not display the former seeded demo as real history. Git history augments the capture catalog through a read-only endpoint and a static build snapshot. Capture files are references, not changed source files; report saved-frame counts and preserve compact line-count metadata rather than inventing per-file changes or summing cumulative prompt deltas.
+
+
+## Git-backed Commit history — 2026-09-22
+
+- Use Git commit parents and branch refs as the structural authority for Commit history. Match saved push summaries to normalized Git subjects, using timestamp proximity for repeated subjects; retain uncaptured commits between saved versions so branch work is not lost.
+- Keep real branch names and distinct lanes. Use local reflog commit events to identify where work happened and branch-creation/fast-forward events to preserve historical context. Actual merge commits have edges from every parent. Fast-forwards move refs without inventing a merge commit or fork; display their recorded merge event in commit details.
+- Keep saved version labels on matched captures and short Git hashes on uncaptured commits. Unpushed captures attach to their recorded branch tip; unmatched push captures are explicitly described as unlinked captures. Source screenshots remain available as references, and Test visual remains independent.
+- Git-backed history uses its own branch-lane geometry with the shared spacing/grid/card tokens; do not flatten every historical branch onto the active sandbox spine. Preserve the existing Test visual routing.
+
+
+## Theater focus surface and portable XR albums — 2026-09-22
+
+- Theater focus fades the gallery surround and header to a shared light-gray surface token. Keep saved screenshot colors unchanged and restore the gallery surface on exit; respect reduced motion.
+- XR exports reuse the production catalog, version grouping, sampling, block padding and axis geometry. Export relative screenshot paths and meter-based transforms in JSON, with copied source images and reusable rendering code. No screenshot-specific geometry exceptions.
+- Export both perpendicular axis guides and their text anchors as world-space data. Render XR labels as real 3D planes visible to both eyes, rather than DOM overlays. Preserve image aspect ratios inside the padded block envelope.
+- Keep export generation separate from the app state. Range exports retain inactive historical chunks; representative frames and hover highlights use shared album rules. Bundle the installed rendering dependency and license for a portable local viewer.

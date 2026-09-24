@@ -4,12 +4,13 @@ import { Icon } from '../../components/Icon';
 import { branchPathIds, canDeleteCurrent, canDeleteFuture, isBranchEndpoint, isReverted, isRevertedRoute, screenshotFocusId, screenshotQueryFlags, type GraphAction, type GraphState } from './model';
 import { frameScreenshotTargets, frameVersionLevel, geometry, layoutBranchView, layoutGraph, screenshotNodeTargets } from './layout';
 import { activeRouteColor, levelColorLookup, stationLabelOffset, treeTheme, versionLabelZoomScale } from './tokens';
+import { layoutGitHistory } from './git-layout';
 import { IsometricGrid } from './IsometricGrid';
 import { VersionCard } from './VersionCard';
 import { branchName, presentTree } from './presentation';
 import { canEditTree, treeModes, type TreeMode } from './panel-state';
 
-type Props = { graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; onModeChange: (mode: TreeMode) => void };
+type Props = { status?: string; graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; onModeChange: (mode: TreeMode) => void };
 
 const screenshotFlags = typeof window !== 'undefined'
   ? screenshotQueryFlags(window.location.search)
@@ -17,9 +18,9 @@ const screenshotFlags = typeof window !== 'undefined'
 const screenshotCapture = screenshotFlags.capture;
 if (screenshotFlags.countHover) document.documentElement.dataset.screenshotCountHover = '1';
 
-export function VersionTreePanel({ graph, dispatch, mode, onModeChange }: Props) {
+export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status = '' }: Props) {
   const activePath = useMemo(() => branchPathIds(graph.nodes, graph.activeBranchId), [graph.nodes, graph.activeBranchId]);
-  const layout = useMemo(() => layoutBranchView(layoutGraph(graph.nodes), graph.selectedId, activePath), [graph.nodes, graph.selectedId, activePath]);
+  const layout = useMemo(() => mode === 'history' && graph.nodes.some(node => node.git) ? layoutGitHistory(graph.nodes) : layoutBranchView(layoutGraph(graph.nodes), graph.selectedId, activePath), [graph.nodes, graph.selectedId, activePath, mode]);
   const levelColor = useMemo(() => levelColorLookup(layout.nodes), [layout.nodes]);
   const viewport = useRef<HTMLDivElement>(null);
   const branchMenu = useRef<HTMLDivElement>(null);
@@ -44,7 +45,7 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange }: Props)
   const jumperEndpointId = endpoints.find(node => node.branchId === presentation.selectedBranchId)?.id ?? endpoints[0]?.id;
   const jumperIndex = Math.max(0, endpoints.findIndex(node => node.id === jumperEndpointId));
   const jumperEndpoint = endpoints[jumperIndex];
-  const branches = endpoints.map(endpoint => ({ branchId: endpoint.branchId, name: branchName(endpoint.branchId, graph.nodes), endpoint }));
+  const branches = graph.nodes.some(node => node.git) ? [...new Set(graph.nodes.flatMap(node => node.git?.refs ?? []))].map(name => ({ branchId: name, name, endpoint: layout.nodes.find(node => node.git?.refs.includes(name))! })) : endpoints.map(endpoint => ({ branchId: endpoint.branchId, name: branchName(endpoint.branchId, graph.nodes), endpoint }));
   const activeBranchName = branchName(graph.activeBranchId, graph.nodes);
 
   useEffect(() => {
@@ -66,7 +67,7 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange }: Props)
   function checkoutBranch(branchId: string) {
     setBranchMenuOpen(false);
     dispatch({ type: 'set-active-branch', branchId });
-    const endpoint = endpoints.find(node => node.branchId === branchId);
+    const endpoint = branches.find(item => item.branchId === branchId)?.endpoint;
     if (endpoint) focusAtZoom(endpoint, 1);
   }
 
@@ -79,7 +80,7 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange }: Props)
   }
 
   function markScreenshotReady() {
-    if (screenshotReady.current || !screenshotCapture) return;
+    if (screenshotReady.current || !screenshotCapture || status) return;
     screenshotReady.current = true;
     document.documentElement.dataset.screenshotReady = '1';
   }
@@ -93,7 +94,8 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange }: Props)
       if (!initialFit.current && width > 0) {
         initialFit.current = true;
         if (screenshotCapture) {
-          const targets = screenshotNodeTargets(layout, presentation.hiddenNodeIds, activePath, graph.selectedId);
+          const captureLayout = mode === 'history' ? { ...layout, nodes: layout.nodes.slice(-treeTheme.historyCaptureVersions) } : layout;
+          const targets = screenshotNodeTargets(captureLayout, presentation.hiddenNodeIds, activePath, graph.selectedId);
           if (targets.length) {
             const frame = frameScreenshotTargets(targets, width, height, treeTheme.minZoom, treeTheme.screenshotZoom);
             zoomRef.current = frame.zoom;
@@ -252,7 +254,7 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange }: Props)
   const worldWidth = Math.max(layout.width + 240, viewportSize.width / zoom);
   const worldHeight = Math.max(layout.height + 240, viewportSize.height / zoom);
 
-  return <section className="tree-panel" aria-labelledby="tree-title" data-selected-branch={presentation.selectedBranchId || undefined} data-active-branch={graph.activeBranchId} style={{
+  return <section className="tree-panel" data-tree-mode={mode} aria-labelledby="tree-title" data-selected-branch={presentation.selectedBranchId || undefined} data-active-branch={graph.activeBranchId} style={{
     '--node-card-width': `${geometry.cardWidth}px`,
     '--station-size': `${treeTheme.stationDiameter}px`,
     '--station-border-width': `${treeTheme.stationBorderWidth}px`,
@@ -267,6 +269,8 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange }: Props)
     '--count-hint-fade': `${treeTheme.countHintFadeMs}ms`,
     '--station-fill': treeTheme.stationFill,
     '--station-open-fill': treeTheme.stationOpenFill,
+    '--debug-border-color': treeTheme.debugBorderColor,
+    '--debug-border-width': `${treeTheme.debugBorderWidth}px`,
     '--active-branch-color': treeTheme.activeBranchColor,
     '--version-label-size': `${treeTheme.versionLabelFontSize}px`,
     '--version-label-weight': treeTheme.versionLabelFontWeight,
@@ -279,11 +283,11 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange }: Props)
   } as CSSProperties}>
     <div className="panel-header tree-header"><div className="panel-heading"><h2 id="tree-title">Version stream</h2>
       <select className="tree-mode-switch" aria-label="Version stream panel" value={mode} onChange={event => onModeChange(event.target.value as TreeMode)}
-        title={mode === 'test' ? 'Independent sandbox. Edits stay in Test visual.' : 'Saved-tree baseline for capture-folder history. Editing is disabled.'}>
+        title={mode === 'test' ? 'Independent sandbox. Edits stay in Test visual.' : 'History from saved screenshot captures, linked by Git parents and branch history. Editing is disabled.'}>
         {treeModes.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
       </select>
     </div><div className="panel-header-actions"><button className="icon-button" onClick={() => setGrid(!grid)} aria-label={grid ? 'Hide grid' : 'Show grid'} title={grid ? 'Hide grid' : 'Show grid'}><Icon name="grid"/>{grid ? 'Hide grid' : 'Show grid'}</button><button className="icon-button" onClick={fitAll} aria-label="Fit all versions" title="Fit all versions"><Icon name="expand"/>Fit all</button></div></div>
-    <div className="canvas-shell">
+    {status ? <p className="tree-history-message" role="status">{status}</p> : <div className="canvas-shell">
       <div ref={viewport} className={`tree-viewport ${isPanning ? 'is-panning' : ''}`} tabIndex={0} aria-label="Version tree canvas. Scroll in any direction to pan. Control plus scroll to zoom. Click empty canvas to deselect." onPointerDown={startPan} onPointerMove={pan} onPointerUp={endPan} onPointerCancel={endPan} onLostPointerCapture={endPan}>
         <div className="canvas-size" style={{ width: worldWidth * zoom, height: worldHeight * zoom }}>
           <div className="canvas-world" style={{ width: worldWidth, height: worldHeight, transform: `scale(${zoom})` }}>
@@ -404,6 +408,7 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange }: Props)
         </div>
       </div>
     </div>
+    }
     <div className="sr-only" role="status" aria-live="polite">{graph.nodes.length} versions. {selected ? `Selected ${selected.label}.` : 'No version selected.'}</div>
   </section>;
 }

@@ -38,3 +38,14 @@ test('control exclusion includes margins around the entire row', async () => {
   assert.equal(containsPoint(rect, 250, 80, margin), true);
   assert.equal(containsPoint(rect, 250, 84, margin), false);
 });
+
+test('the open gap between metadata and playback is not a reserved control row', async () => {
+  const { reservedControlContains } = await import('../src/features/iteration-gallery/theater-transition.ts');
+  const row = { left: 0, top: 0, width: 400, height: 400 };
+  const metadata = { left: 24, top: 180, width: 352, height: 112 };
+  const playback = { left: 24, top: 308, width: 352, height: 72 };
+  assert.equal(reservedControlContains(row, metadata, 200, 220), true);
+  assert.equal(reservedControlContains(row, playback, 200, 340), true);
+  assert.equal(reservedControlContains(row, metadata, 200, 300), false);
+  assert.equal(reservedControlContains(row, playback, 200, 300), false);
+});

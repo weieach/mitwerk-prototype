@@ -24,6 +24,8 @@ export function AlbumView({ versions, range, now, zoom, onOpen, onZoom, onCamera
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [keyboardId, setKeyboardId] = useState('');
+  const keyboardIdRef = useRef(keyboardId);
+  keyboardIdRef.current = keyboardId;
   const [interfaceId, setInterfaceId] = useState<string>(t.interfaces[0].value);
   const active = album.planes.filter(plane => plane.active);
   const hovered = active.find(plane => plane.frame.id === hoveredId);
@@ -50,8 +52,8 @@ export function AlbumView({ versions, range, now, zoom, onOpen, onZoom, onCamera
       const candidates = album.planes.filter(plane => plane.active);
       const middle = candidates.reduce<typeof candidates[number] | undefined>((nearest, plane) =>
         !nearest || Math.abs(plane.depth - album.depth / 2) < Math.abs(nearest.depth - album.depth / 2) ? plane : nearest, undefined);
-      if (middle) { setKeyboardId(middle.frame.id); scene.current?.inspect(middle.frame.id); }
-    }
+      if (middle) { setKeyboardId(middle.frame.id); scene.current?.pin(middle.frame.id); scene.current?.inspect(middle.frame.id); }
+    } else if (keyboardIdRef.current) scene.current?.pin(keyboardIdRef.current);
   }, [album, versions, range, now]);
   useEffect(() => { scene.current?.setZoom(zoom); }, [zoom]);
   useEffect(() => {
@@ -67,7 +69,7 @@ export function AlbumView({ versions, range, now, zoom, onOpen, onZoom, onCamera
       <select aria-label="Tracked interface" value={interfaceId} onChange={event => setInterfaceId(event.target.value)}>
         {t.interfaces.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
       </select>
-      <select aria-label="Saved frame" disabled={!active.length} value={chosen?.frame.id ?? ''} onChange={event => { setKeyboardId(event.target.value); scene.current?.inspect(event.target.value); }}>
+      <select aria-label="Saved frame" disabled={!active.length} value={chosen?.frame.id ?? ''} onChange={event => { setKeyboardId(event.target.value); scene.current?.pin(event.target.value || null); scene.current?.inspect(event.target.value || null); }}>
         <option value="">{active.length ? 'Select a saved frame' : 'No frames in range'}</option>
         {active.map(({ frame }) => <option key={frame.id} value={frame.id}>{formatFrameLabel(frame)}</option>)}
       </select>

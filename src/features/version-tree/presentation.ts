@@ -4,7 +4,7 @@ import { versionLabelParts, type GraphLayout } from './layout.ts';
 /** Selection follows the whole branch, not only the currently focused station. */
 export function getBranchState(nodes: VersionNode[], selectedId: string | null) {
   const byId = new Map(nodes.map(node => [node.id, node]));
-  const nodesWithChildren = new Set(nodes.flatMap(node => node.parentId ? [node.parentId] : []));
+  const nodesWithChildren = new Set(nodes.flatMap(node => node.git?.parents ?? (node.parentId ? [node.parentId] : [])));
   const selected = selectedId ? byId.get(selectedId) : undefined;
   if (selectedId && !selected) throw new Error('Selected version must exist.');
   if (!selected) {
@@ -46,6 +46,8 @@ export function getBranchIds(nodes: VersionNode[]) {
 
 /** The longest branch is `main`; every other branch is numbered in creation order. */
 export function branchName(branchId: string, nodes: VersionNode[]) {
+  if (nodes.some(node => node.git)) return branchId;
+  if (nodes.some(node => node.branchId === branchId && node.capture)) return 'Capture order';
   const mainId = longestBranchId(nodes);
   if (branchId === mainId) return 'main';
   const others = getBranchIds(nodes).filter(id => id !== mainId);
