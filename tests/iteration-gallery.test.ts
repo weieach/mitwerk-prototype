@@ -128,7 +128,7 @@ test('local catalog discovers real PNG dimensions and safely encodes filenames',
 });
 
 
-test('representative frames sample versions evenly and prefer their in-range push', () => {
+test('representative frames sample versions evenly and stay on gallery frames', () => {
   const versions = Array.from({ length: 12 }, (_, index) => ({ number: index + 1, index,
     frames: [
       { ...capture(`prompt-${index}`, 22), version: index + 1, position: index },

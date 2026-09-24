@@ -45,7 +45,7 @@ export function VersionCard({
   const compact = isCompactVersionCard(onActivePath, selected) && !forceMenuOpen;
   const commitAction = versionCommitAction(isEndpoint, reverted);
   const commitActionLabel = versionCommitActionLabel(commitAction);
-  const commitActionIcon = commitAction === 'restore' ? 'restore' : 'reference';
+  const commitActionIcon = commitAction === 'restore' ? 'restore' : 'plus';
   const onCommitAction = commitAction === 'restore' ? onRestore : commitAction === 'revert' ? onRevert : onCommit;
   const restorePrimary = isPrimaryCommitAction(commitAction);
   const blocked = (action: () => void) => readOnly ? () => onDisconnected?.() : action;

@@ -12,7 +12,7 @@ import { VersionCard } from './VersionCard';
 import { branchName, isBranchDivergence, mergedBranchIds, presentTree } from './presentation';
 import { canEditTree, treeModes, type TreeMode } from './panel-state';
 
-type Props = { status?: string; graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; onModeChange: (mode: TreeMode) => void };
+type Props = { status?: string; graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; modeSwitchVisible: boolean; onModeChange: (mode: TreeMode) => void };
 
 function graphBounds(nodes: { x: number; y: number; title: string }[]) {
   const label = stationLabelOffset();
@@ -33,7 +33,7 @@ const screenshotFlags = typeof window !== 'undefined'
 const screenshotCapture = screenshotFlags.capture;
 if (screenshotFlags.countHover) document.documentElement.dataset.screenshotCountHover = '1';
 
-export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status = '' }: Props) {
+export function VersionTreePanel({ graph, dispatch, mode, modeSwitchVisible, onModeChange, status = '' }: Props) {
   const activePath = useMemo(() => branchPathIds(graph.nodes, graph.activeBranchId), [graph.nodes, graph.activeBranchId]);
   const layout = useMemo(() => mode === 'history' && graph.nodes.some(node => node.git) ? layoutGitHistory(graph.nodes) : layoutBranchView(layoutGraph(graph.nodes), graph.selectedId, activePath), [graph.nodes, graph.selectedId, activePath, mode]);
   const levelColor = useMemo(() => levelColorLookup(layout.nodes), [layout.nodes]);
@@ -358,10 +358,10 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
     '--merged-branch-opacity': treeTheme.mergedBranchOpacity,
   } as CSSProperties}>
     <div className="panel-header tree-header"><div className="panel-heading"><h2 id="tree-title">Version stream</h2>
-      <select className="tree-mode-switch" aria-label="Version stream panel" value={mode} onChange={event => onModeChange(event.target.value as TreeMode)}
+      {modeSwitchVisible && <select className="tree-mode-switch" aria-label="Version stream panel" value={mode} onChange={event => onModeChange(event.target.value as TreeMode)}
         title={mode === 'test' ? 'Independent sandbox. Edits stay in Test visual.' : 'History from saved screenshot captures, linked by Git parents and branch history. Editing is disabled.'}>
         {treeModes.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-      </select>
+      </select>}
     </div><div className="panel-header-actions"><button className="icon-button" onClick={() => setGrid(!grid)} aria-label={grid ? 'Hide grid' : 'Show grid'} title={grid ? 'Hide grid' : 'Show grid'}><Icon name="grid"/>{grid ? 'Hide grid' : 'Show grid'}</button><button className="icon-button" onClick={fitAll} aria-label="Fit all versions" title="Fit all versions"><Icon name="expand"/>Fit all</button></div></div>
     {status ? <p className="tree-history-message" role="status">{status}</p> : <div className="canvas-shell">
       <div ref={viewport} className={`tree-viewport ${isPanning ? 'is-panning' : ''}`} tabIndex={0} aria-label="Version tree canvas. Scroll in any direction to pan. Control plus scroll to zoom. Click empty canvas to deselect." onPointerDown={startPan} onPointerMove={pan} onPointerUp={endPan} onPointerCancel={endPan} onLostPointerCapture={endPan}>

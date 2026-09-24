@@ -1,5 +1,5 @@
 import type { GalleryFrame, GalleryVersion, RangeKey } from './model.ts';
-import { formatFrameDate, formatVersion, inRange } from './model.ts';
+import { formatFrameDate, formatVersion, inRange, versionKeepsPush } from './model.ts';
 import { galleryTokens as t } from './tokens.ts';
 
 export function imageSize(frame: Pick<GalleryFrame, 'width' | 'height'>) {
@@ -23,9 +23,14 @@ export function buildAlbum(versions: GalleryVersion[], range: RangeKey, now: num
   for (const version of versions) {
     const start = version.index * t.versionDepth;
     const end = start + t.versionDepth - t.blockGap;
-    const step = (end - start - t.padding * 2) / version.frames.length;
-    let chunkStart = start, chunkActive = inRange(version.frames[0], range, now), chunkIndex = 0;
-    version.frames.forEach((frame, i) => {
+    const shown = versionKeepsPush(version.frames) ? version.frames : version.frames.filter(frame => frame.kind !== 'push');
+    if (!shown.length) {
+      blocks.push({ key: `${version.number}:0`, version: version.number, width, height, start, end, active: version.frames.some(frame => inRange(frame, range, now)) });
+      continue;
+    }
+    const step = (end - start - t.padding * 2) / shown.length;
+    let chunkStart = start, chunkActive = inRange(shown[0], range, now), chunkIndex = 0;
+    shown.forEach((frame, i) => {
       const active = inRange(frame, range, now);
       const boundary = start + t.padding + i * step;
       if (active !== chunkActive) {
@@ -34,7 +39,7 @@ export function buildAlbum(versions: GalleryVersion[], range: RangeKey, now: num
       }
       planes.push({ frame, width: width - t.padding * 2, height: height - t.padding * 2, x: t.padding, y: t.padding,
         depth: boundary + step / 2, active, hitStart: i === 0 ? start : boundary,
-        hitEnd: i === version.frames.length - 1 ? end : boundary + step });
+        hitEnd: i === shown.length - 1 ? end : boundary + step });
     });
     blocks.push({ key: `${version.number}:${chunkIndex}`, version: version.number, width, height, start: chunkStart, end, active: chunkActive });
   }

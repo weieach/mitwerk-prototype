@@ -23,6 +23,19 @@ export default function App() {
   const captureMode = captureTreeMode(location.search);
   const mode = captureMode ?? panels.mode;
   const [historyReady, setHistoryReady] = useState(false);
+  const [modeSwitchVisible, setModeSwitchVisible] = useState(false);
+  useEffect(() => {
+    function revealTestVisual(event: KeyboardEvent) {
+      if (event.key.toLowerCase() !== 't' || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      event.preventDefault();
+      setModeSwitchVisible(true);
+      dispatchPanel({ type: 'switch', mode: 'test' });
+    }
+    window.addEventListener('keydown', revealTestVisual);
+    return () => window.removeEventListener('keydown', revealTestVisual);
+  }, []);
   const [historyError, setHistoryError] = useState('');
   useEffect(() => {
     const abort = new AbortController();
@@ -148,7 +161,7 @@ export default function App() {
       <IterationGallery />
       <VersionTreePanel key={`${mode}-${mode === 'history' && historyReady}`} graph={panels[mode]}
         status={mode === 'history' ? historyError || (!historyReady ? 'Reading capture history…' : !panels.history.nodes.length ? 'No saved captures found.' : '') : ''}
-        mode={mode} onModeChange={mode => dispatchPanel({ type: 'switch', mode })}
+        mode={mode} modeSwitchVisible={modeSwitchVisible} onModeChange={mode => dispatchPanel({ type: 'switch', mode })}
         dispatch={action => dispatchPanel({ type: 'graph', mode, action })} />
     </div>
     <div

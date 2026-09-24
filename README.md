@@ -4,6 +4,8 @@ The active prototype now follows **Idea 2: visual iteration history**. Run `npm 
 
 See [Idea 2](docs/idea-2-project-proposal.md), [gallery implementation](docs/iteration-gallery.md), and [shared design rules](docs/design-system-rules.md). Run `npm test` for the graph and gallery suites. The earlier review prototype described below is retained as historical context under `archive/review-comment-spike/`.
 
+The version stream shows Commit history and hides the Test visual / Commit history dropdown. Press `T` to reveal that dropdown and switch the panel to Test visual.
+
 ## Earlier proposal
 
 An agentic project management platform for running design reviews and gathering feedback — with AI

@@ -5,10 +5,12 @@ import type { GalleryFrame, RangeKey } from './model';
 import { buildTimeline, timelinePointerIndex } from './timeline';
 import { galleryTokens as t } from './tokens';
 
-export function PlaybackTimeline({ frames, catalog, range, now, index, previewIndex, onPreview, onSelect }: { catalog: GalleryFrame[]; range: RangeKey; now: number; previewIndex: number; onPreview: (index: number | null) => void; frames: GalleryFrame[]; index: number; onSelect: (index: number) => void }) {
+export function PlaybackTimeline({ frames, catalog, range, now, index, selectedId, previewIndex, onPreview, onSelect, onSelectPush }: { catalog: GalleryFrame[]; range: RangeKey; now: number; previewIndex: number; onPreview: (index: number | null) => void; frames: GalleryFrame[]; index: number; selectedId: string; onSelect: (index: number) => void; onSelectPush: (id: string) => void }) {
   const [pushTip, setPushTip] = useState<number | null>(null);
   const timeline = useMemo(() => buildTimeline(catalog.map(frame => ({ ...frame, enabled: inRange(frame, range, now) }))), [catalog, range, now]);
-  const position = timeline.marks.find(mark => mark.index === index)?.position ?? 0;
+  const selectedMark = timeline.marks.find(mark => mark.id === selectedId);
+  const selectedPush = timeline.pushes.find(node => node.frameId === selectedId);
+  const position = selectedMark?.position ?? (selectedPush ? (selectedPush.start + selectedPush.end) / 2 : timeline.marks.find(mark => mark.index === index)?.position ?? 0);
   const tipIndex = previewIndex;
   const tipPosition = tipIndex >= 0 ? timeline.marks.find(mark => mark.index === tipIndex)?.position : undefined;
   const previewPosition = previewIndex >= 0 ? tipPosition : undefined;
@@ -54,19 +56,19 @@ export function PlaybackTimeline({ frames, catalog, range, now, index, previewIn
         </div>;
       })}
     </div>
-    <div className="gallery-timeline-playhead" aria-hidden="true"/>
-    {previewPosition !== undefined && <div className="gallery-timeline-playhead gallery-timeline-preview" aria-hidden="true" style={{ left: `${previewPosition * 100}%` }}/> }
     {tipPosition !== undefined && frames[tipIndex] && <span className="capsule-tooltip gallery-timeline-tip" role="tooltip" style={{ left: `${tipPosition * 100}%` }}>{formatVersion(frames[tipIndex].version)}</span>}
     </div>
     {timeline.pushes.map(node => <button key={node.version} type="button"
       className={`gallery-timeline-push${node.floating ? ' is-floating' : ''}`} aria-label={`${formatVersion(node.version)} · push node`}
-      aria-disabled={node.index === null} data-push-version={node.version}
+      aria-disabled={node.frameId === null} data-push-version={node.version}
       style={{ left: `${node.start * 100}%`, width: `${(node.end - node.start) * 100}%` }}
       onPointerDown={event => event.stopPropagation()}
       onPointerEnter={() => { onPreview(null); setPushTip(node.version); }}
       onPointerLeave={() => setPushTip(null)} onFocus={() => { onPreview(null); setPushTip(node.version); }} onBlur={() => setPushTip(null)}
-      onClick={event => { event.stopPropagation(); onPreview(null); if (node.index !== null) onSelect(node.index); }}>
+      onClick={event => { event.stopPropagation(); onPreview(null); if (node.frameId) onSelectPush(node.frameId); }}>
       {pushTip === node.version && <span className="capsule-tooltip gallery-timeline-tip" role="tooltip">{formatVersion(node.version)} · push node{node.index === null && <span className="sr-only"> — no push in this date range</span>}</span>}
     </button>)}
+    <div className="gallery-timeline-playhead" aria-hidden="true"/>
+    {previewPosition !== undefined && <div className="gallery-timeline-playhead gallery-timeline-preview" aria-hidden="true" style={{ left: `${previewPosition * 100}%` }}/> }
   </div>;
 }

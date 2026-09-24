@@ -286,8 +286,8 @@ test('revert grays later versions without removing them, and restore brings a ch
   assert.equal(isBranchEndpoint(before.nodes, 'v2'), false);
   assert.equal(isBranchEndpoint(branchedTip.nodes, 'v3'), true);
   assert.equal(versionCommitAction(isBranchEndpoint(branchedTip.nodes, 'v3'), false), 'commit');
-  assert.equal(versionCommitActionLabel('revert'), 'Add to reference');
-  assert.equal(versionCommitActionLabel('commit'), 'Add to reference');
+  assert.equal(versionCommitActionLabel('revert'), 'Add to chat');
+  assert.equal(versionCommitActionLabel('commit'), 'Add to chat');
   assert.equal(versionCommitActionLabel('restore'), 'Restore change');
   assert.equal(isPrimaryCommitAction('restore'), true);
   assert.equal(isPrimaryCommitAction('revert'), false);

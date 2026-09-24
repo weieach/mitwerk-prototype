@@ -437,7 +437,7 @@ function wantsTheaterCapture(prompt = '') {
   if (argValue('gallery-view') === 'theater') return true;
   if (/\bisometric\b/i.test(prompt) && !/\btheater\b/i.test(prompt)) return false;
   const theaterSubject = prompt.split(/tree-panel|version-card/i)[0] ?? '';
-  if (/iteration-gallery|theater-view|theater-version|theater-branch/i.test(theaterSubject)) return true;
+  if (/iteration-gallery|theater-view|theater-version|theater-branch|\boverlay\b/i.test(theaterSubject)) return true;
   if (/tree-panel|version-card|version stream/i.test(prompt) && !/\bcaptur(?:e|ed|ing|this)\b[\s\S]{0,40}\btheater\b/i.test(prompt)) return false;
   return /\btheater\b/i.test(prompt) || /\bcaptur(?:e|ed)\b[\s\S]{0,80}\btheater view\b/i.test(prompt) || /\btheater view\b[\s\S]{0,80}\bcaptur(?:e|ed)\b/i.test(prompt);
 }
@@ -459,7 +459,7 @@ function screenshotUrl(prompt = '') {
   if (hover) target.searchParams.set('galleryHover', '1');
   if (wantsTheaterCapture(prompt)) {
     target.searchParams.set('galleryView', 'theater');
-    if (/push frame selected/i.test(prompt)) target.searchParams.set('frameKind', 'push');
+    if (/push frame selected|push node/i.test(prompt)) target.searchParams.set('frameKind', 'push');
   } else if (wantsResetCapture(prompt)) {
     target.searchParams.set('galleryView', 'reset');
   } else if (argValue('gallery-view') === 'center' || hover || /\bcenter(?:ed)? view\b/i.test(prompt)) {
@@ -474,7 +474,7 @@ function screenshotUrl(prompt = '') {
   if (centered) target.searchParams.set('treeCenter', centered[1]);
   if (/\b(?:near\s+)?bottom of (?:the )?(?:page|panel)\b/i.test(prompt) || /recapture last prompt/i.test(prompt)) target.searchParams.set('treeFrame', 'bottom');
   if (/a bit more upward/i.test(prompt)) target.searchParams.set('treeLift', '0.22');
-  if (/same (?:spot|zone) as (?:the )?last (?:prompt|one)/i.test(prompt)) {
+  if (/same (?:spot|zone) as (?:the )?last (?:prompt|one)|recapture last frame/i.test(prompt)) {
     try {
       const saved = JSON.parse(readFileSync(join(screenshotsDir, '.last-tree-frame'), 'utf8'));
       if (saved.treeZoom) target.searchParams.set('treeZoom', String(saved.treeZoom));
@@ -484,6 +484,11 @@ function screenshotUrl(prompt = '') {
       if (saved.frameKind) target.searchParams.set('frameKind', String(saved.frameKind));
     } catch { /* The first remembered frame is written after a framed capture. */ }
   }
+  if (/push frame selected|push node/i.test(prompt)) target.searchParams.set('frameKind', 'push');
+  const namedPush = /push node(?:\s+\w+){0,3}\s+v?(\d+)/i.exec(prompt);
+  if (namedPush) target.searchParams.set('pushVersion', namedPush[1]);
+  if (/show the toast/i.test(prompt)) target.searchParams.set('prototypeToast', '1');
+  if (/overlay open/i.test(prompt) || (/push node/i.test(prompt) && /enter prototype|exit prototype|full screen overlay/i.test(prompt) && !/overlay closed/i.test(prompt))) target.searchParams.set('prototypeOpen', '1');
   const frame = { treeZoom: target.searchParams.get('treeZoom'), treeFrame: target.searchParams.get('treeFrame'), treeCenter: target.searchParams.get('treeCenter'), galleryView: target.searchParams.get('galleryView'), frameKind: target.searchParams.get('frameKind') };
   if (frame.treeZoom || frame.treeFrame) {
     mkdirSync(screenshotsDir, { recursive: true });
@@ -549,7 +554,7 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
       expression: wantsTransitionCapture(prompt)
         ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.transitionReady === "true"'
         : wantsTheaterCapture(prompt)
-        ? 'document.documentElement.dataset.screenshotReady === "1" && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete'
+        ? `document.documentElement.dataset.screenshotReady === "1" && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete${/overlay open/i.test(prompt) || (/push node/i.test(prompt) && /enter prototype|exit prototype|full screen overlay/i.test(prompt) && !/overlay closed/i.test(prompt)) ? ' && !!document.querySelector(".theater-fullscreen") && !document.querySelector(".theater-fullscreen .is-exit")' : ''}`
         : wantsGalleryHover(prompt)
         ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.inspectionReady === "true"'
         : 'document.documentElement.dataset.screenshotReady === "1"',

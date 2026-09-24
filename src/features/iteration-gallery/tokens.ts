@@ -21,10 +21,11 @@ export const galleryTokens = {
   disabledOpacity: 0.14, endpointOpacity: 0.72, refreshMs: 30_000,
   zoomMin: 0.5, zoomMax: 3, zoomStep: 0.25,
   playbackIntervalMs: 350, speeds: [0.5, 1, 2, 4],
-  timeline: { height: 34, playheadOverhang: 5, playheadWidth: 2, minorTickHeight: 16, majorTickHeight: 22, inlinePadding: 6, disabledOpacity: .5, disabledBorderOpacity: .28, previewOpacity: .45, gapScale: .5, rangeLabelGap: 6, pushBackground: '#c4c4c4', pushHoverBackground: '#a6a6a6' },
+  timeline: { height: 34, playheadOverhang: 5, playheadWidth: 2, minorTickHeight: 16, majorTickHeight: 22, inlinePadding: 6, disabledOpacity: .5, disabledBorderOpacity: .28, previewOpacity: .45, gapScale: .5, rangeLabelGap: 6, pushBackground: '#fff', pushHoverBackground: '#c4c4c4' },
   fullscreen: { scrim: 'rgba(0, 0, 0, .8)', gutter: 48, closeGap: 8, closeSize: 28 },
   theaterReference: { kind: 'prompt', number: 56 } as const,
-  theater: { focusBackground: '#fff', frameShadow: 'none', metadataHeight: 112, metadataGap: 24, metadataRowGap: 4, summaryGapScale: 1.5, playbackFooterGap: 4, actionGap: 12, imageCacheSize: 8, preloadFrames: 3, wheelStep: 80, addedColor: '#1f8a4c', removedColor: '#d12b2b' },
+  capturePushVersion: 16,
+  theater: { focusBackground: '#fff', frameShadow: 'none', metadataHeight: 112, metadataGap: 20, metadataHeightMaxVh: 20, metadataRowGap: 4, summaryGapScale: 1.75, playbackFooterGap: 4, actionGap: 8, enterDelayMs: 1000, enterExpandMs: 280, enterFadeMs: 180, imageCacheSize: 8, preloadFrames: 3, wheelStep: 80, addedColor: '#1f8a4c', removedColor: '#d12b2b' },
   viewportPresets: [
     { value: 'original', label: 'Original size', width: 0, height: 0 },
     { value: 'desktop', label: 'Desktop', width: 1440, height: 900 },

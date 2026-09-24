@@ -45,13 +45,24 @@
 .album-caption span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .theater-view { container-type: inline-size; flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding: 16px 24px var(--theater-footer-gap, 4px); gap: 16px; }
 .theater-body { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: var(--theater-metadata-gap, 16px); }
-.theater-stage { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--theater-action-gap); min-height: 0; max-width: 100%; }
+.theater-stage { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; max-width: 100%; }
+.theater-stage > .theater-frame-actions { margin-bottom: var(--theater-action-gap); }
+.theater-stage > .theater-metadata { margin-top: var(--theater-metadata-gap); }
 .theater-screen { position: relative; flex-shrink: 0; background: var(--fill); border: 1px solid var(--line-strong); display: grid; place-items: center; overflow: hidden; overscroll-behavior: none; box-shadow: var(--theater-frame-shadow); }
 .theater-screen.is-push { border-color: var(--ink); border-width: 2px; }
 .theater-screen img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; }
 .theater-frame-actions { width: 100%; flex-shrink: 0; display: flex; justify-content: flex-end; gap: 12px; flex-wrap: wrap; font-size: 11px; }
+.theater-text-action.is-exit { margin-right: auto; }
 .theater-text-action { display: inline-flex; align-items: center; gap: 4px; border: 0; background: transparent; padding: 0; color: var(--ink); font: inherit; cursor: pointer; }
-.theater-metadata { height: var(--theater-metadata-height); overflow: auto; width: 100%; flex-shrink: 0; display: flex; flex-direction: column; gap: var(--theater-row-gap, 4px); font-size: 11px; }
+.theater-text-action.is-bold { font-weight: 700; }
+.theater-text-action.is-enter { background: var(--ink); color: var(--paper); font-weight: 700; padding: 5px 10px; border-radius: 4px; transform: scaleX(0); }
+.theater-text-action.is-enter > span { opacity: 0; color: var(--paper); }
+.theater-text-action.is-enter.is-shown { transform: none; }
+.theater-text-action.is-enter.is-shown > span { opacity: 1; }
+.theater-text-action.is-enter:disabled { color: var(--paper); }
+.theater-text-action:disabled { color: var(--muted); cursor: default; }
+.theater-loading { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; background: color-mix(in srgb, var(--paper) 72%, transparent); color: var(--ink); font-size: 12px; font-weight: 500; }
+.theater-metadata { height: clamp(20px, var(--theater-metadata-max, 20vh), var(--theater-metadata-height)); overflow: auto; width: 100%; flex-shrink: 0; display: flex; flex-direction: column; gap: var(--theater-row-gap, 4px); font-size: 11px; }
 .theater-metadata p { line-height: 1.5; overflow-wrap: anywhere; }
 .theater-version { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: var(--theater-summary-gap, 2px); }
 .theater-version-group { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-width: 0; flex-wrap: wrap; }
@@ -85,7 +96,7 @@
 .gallery-timeline-version.is-disabled .gallery-timeline-progress,
 .gallery-timeline-version.is-disabled .gallery-timeline-mark { opacity: var(--gallery-disabled, 0.5); }
 .gallery-timeline-mark { position: absolute; top: 50%; transform: translateY(-50%); height: var(--timeline-minor-height); border-left: 1px solid var(--line-strong); }
-.gallery-timeline-playhead { position: absolute; top: 50%; left: var(--timeline-progress); width: var(--timeline-playhead-width); height: var(--timeline-playhead-height); transform: translate(-50%, -50%); background: var(--ink); pointer-events: none; }
+.gallery-timeline-playhead { position: absolute; z-index: 4; top: 50%; left: var(--timeline-progress); width: var(--timeline-playhead-width); height: var(--timeline-playhead-height); transform: translate(-50%, -50%); background: var(--ink); pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .iteration-gallery * { transition: none !important; animation: none !important; } }
 @media (max-width: 800px) { .iteration-gallery .panel-header { padding: 0 14px; } .gallery-toolbar.album-frame-bar, .gallery-footer { padding-left: 14px; padding-right: 14px; } .theater-view { padding: 12px 14px; } }
 
@@ -162,8 +173,6 @@
 .gallery-timeline-push .gallery-timeline-tip { left: 50%; white-space: nowrap; }
 
 .theater-prototype { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--paper); z-index: 2; }
-.theater-prototype-action { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.theater-prototype-action .gallery-play { font-size: inherit; }
 
 .gallery-timeline-push.is-floating .gallery-timeline-tip { left: auto; right: 0; transform: none; }
 .gallery-timeline-scrubber:focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; }
@@ -174,6 +183,5 @@
 .theater-fullscreen-content > img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .theater-fullscreen-close { position: absolute; right: 0; bottom: calc(100% + var(--fullscreen-close-gap)); width: var(--fullscreen-close-size); height: var(--fullscreen-close-size); padding: 0; display: grid; place-items: center; border: 0; background: transparent; color: white; cursor: pointer; }
 .theater-fullscreen-close:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
-.theater-fullscreen-footer { position: absolute; top: calc(100% + var(--fullscreen-close-gap)); width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; }
-
-.theater-fullscreen-footer .gallery-play { color: var(--ink); }
+.theater-fullscreen-footer { position: absolute; top: calc(100% + var(--fullscreen-close-gap)); width: 100%; display: flex; justify-content: flex-start; font-size: 11px; color: white; }
+.theater-fullscreen-footer .theater-text-action { color: white; }

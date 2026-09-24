@@ -38,6 +38,11 @@ export function parseCaptureName(filename: string) {
     added: changes?.[1] ?? null, removed: changes?.[2] ?? null };
 }
 
+/** A version with at most one prompt keeps its push capture as a frame. Busier versions leave the push on the gutter node. */
+export function versionKeepsPush(frames: { kind?: string }[]) {
+  return frames.filter(frame => frame.kind === 'prompt').length <= 1;
+}
+
 /** A push closes a version. Captures after the latest push belong to the next version. */
 export function buildVersions(captures: Capture[]): GalleryVersion[] {
   const ordered = [...captures].sort((a, b) => a.timestamp - b.timestamp || a.filename.localeCompare(b.filename));
@@ -84,12 +89,13 @@ export function promptShare(visible: number, total: number) {
 }
 
 export function rangeCounts(versions: GalleryVersion[], range: RangeKey, now: number) {
-  const frames = versions.flatMap(version => version.frames);
+  const shown = (version: GalleryVersion) => versionKeepsPush(version.frames) ? version.frames : version.frames.filter(frame => frame.kind !== 'push');
+  const frames = versions.flatMap(shown);
   const visibleFrames = frames.filter(frame => inRange(frame, range, now));
   return {
     frames: visibleFrames.length,
     frameTotal: frames.length,
-    versions: versions.filter(version => version.frames.some(frame => inRange(frame, range, now))).length,
+    versions: versions.filter(version => shown(version).some(frame => inRange(frame, range, now))).length,
     versionTotal: versions.length,
   };
 }
@@ -108,7 +114,8 @@ export function representativeFrames(versions: GalleryVersion[], range: RangeKey
   const count = Math.ceil(eligible.length / t.representativeVersionStride);
   return Array.from({ length: count }, (_, i) => {
     const frames = eligible[count === 1 ? 0 : Math.floor(i * (eligible.length - 1) / (count - 1))];
-    return frames.filter(frame => frame.kind === 'push').at(-1) ?? frames.at(-1)!;
+    const gallery = versionKeepsPush(frames) ? frames : frames.filter(frame => frame.kind !== 'push');
+    return gallery.filter(frame => frame.kind === 'push').at(-1) ?? gallery.at(-1)!;
   });
 }
 

@@ -45,6 +45,7 @@ test('real parent hashes produce forks and both merge-parent edges, including un
   assert.ok(dots.length >= 2);
   assert.equal(dots[1] - dots[0], geometry.gridRise * 2 * 3);
   assert.notEqual(layout.nodes.find(node => node.id === 'b')?.x, layout.nodes.find(node => node.id === 'c')?.x);
+  assert.equal(layout.nodes.find(node => node.id === 'b')!.x - layout.nodes.find(node => node.id === 'a')!.x, geometry.columnGap);
   assert.equal(layout.nodes[0].label, 'V1');
   assert.equal(layout.nodes[1].label, 'V1.1');
   assert.deepEqual([...mergedBranchIds(graph.nodes)], ['feature']);

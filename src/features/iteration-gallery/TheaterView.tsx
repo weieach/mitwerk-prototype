@@ -29,6 +29,11 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
   const gesture = useRef<{ pointer: number; x: number; y: number; frameClick: boolean; orbit: TheaterOrbit | null } | null>(null);
   const [playing, setPlaying] = useState(false);
   const [fullscreenId, setFullscreenId] = useState<string | null>(null);
+  const [toast, setToast] = useState('');
+  const [enterReady, setEnterReady] = useState(false);
+  const [enterSettled, setEnterSettled] = useState(false);
+  const enterShape = useRef<HTMLButtonElement>(null);
+  const enterLabel = useRef<HTMLSpanElement>(null);
   useEffect(() => { setFullscreenId(null); }, [selectedId, active]);
   const [speed, setSpeed] = useState(1);
   const [mode, setMode] = useState<LoopMode>('loop');
@@ -44,9 +49,9 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
   const stepFrame = useRef<(move: number) => void>(() => {});
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const [stageMeasured, setStageMeasured] = useState(false);
-  const index = Math.max(0, frames.findIndex(frame => frame.id === selectedId));
+  const index = frames.findIndex(frame => frame.id === selectedId);
   const branches = useMemo(() => [...new Set(catalog.map(item => item.branch).filter((branch): branch is string => !!branch))], [catalog]);
-  const requested = frames[index];
+  const requested = catalog.find(item => item.id === selectedId) ?? frames[Math.max(0, index)];
   const [displayed, setDisplayed] = useState<GalleryFrame | null>(null);
   const loader = useRef<FrameLoader | null>(null);
   if (!loader.current) loader.current = new FrameLoader(t.theater.imageCacheSize);
@@ -58,8 +63,8 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
   const prototype = usePrototype(frame, active);
   const fullscreen = active && frame?.kind === 'push' && fullscreenId === frame.id;
   const showingPreview = !!previewFrame && !!previewImage;
-  const previousPush = adjacentPushIndex(frames, index, -1);
-  const nextPush = adjacentPushIndex(frames, index, 1);
+  const previousPush = adjacentPushIndex(catalog, Math.max(0, catalog.findIndex(item => item.id === selectedId)), -1);
+  const nextPush = adjacentPushIndex(catalog, Math.max(0, catalog.findIndex(item => item.id === selectedId)), 1);
 
   useEffect(() => {
     if (!previewFrame) return;
@@ -98,10 +103,9 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
     const body = bodyRef.current;
     if (!body) return;
     const measure = () => {
-      const gap = parseFloat(getComputedStyle(body).rowGap || getComputedStyle(body).gap) || t.theater.metadataGap;
       const meta = metaRef.current?.offsetHeight ?? 0;
       const actions = (actionsRef.current?.offsetHeight ?? 0) + t.theater.actionGap;
-      const height = Math.max(0, body.clientHeight - meta - gap - actions);
+      const height = Math.max(0, body.clientHeight - meta - t.theater.metadataGap - actions);
       setStageSize({ width: body.clientWidth, height });
       setStageMeasured(body.clientWidth > 0 && height > 0);
     };
@@ -135,11 +139,51 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
     screen.addEventListener('wheel', onWheel, { passive: false });
     return () => screen.removeEventListener('wheel', onWheel);
   }, [Boolean(frame), stageSize.height]);
+  useEffect(() => {
+    if (prototype.error) setToast(prototype.error);
+  }, [prototype.error]);
+  useEffect(() => {
+    if (prototype.open) setEnterSettled(true);
+  }, [prototype.open]);
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('screenshot') !== '1') return;
+    if (params.get('prototypeToast') === '1' && prototype.available === false) setToast('No saved codebase for this push.');
+    if (params.get('prototypeOpen') === '1' && prototype.available && frame?.kind === 'push') {
+      setPlaying(false);
+      setFullscreenId(frame.id);
+      void prototype.enter();
+    }
+  }, [prototype.available, frame?.id, frame?.kind]);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(''), 5000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+  const lingerKey = `${previewFrame?.id ?? requested?.id ?? ''}:${(previewFrame ?? requested)?.kind ?? ''}`;
+  useEffect(() => {
+    setEnterReady(false);
+    setEnterSettled(false);
+    if (!lingerKey.endsWith(':push')) return;
+    const timer = window.setTimeout(() => setEnterReady(true), t.theater.enterDelayMs);
+    return () => window.clearTimeout(timer);
+  }, [lingerKey]);
+  useEffect(() => {
+    const shape = enterShape.current;
+    const label = enterLabel.current;
+    if (!enterReady || enterSettled || !shape || !label) return;
+    const expand = shape.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: t.theater.enterExpandMs, easing: 'ease-out', fill: 'forwards' });
+    const fade = label.animate([{ opacity: 0 }, { opacity: 1 }], { duration: t.theater.enterFadeMs, delay: t.theater.enterExpandMs, easing: 'ease-out', fill: 'forwards' });
+    return () => { expand.cancel(); fade.cancel(); };
+  }, [enterReady, enterSettled]);
 
   if (!frame) return <div className="gallery-empty">No frames in this date range. Choose a wider range to play.</div>;
   const viewport = t.viewportPresets.find(option => option.value === preset)!;
   const dimensions = preset === 'original' ? baseline : preset === 'custom' ? custom : viewport;
-  const frameSize = theaterFrameSize(stageSize, baseline, dimensions);
+  const naturalFrame = theaterFrameSize(stageSize, baseline, dimensions);
+  const frameRatio = dimensions.width / Math.max(dimensions.height, 1);
+  const frameHeight = Math.min(naturalFrame.height, stageSize.height);
+  const frameSize = { width: frameHeight * frameRatio, height: frameHeight };
   function selectFrame(next: number) {
     prototype.exit();
     const nextFrame = frames[next];
@@ -153,7 +197,9 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
   };
   function skipPush(next: number | null) {
     if (next === null) return;
-    setDirection(1); selectFrame(next);
+    const push = catalog[next];
+    if (!push) return;
+    setDirection(1); setPlaying(false); setPreviewId(null); setPreviewImage(null); onSelect(push.id);
   }
 
   function goToCommit() {
@@ -206,20 +252,22 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
-  const prototypeControls = <div className="theater-prototype-action" data-orbit-blocked>
-          <button className="gallery-play" disabled={!active || !prototype.available || prototype.loading}
-            onClick={() => { setPlaying(false); setPreviewId(null); setPreviewImage(null); if (prototype.open) prototype.exit(); else void prototype.enter(); }}>
-            {prototype.open ? 'Exit prototype' : prototype.loading ? 'Building prototype…' : 'Enter prototype'}
-          </button>
-          {prototype.available === false && <span className="gallery-small">No saved codebase for this push.</span>}
-          {prototype.error && <span role="alert" className="gallery-small">{prototype.error}</span>}
-        </div>;
+  function enterPrototype() {
+    setPlaying(false); setPreviewId(null); setPreviewImage(null);
+    setEnterSettled(true);
+    if (prototype.available === false) { setToast('No saved codebase for this push.'); return; }
+    if (frame) setFullscreenId(frame.id);
+    void prototype.enter();
+  }
+  const exitPrototype = frame?.kind === 'push' && prototype.open
+    ? <button className="theater-text-action is-exit" onClick={() => { prototype.exit(); setFullscreenId(null); }}><Icon name="close"/>Exit prototype</button>
+    : null;
 
   return <div className="theater-view" data-frame-id={frame?.id} data-selected-frame-id={requested?.id} data-preview-frame-id={previewFrame?.id} data-frame-ready={ready && stageMeasured}
     style={{ '--theater-footer-gap': `${t.theater.playbackFooterGap}px` } as CSSProperties}
     onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} onLostPointerCapture={pointerEnd}>
     {fullscreen && <FullscreenPreview label={`${formatVersion(frame.version)} full screen`} ratio={dimensions.width / dimensions.height}
-      onClose={() => setFullscreenId(null)} footer={prototypeControls}>
+      onClose={() => setFullscreenId(null)} footer={null}>
       {prototype.open && prototype.url
         ? <iframe className="theater-prototype" src={prototype.url} title={`${formatVersion(frame.version)} interactive archived prototype`}
             sandbox="allow-scripts" referrerPolicy="no-referrer"/>
@@ -237,12 +285,17 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
       <span className="gallery-small">{aspectRatioLabel(dimensions.width, dimensions.height)}</span>
 
     </div>
-    <div className="theater-body" ref={bodyRef} style={{ '--theater-metadata-height': `${t.theater.metadataHeight}px`, '--theater-metadata-gap': `${t.theater.metadataGap}px` } as CSSProperties}>
+    <div className="theater-body" ref={bodyRef} style={{ '--theater-metadata-height': `${t.theater.metadataHeight}px`, '--theater-metadata-max': `${t.theater.metadataHeightMaxVh}vh`, '--theater-metadata-gap': `${t.theater.metadataGap}px` } as CSSProperties}>
       <div className="theater-stage" style={{ width: frameSize.width, '--theater-action-gap': `${t.theater.actionGap}px` } as CSSProperties}>
       <div className="theater-frame-actions" data-orbit-blocked ref={actionsRef}>
+        {exitPrototype}
         <button className="theater-text-action" onClick={goToCommit}><Icon name="commit"/>Go to commit</button>
-        {frame.kind === 'push' && <button className="theater-text-action" onClick={() => { setPlaying(false); setFullscreenId(frame.id); }}><Icon name="expand"/>Full screen</button>}
         <button className="theater-text-action" onClick={event => event.stopPropagation()}><Icon name="plus"/>Add frame to chat</button>
+        {frame.kind === 'push' && (prototype.open
+          ? <button className="theater-text-action" onClick={() => { setPlaying(false); setFullscreenId(frame.id); }}><Icon name="expand"/>Full screen</button>
+          : enterReady && <button ref={enterShape} className={`theater-text-action is-enter${enterSettled ? ' is-shown' : ''}`} disabled={!active || prototype.loading} onClick={enterPrototype} style={{ transformOrigin: 'right center' }}>
+            <span ref={enterLabel} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="arrow"/>Enter prototype</span>
+          </button>)}
       </div>
         <div className={`theater-screen${displayed?.kind === 'push' ? ' is-push' : ''}`} ref={screenRef} data-orbit-blocked={prototype.open || undefined} style={{ height: frameSize.height, width: '100%' }}>
           {!fullscreen && prototype.open && prototype.url && <iframe className="theater-prototype" src={prototype.url}
@@ -250,8 +303,8 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
           {displayed ? <img draggable={false} src={`${import.meta.env.BASE_URL}${displayed.url}`} alt={`${formatVersion(displayed.version)}: ${displayed.summary}`} aria-hidden={showingPreview}/>
             : <div className="gallery-empty">{failedImage ? 'This saved image could not be loaded.' : 'Loading frame…'}</div>}
           {showingPreview && <img draggable={false} className="theater-preview-image" src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`Preview ${formatVersion(frame.version)}: ${frame.summary}`}/>}
+          {prototype.loading && <div className="theater-loading" role="status">Building prototype…</div>}
         </div>
-      </div>
       <div className="theater-metadata" ref={metaRef} style={{ '--line-added': t.theater.addedColor, '--line-removed': t.theater.removedColor, '--theater-row-gap': `${t.theater.metadataRowGap}px`, '--theater-summary-gap': `${t.theater.metadataRowGap * (t.theater.summaryGapScale - 1)}px` } as CSSProperties}>
         {failedImage && displayed && <span role="status" data-orbit-blocked>The next image could not be loaded. The previous frame is still shown.</span>}
         <div className="theater-version" data-orbit-blocked>
@@ -263,7 +316,7 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
           <time dateTime={new Date(frame.timestamp).toISOString()}>{formatTime(frame.timestamp)}</time>
         </div>
         <p className="theater-summary"><span data-orbit-blocked data-orbit-inline>{frame.kind === 'push' ? <strong>{theaterCaptionLead(frame)}</strong> : theaterCaptionLead(frame)}{theaterCaption(frame)}</span></p>
-        {frame.kind === 'push' && !fullscreen && prototypeControls}
+      </div>
       </div>
     </div>
     <div className="theater-playback" data-orbit-blocked>
@@ -278,7 +331,8 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
         <select aria-label="Playback loop" value={mode} onChange={event => { setMode(event.target.value as LoopMode); setDirection(1); }}><option value="once">Play once</option><option value="loop">Loop</option><option value="ping-pong">Ping-pong</option></select>
         </div>
       </div>
-      <PlaybackTimeline frames={frames} catalog={catalog} range={range} now={now} index={index} previewIndex={previewIndex} onPreview={next => { if (prototype.open || prototype.loading) return; setPreviewId(next === null ? null : frames[next].id); if (next === null) setPreviewImage(null); }} onSelect={selectFrame}/>
+      <PlaybackTimeline frames={frames} catalog={catalog} range={range} now={now} index={Math.max(0, index)} selectedId={selectedId} previewIndex={previewIndex} onPreview={next => { if (prototype.open || prototype.loading) return; setPreviewId(next === null ? null : frames[next].id); if (next === null) setPreviewImage(null); }} onSelect={selectFrame} onSelectPush={id => { prototype.exit(); setPlaying(false); setPreviewId(null); setPreviewImage(null); onSelect(id); }}/>
+      {toast && <div className="project-toast" role="status">{toast}</div>}
     </div>
   </div>;
 }

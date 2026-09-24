@@ -10,6 +10,7 @@ test('both panels start with independent copies of the saved tree', () => {
   assert.deepEqual(panels.history, seed);
   assert.notEqual(panels.test.nodes, panels.history.nodes);
   assert.notEqual(panels.test.nodes[0].files, seed.nodes[0].files);
+  assert.equal(panels.mode, 'history');
 });
 
 test('sandbox commits and branches never change history or the seed', () => {

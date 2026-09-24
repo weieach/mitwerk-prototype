@@ -14,6 +14,28 @@ export function commitBranchGap(title: string) {
   return Math.max(min, Math.ceil(needed / pitch) * pitch);
 }
 
+/** The latest side branch reuses the x of the earlier side branch that left the same parent, so it stays in that column instead of opening another one. */
+function alignLatestBranch(nodes: { id: string; branchId: string; x: number; git?: { parents: string[] }; parentId: string | null }[]) {
+  const order: string[] = [];
+  const byId = new Map(nodes.map(node => [node.id, node]));
+  for (const node of nodes) if (!order.includes(node.branchId)) order.push(node.branchId);
+  const latest = order.at(-1);
+  if (!latest) return;
+  const root = nodes.find(node => node.branchId === latest)!;
+  const parents = root.git?.parents ?? (root.parentId ? [root.parentId] : []);
+  const parentBranch = parents.map(id => byId.get(id)?.branchId).find(id => id && id !== latest);
+  if (!parentBranch) return;
+  const sibling = order.find(id => {
+    if (id === latest || id === parentBranch) return false;
+    const start = nodes.find(node => node.branchId === id)!;
+    const startParents = start.git?.parents ?? (start.parentId ? [start.parentId] : []);
+    return startParents.some(id => byId.get(id)?.branchId === parentBranch);
+  });
+  if (!sibling) return;
+  const x = nodes.find(node => node.branchId === sibling)!.x;
+  for (const node of nodes) if (node.branchId === latest) node.x = x;
+}
+
 /** Git lanes preserve branch ownership and every recorded parent, including merge parents. */
 export function layoutGitHistory(source: VersionNode[]) {
   const base = layoutGraph(source);
@@ -30,6 +52,7 @@ export function layoutGitHistory(source: VersionNode[]) {
     placed.set(node.id, y);
     return { ...node, label: source.find(item => item.id === node.id)!.label, row, y };
   });
+  alignLatestBranch(nodes);
   const byId = new Map(nodes.map(node => [node.id, node]));
   const merged = mergedBranchIds(nodes);
   const firstOfBranch = new Map<string, string>();
@@ -62,7 +85,7 @@ export function layoutGitHistory(source: VersionNode[]) {
       edges.push({ id: `merged-span:${anchor.id}:${target.id}`, sourceId: anchor.id, targetId: target.id, branchId: target.branchId, dashed: true, path: `M ${anchor.x} ${anchor.y} L ${target.x} ${target.y}` });
     }
   }
-  return { ...base, nodes, edges, levels: [], forks: [], height: Math.max(...nodes.map(node => node.y)) + geometry.cardHeight + geometry.padding };
+  return { ...base, nodes, edges, levels: [], forks: [], width: Math.max(...nodes.map(node => node.x)) + geometry.cardOffsetX + geometry.cardWidth + geometry.padding, height: Math.max(...nodes.map(node => node.y)) + geometry.cardHeight + geometry.padding };
 }
 
 /** Square dots on grid intersections along a vertical re-merge stem, three grids apart. */

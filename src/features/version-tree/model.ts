@@ -64,7 +64,7 @@ export function versionCommitAction(isEndpoint: boolean, reverted: boolean): Ver
 
 export function versionCommitActionLabel(action: VersionCommitAction) {
   if (action === 'restore') return 'Restore change';
-  return 'Add to reference';
+  return 'Add to chat';
 }
 
 /** Restore is the primary card action; Add branch / Revert stay secondary. */

@@ -12,7 +12,7 @@ export type PanelAction = { type: 'history'; graph: GraphState } | { type: 'swit
 
 /** One-time migration: both views start from independent copies of the saved tree. */
 export function createTreePanels(seed: GraphState): TreePanels {
-  return { mode: 'test', test: structuredClone(seed), history: structuredClone(seed) };
+  return { mode: 'history', test: structuredClone(seed), history: structuredClone(seed) };
 }
 
 export function canEditTree(mode: TreeMode) { return mode === 'test'; }
@@ -35,7 +35,7 @@ export function loadTreePanels(seed: GraphState, storage: StorageLike | null): T
     if (raw) {
       const value = JSON.parse(raw);
       const test = parseStoredGraphState(value.test), history = parseStoredGraphState(value.history);
-      if (test) return { test, history: history ?? structuredClone(seed), mode: value.mode === 'history' ? 'history' : 'test' };
+      if (test) return { test, history: history ?? structuredClone(seed), mode: 'history' };
     }
   } catch { /* Storage may be unavailable or contain an older invalid snapshot. */ }
   return createTreePanels(seed);

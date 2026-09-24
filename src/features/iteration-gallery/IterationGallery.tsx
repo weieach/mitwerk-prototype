@@ -5,7 +5,7 @@ import type { CSSProperties } from 'react';
 import { AlbumView } from './AlbumView';
 import { referenceCapture } from './theater-layout';
 import { TheaterView } from './TheaterView';
-import { buildVersions, inRange, rangeCounts, ranges } from './model';
+import { buildVersions, inRange, rangeCounts, ranges, versionKeepsPush } from './model';
 import type { Capture, RangeKey } from './model';
 import { galleryTokens as t } from './tokens';
 import './gallery.css';
@@ -64,7 +64,7 @@ export function IterationGallery() {
 
   const versions = useMemo(() => buildVersions(catalog?.frames ?? []), [catalog]);
   const baseline = useMemo(() => referenceCapture(versions.flatMap(version => version.frames), t.theaterReference), [versions]);
-  const visibleFrames = useMemo(() => versions.flatMap(version => version.frames).filter(frame => inRange(frame, range, now)), [versions, range, now]);
+  const visibleFrames = useMemo(() => versions.flatMap(version => (versionKeepsPush(version.frames) ? version.frames : version.frames.filter(frame => frame.kind !== 'push')).filter(frame => inRange(frame, range, now))), [versions, range, now]);
   const counts = useMemo(() => rangeCounts(versions, range, now), [versions, range, now]);
   const rangePrompts = visibleFrames.filter(frame => frame.kind === 'prompt').length;
   const rangePromptLabel = ` (${rangePrompts} ${rangePrompts === 1 ? 'prompt' : 'prompts'})`;
@@ -85,7 +85,10 @@ export function IterationGallery() {
     const params = new URLSearchParams(location.search);
     if (params.get('screenshot') !== '1' || !['theater', 'transition', 'timeline-transition'].includes(params.get('galleryView') ?? '')) return;
     const frames = versions.flatMap(version => version.frames);
-    const featured = params.get('frameKind') === 'push' ? frames.find(frame => frame.kind === 'push') : referenceCapture(frames, t.theaterReference);
+    const pushVersion = Number(params.get('pushVersion')) || t.capturePushVersion;
+    const featured = params.get('frameKind') === 'push'
+      ? frames.find(frame => frame.kind === 'push' && (frame.version === pushVersion || frame.number === pushVersion)) ?? frames.find(frame => frame.kind === 'push')
+      : referenceCapture(frames, t.theaterReference);
     if (featured && !inRange(featured, range, now)) { setRange('all'); return; }
     const id = featured?.id;
     if (id) { setSelectedId(id); setView(params.get('galleryView') === 'theater' ? 'theater' : 'turning'); }
@@ -119,7 +122,6 @@ export function IterationGallery() {
         <label><span className="sr-only">Date range</span><select aria-label="Date range" value={range} onChange={event => { setRange(event.target.value as RangeKey); setNow(Date.now()); }}>{ranges.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
         <span className="gallery-small">{catalog ? counts.versions + '/' + counts.versionTotal + ' versions' + rangePromptLabel : 'Loading frames…'}</span>
       </div>
-      {catalog && catalog.ignored > 0 && <span className="gallery-small" title="Unrecognized or unreadable PNG files were skipped.">{catalog.ignored} files skipped</span>}
       <button className="icon-button" disabled title="Token usage is not included in capture filenames.">See token usage</button>
     </footer>
   </section>;

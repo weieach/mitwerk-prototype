@@ -73,10 +73,15 @@ test('push targets use the preceding version, keep exact gutter geometry, and fl
     { id: 'p2', version: 8, kind: 'prompt' }, { id: 'push8', version: 8, kind: 'push' },
   ]);
   const [first, last] = timeline.pushes;
-  assert.equal(first.frameId, 'push3'); assert.equal(first.index, 1);
+  assert.equal(first.frameId, 'push3'); assert.equal(first.index, null);
+  assert.deepEqual(timeline.versions[0].marks.map(mark => mark.id), ['p1', 'push3']);
+  const busy = buildTimeline([
+    { id: 'a', version: 1, kind: 'prompt' }, { id: 'b', version: 1, kind: 'prompt' }, { id: 'push', version: 1, kind: 'push' },
+  ]);
+  assert.deepEqual(busy.versions[0].marks.map(mark => mark.id), ['a', 'b']);
   assert.equal(first.start, timeline.versions[0].end);
   assert.equal(first.end, timeline.versions[1].start);
-  assert.equal(timelinePointerIndex(timeline, (first.start + first.end) / 2), 1);
+  assert.equal(timelinePointerIndex(timeline, (first.start + first.end) / 2), null);
   assert.equal(last.start, 1); assert.ok(last.end > 1); assert.equal(last.floating, true);
   assert.ok(Math.abs(last.end - last.start - (first.end - first.start)) < 1e-8);
   assert.equal(timeline.versions.at(-1)!.end, 1);
@@ -90,5 +95,6 @@ test('push targets never substitute prompt frames for missing or filtered pushes
   assert.deepEqual(timeline.pushes.map(node => node.index), [null, null]);
   assert.equal(timelinePointerIndex(timeline, (timeline.pushes[0].start + timeline.pushes[0].end) / 2), null);
   const single = buildTimeline([{ id: 'only', version: 19, kind: 'push' }]);
-  assert.equal(single.pushes[0].index, 0); assert.equal(single.pushes[0].start, 1);
+  assert.equal(single.pushes[0].index, null); assert.equal(single.pushes[0].frameId, 'only'); assert.equal(single.pushes[0].start, 1);
+  assert.deepEqual(single.versions[0].marks.map(mark => mark.id), ['only']);
 });
