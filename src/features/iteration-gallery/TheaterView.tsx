@@ -1,3 +1,5 @@
+import { FullscreenPreview } from './FullscreenPreview';
+import { usePrototype } from './usePrototype';
 import { BranchTag } from '../../components/BranchTag';
 import { formatVersion, galleryBranchPaint } from './model';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -26,6 +28,8 @@ function PlaybackTip({ label, children }: { label: string; children: ReactNode }
 export function TheaterView({ frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline, interfaceId, onInterface }: { baseline: { width: number; height: number }; active: boolean; interfaceId: string; onInterface: (value: string) => void; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string) => void }) {
   const gesture = useRef<{ pointer: number; x: number; y: number; frameClick: boolean; orbit: TheaterOrbit | null } | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [fullscreenId, setFullscreenId] = useState<string | null>(null);
+  useEffect(() => { setFullscreenId(null); }, [selectedId, active]);
   const [speed, setSpeed] = useState(1);
   const [mode, setMode] = useState<LoopMode>('loop');
   const [direction, setDirection] = useState(1);
@@ -51,6 +55,8 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
   const previewIndex = frames.findIndex(item => item.id === previewId);
   const previewFrame = frames[previewIndex];
   const frame = presentedFrame(!!previewFrame, previewImage, displayed, requested);
+  const prototype = usePrototype(frame, active);
+  const fullscreen = active && frame?.kind === 'push' && fullscreenId === frame.id;
   const showingPreview = !!previewFrame && !!previewImage;
   const previousPush = adjacentPushIndex(frames, index, -1);
   const nextPush = adjacentPushIndex(frames, index, 1);
@@ -135,6 +141,7 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
   const dimensions = preset === 'original' ? baseline : preset === 'custom' ? custom : viewport;
   const frameSize = theaterFrameSize(stageSize, baseline, dimensions);
   function selectFrame(next: number) {
+    prototype.exit();
     const nextFrame = frames[next];
     if (previewImage?.id === nextFrame.id) setDisplayed(previewImage);
     setPlaying(false); setPreviewId(null); setPreviewImage(null); onSelect(nextFrame.id);
@@ -199,9 +206,25 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
+  const prototypeControls = <div className="theater-prototype-action" data-orbit-blocked>
+          <button className="gallery-play" disabled={!active || !prototype.available || prototype.loading}
+            onClick={() => { setPlaying(false); setPreviewId(null); setPreviewImage(null); if (prototype.open) prototype.exit(); else void prototype.enter(); }}>
+            {prototype.open ? 'Exit prototype' : prototype.loading ? 'Building prototype…' : 'Enter prototype'}
+          </button>
+          {prototype.available === false && <span className="gallery-small">No saved codebase for this push.</span>}
+          {prototype.error && <span role="alert" className="gallery-small">{prototype.error}</span>}
+        </div>;
+
   return <div className="theater-view" data-frame-id={frame?.id} data-selected-frame-id={requested?.id} data-preview-frame-id={previewFrame?.id} data-frame-ready={ready && stageMeasured}
     style={{ '--theater-footer-gap': `${t.theater.playbackFooterGap}px` } as CSSProperties}
     onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} onLostPointerCapture={pointerEnd}>
+    {fullscreen && <FullscreenPreview label={`${formatVersion(frame.version)} full screen`} ratio={dimensions.width / dimensions.height}
+      onClose={() => setFullscreenId(null)} footer={prototypeControls}>
+      {prototype.open && prototype.url
+        ? <iframe className="theater-prototype" src={prototype.url} title={`${formatVersion(frame.version)} interactive archived prototype`}
+            sandbox="allow-scripts" referrerPolicy="no-referrer"/>
+        : <img draggable={false} src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`${formatVersion(frame.version)}: ${frame.summary}`}/>}
+    </FullscreenPreview>}
     <div className="gallery-toolbar" data-orbit-blocked>
       <TrackedInterface value={interfaceId} onChange={onInterface}/>
       <select value={preset} onChange={event => setPreset(event.target.value)} aria-label="Preview viewport">
@@ -218,9 +241,12 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
       <div className="theater-stage" style={{ width: frameSize.width, '--theater-action-gap': `${t.theater.actionGap}px` } as CSSProperties}>
       <div className="theater-frame-actions" data-orbit-blocked ref={actionsRef}>
         <button className="theater-text-action" onClick={goToCommit}><Icon name="commit"/>Go to commit</button>
+        {frame.kind === 'push' && <button className="theater-text-action" onClick={() => { setPlaying(false); setFullscreenId(frame.id); }}><Icon name="expand"/>Full screen</button>}
         <button className="theater-text-action" onClick={event => event.stopPropagation()}><Icon name="plus"/>Add frame to chat</button>
       </div>
-        <div className={`theater-screen${displayed?.kind === 'push' ? ' is-push' : ''}`} ref={screenRef} style={{ height: frameSize.height, width: '100%' }}>
+        <div className={`theater-screen${displayed?.kind === 'push' ? ' is-push' : ''}`} ref={screenRef} data-orbit-blocked={prototype.open || undefined} style={{ height: frameSize.height, width: '100%' }}>
+          {!fullscreen && prototype.open && prototype.url && <iframe className="theater-prototype" src={prototype.url}
+            title={`${formatVersion(frame.version)} interactive archived prototype`} sandbox="allow-scripts" referrerPolicy="no-referrer"/>}
           {displayed ? <img draggable={false} src={`${import.meta.env.BASE_URL}${displayed.url}`} alt={`${formatVersion(displayed.version)}: ${displayed.summary}`} aria-hidden={showingPreview}/>
             : <div className="gallery-empty">{failedImage ? 'This saved image could not be loaded.' : 'Loading frame…'}</div>}
           {showingPreview && <img draggable={false} className="theater-preview-image" src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`Preview ${formatVersion(frame.version)}: ${frame.summary}`}/>}
@@ -237,13 +263,14 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
           <time dateTime={new Date(frame.timestamp).toISOString()}>{formatTime(frame.timestamp)}</time>
         </div>
         <p className="theater-summary"><span data-orbit-blocked data-orbit-inline>{frame.kind === 'push' ? <strong>{theaterCaptionLead(frame)}</strong> : theaterCaptionLead(frame)}{theaterCaption(frame)}</span></p>
+        {frame.kind === 'push' && !fullscreen && prototypeControls}
       </div>
     </div>
     <div className="theater-playback" data-orbit-blocked>
       <div className="gallery-toolbar playback-controls">
         <div className="playback-transport">
         <PlaybackTip label="Jump to last push"><button className="icon-button" onClick={() => skipPush(previousPush)} disabled={previousPush === null} aria-label="Previous push"><span className="skip-marks is-previous"><Icon name="play" size={16}/><Icon name="play" size={16}/></span></button></PlaybackTip>
-        <PlaybackTip label={playing ? 'Pause' : 'Play'}><button className="icon-button playback-toggle" onClick={() => { if (!playing && mode === 'once' && index === frames.length - 1) onSelect(frames[0].id); setPlaying(!playing); }} disabled={frames.length < 2} aria-label={playing ? 'Pause playback' : 'Play frames'}><Icon name={playing ? 'pause' : 'play'} size={26}/></button></PlaybackTip>
+        <PlaybackTip label={playing ? 'Pause' : 'Play'}><button className="icon-button playback-toggle" onClick={() => { prototype.exit(); if (!playing && mode === 'once' && index === frames.length - 1) onSelect(frames[0].id); setPlaying(!playing); }} disabled={frames.length < 2} aria-label={playing ? 'Pause playback' : 'Play frames'}><Icon name={playing ? 'pause' : 'play'} size={26}/></button></PlaybackTip>
         <PlaybackTip label="Jump to next push"><button className="icon-button" onClick={() => skipPush(nextPush)} disabled={nextPush === null} aria-label="Next push"><span className="skip-marks"><Icon name="play" size={16}/><Icon name="play" size={16}/></span></button></PlaybackTip>
         </div>
         <div className="playback-options">
@@ -251,7 +278,7 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
         <select aria-label="Playback loop" value={mode} onChange={event => { setMode(event.target.value as LoopMode); setDirection(1); }}><option value="once">Play once</option><option value="loop">Loop</option><option value="ping-pong">Ping-pong</option></select>
         </div>
       </div>
-      <PlaybackTimeline frames={frames} catalog={catalog} range={range} now={now} index={index} previewIndex={previewIndex} onPreview={next => { setPreviewId(next === null ? null : frames[next].id); if (next === null) setPreviewImage(null); }} onSelect={selectFrame}/>
+      <PlaybackTimeline frames={frames} catalog={catalog} range={range} now={now} index={index} previewIndex={previewIndex} onPreview={next => { if (prototype.open || prototype.loading) return; setPreviewId(next === null ? null : frames[next].id); if (next === null) setPreviewImage(null); }} onSelect={selectFrame}/>
     </div>
   </div>;
 }

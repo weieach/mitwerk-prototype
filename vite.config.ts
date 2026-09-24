@@ -3,10 +3,20 @@ import { existsSync, readFileSync, watch, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
-import { iterationGalleryCatalog } from './server/gallery-catalog.ts';
+import { createPrototypeService } from './server/prototype-service.mjs';
+import { readGitHistory } from './server/git-history.ts';
+import { iterationGalleryCatalog, readCaptureCatalog } from './server/gallery-catalog.ts';
 
 const GRAPH_KEY = 'mitwerk.version-tree.graph';
 const GRAPH_PATH = '/__mitwerk/graph';
+
+function archivedPrototypes(): Plugin {
+  return { name: 'archived-prototypes', configureServer(server) {
+    server.middlewares.use(createPrototypeService(server.config.root, {
+      catalog: () => readCaptureCatalog(server.config.root), history: () => readGitHistory(server.config.root),
+    }).middleware);
+  } };
+}
 
 function isGraphSnapshot(value: unknown): value is { nodes: unknown[] } {
   return Boolean(value) && typeof value === 'object' && Array.isArray((value as { nodes?: unknown }).nodes)
@@ -113,11 +123,11 @@ function mitwerkPushCapture(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), mitwerkGraphPersist(), mitwerkPushCapture(), iterationGalleryCatalog()],
+  plugins: [react(), mitwerkGraphPersist(), mitwerkPushCapture(), iterationGalleryCatalog(), archivedPrototypes()],
   server: {
     port: 5173,
     strictPort: true,
-    watch: { ignored: (path: string) => path.includes('/[ver capture] codebase') },
+    watch: { ignored: (path: string) => path.includes('/[ver capture] codebase') || path.includes('/.mitwerk-prototypes') },
   },
   preview: {
     port: 5173,

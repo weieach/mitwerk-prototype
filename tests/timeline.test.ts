@@ -24,7 +24,7 @@ test('unequal commit counts preserve equal version spacing and exact frame looku
   assert.equal(nearestTimelineFrame(timeline.marks, 2), 3);
 });
 test('single frames, empty ranges and nonconsecutive versions need no special fixtures', () => {
-  assert.deepEqual(buildTimeline([]), { versions: [], marks: [] });
+  assert.deepEqual(buildTimeline([]), { versions: [], marks: [], pushes: [] });
   assert.equal(buildTimeline([{ id: 'a', version: 9 }]).marks[0].position, .5);
   const timeline = buildTimeline([{ id: 'a', version: 3 }, { id: 'b', version: 8 }]);
   assert.deepEqual(timeline.versions.map(v => v.number), [3, 8]);
@@ -65,4 +65,30 @@ test('skip controls find push captures and never fall back to prompt frames', ()
   assert.equal(adjacentPushIndex(list, 4, 1), null);
   assert.equal(adjacentPushIndex(list, 1, -1), null);
   assert.equal(adjacentPushIndex([{ kind: 'prompt' }], 0, 1), null);
+});
+
+test('push targets use the preceding version, keep exact gutter geometry, and float after the last block', () => {
+  const timeline = buildTimeline([
+    { id: 'p1', version: 3, kind: 'prompt' }, { id: 'push3', version: 3, kind: 'push' },
+    { id: 'p2', version: 8, kind: 'prompt' }, { id: 'push8', version: 8, kind: 'push' },
+  ]);
+  const [first, last] = timeline.pushes;
+  assert.equal(first.frameId, 'push3'); assert.equal(first.index, 1);
+  assert.equal(first.start, timeline.versions[0].end);
+  assert.equal(first.end, timeline.versions[1].start);
+  assert.equal(timelinePointerIndex(timeline, (first.start + first.end) / 2), 1);
+  assert.equal(last.start, 1); assert.ok(last.end > 1); assert.equal(last.floating, true);
+  assert.ok(Math.abs(last.end - last.start - (first.end - first.start)) < 1e-8);
+  assert.equal(timeline.versions.at(-1)!.end, 1);
+});
+
+test('push targets never substitute prompt frames for missing or filtered pushes', () => {
+  const timeline = buildTimeline([
+    { id: 'old', version: 1, kind: 'push', enabled: false },
+    { id: 'wip', version: 2, kind: 'prompt' },
+  ]);
+  assert.deepEqual(timeline.pushes.map(node => node.index), [null, null]);
+  assert.equal(timelinePointerIndex(timeline, (timeline.pushes[0].start + timeline.pushes[0].end) / 2), null);
+  const single = buildTimeline([{ id: 'only', version: 19, kind: 'push' }]);
+  assert.equal(single.pushes[0].index, 0); assert.equal(single.pushes[0].start, 1);
 });

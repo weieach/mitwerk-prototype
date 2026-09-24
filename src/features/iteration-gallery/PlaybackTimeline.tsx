@@ -1,11 +1,12 @@
 import { formatVersion, inRange } from './model';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { CSSProperties, PointerEvent } from 'react';
 import type { GalleryFrame, RangeKey } from './model';
 import { buildTimeline, timelinePointerIndex } from './timeline';
 import { galleryTokens as t } from './tokens';
 
 export function PlaybackTimeline({ frames, catalog, range, now, index, previewIndex, onPreview, onSelect }: { catalog: GalleryFrame[]; range: RangeKey; now: number; previewIndex: number; onPreview: (index: number | null) => void; frames: GalleryFrame[]; index: number; onSelect: (index: number) => void }) {
+  const [pushTip, setPushTip] = useState<number | null>(null);
   const timeline = useMemo(() => buildTimeline(catalog.map(frame => ({ ...frame, enabled: inRange(frame, range, now) }))), [catalog, range, now]);
   const position = timeline.marks.find(mark => mark.index === index)?.position ?? 0;
   const tipIndex = previewIndex;
@@ -15,10 +16,12 @@ export function PlaybackTimeline({ frames, catalog, range, now, index, previewIn
     const rect = event.currentTarget.getBoundingClientRect();
     return timelinePointerIndex(timeline, (event.clientX - rect.left) / rect.width);
   }
-  return <div className="gallery-timeline" role="slider" tabIndex={0} aria-label="Playback position"
+  return <div className="gallery-timeline"
+    style={{ '--timeline-push-background': t.timeline.pushBackground, '--timeline-push-hover': t.timeline.pushHoverBackground, '--timeline-height': `${t.timeline.height}px`, '--timeline-playhead-height': `${t.timeline.height + t.timeline.playheadOverhang * 2}px`, '--timeline-playhead-width': `${t.timeline.playheadWidth}px`, '--timeline-preview-opacity': t.timeline.previewOpacity, '--timeline-minor-height': `${t.timeline.minorTickHeight}px`, '--timeline-progress': `${position * 100}%`, '--gallery-disabled': t.timeline.disabledOpacity, '--timeline-disabled-border': t.timeline.disabledBorderOpacity } as CSSProperties}
+    >
+    <div className="gallery-timeline-scrubber" role="slider" tabIndex={0} aria-label="Playback position"
     aria-valuemin={0} aria-valuemax={Math.max(0, frames.length - 1)} aria-valuenow={index}
     aria-valuetext={`Frame ${index + 1} of ${frames.length}, ${formatVersion(frames[index]?.version)}`}
-    style={{ '--timeline-height': `${t.timeline.height}px`, '--timeline-playhead-height': `${t.timeline.height + t.timeline.playheadOverhang * 2}px`, '--timeline-playhead-width': `${t.timeline.playheadWidth}px`, '--timeline-preview-opacity': t.timeline.previewOpacity, '--timeline-minor-height': `${t.timeline.minorTickHeight}px`, '--timeline-progress': `${position * 100}%`, '--gallery-disabled': t.timeline.disabledOpacity, '--timeline-disabled-border': t.timeline.disabledBorderOpacity } as CSSProperties}
     onClick={event => event.stopPropagation()}
     onPointerDown={event => { if (event.button !== 0) return; const next = pointerIndex(event); if (next === null) return; event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId); onSelect(next); }}
     onPointerEnter={event => { if (event.pointerType !== 'touch') onPreview(pointerIndex(event)); }}
@@ -54,5 +57,16 @@ export function PlaybackTimeline({ frames, catalog, range, now, index, previewIn
     <div className="gallery-timeline-playhead" aria-hidden="true"/>
     {previewPosition !== undefined && <div className="gallery-timeline-playhead gallery-timeline-preview" aria-hidden="true" style={{ left: `${previewPosition * 100}%` }}/> }
     {tipPosition !== undefined && frames[tipIndex] && <span className="capsule-tooltip gallery-timeline-tip" role="tooltip" style={{ left: `${tipPosition * 100}%` }}>{formatVersion(frames[tipIndex].version)}</span>}
+    </div>
+    {timeline.pushes.map(node => <button key={node.version} type="button"
+      className={`gallery-timeline-push${node.floating ? ' is-floating' : ''}`} aria-label={`${formatVersion(node.version)} · push node`}
+      aria-disabled={node.index === null} data-push-version={node.version}
+      style={{ left: `${node.start * 100}%`, width: `${(node.end - node.start) * 100}%` }}
+      onPointerDown={event => event.stopPropagation()}
+      onPointerEnter={() => { onPreview(null); setPushTip(node.version); }}
+      onPointerLeave={() => setPushTip(null)} onFocus={() => { onPreview(null); setPushTip(node.version); }} onBlur={() => setPushTip(null)}
+      onClick={event => { event.stopPropagation(); onPreview(null); if (node.index !== null) onSelect(node.index); }}>
+      {pushTip === node.version && <span className="capsule-tooltip gallery-timeline-tip" role="tooltip">{formatVersion(node.version)} · push node{node.index === null && <span className="sr-only"> — no push in this date range</span>}</span>}
+    </button>)}
   </div>;
 }

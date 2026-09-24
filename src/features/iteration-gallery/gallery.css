@@ -152,3 +152,28 @@
 .iteration-gallery > .panel-header { background: var(--gallery-surface); transition: background-color var(--theater-controls-fade) ease; }
 .gallery-phase-theater { --gallery-surface: var(--theater-focus-background); }
 @media (prefers-reduced-motion: reduce) { .iteration-gallery { transition: none; } }
+
+/* Push targets occupy the existing gutters; the final one extends past 100%. */
+.gallery-timeline-scrubber { position: absolute; inset: 0; }
+.gallery-timeline-push { position: absolute; top: 0; height: 100%; border: 0; border-radius: 0; padding: 0; background: var(--timeline-push-background); cursor: pointer; }
+.gallery-timeline-push:hover, .gallery-timeline-push:focus-visible { background: var(--timeline-push-hover); }
+.gallery-timeline-push:focus-visible { outline: 1px solid var(--ink); outline-offset: 1px; }
+.gallery-timeline-push[aria-disabled=true] { cursor: default; }
+.gallery-timeline-push .gallery-timeline-tip { left: 50%; white-space: nowrap; }
+
+.theater-prototype { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--paper); z-index: 2; }
+.theater-prototype-action { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.theater-prototype-action .gallery-play { font-size: inherit; }
+
+.gallery-timeline-push.is-floating .gallery-timeline-tip { left: auto; right: 0; transform: none; }
+.gallery-timeline-scrubber:focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; }
+
+.theater-fullscreen { border: 0; padding: 0; margin: auto; overflow: visible; background: transparent; color: white; max-width: none; max-height: none; width: min(calc(100vw - var(--fullscreen-gutter) * 2), calc((100dvh - var(--fullscreen-gutter) * 3) * var(--fullscreen-ratio))); }
+.theater-fullscreen::backdrop { background: var(--fullscreen-scrim); }
+.theater-fullscreen-content { position: relative; width: 100%; aspect-ratio: var(--fullscreen-ratio); background: var(--paper); }
+.theater-fullscreen-content > img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.theater-fullscreen-close { position: absolute; right: 0; bottom: calc(100% + var(--fullscreen-close-gap)); width: var(--fullscreen-close-size); height: var(--fullscreen-close-size); padding: 0; display: grid; place-items: center; border: 0; background: transparent; color: white; cursor: pointer; }
+.theater-fullscreen-close:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
+.theater-fullscreen-footer { position: absolute; top: calc(100% + var(--fullscreen-close-gap)); width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; }
+
+.theater-fullscreen-footer .gallery-play { color: var(--ink); }

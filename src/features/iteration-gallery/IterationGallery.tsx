@@ -17,7 +17,7 @@ export function IterationGallery() {
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const [range, setRange] = useState<RangeKey>('7');
-  const [interfaceId, setInterfaceId] = useState(t.interfaces[0].value);
+  const [interfaceId, setInterfaceId] = useState<string>(t.interfaces[0].value);
   const [now, setNow] = useState(Date.now);
   const [zoom, setZoom] = useState(1);
   const [view, setView] = useState<'album' | 'turning' | 'theater' | 'returning' | 'orbiting'>('album');

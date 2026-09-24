@@ -100,3 +100,10 @@ The cache also only helps within a running server; each `npm run spike` is a fre
 ## Source of record
 
 Research board (FigJam): [Capstone research](https://www.figma.com/board/im0O0k4DLrdOmlk5NJjMaq/Capstone-research?node-id=0-1)
+
+
+### Archived prototypes
+
+On a theater push frame, **Enter prototype** builds that push's source from `[ver capture] codebase/` and embeds it in the frame. Push targets occupy timeline separators, including an extra target beyond the latest block. Targets without a push in the chosen date range are unavailable.
+
+The local Vite server and `npm start` expose the prototype service on port 5173. A plain static-file host cannot build archives. Builds use installed host dependencies (no automatic installs), ignore archived Vite configs/scripts/hooks and cache output in ignored `.mitwerk-prototypes/`. Captures are frozen at the push timestamp. The iframe has isolated in-memory storage and no access to live project APIs; closing it discards interaction state. Archives before push 6 are absent in this workspace. Historical code requiring unavailable dependencies reports a build error rather than opening the current site.

@@ -1,3 +1,4 @@
+import { createPrototypeService, builtPrototypeData } from './prototype-service.mjs';
 // Serves the built front end.
 //
 //   npm run build && npm start
@@ -52,8 +53,9 @@ async function serveStatic(req, res) {
   }
 }
 
+const prototypes = createPrototypeService(join(here, '..'), builtPrototypeData(join(here, '..')));
 createServer(async (req, res) => {
-  await serveStatic(req, res);
+  await prototypes.middleware(req, res, () => { void serveStatic(req, res); });
 }).listen(PORT, () => {
   console.log('Mitwerk listening on http://localhost:' + PORT);
 });

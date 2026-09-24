@@ -263,10 +263,10 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Segmented theater timeline — 2026-09-24
 
-- Render one square-cornered outlined rectangle per version, including versions outside the selected date range, separated by visible gaps at `timeline.gapScale` (0.5× `blockGap`). Reuse `versionDepth` for equal block widths. Inset saved-frame marks with `timeline.inlinePadding` (6), slightly inside the shared album `padding`. Do not use a continuous outer border or rounded track.
+- Render one square-cornered outlined rectangle per version, including versions outside the selected date range, separated by push-node rectangles at `timeline.gapScale` (0.5× `blockGap`). Reuse `versionDepth` for equal block widths. Inset saved-frame marks with `timeline.inlinePadding` (6), slightly inside the shared album `padding`. Do not use a continuous outer border or rounded track.
 - Out-of-range version blocks stay visible at `timeline.disabledOpacity` (0.5) for marks and progress, with the border separately lighter at `timeline.disabledBorderOpacity` (0.28), and reject the playhead, preview, and scrub. Album chunks keep the lower shared `disabledOpacity`. Playback and keyboard stepping stay inside the selected range. Do not label the range under the timeline. A cleared hover must not match disabled marks, which use index `-1`.
 - Saved-frame ruler marks use `timeline.minorTickHeight` (16) and stay vertically centered inside each block.
-- Clip progress fill to each block so gutters stay empty. Keep centered saved-frame marks inside each rectangle. Selected and hover playheads use the same segment-derived coordinates as scrubbing and keyboard playback. A pointer in a gutter resolves to the nearest saved frame; it never creates a blank playback state.
+- Clip progress fill to each block so the push-node separators keep their own fill. Keep centered saved-frame marks inside each rectangle. Selected and hover playheads use the same segment-derived coordinates as scrubbing and keyboard playback. A separator targets the push closing the immediately preceding version; missing or out-of-range pushes are unavailable.
 - Timeline block borders stay the shared outline, including versions from other branches. The theater branch tag border uses that branch's version-stream color. The branch name and icon stay black, and the tag shows the branch name.
 - The footer version count and the selected range's prompt total stay on one row.
 
@@ -302,3 +302,13 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Apply the same frame → timeline → remaining UI sequence to the first theater entrance after opening or refreshing the site and to later entrances. Wait for the selected frame texture before starting the clock, so cold image loading cannot collapse or reorder the stages.
 - Keep the default landing view unchanged. The sequence applies when entering theater; reduced motion settles both stages immediately. The midpoint timeline capture freezes after the frame is fully frontal and before the other theater elements appear.
+
+
+## Push nodes and archived prototypes — 2026-09-24
+
+- Timeline separators retain the exact derived gap width and timeline height. They use shared darker-gray `timeline.pushBackground` and `pushHoverBackground` fills at rest and on hover/focus, with a `v# · push node` tooltip. Clicking selects the actual push frame closing the preceding version. Do not substitute a prompt when a push is missing or outside the selected range.
+- Add the same target after the final version, absolutely positioned outside the timeline's measured end; do not shrink or rescale existing blocks. Derive targets from capture kinds and version groups, not ordinal assumptions. Support keyboard activation.
+- Push-frame metadata offers a centered Enter prototype button below its message. Resolve the codebase by push number in `[ver capture] codebase/`, build on demand, and display an interactive iframe in the existing theater frame. Exit prototype restores the screenshot. Stop playback while entering; changing frames closes the prototype. Missing archives and build failures must be explicit.
+- Build immutable archived source with the host's available tooling, bypassing archived configs, package scripts and hooks. Snapshot the gallery catalog at that push's time. Run the result in a sandbox with ephemeral storage and read-only archived assets; never write to current project data or the source archive. Cache rebuildable output outside version archives.
+
+- Push frames offer Full screen immediately to the right of Go to commit. Expand the current screenshot or archived prototype in an aspect-preserving modal over a dark scrim. Keep Enter/Exit prototype available in the overlay. The close button sits outside the frame above its top-right corner; Escape and scrim clicks also close, restoring focus. Background controls and theater orbit gestures remain inactive while open. Use shared fullscreen spacing and scrim tokens.

@@ -1,16 +1,16 @@
 import type { GalleryFrame } from './model';
 import { galleryTokens as t } from './tokens.ts';
 
-export type TimelineInput = Pick<GalleryFrame, 'id' | 'version'> & { enabled?: boolean; branch?: string | null };
+export type TimelineInput = Pick<GalleryFrame, 'id' | 'version'> & { enabled?: boolean; branch?: string | null; kind?: GalleryFrame['kind'] };
 
 /** Each version occupies one equal slot; its captured commits subdivide that slot. */
 export function buildTimeline(frames: TimelineInput[]) {
-  const groups = new Map<number, { id: string; index: number; enabled: boolean; branch: string | null }[]>();
+  const groups = new Map<number, { id: string; index: number; enabled: boolean; branch: string | null; kind?: GalleryFrame['kind'] }[]>();
   let playable = 0;
   frames.forEach(frame => {
     if (!groups.has(frame.version)) groups.set(frame.version, []);
     const enabled = frame.enabled !== false;
-    groups.get(frame.version)!.push({ id: frame.id, index: enabled ? playable++ : -1, enabled, branch: frame.branch ?? null });
+    groups.get(frame.version)!.push({ id: frame.id, index: enabled ? playable++ : -1, enabled, branch: frame.branch ?? null, kind: frame.kind });
   });
   const gap = t.blockGap * t.timeline.gapScale;
   const span = Math.max(t.versionDepth, groups.size * t.versionDepth) - gap;
@@ -22,7 +22,12 @@ export function buildTimeline(frames: TimelineInput[]) {
     marks: items.map((item, i) => ({ ...item,
       position: (slot * t.versionDepth + t.timeline.inlinePadding + (i + .5) * contentDepth / items.length) / span })),
   }));
-  return { versions, marks: versions.flatMap(version => version.marks) };
+  const pushes = versions.map((version, i) => {
+    const push = version.marks.filter(mark => mark.kind === 'push').at(-1);
+    return { version: version.number, start: version.end, end: versions[i + 1]?.start ?? version.end + gap / span,
+      index: push && push.index >= 0 ? push.index : null, frameId: push?.id ?? null, floating: i === versions.length - 1 };
+  });
+  return { versions, marks: versions.flatMap(version => version.marks), pushes };
 }
 
 /** A version block uses the branch of its frames when they leave the checked-out branch. */
@@ -46,6 +51,8 @@ export function nearestTimelineFrame(marks: { index: number; position: number }[
 
 /** A pointer inside an out-of-range block cannot move the playhead. */
 export function timelinePointerIndex(timeline: ReturnType<typeof buildTimeline>, position: number) {
+  const push = timeline.pushes.find(node => position >= node.start && position < node.end);
+  if (push) return push.index;
   const block = timeline.versions.find(version => position >= version.start && position <= version.end);
   if (block && !block.enabled) return null;
   if (!timeline.marks.some(mark => mark.index >= 0)) return null;
