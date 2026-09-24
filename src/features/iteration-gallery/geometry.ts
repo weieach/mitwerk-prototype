@@ -1,5 +1,5 @@
 import type { GalleryFrame, GalleryVersion, RangeKey } from './model.ts';
-import { formatFrameDate, inRange } from './model.ts';
+import { formatFrameDate, formatVersion, inRange } from './model.ts';
 import { galleryTokens as t } from './tokens.ts';
 
 export function imageSize(frame: Pick<GalleryFrame, 'width' | 'height'>) {
@@ -113,7 +113,7 @@ export function featuredDatePose(depth: number) {
 export function featuredFrameAxis(album: Pick<ReturnType<typeof buildAlbum>, 'width' | 'blocks'>, plane: Pick<FramePlane, 'depth' | 'frame'>) {
   return {
     date: { ...featuredDatePose(plane.depth), text: formatFrameDate(plane.frame.timestamp) },
-    version: { ...featuredVersionPose(album, plane.depth), text: `V${plane.frame.version}` },
+    version: { ...featuredVersionPose(album, plane.depth), text: formatVersion(plane.frame.version) },
   };
 }
 
@@ -133,8 +133,8 @@ export function resetLook(album: ReturnType<typeof buildAlbum>) {
   const bounds = albumBlockBounds(album);
   const points = [
     ...boxCorners(bounds),
-    { x: bounds.max.x + t.rulerTickLength + t.versionTitleGap, y: bounds.min.y, z: bounds.center.z },
-    { x: bounds.min.x, y: bounds.max.y + t.rulerTickLength + t.rulerTitleGap, z: bounds.center.z },
+    { x: bounds.max.x + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, y: bounds.min.y, z: bounds.center.z },
+    { x: bounds.min.x, y: bounds.max.y + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, z: bounds.center.z },
   ];
   const span = coverRadius(bounds.center, points) * 2 * t.overviewPadding / t.overviewFitScale;
   return { center: bounds.center, span };

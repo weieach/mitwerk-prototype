@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { containedFrameTarget, transitionProgress } from '../src/features/iteration-gallery/theater-transition.ts';
+import { containedFrameTarget, transitionProgress, timelineEntrance, timelineCaptureProgress, theaterEntranceDuration, theaterRotationProgress, rotationCaptureProgress } from '../src/features/iteration-gallery/theater-transition.ts';
 
 test('theater handoff only completes at the end of the transformation', () => {
   assert.equal(transitionProgress(0, 1100).eased, 0);
@@ -48,4 +48,32 @@ test('the open gap between metadata and playback is not a reserved control row',
   assert.equal(reservedControlContains(row, playback, 200, 340), true);
   assert.equal(reservedControlContains(row, metadata, 200, 300), false);
   assert.equal(reservedControlContains(row, playback, 200, 300), false);
+});
+
+
+test('frame finishes before the timeline enters and UI handoff follows both stages', () => {
+  const frameEnd = 1100 / theaterEntranceDuration();
+  for (const progress of [0, frameEnd / 2, frameEnd]) {
+    assert.deepEqual(timelineEntrance(progress), { opacity: 0, offsetVh: -5 });
+  }
+  const middle = timelineCaptureProgress();
+  assert.equal(theaterRotationProgress(middle).progress, 1);
+  assert.equal(theaterRotationProgress(middle).eased, 1);
+  assert.deepEqual(timelineEntrance(middle), { opacity: .5, offsetVh: -2.5 });
+  assert.equal(transitionProgress(1100, theaterEntranceDuration()).complete, false);
+  assert.equal(transitionProgress(theaterEntranceDuration(), theaterEntranceDuration()).complete, true);
+  assert.equal(timelineEntrance(1).opacity, 1);
+  assert.equal(Math.abs(timelineEntrance(1).offsetVh), 0);
+});
+
+test('capture freezes the actual staged clock and preserves the original rotation midpoint', () => {
+  const frozen = transitionProgress(9000, theaterEntranceDuration(), timelineCaptureProgress());
+  assert.equal(frozen.complete, false);
+  assert.equal(timelineEntrance(frozen.progress).opacity, .5);
+  assert.equal(theaterRotationProgress(frozen.progress).eased, 1);
+  assert.equal(theaterRotationProgress(rotationCaptureProgress()).eased, .5);
+  assert.equal(timelineEntrance(rotationCaptureProgress()).opacity, 0);
+  const instant = transitionProgress(0, 0);
+  assert.equal(timelineEntrance(instant.progress).opacity, 1);
+  assert.equal(theaterRotationProgress(instant.progress).eased, 1);
 });

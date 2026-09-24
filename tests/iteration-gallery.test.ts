@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildVersions, captionLineBold, formatFrameDate, formatFrameLabel, hoverCaptionLines, wrapTextToWidth, dateTicks, edgePanArmed, edgePanStrength, representativeFrames, inRange, parseCaptureName, playbackStep, rangeCounts, rangeStart, ratioLabel } from '../src/features/iteration-gallery/model.ts';
+import { buildVersions, formatFrameDate, formatFrameLabel, galleryBranchPaint, hoverCaptionLines, wrapTextToWidth, dateTicks, edgePanArmed, edgePanStrength, promptShare, representativeFrames, inRange, parseCaptureName, playbackStep, rangeCounts, rangeStart, ratioLabel } from '../src/features/iteration-gallery/model.ts';
 import type { Capture } from '../src/features/iteration-gallery/model.ts';
 import { albumBlockBounds, albumEnvelope, albumFloorY, boxCorners, buildAlbum, containingBlock, coverRadius, dateLabelPose, featuredFrameAxis, frameFocus, hoverCaptionHeight, imageSize, resetCameraDestination, resetLook, versionLabelPose } from '../src/features/iteration-gallery/geometry.ts';
 import { galleryTokens as t } from '../src/features/iteration-gallery/tokens.ts';
@@ -49,6 +49,10 @@ test('range counts collapse to one number when the filter includes everything', 
   const all = rangeCounts(versions, 'all', now);
   assert.equal(ratioLabel(all.frames, all.frameTotal, 'saved frame', 'saved frames'), '4 saved frames');
   assert.equal(ratioLabel(all.versions, all.versionTotal, 'version', 'versions'), '2 versions');
+  assert.equal(promptShare(today.frames, today.frameTotal), 0.25);
+  assert.equal(promptShare(0, 0), 0);
+  assert.equal(galleryBranchPaint('main', ['iteration-gallery-prelim-render']), '#000000');
+  assert.notEqual(galleryBranchPaint('iteration-gallery-prelim-render', ['iteration-gallery-prelim-render']), '#000000');
 });
 
 test('date ranges include local calendar boundaries and exclude future frames', () => {
@@ -159,8 +163,8 @@ test('reset look stays on the block volume even when guides extend farther out',
   assert.ok(t.webgl.hoverEdgeWidth > t.webgl.edgeWidth);
   const fitPoints = [
     ...boxCorners(bounds),
-    { x: bounds.max.x + t.rulerTickLength + t.versionTitleGap, y: bounds.min.y, z: bounds.center.z },
-    { x: bounds.min.x, y: bounds.max.y + t.rulerTickLength + t.rulerTitleGap, z: bounds.center.z },
+    { x: bounds.max.x + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, y: bounds.min.y, z: bounds.center.z },
+    { x: bounds.min.x, y: bounds.max.y + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, z: bounds.center.z },
   ];
   assert.equal(look.span, coverRadius(bounds.center, fitPoints) * 2 * t.overviewPadding / t.overviewFitScale);
   const far = { x: bounds.center.x + 800, y: bounds.center.y + 800, z: bounds.center.z };
@@ -188,7 +192,7 @@ test('reset look stays on the block volume even when guides extend farther out',
   assert.equal(featured.version.face, 'ground');
   assert.equal(featured.version.z, -plane.depth);
   assert.ok(featured.version.x < versionPose.x);
-  assert.equal(featured.version.text, `V${plane.frame.version}`);
+  assert.equal(featured.version.text, `v${plane.frame.version}`);
 });
 
 test('edge travel ramps toward the border and waits for the dwell delay', () => {
@@ -205,16 +209,14 @@ test('edge travel ramps toward the border and waits for the dwell delay', () => 
 
 test('saved-frame labels use bracketed versions and dashed local times', () => {
   assert.equal(formatFrameDate(new Date(2026, 8, 17, 16, 41).getTime()), 'Sep 17, 4:41');
-  assert.equal(formatFrameLabel({ version: 10, timestamp: new Date(2026, 8, 17, 16, 41).getTime() }), '[V10] - Sep 17, 4:41');
-  assert.equal(formatFrameLabel({ version: 11, timestamp: new Date(2026, 8, 22, 10, 7).getTime() }), '[V11] - Sep 22, 10:07');
-  assert.equal(formatFrameLabel({ version: 2, timestamp: new Date(2026, 8, 17, 0, 5).getTime() }), '[V2] - Sep 17, 12:05');
+  assert.equal(formatFrameLabel({ version: 10, timestamp: new Date(2026, 8, 17, 16, 41).getTime() }), '[v10] - Sep 17, 4:41');
+  assert.equal(formatFrameLabel({ version: 11, timestamp: new Date(2026, 8, 22, 10, 7).getTime() }), '[v11] - Sep 22, 10:07');
+  assert.equal(formatFrameLabel({ version: 2, timestamp: new Date(2026, 8, 17, 0, 5).getTime() }), '[v2] - Sep 17, 12:05');
 });
 
-test('hover captions quote the summary and put a version tag above every frame', () => {
-  assert.deepEqual(hoverCaptionLines({ kind: 'prompt', version: 8, summary: '  short prompt  ' }), ['[V8]', '"short prompt"']);
-  assert.deepEqual(hoverCaptionLines({ kind: 'push', version: 11, summary: 'Commit message' }), ['[V11]', '"Commit message"']);
-  assert.equal(captionLineBold('[V8]'), true);
-  assert.equal(captionLineBold('"short prompt"'), false);
+test('hover captions contain only the quoted summary', () => {
+  assert.deepEqual(hoverCaptionLines({ summary: '  short prompt  ' }), [ '"short prompt"']);
+  assert.deepEqual(hoverCaptionLines({ summary: 'Commit message' }), [ '"Commit message"']);
 });
 
 test('caption wrapping stays within the measured width', () => {

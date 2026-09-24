@@ -41,7 +41,7 @@ export const geometry = {
 } as const;
 
 export type PositionedNode = VersionNode & { x: number; y: number; row: number; column: number };
-export type GraphEdge = { id: string; sourceId: string; targetId: string; path: string; branchId: string; collapsedSourcePath?: string };
+export type GraphEdge = { id: string; sourceId: string; targetId: string; path: string; branchId: string; collapsedSourcePath?: string; dashed?: boolean };
 export type VersionLevel = { id: string; row: number; label: string; nodeIds: string[]; x: number; y: number };
 export type Fork = VersionLevel & { parentId: string | null; horizontal: boolean; branchId: string };
 export type OriginStation = { id: string; x: number; y: number; forkId: string };

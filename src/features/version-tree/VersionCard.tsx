@@ -20,6 +20,7 @@ type Props = {
   canDeleteFuture: boolean;
   color: string;
   reverted: boolean;
+  merged?: boolean;
   onSelect: () => void;
   onBranch: () => void;
   onCommit: () => void;
@@ -33,7 +34,7 @@ type Props = {
 };
 
 export function VersionCard({
-  node, selected, hasDescendants, isEndpoint, onActivePath, isCurrentBranch, canDeleteCurrent, canDeleteFuture, color, reverted,
+  node, selected, hasDescendants, isEndpoint, onActivePath, isCurrentBranch, canDeleteCurrent, canDeleteFuture, color, reverted, merged = false,
   onSelect, onBranch, onCommit, onRevert, onRestore, onSwitchBranch, onDeleteCurrent, onDeleteFuture, forceMenuOpen = false, readOnly = false,
 }: Props) {
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -73,7 +74,7 @@ export function VersionCard({
   }, [menuOpen, forceMenuOpen]);
 
   return <article className={`version-card ${selected ? 'is-selected' : ''} ${onActivePath ? 'is-active-branch' : ''} ${compact ? 'is-compact' : ''} ${reverted ? 'is-reverted' : ''}`} style={{ '--route-color': color } as CSSProperties} data-node-id={node.id} data-active-branch={onActivePath} data-compact={compact || undefined} data-reverted={reverted || undefined} onClick={compact ? onSelect : undefined}>
-    <button className={`station ${hasDescendants ? 'has-descendants' : 'is-terminal'}`} aria-label={`Select ${node.label}`} aria-pressed={selected} onClick={onSelect}>
+    <button className={`station ${hasDescendants ? 'has-descendants' : 'is-terminal'} ${merged ? 'is-merged' : ''}`} aria-label={`Select ${node.label}`} aria-pressed={selected} onClick={onSelect}>
       <span />
     </button>
     {!compact && <div ref={menu} className="card-menu">

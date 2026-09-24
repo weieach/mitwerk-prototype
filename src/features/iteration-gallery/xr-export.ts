@@ -1,5 +1,5 @@
 import { albumEnvelope, albumFloorY, buildAlbum, dateLabelPose, imageSize, versionLabelPose } from './geometry.ts';
-import { buildVersions, dateTicks, formatDate, representativeFrames } from './model.ts';
+import { buildVersions, dateTicks, formatDate, formatVersion, representativeFrames } from './model.ts';
 import type { Capture, RangeKey } from './model.ts';
 import { galleryTokens as t } from './tokens.ts';
 
@@ -30,8 +30,8 @@ export function createXRManifest(captures: Capture[], range: RangeKey = 'all', n
   const labels: { id: string; text: string; position: number[]; rotation: number[]; height: number }[] = [];
   const guides: { id: string; axis: string; points: number[][] }[] = [];
   const label = (id: string, text: string, x: number, y: number, z: number, face: 'ground' | 'wall') => labels.push({ id, text, position: point(x, y, z), rotation: face === 'ground' ? [-Math.PI / 2, 0, 0] : [0, Math.PI / 2, 0], height: xrTokens.labelHeightMeters });
-  label('date-title', 'Date', 0, t.rulerTickLength + t.rulerTitleGap, -album.depth / 2, 'wall');
-  label('version-title', 'Version', album.width + t.rulerTickLength + t.versionTitleGap, floor, -album.depth / 2, 'ground');
+  label('date-title', 'Date', 0, t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, -album.depth / 2, 'wall');
+  label('version-title', 'Version', album.width + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, floor, -album.depth / 2, 'ground');
   for (const tick of dateTicks(versions.flatMap(version => version.frames))) {
     const plane = album.planes.find(plane => plane.frame.id === tick.id)!;
     const pose = dateLabelPose(plane.depth);
@@ -43,7 +43,7 @@ export function createXRManifest(captures: Capture[], range: RangeKey = 'all', n
     const pose = versionLabelPose(album, version.index);
     const id = `version-${version.number}`;
     guides.push({ id, axis: 'version', points: [point(album.width, floor, pose.z), point(album.width + t.rulerTickLength, floor, pose.z)] });
-    label(id, `V${version.number}`, pose.x, pose.y, pose.z, 'ground');
+    label(id, formatVersion(version.number), pose.x, pose.y, pose.z, 'ground');
   }
   return {
     schemaVersion: 1, generatedAt: new Date(now).toISOString(), range,

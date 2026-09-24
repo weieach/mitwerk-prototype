@@ -13,6 +13,7 @@ export const AxisLabels = forwardRef<AxisLabelsHandle>(function AxisLabels(_, re
       label.featured && 'album-axis-label-featured',
       label.featured && label.face === 'ground' && 'album-axis-label-featured-version',
     ].filter(Boolean).join(' ')} hidden={label.hidden}
-      style={{ transform: label.transform, fontSize: label.fontSize }}><span>{label.text}</span></span>)}
+      style={{ transform: label.transform, fontSize: label.fontSize, opacity: label.opacity }}><span
+        style={{ transform: `translate(${-100 * label.align}%, ${-50 - 50 * label.rise}%)` }}>{label.text}</span></span>)}
   </div>;
 });

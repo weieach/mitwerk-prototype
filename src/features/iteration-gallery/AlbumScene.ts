@@ -1,21 +1,22 @@
 import * as THREE from 'three';
-import { dragAngles, transitionProgress } from './theater-transition';
+import { dragAngles, transitionProgress, theaterEntranceDuration, theaterRotationProgress } from './theater-transition';
 import type { TheaterOrbit, TheaterTarget } from './theater-transition';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { GalleryVersion } from './model';
-import { captionLineBold, dateTicks, edgePanArmed, edgePanStrength, formatDate, hoverCaptionLines, wrapTextToWidth } from './model';
+import { dateTicks, edgePanArmed, edgePanStrength, formatDate, formatVersion, hoverCaptionLines, wrapTextToWidth } from './model';
 import type { buildAlbum, FramePlane, LabelFace } from './geometry';
-import { albumFloorY, containingBlock, dateLabelPose, featuredFrameAxis, featuredTickLength, frameFocus, hoverCaptionHeight, resetCameraDestination, versionLabelPose } from './geometry';
+import { albumBlockBounds, albumFloorY, containingBlock, dateLabelPose, featuredFrameAxis, featuredTickLength, frameFocus, hoverCaptionHeight, resetCameraDestination, versionLabelPose } from './geometry';
 import { galleryTokens as t } from './tokens';
-import { mergeAxisAnchors, projectAxisLabels } from './axis-label-layout';
+import { axisTopBlend, mergeAxisAnchors, overheadDatePosition, projectAxisLabels, withOverheadDates } from './axis-label-layout';
+import { hoverCaptionPose } from './caption-layout';
 import type { AxisAnchor, AxisLabel } from './axis-label-layout';
 
 type Album = ReturnType<typeof buildAlbum>;
 type FrameObject = { plane: FramePlane; group: THREE.Group; image: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>; outline: THREE.LineBasicMaterial };
-type Callbacks = { hover: (id: string | null) => void; open: (id: string) => void; zoom: (value: number) => void; error: (message: string) => void; labels: (labels: AxisLabel[]) => void };
+type Callbacks = { motion: (progress: number) => void; hover: (id: string | null) => void; open: (id: string) => void; zoom: (value: number) => void; error: (message: string) => void; labels: (labels: AxisLabel[]) => void };
 
 /** Owns GPU resources and controls; React owns the data, filters and theater selection. */
 export class AlbumScene {
@@ -54,6 +55,7 @@ export class AlbumScene {
   private initialized = false;
   private restoreAlbum: (() => void) | null = null;
   private theaterTurn: ((time: number) => void) | null = null;
+  private overheadBlend = 0;
   private caption: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | null = null;
   private failedTextures = new Set<string>();
   private reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -67,7 +69,7 @@ export class AlbumScene {
     this.renderer.setClearColor(this.colors.paper);
     const canvas = this.renderer.domElement;
     canvas.tabIndex = 0;
-    canvas.setAttribute('aria-label', '3D iteration gallery. Drag to rotate. Scroll to zoom. Right drag to pan. Arrow keys rotate; Home resets the view.');
+    canvas.setAttribute('aria-label', '3D iteration gallery. Drag to rotate. Scroll to zoom. Right drag to pan. Arrow keys rotate; Home resets the view; T frames the top view.');
     host.append(canvas);
     this.scene.add(this.content);
     this.controls = new OrbitControls(this.camera, canvas);
@@ -128,8 +130,9 @@ export class AlbumScene {
       frame.group.position.y += (target - frame.group.position.y) * blend;
       if (Math.abs(target - frame.group.position.y) < .05) frame.group.position.y = target; else moving = true;
     }
+    if (this.syncTopView(dt)) moving = true;
     this.renderer.render(this.scene, this.camera);
-    this.callbacks.labels(projectAxisLabels(mergeAxisAnchors(this.axisAnchors, this.featuredAnchors), this.camera, this.host.clientWidth, this.host.clientHeight));
+    this.callbacks.labels(projectAxisLabels(withOverheadDates(mergeAxisAnchors(this.axisAnchors, this.featuredAnchors), this.album ? albumFloorY(this.album) : 0, this.album ? -albumBlockBounds(this.album).min.z : undefined), this.camera, this.host.clientWidth, this.host.clientHeight, this.overheadBlend));
     const hovered = this.hovered ? this.frames.get(this.hovered) : undefined;
     this.host.dataset.inspectionReady = String(!!hovered && this.textures.has(hovered.plane.frame.id) && hovered.group.position.y === t.hoverLift && (!edgePanArmed(this.edgeHoldMs) || this.lookSettled(hovered.plane)));
     if (moving) this.invalidate();
@@ -180,11 +183,17 @@ export class AlbumScene {
     let start: number | null = null;
     this.theaterTurn = time => {
       const ready = this.textures.has(id) || this.failedTextures.has(id);
-      // Keep the DOM theater image visible until its GPU counterpart is ready.
-      if (reverse && !ready) { this.invalidate(); return; }
+      // Cold loads must decode the frame before starting either entrance stage.
+      // Reverse likewise keeps the DOM image until its GPU counterpart is ready.
+      if (!ready) { this.invalidate(); return; }
       if (start === null) { start = time; started?.(); }
-      const { progress, eased: forwardEase, complete: finished } = transitionProgress(time - start, this.reducedMotion ? 0 : t.theaterMotion.rotateMs, freezeAt);
+      const duration = reverse ? t.theaterMotion.rotateMs : theaterEntranceDuration();
+      const clock = transitionProgress(time - start, this.reducedMotion ? 0 : duration, freezeAt);
+      const { progress, complete: finished } = clock;
+      const rotation = reverse ? clock : theaterRotationProgress(progress);
+      const forwardEase = rotation.eased;
       const eased = reverse ? 1 - forwardEase : forwardEase;
+      this.callbacks.motion(reverse ? 1 - progress : progress);
       this.camera.position.lerpVectors(fromPosition, destination, eased);
       this.camera.quaternion.slerpQuaternions(fromRotation, new THREE.Quaternion(), eased);
       this.camera.zoom = 1;
@@ -193,7 +202,7 @@ export class AlbumScene {
       selected.group.position.y = originalLift * (1 - eased);
       selected.image.scale.x = THREE.MathUtils.lerp(1, imageScale, eased);
       selected.image.material.opacity = THREE.MathUtils.lerp(originalOpacity, 1, eased);
-      const axisOpacity = 1 - transitionProgress((reverse ? 1 - progress : progress) * t.theaterMotion.rotateMs, t.theaterMotion.verticalAxisFadeMs).eased;
+      const axisOpacity = 1 - transitionProgress((reverse ? 1 - progress : rotation.progress) * t.theaterMotion.rotateMs, t.theaterMotion.verticalAxisFadeMs).eased;
       for (const [material, opacity] of otherMaterials) {
         material.opacity = opacity * (material.userData.axisFace === 'wall' ? axisOpacity : 1 - eased);
       }
@@ -283,9 +292,10 @@ export class AlbumScene {
   };
   private contextLost = (event: Event) => { event.preventDefault(); this.callbacks.error('The 3D view lost its graphics connection. Reload the page to restore it. You can still open frames below.'); };
   private keyDown = (event: KeyboardEvent) => {
-    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home'].includes(event.key)) return;
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 't', 'T'].includes(event.key)) return;
     event.preventDefault();
-    if (event.key === 'Home') this.reset();
+    if (event.key.toLowerCase() === 't') this.top();
+    else if (event.key === 'Home') this.reset();
     else {
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') this.controls.rotateLeft((event.key === 'ArrowLeft' ? 1 : -1) * t.webgl.keyRotateRadians);
       else this.controls.rotateUp((event.key === 'ArrowUp' ? 1 : -1) * t.webgl.keyRotateRadians);
@@ -460,6 +470,22 @@ export class AlbumScene {
     this.frameView(this.lookAt(frameFocus(first)),
       Math.max(this.album.blocks[0].width, this.album.blocks[0].height) * t.webgl.frontViewPadding, 'center');
   }
+  /** North-up overhead framing includes both numeric rails and the end titles. */
+  private top() {
+    if (!this.album?.blocks.length) return;
+    const inspected = this.hovered;
+    const bounds = albumBlockBounds(this.album);
+    const rail = t.rulerTickLength + t.rulerLabelGap;
+    const end = bounds.min.z - t.topView.titleEndGap;
+    const aspect = this.host.clientWidth / Math.max(1, this.host.clientHeight);
+    const vertical = Math.max(bounds.max.z - end, (this.album.width + 2 * rail) / aspect) * t.overviewPadding;
+    const center = new THREE.Vector3(bounds.center.x, bounds.center.y, (end + bounds.max.z) / 2);
+    this.frameView(center, vertical * Math.min(1, aspect), 'reset');
+    this.camera.position.copy(center).add(new THREE.Vector3(0, vertical * 2, .001));
+    this.controls.update();
+    this.inspect(inspected);
+    this.invalidate();
+  }
   reset() {
     if (!this.album) return;
     this.inspect(null);
@@ -537,8 +563,8 @@ export class AlbumScene {
     this.fades.set(material, { opacity: start, target: opacity });
     material.userData.fadeKey = key;
   }
-  private axisLabel(text: string, x: number, y: number, z: number, face: LabelFace) {
-    this.axisAnchors.push({ id: `${face}:${text}:${z}`, text, position: new THREE.Vector3(x, y, z), face });
+  private axisLabel(text: string, x: number, y: number, z: number, face: LabelFace, valueOrigin?: THREE.Vector3) {
+    this.axisAnchors.push({ id: `${face}:${text}:${z}`, text, position: new THREE.Vector3(x, y, z), face, valueOrigin });
   }
 
   private makePlate(text: string, ink: string, worldLineH: number, maxWorldW?: number) {
@@ -558,12 +584,12 @@ export class AlbumScene {
     const family = getComputedStyle(this.host).fontFamily || 'sans-serif';
     const line = t.labelFontSize * 1.25;
     const pad = t.captionShadow.pad;
-    const fontFor = (item: string) => `${captionLineBold(item) ? '700 ' : ''}${t.labelFontSize}px ${family}`;
-    const measure = (item: string) => { ctx.font = fontFor(item); return ctx.measureText(item).width; };
+    const font = `${t.labelFontSize}px ${family}`;
+    const measure = (item: string) => { ctx.font = font; return ctx.measureText(item).width; };
     const maxCss = maxWorldW ? Math.max(line, maxWorldW * line / worldLineH - pad * 2) : Infinity;
     const lines = text.split('\n').flatMap(item => {
-      ctx.font = fontFor(item);
-      return maxWorldW ? wrapTextToWidth(item, maxCss, value => { ctx.font = fontFor(item); return ctx.measureText(value).width; }) : [item];
+      ctx.font = font;
+      return maxWorldW ? wrapTextToWidth(item, maxCss, value => { ctx.font = font; return ctx.measureText(value).width; }) : [item];
     });
     const cssW = Math.min(maxCss === Infinity ? Number.POSITIVE_INFINITY : maxCss + pad * 2,
       Math.max(0, ...lines.map(measure)) + pad * 2);
@@ -583,7 +609,7 @@ export class AlbumScene {
     ctx.shadowColor = t.captionShadow.color;
     ctx.shadowBlur = t.captionShadow.blur * scale;
     const draw = (fill: boolean) => lines.forEach((item, index) => {
-      ctx.font = fontFor(item);
+      ctx.font = font;
       if (fill) ctx.fillText(item, pad, pad + line * (index + .5));
       else ctx.strokeText(item, pad, pad + line * (index + .5));
     });
@@ -617,11 +643,44 @@ export class AlbumScene {
     this.caption.position.set(plane.x + size.width / 2, -plane.y + t.hoverCaptionGap + size.height / 2, -plane.depth);
     frame.group.add(this.caption);
     this.caption.visible = true;
+    this.caption.material.depthTest = false;
+    this.caption.renderOrder = 10;
+    this.syncCaptionPose();
+  }
+  private syncCaptionPose() {
+    const frame = this.hovered ? this.frames.get(this.hovered) : undefined;
+    if (!frame || !this.caption) return;
+    const pose = hoverCaptionPose(frame.plane, this.caption.userData.plate, this.camera, axisTopBlend(this.camera));
+    this.caption.position.copy(pose.position);
+    this.caption.quaternion.copy(pose.rotation);
+  }
+  private syncTopView(dt: number) {
+    const target = axisTopBlend(this.camera);
+    this.overheadBlend += (target - this.overheadBlend) * (this.reducedMotion ? 1 : 1 - Math.exp(-dt / (t.topView.dateFadeMs / 3)));
+    const moving = Math.abs(target - this.overheadBlend) > .002;
+    if (!moving) this.overheadBlend = target;
+    this.syncCaptionPose();
+    this.content.traverse(object => {
+      if (object instanceof THREE.Line && object.material instanceof THREE.LineBasicMaterial) {
+        const face = object.material.userData.axisFace;
+        if (face === 'wall' || face === 'overhead-date') {
+          object.material.transparent = true;
+          object.material.opacity = face === 'wall' ? 1 - this.overheadBlend : this.overheadBlend;
+        }
+      }
+    });
+    return moving;
   }
   private line(points: THREE.Vector3[], face: LabelFace, parent = this.content) {
     const material = new THREE.LineBasicMaterial({ color: this.colors.line });
     material.userData.axisFace = face;
     parent.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material));
+    if (face === 'wall' && this.album) {
+      const topMaterial = new THREE.LineBasicMaterial({ color: this.colors.line, transparent: true, opacity: this.overheadBlend });
+      topMaterial.userData.axisFace = 'overhead-date';
+      const floor = albumFloorY(this.album);
+      parent.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points.map(point => overheadDatePosition(point, floor))), topMaterial));
+    }
   }
 
   update(album: Album, versions: GalleryVersion[], representatives: string[]) {
@@ -683,8 +742,8 @@ export class AlbumScene {
     if (!this.album) return;
     const album = this.album;
     const floor = albumFloorY(album);
-    this.axisLabel('Date', 0, t.rulerTickLength + t.rulerTitleGap, -album.depth / 2, 'wall');
-    this.axisLabel('Version', album.width + t.rulerTickLength + t.versionTitleGap, floor, -album.depth / 2, 'ground');
+    this.axisLabel('Date', 0, t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, -album.depth / 2, 'wall', new THREE.Vector3(0, t.rulerTickLength + t.rulerLabelGap, -album.depth / 2));
+    this.axisLabel('Version', album.width + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, floor, -album.depth / 2, 'ground', new THREE.Vector3(album.width + t.rulerTickLength + t.rulerLabelGap, floor, -album.depth / 2));
     for (const tick of dateTicks(versions.flatMap(version => version.frames))) {
       const depth = this.frames.get(tick.id)?.plane.depth ?? 0;
       this.line([new THREE.Vector3(0, 0, -depth), new THREE.Vector3(0, t.rulerTickLength, -depth)], 'wall');
@@ -694,7 +753,7 @@ export class AlbumScene {
     for (const version of versions) {
       const pose = versionLabelPose(album, version.index);
       this.line([new THREE.Vector3(album.width, floor, pose.z), new THREE.Vector3(album.width + t.rulerTickLength, floor, pose.z)], 'ground');
-      this.axisLabel(`V${version.number}`, pose.x, pose.y, pose.z, pose.face);
+      this.axisLabel(formatVersion(version.number), pose.x, pose.y, pose.z, pose.face);
     }
   }
 

@@ -185,7 +185,16 @@ export function screenshotQueryFlags(search: string) {
     : new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   const capture = params.get('screenshot') === '1';
   const flags = new Set((params.get('interact') ?? '').split(',').map(flag => flag.trim()).filter(Boolean));
-  return { capture, countHover: capture && flags.has('count'), menuOpen: capture && flags.has('menu') };
+  const zoom = Number(params.get('treeZoom'));
+  const lift = Number(params.get('treeLift'));
+  return {
+    capture,
+    countHover: capture && flags.has('count'),
+    menuOpen: capture && flags.has('menu'),
+    treeZoom: capture && Number.isFinite(zoom) && zoom > 0 ? zoom : null,
+    treeFrame: capture && params.get('treeFrame') === 'bottom' ? 'bottom' as const : null,
+    treeLift: capture && Number.isFinite(lift) && lift > 0 ? lift : 0,
+  };
 }
 
 /** Last commit on a branch: its first station followed along direct commit children. */

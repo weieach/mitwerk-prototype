@@ -44,6 +44,27 @@ export function getBranchIds(nodes: VersionNode[]) {
   return [...new Set(nodes.map(node => node.branchId))];
 }
 
+/** A branch is merged when later work on another branch joins it, or a merge event names it as the source. Leaving a branch does not merge the parent. */
+export function mergedBranchIds(nodes: VersionNode[]) {
+  const byId = new Map(nodes.map(node => [node.id, node]));
+  const firstOfBranch = new Map<string, string>();
+  for (const node of nodes) if (!firstOfBranch.has(node.branchId)) firstOfBranch.set(node.branchId, node.id);
+  const merged = new Set<string>();
+  for (const node of nodes) {
+    const parents = node.git?.parents ?? (node.parentId ? [node.parentId] : []);
+    const branchStart = firstOfBranch.get(node.branchId) === node.id && parents.length <= 1;
+    for (const id of parents) {
+      const parent = byId.get(id);
+      if (parent && parent.branchId !== node.branchId && !branchStart) merged.add(parent.branchId);
+    }
+    for (const merge of node.git?.merges ?? []) {
+      const source = merge.split(' → ')[0];
+      if (source) merged.add(source);
+    }
+  }
+  return merged;
+}
+
 /** The longest branch is `main`; every other branch is numbered in creation order. */
 export function branchName(branchId: string, nodes: VersionNode[]) {
   if (nodes.some(node => node.git)) return branchId;
@@ -63,6 +84,7 @@ export type DisplayRoute = {
   active: boolean;
   spine: boolean;
   kind: 'horizontal-branch' | 'branch' | 'commit';
+  dashed?: boolean;
 };
 
 /**
@@ -124,14 +146,24 @@ export function presentTree(
       path: `M ${Math.min(...xs)} ${y} L ${Math.max(...xs)} ${y}` });
   }
   // Level connector, then later versions, then Vx.1, then the checked-out branch on top.
+  // Re-merge graphs paint solid routes above dashed ones. The selected branch stays above both.
   const layer = (route: DisplayRoute) => route.spine ? 4 : route.kind === 'horizontal-branch' ? 0 : route.kind === 'commit' ? 1 : 2;
+  const priorityBranch = selection.selectedBranchId || activeBranchId;
+  const hasDashed = routes.some(route => route.dashed);
   const versionOrder = (route: DisplayRoute) => {
     const node = route.targetId ? byId.get(route.targetId) : undefined;
     if (!node) return 0;
     const [level, alt] = versionLabelParts(node.label);
     return (isEmptyVersion(node) ? -10000 : 0) - level * 100 - alt;
   };
-  routes.sort((a, b) => layer(a) - layer(b) || versionOrder(a) - versionOrder(b));
+  routes.sort((a, b) => {
+    if (hasDashed) {
+      const priority = (route: DisplayRoute) => route.branchId === priorityBranch;
+      if (priority(a) !== priority(b)) return priority(a) ? 1 : -1;
+      if (Boolean(a.dashed) !== Boolean(b.dashed)) return a.dashed ? -1 : 1;
+    }
+    return layer(a) - layer(b) || versionOrder(a) - versionOrder(b);
+  });
   const hiddenNodeIds = new Set(hiddenById.keys());
   const endpoints = getBranchEndpoints(layout.nodes)
     .flatMap(node => hiddenNodeIds.has(node.id) ? [] : [byId.get(node.id)!])

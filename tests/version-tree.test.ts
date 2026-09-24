@@ -330,9 +330,9 @@ test('progress screenshots only force hover or menus when that component changed
   assert.deepEqual(screenshotInteractFromPrompt('make the text slightly smaller and use medium weight'), { count: false, menu: false });
   assert.equal(screenshotInteractQuery('replace triangle next to circled number with downward caret'), 'count');
   assert.equal(screenshotInteractQuery('open the floating panel on the action menu'), 'menu');
-  assert.deepEqual(screenshotQueryFlags('?screenshot=1'), { capture: true, countHover: false, menuOpen: false });
-  assert.deepEqual(screenshotQueryFlags('?screenshot=1&interact=count'), { capture: true, countHover: true, menuOpen: false });
-  assert.deepEqual(screenshotQueryFlags('?screenshot=1&interact=menu'), { capture: true, countHover: false, menuOpen: true });
+  assert.deepEqual(screenshotQueryFlags('?screenshot=1'), { capture: true, countHover: false, menuOpen: false, treeZoom: null, treeFrame: null });
+  assert.deepEqual(screenshotQueryFlags('?screenshot=1&interact=count'), { capture: true, countHover: true, menuOpen: false, treeZoom: null, treeFrame: null });
+  assert.deepEqual(screenshotQueryFlags('?screenshot=1&interact=menu'), { capture: true, countHover: false, menuOpen: true, treeZoom: null, treeFrame: null });
 });
 
 test('invalid ancestry gives a clear error instead of an infinite layout traversal', () => {

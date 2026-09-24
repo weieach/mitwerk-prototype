@@ -1,3 +1,4 @@
+import { activeRouteColor, branchColor } from '../version-tree/tokens.ts';
 import { galleryTokens as t } from './tokens.ts';
 
 export type Capture = {
@@ -71,6 +72,17 @@ export function ratioLabel(visible: number, total: number, singular: string, plu
   return visible === total ? `${total} ${unit}` : `${visible}/${total} ${unit}`;
 }
 
+/** Off-main branches reuse the version-stream route palette. The checked-out branch stays black. */
+export function galleryBranchPaint(branch: string, branches: string[], active = 'main') {
+  const ids = [active, ...branches.filter(id => id !== active)];
+  return activeRouteColor(branchColor(branch, ids), branch === active);
+}
+
+/** Share of catalog prompts inside the selected range. Captures are the prompt records. */
+export function promptShare(visible: number, total: number) {
+  return total > 0 ? visible / total : 0;
+}
+
 export function rangeCounts(versions: GalleryVersion[], range: RangeKey, now: number) {
   const frames = versions.flatMap(version => version.frames);
   const visibleFrames = frames.filter(frame => inRange(frame, range, now));
@@ -132,18 +144,16 @@ export function formatFrameDate(timestamp: number) {
   return `${part('month')} ${part('day')}, ${part('hour')}:${part('minute')}`;
 }
 
+export function formatVersion(number: number) { return `v${number}`; }
+
 /** Compact local timestamp shared by the saved-frame menu. */
 export function formatFrameLabel(frame: Pick<GalleryFrame, 'version' | 'timestamp'>) {
-  return `[V${frame.version}] - ${formatFrameDate(frame.timestamp)}`;
+  return `[${formatVersion(frame.version)}] - ${formatFrameDate(frame.timestamp)}`;
 }
 
-/** Quoted hover summary with a bold version tag on the line above. */
-export function hoverCaptionLines(frame: Pick<GalleryFrame, 'kind' | 'version' | 'summary'>) {
-  return [`[V${frame.version}]`, `"${frame.summary.trim()}"`];
-}
-
-export function captionLineBold(text: string) {
-  return /^\[V\d+\]$/.test(text);
+/** Hover captions contain only the quoted summary; metadata stays on the axis rulers. */
+export function hoverCaptionLines(frame: Pick<GalleryFrame, 'summary'>) {
+  return [`"${frame.summary.trim()}"`];
 }
 
 /** Word-wrap to a measured width, hard-breaking a token that cannot fit. */

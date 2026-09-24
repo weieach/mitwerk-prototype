@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { formatVersion, galleryBranchPaint } from './model';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
-import type { GalleryFrame, LoopMode } from './model';
+import type { GalleryFrame, LoopMode, RangeKey } from './model';
 import { formatTime, playbackStep } from './model';
 import { galleryTokens as t } from './tokens';
 import { presentedFrame, theaterFrameSize, wheelFrameDelta } from './theater-layout';
@@ -12,7 +13,7 @@ import type { TheaterOrbit, TheaterTarget } from './theater-transition';
 import { theaterCaption } from './theater-layout';
 import { Icon } from '../../components/Icon';
 
-export function TheaterView({ frames, selectedId, onSelect, onOrbit, onDismiss, active, baseline }: { baseline: { width: number; height: number }; active: boolean; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; selectedId: string; onSelect: (id: string) => void }) {
+export function TheaterView({ frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline }: { baseline: { width: number; height: number }; active: boolean; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string) => void }) {
   const gesture = useRef<{ pointer: number; x: number; y: number; frameClick: boolean; orbit: TheaterOrbit | null } | null>(null);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -30,6 +31,7 @@ export function TheaterView({ frames, selectedId, onSelect, onOrbit, onDismiss, 
   const stepFrame = useRef<(move: number) => void>(() => {});
   const [stageSize, setStageSize] = useState({ width: 600, height: 220 });
   const index = Math.max(0, frames.findIndex(frame => frame.id === selectedId));
+  const branches = useMemo(() => [...new Set(catalog.map(item => item.branch).filter((branch): branch is string => !!branch))], [catalog]);
   const requested = frames[index];
   const [displayed, setDisplayed] = useState<GalleryFrame | null>(null);
   const loader = useRef<FrameLoader | null>(null);
@@ -183,6 +185,7 @@ export function TheaterView({ frames, selectedId, onSelect, onOrbit, onDismiss, 
   }
 
   return <div className="theater-view" data-frame-id={frame?.id} data-selected-frame-id={requested?.id} data-preview-frame-id={previewFrame?.id} data-frame-ready={ready}
+    style={{ '--theater-footer-gap': `${t.theater.playbackFooterGap}px` } as CSSProperties}
     onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} onLostPointerCapture={pointerEnd}>
     <div className="gallery-toolbar" data-orbit-blocked>
       <select aria-label="Tracked interface" value={interfaceId} onChange={event => setInterfaceId(event.target.value)}>
@@ -205,17 +208,19 @@ export function TheaterView({ frames, selectedId, onSelect, onOrbit, onDismiss, 
         <button className="theater-text-action" onClick={event => event.stopPropagation()}><Icon name="plus"/>Add frame to chat</button>
       </div>
         <div className="theater-screen" ref={screenRef} style={{ height: frameSize.height, width: '100%' }}>
-          {displayed ? <img draggable={false} src={`${import.meta.env.BASE_URL}${displayed.url}`} alt={`V${displayed.version}: ${displayed.summary}`} aria-hidden={showingPreview}/>
+          {displayed ? <img draggable={false} src={`${import.meta.env.BASE_URL}${displayed.url}`} alt={`${formatVersion(displayed.version)}: ${displayed.summary}`} aria-hidden={showingPreview}/>
             : <div className="gallery-empty">{failedImage ? 'This saved image could not be loaded.' : 'Loading frame…'}</div>}
-          {showingPreview && <img draggable={false} className="theater-preview-image" src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`Preview V${frame.version}: ${frame.summary}`}/>}
+          {showingPreview && <img draggable={false} className="theater-preview-image" src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`Preview ${formatVersion(frame.version)}: ${frame.summary}`}/>}
         </div>
       </div>
-      <div className="theater-metadata" data-orbit-blocked ref={metaRef}>
-        {failedImage && displayed && <span role="status">The next image could not be loaded. The previous frame is still shown.</span>}
-        <div className="theater-version"><strong>V{frame.version} · {frame.kind} {frame.number ?? ''}</strong><time dateTime={new Date(frame.timestamp).toISOString()}>{formatTime(frame.timestamp)}</time></div>
+      <div className="theater-metadata" ref={metaRef} style={{ '--line-added': t.theater.addedColor, '--line-removed': t.theater.removedColor, '--theater-row-gap': `${t.theater.metadataRowGap}px`, '--theater-summary-gap': `${t.theater.metadataRowGap * (t.theater.summaryGapScale - 1)}px` } as CSSProperties}>
+        {failedImage && displayed && <span role="status" data-orbit-blocked>The next image could not be loaded. The previous frame is still shown.</span>}
+        <div className="theater-version" data-orbit-blocked><strong>{formatVersion(frame.version)} · {frame.kind} {frame.number ?? ''}</strong><time dateTime={new Date(frame.timestamp).toISOString()}>{formatTime(frame.timestamp)}</time></div>
         <p className="theater-summary"><em>{theaterCaption(frame)}</em></p>
-        {frame.branch && <div className="theater-branch-row"><span className="theater-branch-tag"><Icon name="branch" size={12}/>{frame.branch}</span></div>}
-        {frame.added ? <span className="gallery-small">+{frame.added} −{frame.removed} lines</span> : null}
+        {(frame.branch || frame.added) && <div className="theater-branch-row">
+          {frame.branch && <span className="theater-branch-tag" style={{ borderColor: galleryBranchPaint(frame.branch, branches) }}><Icon name="branch" size={12}/>{frame.branch}</span>}
+          {frame.added ? <span className="gallery-small theater-lines"><span className="is-added">+{frame.added}</span> <span className="is-removed">−{frame.removed}</span> lines</span> : null}
+        </div>}
       </div>
     </div>
     <div className="theater-playback" data-orbit-blocked>
@@ -230,7 +235,7 @@ export function TheaterView({ frames, selectedId, onSelect, onOrbit, onDismiss, 
         <select aria-label="Playback loop" value={mode} onChange={event => { setMode(event.target.value as LoopMode); setDirection(1); }}><option value="once">Play once</option><option value="loop">Loop</option><option value="ping-pong">Ping-pong</option></select>
         </div>
       </div>
-      <PlaybackTimeline frames={frames} index={index} previewIndex={previewIndex} onPreview={next => { setPreviewId(next === null ? null : frames[next].id); if (next === null) setPreviewImage(null); }} onSelect={selectFrame}/>
+      <PlaybackTimeline frames={frames} catalog={catalog} range={range} now={now} index={index} previewIndex={previewIndex} onPreview={next => { setPreviewId(next === null ? null : frames[next].id); if (next === null) setPreviewImage(null); }} onSelect={selectFrame}/>
     </div>
   </div>;
 }

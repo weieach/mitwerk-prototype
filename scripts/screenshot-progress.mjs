@@ -429,20 +429,22 @@ function screenshotInteractFromPrompt(prompt) {
 }
 
 function wantsResetCapture(prompt = '') {
-  return argValue('gallery-view') === 'reset' || /\bisometric\b/i.test(prompt)
+  return ['reset', 'frontal', 'top', 'overhead'].includes(argValue('gallery-view')) || /\bisometric\b/i.test(prompt)
     || /\bcapture\b[\s\S]{0,80}\breset view\b/i.test(prompt) || /\breset view\b[\s\S]{0,40}\bcapture\b/i.test(prompt);
 }
 
 function wantsTheaterCapture(prompt = '') {
-  return argValue('gallery-view') === 'theater' || /\bcaptur(?:e|ed)\b[\s\S]{0,80}\btheater view\b/i.test(prompt) || /\btheater view\b[\s\S]{0,80}\bcaptur(?:e|ed)\b/i.test(prompt);
+  if (argValue('gallery-view') === 'theater') return true;
+  if (/\bisometric\b/i.test(prompt) && !/\btheater\b/i.test(prompt)) return false;
+  return /\btheater\b/i.test(prompt) || /\bcaptur(?:e|ed)\b[\s\S]{0,80}\btheater view\b/i.test(prompt) || /\btheater view\b[\s\S]{0,80}\bcaptur(?:e|ed)\b/i.test(prompt);
 }
 
 function wantsTransitionCapture(prompt = '') {
-  return argValue('gallery-view') === 'transition' || /\bmidway\b[\s\S]{0,80}\btransition\b/i.test(prompt) || /\btransition\b[\s\S]{0,80}\bmidway\b/i.test(prompt) || /\bmid-transition\b/i.test(prompt);
+  return ['transition', 'timeline-transition'].includes(argValue('gallery-view')) || /\bmidway\b[\s\S]{0,80}\btransition\b/i.test(prompt) || /\btransition\b[\s\S]{0,80}\bmidway\b/i.test(prompt) || /\bmid-transition\b/i.test(prompt);
 }
 
 function wantsGalleryHover(prompt = '') {
-  return hasFlag('gallery-hover') || (/\bhover(?:ing|ed)?\b/i.test(prompt) && !wantsResetCapture(prompt));
+  return argValue('gallery-view') === 'top' || hasFlag('gallery-hover') || (/\bhover(?:ing|ed)?\b/i.test(prompt) && !wantsResetCapture(prompt));
 }
 
 function screenshotUrl(prompt = '') {
@@ -450,7 +452,7 @@ function screenshotUrl(prompt = '') {
   target.searchParams.set('screenshot', '1');
   target.searchParams.set('treeMode', argValue('tree-mode', 'history'));
   const hover = wantsGalleryHover(prompt);
-  if (wantsTransitionCapture(prompt)) { target.searchParams.set('galleryView', 'transition'); return target.href; }
+  if (wantsTransitionCapture(prompt)) { target.searchParams.set('galleryView', argValue('gallery-view') === 'timeline-transition' ? 'timeline-transition' : 'transition'); return target.href; }
   if (hover) target.searchParams.set('galleryHover', '1');
   if (wantsTheaterCapture(prompt)) {
     target.searchParams.set('galleryView', 'theater');
@@ -461,6 +463,22 @@ function screenshotUrl(prompt = '') {
   }
   const interact = screenshotInteractFromPrompt(prompt);
   if (interact) target.searchParams.set('interact', interact);
+  const scale = /(\d+(?:\.\d+)?)\s*%(?:\s+in)?\s+scale/i.exec(prompt);
+  if (scale) target.searchParams.set('treeZoom', String(Number(scale[1]) / 100));
+  if (/\b(?:near\s+)?bottom of (?:the )?(?:page|panel)\b/i.test(prompt) || /recapture last prompt/i.test(prompt)) target.searchParams.set('treeFrame', 'bottom');
+  if (/a bit more upward/i.test(prompt)) target.searchParams.set('treeLift', '0.22');
+  if (/same spot as (?:the )?last prompt/i.test(prompt)) {
+    try {
+      const saved = JSON.parse(readFileSync(join(screenshotsDir, '.last-tree-frame'), 'utf8'));
+      if (saved.treeZoom) target.searchParams.set('treeZoom', String(saved.treeZoom));
+      if (saved.treeFrame) target.searchParams.set('treeFrame', String(saved.treeFrame));
+    } catch { /* The first remembered frame is written after a framed capture. */ }
+  }
+  const frame = { treeZoom: target.searchParams.get('treeZoom'), treeFrame: target.searchParams.get('treeFrame') };
+  if (frame.treeZoom || frame.treeFrame) {
+    mkdirSync(screenshotsDir, { recursive: true });
+    writeFileSync(join(screenshotsDir, '.last-tree-frame'), JSON.stringify(frame));
+  }
   return target.href;
 }
 
@@ -582,7 +600,26 @@ async function capture(chrome, outFile, prompt = '') {
     await waitForSocket(ws);
     const cdp = createCdp(ws);
     await waitForScreenshotReady(cdp, 10000, prompt);
-    await delay(150);
+    if (['frontal', 'top', 'overhead'].includes(argValue('gallery-view'))) {
+      await cdp('Runtime.evaluate', { expression: `document.querySelector('.album-webgl canvas, canvas[aria-label^="3D iteration gallery"]')?.focus()` });
+      if (argValue('gallery-view') === 'overhead') {
+        await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 't', code: 'KeyT', windowsVirtualKeyCode: 84 });
+        await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 't', code: 'KeyT', windowsVirtualKeyCode: 84 });
+      } else {
+        // Exercise the normal keyboard orbit, retaining the reset composition.
+        for (let step = 0; step < 3; step++) {
+          await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowLeft', code: 'ArrowLeft', windowsVirtualKeyCode: 37 });
+          await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowLeft', code: 'ArrowLeft', windowsVirtualKeyCode: 37 });
+        }
+        if (argValue('gallery-view') === 'top') {
+          for (let step = 0; step < 8; step++) {
+            await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowUp', code: 'ArrowUp', windowsVirtualKeyCode: 38 });
+            await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowUp', code: 'ArrowUp', windowsVirtualKeyCode: 38 });
+          }
+        }
+      }
+    }
+    await delay(['top', 'overhead'].includes(argValue('gallery-view')) ? 500 : 150);
     const shot = await cdp('Page.captureScreenshot', { format: 'png', fromSurface: true });
     writeFileSync(outFile, Buffer.from(shot.data, 'base64'));
     ws.close();
@@ -939,6 +976,22 @@ async function takeScreenshot({ tag, label, sha, base }) {
   await assertServer();
   mkdirSync(screenshotsDir, { recursive: true });
   const message = sanitizeMessage(label, tag === 'prompt' ? 'prompt' : 'commit');
+  const overwrite = tag === 'prompt' && /recapture last prompt/i.test(label) && /overwrite/i.test(label);
+  if (overwrite) {
+    const number = name => Number(/^\[prompt #(\d+)\]/i.exec(name)?.[1] ?? 0);
+    const prompts = readdirSync(screenshotsDir).filter(name => /^\[prompt #\d+\]/i.test(name)).sort((a, b) => number(a) - number(b));
+    const kept = [];
+    for (const name of prompts) {
+      if (/recapture last prompt/i.test(name)) unlinkSync(join(screenshotsDir, name));
+      else kept.push(name);
+    }
+    const previous = kept.at(-1);
+    if (previous) {
+      const outFile = join(screenshotsDir, previous);
+      await capture(chrome, outFile, label);
+      return outFile;
+    }
+  }
   const count = nextTagCount(screenshotsDir, tag);
   const files = tag === 'push' ? countChangedFiles(tag, sha, base) : 0;
   const lines = tag === 'push' ? countLineChanges(sha, base) : countWorkingTreeLineChanges();

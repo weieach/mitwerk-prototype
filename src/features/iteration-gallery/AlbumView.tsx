@@ -1,3 +1,5 @@
+import { rotationCaptureProgress, timelineCaptureProgress } from './theater-transition';
+import { formatVersion } from './model';
 import type { GalleryCamera, TheaterTarget } from './theater-transition';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GalleryVersion, RangeKey } from './model';
@@ -9,8 +11,8 @@ import { galleryTokens as t } from './tokens';
 import { AxisLabels } from './AxisLabels';
 import type { AxisLabelsHandle } from './AxisLabels';
 
-export function AlbumView({ versions, range, now, zoom, onOpen, onZoom, onCamera, turning, returning, hidden, onReturnStarted, theaterTarget, theaterId, onTurnComplete }: {
-  returning: boolean; hidden: boolean; onReturnStarted: () => void; turning: boolean; theaterTarget: TheaterTarget | null; theaterId: string; onTurnComplete: () => void;
+export function AlbumView({ versions, range, now, zoom, onOpen, onZoom, onCamera, turning, returning, hidden, onReturnStarted, theaterTarget, theaterId, onTurnComplete, onMotion }: {
+  onMotion: (progress: number) => void; returning: boolean; hidden: boolean; onReturnStarted: () => void; turning: boolean; theaterTarget: TheaterTarget | null; theaterId: string; onTurnComplete: () => void;
   versions: GalleryVersion[]; range: RangeKey; now: number; zoom: number;
   onOpen: (id: string) => void; onZoom: (zoom: number) => void;
   onCamera?: (camera: GalleryCamera | null) => void;
@@ -19,8 +21,8 @@ export function AlbumView({ versions, range, now, zoom, onOpen, onZoom, onCamera
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<AlbumScene | null>(null);
   const axisLabels = useRef<AxisLabelsHandle>(null);
-  const callbacks = useRef({ onOpen, onZoom, onCamera });
-  callbacks.current = { onOpen, onZoom, onCamera };
+  const callbacks = useRef({ onOpen, onZoom, onCamera, onMotion });
+  callbacks.current = { onOpen, onZoom, onCamera, onMotion };
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [keyboardId, setKeyboardId] = useState('');
@@ -34,7 +36,7 @@ export function AlbumView({ versions, range, now, zoom, onOpen, onZoom, onCamera
   useEffect(() => {
     try {
       scene.current = new AlbumScene(host.current!, {
-        hover: setHoveredId, open: id => callbacks.current.onOpen(id),
+        motion: progress => callbacks.current.onMotion(progress), hover: setHoveredId, open: id => callbacks.current.onOpen(id),
         zoom: value => callbacks.current.onZoom(value), error: setError,
         labels: labels => axisLabels.current?.update(labels),
       });
@@ -46,7 +48,7 @@ export function AlbumView({ versions, range, now, zoom, onOpen, onZoom, onCamera
     if (hidden || returning || (turning && host.current?.dataset.transitionProgress)) return;
     scene.current?.update(album, versions, representativeFrames(versions, range, now).map(frame => frame.id));
     const params = new URLSearchParams(location.search);
-    if (params.get('screenshot') === '1' && ['reset', 'transition'].includes(params.get('galleryView') ?? '')) scene.current?.reset();
+    if (params.get('screenshot') === '1' && ['reset', 'transition', 'timeline-transition'].includes(params.get('galleryView') ?? '')) scene.current?.reset();
     else if (params.get('screenshot') === '1' && params.get('galleryView') !== 'theater') scene.current?.center();
     if (params.get('screenshot') === '1' && params.get('galleryHover') === '1') {
       const candidates = album.planes.filter(plane => plane.active);
@@ -60,8 +62,9 @@ export function AlbumView({ versions, range, now, zoom, onOpen, onZoom, onCamera
     if ((!turning && !returning) || !theaterTarget) return;
     if (!scene.current || error) { onTurnComplete(); return; }
     const params = new URLSearchParams(location.search);
-    const freeze = params.get('screenshot') === '1' && params.get('galleryView') === 'transition';
-    scene.current.turnToTheater(theaterId, theaterTarget, onTurnComplete, freeze && !returning ? t.theaterMotion.captureProgress : undefined, returning, onReturnStarted);
+    const freeze = params.get('screenshot') === '1' && ['transition', 'timeline-transition'].includes(params.get('galleryView') ?? '');
+    const captureProgress = params.get('galleryView') === 'timeline-transition' ? timelineCaptureProgress() : rotationCaptureProgress();
+    scene.current.turnToTheater(theaterId, theaterTarget, onTurnComplete, freeze && !returning ? captureProgress : undefined, returning, onReturnStarted);
   }, [turning, returning, theaterTarget, theaterId, onTurnComplete, onReturnStarted, error]);
 
   return <div className="album-webgl" inert={turning || returning || hidden}>
@@ -80,6 +83,6 @@ export function AlbumView({ versions, range, now, zoom, onOpen, onZoom, onCamera
       {chosen && <button className="album-open-frame gallery-play" onClick={() => onOpen(chosen.frame.id)}>Open frame</button>}
       {error && <div className="gallery-empty album-3d-error" role="status">{error}</div>}
     </div>
-    <div className="sr-only" aria-live="polite">{hovered && `V${hovered.frame.version} · ${formatTime(hovered.frame.timestamp)}. ${hovered.frame.summary}`}</div>
+    <div className="sr-only" aria-live="polite">{hovered && `${formatVersion(hovered.frame.version)} · ${formatTime(hovered.frame.timestamp)}. ${hovered.frame.summary}`}</div>
   </div>;
 }

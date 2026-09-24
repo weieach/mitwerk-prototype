@@ -25,6 +25,12 @@ export const treeTheme = {
   /** Incoming connectors to reverted stations. */
   revertedRouteColor: '#b9bdba',
   revertedRouteOpacity: 0.4,
+  /** Merged branches keep a paler accent at full opacity. 0 is the accent; 1 is white. */
+  mergedBranchPale: 0.45,
+  mergedBranchOpacity: 1,
+  /** Square marks on a re-merge stem. One grid is the diamond between intersections. */
+  mergedStemDotSize: geometry.gridTriangleSide,
+  mergedStemDotGrids: 3,
   stationBorderWidth,
   stationClearance: 3,
   stationSelectedBorderWidth: 3,
@@ -99,6 +105,21 @@ export function levelColorLookup(nodes: { branchId: string; row: number }[]) {
 /** Stations and connectors on the checked-out branch share one color. */
 export function activeRouteColor(color: string, onActiveBranch: boolean) {
   return onActiveBranch ? treeTheme.activeBranchColor : color;
+}
+
+/** Lighten an accent toward white without changing its opacity. */
+export function palerAccent(color: string) {
+  const mix = treeTheme.mergedBranchPale;
+  const hex = /^#([0-9a-f]{6})$/i.exec(color);
+  if (hex) {
+    const channel = (index: number) => parseInt(hex[1].slice(index, index + 2), 16);
+    const blend = (value: number) => Math.round(value + (255 - value) * mix);
+    return `#${[0, 2, 4].map(index => blend(channel(index)).toString(16).padStart(2, '0')).join('')}`;
+  }
+  const hsl = /^hsl\((\d+(?:\.\d+)?) ([\d.]+)% ([\d.]+)%\)$/.exec(color);
+  if (!hsl) return color;
+  const lightness = Number(hsl[3]) + (100 - Number(hsl[3])) * mix;
+  return `hsl(${hsl[1]} ${hsl[2]}% ${lightness}%)`;
 }
 
 /** Extra scale so version numbers stay closer to their screen size as the board zooms. */

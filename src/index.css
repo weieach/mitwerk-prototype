@@ -74,6 +74,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .version-card.is-selected { background: var(--paper); border-color: var(--line-strong); }
 .version-card:hover { border-color: #b5b5b5; }
 .station { width: var(--station-size); height: var(--station-size); border-radius: 50%; display: grid; place-items: center; padding: 0; position: absolute; left: var(--station-offset-x); top: var(--station-offset-y); border: var(--station-border-width) solid var(--station-color, var(--route-color)); background: var(--station-color, var(--route-color)); box-shadow: 0 0 0 var(--station-clearance) var(--canvas-bg); }
+.station.is-merged { opacity: var(--merged-branch-opacity, 0.4); }
 .station span { width: var(--station-inner-size); height: var(--station-inner-size); border-radius: 50%; background: var(--station-open-fill); }
 .station.has-descendants { border-color: transparent; background: transparent; box-shadow: none; }
 .station.has-descendants span { background: var(--station-color, var(--route-color)); box-shadow: 0 0 0 var(--station-clearance) var(--canvas-bg); }

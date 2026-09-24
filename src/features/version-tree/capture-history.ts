@@ -77,5 +77,23 @@ export function buildGitCaptureHistory(captures: Capture[], git: GitHistory): Gr
     nodes.push({ ...node, branchId: branch, parentId, relation: parentId ? 'commit' : 'root',
       summary: `${node.capture?.pushed ? 'Capture without a matching Git commit' : 'Unpushed work'} · ${node.summary}` });
   }
+  assignInterimVersionLabels(nodes);
   return { nodes, activeBranchId: git.currentBranch || nodes.at(-1)?.branchId || 'main', selectedId: nodes.at(-1)?.id ?? null, revertedIds: [] };
+}
+
+/** Uncaptured commits between saved versions keep a dotted number off the previous version. */
+export function assignInterimVersionLabels(nodes: VersionNode[]) {
+  let major = '';
+  let minor = 0;
+  for (const node of nodes) {
+    if (/^V\d+$/.test(node.label)) {
+      major = node.label;
+      minor = 0;
+      continue;
+    }
+    if (/^V\d+\.\d+$/.test(node.label) || !major) continue;
+    minor += 1;
+    node.label = `${major}.${minor}`;
+  }
+  return nodes;
 }

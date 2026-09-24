@@ -1,3 +1,5 @@
+import { galleryTokens as t } from './tokens.ts';
+
 /** Shared motion curve, including deterministic progress for mid-transition captures. */
 export function transitionProgress(elapsed: number, duration: number, freezeAt?: number) {
   const linear = duration <= 0 ? 1 : Math.min(1, Math.max(0, elapsed / duration));
@@ -33,4 +35,27 @@ export function containsPoint(rect: TheaterTarget, x: number, y: number, margin 
 /** A control row reserves its own box and margins across the panel, not neighboring layout gaps. */
 export function reservedControlContains(row: TheaterTarget, control: TheaterTarget, x: number, y: number, margin = { left: 0, right: 0, top: 0, bottom: 0 }) {
   return containsPoint({ left: row.left, width: row.width, top: control.top, height: control.height }, x, y, margin);
+}
+
+/** One clock sequences the frame, timeline, then the existing UI fade at handoff. */
+export function theaterEntranceDuration() {
+  return t.theaterMotion.rotateMs + t.theaterMotion.timelineMs;
+}
+
+export function theaterRotationProgress(entranceProgress: number) {
+  return transitionProgress(entranceProgress * theaterEntranceDuration(), t.theaterMotion.rotateMs);
+}
+
+export function timelineEntrance(entranceProgress: number) {
+  const { rotateMs, timelineMs, timelineOffsetVh } = t.theaterMotion;
+  const { eased } = transitionProgress(entranceProgress * theaterEntranceDuration() - rotateMs, timelineMs);
+  return { opacity: eased, offsetVh: -timelineOffsetVh * (1 - eased) };
+}
+
+export function timelineCaptureProgress() {
+  return (t.theaterMotion.rotateMs + t.theaterMotion.timelineMs / 2) / theaterEntranceDuration();
+}
+
+export function rotationCaptureProgress() {
+  return t.theaterMotion.rotateMs * t.theaterMotion.captureProgress / theaterEntranceDuration();
 }

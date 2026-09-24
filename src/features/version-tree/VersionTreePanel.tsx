@@ -3,18 +3,18 @@ import type { CSSProperties, Dispatch, PointerEvent as ReactPointerEvent } from 
 import { Icon } from '../../components/Icon';
 import { branchPathIds, canDeleteCurrent, canDeleteFuture, isBranchEndpoint, isReverted, isRevertedRoute, screenshotFocusId, screenshotQueryFlags, type GraphAction, type GraphState } from './model';
 import { frameScreenshotTargets, frameVersionLevel, geometry, layoutBranchView, layoutGraph, screenshotNodeTargets } from './layout';
-import { activeRouteColor, levelColorLookup, stationLabelOffset, treeTheme, versionLabelZoomScale } from './tokens';
-import { layoutGitHistory } from './git-layout';
+import { activeRouteColor, levelColorLookup, palerAccent, stationLabelOffset, treeTheme, versionLabelZoomScale } from './tokens';
+import { layoutGitHistory, mergedStemDots } from './git-layout';
 import { IsometricGrid } from './IsometricGrid';
 import { VersionCard } from './VersionCard';
-import { branchName, presentTree } from './presentation';
+import { branchName, mergedBranchIds, presentTree } from './presentation';
 import { canEditTree, treeModes, type TreeMode } from './panel-state';
 
 type Props = { status?: string; graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; onModeChange: (mode: TreeMode) => void };
 
 const screenshotFlags = typeof window !== 'undefined'
   ? screenshotQueryFlags(window.location.search)
-  : { capture: false, countHover: false, menuOpen: false };
+  : screenshotQueryFlags('');
 const screenshotCapture = screenshotFlags.capture;
 if (screenshotFlags.countHover) document.documentElement.dataset.screenshotCountHover = '1';
 
@@ -22,6 +22,7 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
   const activePath = useMemo(() => branchPathIds(graph.nodes, graph.activeBranchId), [graph.nodes, graph.activeBranchId]);
   const layout = useMemo(() => mode === 'history' && graph.nodes.some(node => node.git) ? layoutGitHistory(graph.nodes) : layoutBranchView(layoutGraph(graph.nodes), graph.selectedId, activePath), [graph.nodes, graph.selectedId, activePath, mode]);
   const levelColor = useMemo(() => levelColorLookup(layout.nodes), [layout.nodes]);
+  const mergedBranches = useMemo(() => mergedBranchIds(graph.nodes), [graph.nodes]);
   const viewport = useRef<HTMLDivElement>(null);
   const branchMenu = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(0.8);
@@ -94,10 +95,21 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
       if (!initialFit.current && width > 0) {
         initialFit.current = true;
         if (screenshotCapture) {
+          const captureZoom = screenshotFlags.treeZoom ?? treeTheme.screenshotZoom;
+          if (screenshotFlags.treeFrame === 'bottom') {
+            zoomRef.current = captureZoom;
+            setZoom(captureZoom);
+            requestAnimationFrame(() => {
+              const worldHeight = Math.max(layout.height + 240, height / captureZoom);
+              const lift = screenshotFlags.treeLift ?? 0;
+              element.scrollTo({ left: 0, top: Math.max(0, worldHeight * captureZoom - height * (1 + lift)), behavior: 'instant' });
+              requestAnimationFrame(markScreenshotReady);
+            });
+          } else {
           const captureLayout = mode === 'history' ? { ...layout, nodes: layout.nodes.slice(-treeTheme.historyCaptureVersions) } : layout;
           const targets = screenshotNodeTargets(captureLayout, presentation.hiddenNodeIds, activePath, graph.selectedId);
           if (targets.length) {
-            const frame = frameScreenshotTargets(targets, width, height, treeTheme.minZoom, treeTheme.screenshotZoom);
+            const frame = frameScreenshotTargets(targets, width, height, treeTheme.minZoom, captureZoom);
             zoomRef.current = frame.zoom;
             setZoom(frame.zoom);
             requestAnimationFrame(() => {
@@ -106,6 +118,7 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
             });
           } else {
             requestAnimationFrame(() => requestAnimationFrame(markScreenshotReady));
+          }
           }
         } else {
           const next = Math.max(treeTheme.screenshotZoom, Math.min(1, (width - 24) / layout.width));
@@ -154,6 +167,10 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
   }, []);
 
   useEffect(() => {
+    if (screenshotCapture) {
+      previousCount.current = graph.nodes.length;
+      return;
+    }
     if (graph.nodes.length > previousCount.current && selected) {
       const group = presentation.groups.find(level => level.nodeIds.includes(selected.id));
       const element = viewport.current;
@@ -280,6 +297,7 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
     '--station-offset-y': `${-geometry.cardOffsetY - treeTheme.stationRadius - 1}px`,
     '--reverted-title-color': treeTheme.revertedTitleColor,
     '--reverted-route-color': treeTheme.revertedRouteColor,
+    '--merged-branch-opacity': treeTheme.mergedBranchOpacity,
   } as CSSProperties}>
     <div className="panel-header tree-header"><div className="panel-heading"><h2 id="tree-title">Version stream</h2>
       <select className="tree-mode-switch" aria-label="Version stream panel" value={mode} onChange={event => onModeChange(event.target.value as TreeMode)}
@@ -294,18 +312,27 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
             <svg className="route-layer" width={worldWidth} height={worldHeight} aria-hidden="true">
               <IsometricGrid width={worldWidth} height={worldHeight} visible={grid}/>
               {/* Paint clearance first so connected segments do not erase each other's junctions. */}
-              {presentation.routes.map(route => <path key={`clearance:${route.id}`} d={route.path} fill="none" stroke="var(--canvas-bg)" strokeWidth={treeTheme.routeWidth + treeTheme.routeClearance * 2} strokeLinejoin="round" strokeLinecap="round"/>)}
+              {presentation.routes.filter(route => !route.dashed).map(route => <path key={`clearance:${route.id}`} d={route.path} fill="none" stroke="var(--canvas-bg)" strokeWidth={treeTheme.routeWidth + treeTheme.routeClearance * 2} strokeLinejoin="round" strokeLinecap="round"/>)}
               {/* Routes arrive pre-sorted: later versions, Vx.1, then the checked-out branch on top. */}
               {presentation.routes.map(route => {
                 const routeReverted = isRevertedRoute(graph.revertedIds, route.targetId);
+                const routeMerged = mergedBranches.has(route.branchId);
+                const routeRow = layout.nodes.find(node => node.id === route.targetId)?.row ?? layout.forks?.find(fork => fork.id === route.targetId)?.row ?? 0;
                 const stroke = route.kind === 'horizontal-branch' ? treeTheme.levelConnectorColor
                   : routeReverted ? treeTheme.revertedRouteColor
+                  : routeMerged ? palerAccent(levelColor(route.branchId, routeRow))
                   : route.spine ? 'var(--active-branch-color)'
-                  : levelColor(route.branchId, layout.nodes.find(node => node.id === route.targetId)?.row ?? layout.forks?.find(fork => fork.id === route.targetId)?.row ?? 0);
-                return <g key={route.id} className="route" data-route-kind={route.kind} data-active={route.active} data-spine={route.spine || undefined} data-reverted={routeReverted || undefined}
-                  opacity={route.kind === 'horizontal-branch' ? treeTheme.levelConnectorOpacity : routeReverted ? treeTheme.revertedRouteOpacity : 1}>
+                  : levelColor(route.branchId, routeRow);
+                const from = layout.nodes.find(node => node.id === route.sourceId);
+                const to = layout.nodes.find(node => node.id === route.targetId);
+                const dots = route.dashed && from && to ? mergedStemDots(from.y, to.y) : [];
+                const dot = treeTheme.mergedStemDotSize;
+                return <g key={route.id} className="route" data-route-kind={route.kind} data-active={route.active} data-spine={route.spine || undefined} data-reverted={routeReverted || undefined} data-merged={routeMerged || undefined} data-dashed={route.dashed || undefined}
+                  opacity={route.kind === 'horizontal-branch' ? treeTheme.levelConnectorOpacity : routeReverted ? treeTheme.revertedRouteOpacity : routeMerged ? treeTheme.mergedBranchOpacity : 1}>
+                  {route.dashed && from ? dots.map(y => <rect key={y} x={from.x - dot / 2} y={y - dot / 2} width={dot} height={dot} fill={stroke}/>) : <>
                   <path d={route.path} fill="none" stroke={stroke} strokeWidth={treeTheme.routeWidth} strokeLinejoin="round" strokeLinecap="round"/>
                   <path d={route.path} fill="none" stroke={treeTheme.routeStripeColor} strokeWidth={treeTheme.routeStripeWidth} opacity={treeTheme.routeStripeOpacity} strokeLinejoin="round" strokeLinecap="round"/>
+                  </>}
                 </g>;
               })}
               {presentation.tip && <path data-branch-end={presentation.tip.id} fill={isReverted(graph.revertedIds, presentation.tip.id) ? treeTheme.revertedRouteColor : treeTheme.stationFill}
@@ -333,7 +360,8 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
               const cardOffsetY = presentation.cardBelowRows.has(node.row) ? geometry.horizontalCardOffsetY : geometry.cardOffsetY;
               const onSpine = activePath.has(node.id);
               const reverted = isReverted(graph.revertedIds, node.id);
-              const color = activeRouteColor(levelColor(node.branchId, node.row), onSpine);
+              const merged = mergedBranches.has(node.branchId);
+              const color = merged ? palerAccent(levelColor(node.branchId, node.row)) : activeRouteColor(levelColor(node.branchId, node.row), onSpine);
               const label = stationLabelOffset();
               return <div className="version-position" key={node.id} style={{
                 left: node.x + geometry.cardOffsetX, top: node.y + cardOffsetY,
@@ -351,7 +379,7 @@ export function VersionTreePanel({ graph, dispatch, mode, onModeChange, status =
                   isCurrentBranch={node.branchId === graph.activeBranchId}
                   canDeleteCurrent={canDeleteCurrent(graph.nodes, node.id)}
                   canDeleteFuture={canDeleteFuture(graph.nodes, node.id)}
-                  color={color} reverted={reverted} readOnly={!canEditTree(mode)}
+                  color={color} reverted={reverted} merged={merged} readOnly={!canEditTree(mode)}
                   onSelect={() => dispatch({ type: 'select', id: node.id })}
                   onBranch={() => dispatch({ type: 'add-branch', sourceId: node.id })}
                   onCommit={() => dispatch({ type: 'add-commit', sourceId: node.id })}

@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { containedFrameTarget } from './theater-transition';
+import { containedFrameTarget, timelineEntrance } from './theater-transition';
 import type { GalleryCamera, TheaterTarget } from './theater-transition';
 import type { CSSProperties } from 'react';
 import { AlbumView } from './AlbumView';
 import { referenceCapture } from './theater-layout';
 import { TheaterView } from './TheaterView';
-import { buildVersions, inRange, rangeCounts, ranges, ratioLabel } from './model';
+import { buildVersions, inRange, rangeCounts, ranges } from './model';
 import type { Capture, RangeKey } from './model';
 import { galleryTokens as t } from './tokens';
 import './gallery.css';
 
 type Catalog = { frames: Capture[]; ignored: number };
+
 export function IterationGallery() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [error, setError] = useState('');
@@ -22,6 +23,12 @@ export function IterationGallery() {
   const [selectedId, setSelectedId] = useState('');
   const [target, setTarget] = useState<TheaterTarget | null>(null);
   const viewStack = useRef<HTMLDivElement>(null);
+  const galleryRoot = useRef<HTMLElement>(null);
+  const updateTimelineMotion = useCallback((progress: number) => {
+    const pose = timelineEntrance(progress);
+    galleryRoot.current?.style.setProperty('--timeline-enter-opacity', String(pose.opacity));
+    galleryRoot.current?.style.setProperty('--timeline-enter-offset', `${pose.offsetVh}vh`);
+  }, []);
   const [returnReady, setReturnReady] = useState(false);
   const startReturn = useCallback(() => setReturnReady(true), []);
   const finishTurn = useCallback(() => { setView(previous => previous === 'returning' ? 'album' : 'theater'); setTarget(null); }, []);
@@ -57,8 +64,10 @@ export function IterationGallery() {
   const baseline = useMemo(() => referenceCapture(versions.flatMap(version => version.frames), t.theaterReference), [versions]);
   const visibleFrames = useMemo(() => versions.flatMap(version => version.frames).filter(frame => inRange(frame, range, now)), [versions, range, now]);
   const counts = useMemo(() => rangeCounts(versions, range, now), [versions, range, now]);
+  const rangePrompts = visibleFrames.filter(frame => frame.kind === 'prompt').length;
+  const rangePromptLabel = ` (${rangePrompts} ${rangePrompts === 1 ? 'prompt' : 'prompts'})`;
   const select = useCallback((id: string) => setSelectedId(id), []);
-  function open(id: string) { if (view !== 'album') return; setSelectedId(id); setView('turning'); }
+  function open(id: string) { if (view !== 'album') return; updateTimelineMotion(0); setSelectedId(id); setView('turning'); }
 
   useLayoutEffect(() => {
     if (view !== 'turning') return;
@@ -72,14 +81,14 @@ export function IterationGallery() {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    if (params.get('screenshot') !== '1' || !['theater', 'transition'].includes(params.get('galleryView') ?? '')) return;
+    if (params.get('screenshot') !== '1' || !['theater', 'transition', 'timeline-transition'].includes(params.get('galleryView') ?? '')) return;
     const featured = referenceCapture(versions.flatMap(version => version.frames), t.theaterReference);
     if (featured && !inRange(featured, range, now)) { setRange('all'); return; }
     const id = featured?.id;
-    if (id) { setSelectedId(id); setView(params.get('galleryView') === 'transition' ? 'turning' : 'theater'); }
+    if (id) { setSelectedId(id); setView(params.get('galleryView') === 'theater' ? 'theater' : 'turning'); }
   }, [versions, range, now]);
 
-  return <section data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-labelledby="gallery-title" style={{ '--theater-focus-background': t.theater.focusBackground, '--theater-frame-shadow': t.theater.frameShadow, '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px` } as CSSProperties}>
+  return <section ref={galleryRoot} data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-labelledby="gallery-title" style={{ '--theater-focus-background': t.theater.focusBackground, '--theater-frame-shadow': t.theater.frameShadow, '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px` } as CSSProperties}>
     <header className="panel-header">
       <div className="panel-heading">
         {(view === 'theater' || view === 'orbiting') && <button className="icon-button album-reset gallery-back" onClick={exit}>← Gallery</button>}
@@ -99,15 +108,13 @@ export function IterationGallery() {
     {!catalog ? <div className="gallery-empty">{error ? 'Screenshot catalog unavailable.' : 'Reading saved frames…'}</div>
       : !versions.length ? <div className="gallery-empty">No saved frames found.</div>
       : <div className="gallery-view-stack" ref={viewStack}>
-      {<><AlbumView turning={view === 'turning'} returning={view === 'returning'} hidden={view === 'theater' || view === 'orbiting'} onReturnStarted={startReturn} theaterTarget={target} theaterId={selectedId} onTurnComplete={finishTurn} versions={versions} range={range} now={now} zoom={zoom} onOpen={open} onZoom={setZoom} onCamera={api => { camera.current = api; }}/>{!visibleFrames.length && <div className="gallery-message">No frames in this range. Earlier versions remain visible in gray.</div>}</>}
-      {view !== 'album' && <div className="gallery-theater-layer" inert={view === 'turning' || view === 'returning'} aria-hidden={view === 'turning' || view === 'returning'}><TheaterView baseline={baseline ?? t.viewportPresets[1]} frames={visibleFrames} selectedId={selectedId} onSelect={select} onOrbit={(id, rect) => camera.current?.orbit(id, rect, () => { setSelectedId(id); setView('orbiting'); }, () => { setView('album'); setTarget(null); }) ?? null} onDismiss={exit} active={view === 'theater'}/></div>}
+      {<><AlbumView onMotion={updateTimelineMotion} turning={view === 'turning'} returning={view === 'returning'} hidden={view === 'theater' || view === 'orbiting'} onReturnStarted={startReturn} theaterTarget={target} theaterId={selectedId} onTurnComplete={finishTurn} versions={versions} range={range} now={now} zoom={zoom} onOpen={open} onZoom={setZoom} onCamera={api => { camera.current = api; }}/>{!visibleFrames.length && <div className="gallery-message">No frames in this range. Earlier versions remain visible in gray.</div>}</>}
+      {view !== 'album' && <div className="gallery-theater-layer" inert={view === 'turning' || view === 'returning'} aria-hidden={view === 'turning' || view === 'returning'}><TheaterView baseline={baseline ?? t.viewportPresets[1]} frames={visibleFrames} catalog={versions.flatMap(version => version.frames)} range={range} now={now} selectedId={selectedId} onSelect={select} onOrbit={(id, rect) => camera.current?.orbit(id, rect, () => { setSelectedId(id); setView('orbiting'); }, () => { setView('album'); setTarget(null); }) ?? null} onDismiss={exit} active={view === 'theater'}/></div>}
       </div>}
     <footer className="gallery-footer" inert={view === 'turning' || view === 'returning' || view === 'orbiting'}>
       <div className="gallery-range">
         <label><span className="sr-only">Date range</span><select aria-label="Date range" value={range} onChange={event => { setRange(event.target.value as RangeKey); setNow(Date.now()); }}>{ranges.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-        <span className="gallery-small">{catalog
-          ? `${ratioLabel(counts.frames, counts.frameTotal, 'saved frame', 'saved frames')} · ${ratioLabel(counts.versions, counts.versionTotal, 'version', 'versions')}`
-          : 'Loading frames…'}</span>
+        <span className="gallery-small">{catalog ? counts.versions + '/' + counts.versionTotal + ' versions' + rangePromptLabel : 'Loading frames…'}</span>
       </div>
       {catalog && catalog.ignored > 0 && <span className="gallery-small" title="Unrecognized or unreadable PNG files were skipped.">{catalog.ignored} files skipped</span>}
       <button className="icon-button" disabled title="Token usage is not included in capture filenames.">See token usage</button>
