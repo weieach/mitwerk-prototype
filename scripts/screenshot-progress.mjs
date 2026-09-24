@@ -437,7 +437,8 @@ function wantsTheaterCapture(prompt = '') {
   if (argValue('gallery-view') === 'theater') return true;
   if (/\bisometric\b/i.test(prompt) && !/\btheater\b/i.test(prompt)) return false;
   const theaterSubject = prompt.split(/tree-panel|version-card/i)[0] ?? '';
-  if (/iteration-gallery|theater-view|theater-version|theater-branch|\boverlay\b/i.test(theaterSubject)) return true;
+  if (/\bat mobile\b|mobile breakpoint/i.test(prompt)) return true;
+  if (/iteration-gallery|theater-view|theater-version|theater-branch|\boverlay\b|\bprototype\b/i.test(theaterSubject)) return true;
   if (/tree-panel|version-card|version stream/i.test(prompt) && !/\bcaptur(?:e|ed|ing|this)\b[\s\S]{0,40}\btheater\b/i.test(prompt)) return false;
   return /\btheater\b/i.test(prompt) || /\bcaptur(?:e|ed)\b[\s\S]{0,80}\btheater view\b/i.test(prompt) || /\btheater view\b[\s\S]{0,80}\bcaptur(?:e|ed)\b/i.test(prompt);
 }
@@ -488,7 +489,9 @@ function screenshotUrl(prompt = '') {
   const namedPush = /push node(?:\s+\w+){0,3}\s+v?(\d+)/i.exec(prompt);
   if (namedPush) target.searchParams.set('pushVersion', namedPush[1]);
   if (/show the toast/i.test(prompt)) target.searchParams.set('prototypeToast', '1');
-  if (/overlay open/i.test(prompt) || (/push node/i.test(prompt) && /enter prototype|exit prototype|full screen overlay/i.test(prompt) && !/overlay closed/i.test(prompt))) target.searchParams.set('prototypeOpen', '1');
+  if (/overlay open/i.test(prompt)) target.searchParams.set('overlay', '1');
+  if (/mobile breakpoint|\bat mobile\b/i.test(prompt)) { target.searchParams.set('viewport', 'phone'); target.searchParams.set('frameKind', 'push'); target.searchParams.set('prototypeOpen', '1'); }
+  if (/overlay open/i.test(prompt) || /prototype (?:is )?entered|prototype mode/i.test(prompt) || (/push node/i.test(prompt) && /enter prototype|exit prototype|full screen overlay/i.test(prompt) && !/overlay closed/i.test(prompt))) target.searchParams.set('prototypeOpen', '1');
   const frame = { treeZoom: target.searchParams.get('treeZoom'), treeFrame: target.searchParams.get('treeFrame'), treeCenter: target.searchParams.get('treeCenter'), galleryView: target.searchParams.get('galleryView'), frameKind: target.searchParams.get('frameKind') };
   if (frame.treeZoom || frame.treeFrame) {
     mkdirSync(screenshotsDir, { recursive: true });
@@ -554,7 +557,7 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
       expression: wantsTransitionCapture(prompt)
         ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.transitionReady === "true"'
         : wantsTheaterCapture(prompt)
-        ? `document.documentElement.dataset.screenshotReady === "1" && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete${/overlay open/i.test(prompt) || (/push node/i.test(prompt) && /enter prototype|exit prototype|full screen overlay/i.test(prompt) && !/overlay closed/i.test(prompt)) ? ' && !!document.querySelector(".theater-fullscreen") && !document.querySelector(".theater-fullscreen .is-exit")' : ''}`
+        ? `document.documentElement.dataset.screenshotReady === "1" && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete${/overlay open/i.test(prompt) ? ' && !!document.querySelector(".theater-fullscreen") && !document.querySelector(".theater-fullscreen .is-exit")' : ''}${/mobile breakpoint|\bat mobile\b/i.test(prompt) ? ' && document.querySelector("[aria-label=\\"Preview viewport\\"]")?.value === "phone" && !!document.querySelector(".theater-frame-bed")' : ''}${/prototype (?:is )?entered|prototype mode/i.test(prompt) ? ' && !!document.querySelector("[aria-label=\\"Preview viewport\\"]")' : ''}`
         : wantsGalleryHover(prompt)
         ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.inspectionReady === "true"'
         : 'document.documentElement.dataset.screenshotReady === "1"',

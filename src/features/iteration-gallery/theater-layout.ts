@@ -19,6 +19,18 @@ export function theaterFrameSize(available: Size, _baseline: Size, viewport: Siz
   return { width, height: width / ratio };
 }
 
+/** Fit a prototype viewport inside the theater frame, keeping its own aspect ratio. */
+export function fitPrototypeFrame(available: Size, viewport: Size) {
+  const ratio = viewport.width / Math.max(viewport.height, 1);
+  let width = Math.min(Math.max(0, available.width), Math.max(0, viewport.width));
+  let height = width / ratio;
+  if (height > available.height) {
+    height = Math.max(0, available.height);
+    width = height * ratio;
+  }
+  return { width, height };
+}
+
 /** Accumulate wheel pixels until one shared step; scroll down advances, scroll up goes back. */
 export function wheelFrameDelta(deltaY: number, accumulated: number, step: number) {
   const next = accumulated + deltaY;

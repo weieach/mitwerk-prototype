@@ -7,7 +7,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from
 import type { GalleryFrame, LoopMode, RangeKey } from './model';
 import { formatTime, playbackStep } from './model';
 import { galleryTokens as t } from './tokens';
-import { aspectRatioLabel, presentedFrame, theaterFrameSize, wheelFrameDelta } from './theater-layout';
+import { aspectRatioLabel, fitPrototypeFrame, presentedFrame, theaterFrameSize, wheelFrameDelta } from './theater-layout';
 import { FrameLoader } from './frame-loader';
 import { adjacentPushIndex } from './timeline';
 import { PlaybackTimeline } from './PlaybackTimeline';
@@ -148,10 +148,10 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('screenshot') !== '1') return;
-    if (params.get('prototypeToast') === '1' && prototype.available === false) setToast('No saved codebase for this push.');
+    if (params.get('viewport') === 'phone') setPreset('phone');
     if (params.get('prototypeOpen') === '1' && prototype.available && frame?.kind === 'push') {
       setPlaying(false);
-      setFullscreenId(frame.id);
+      if (params.get('overlay') === '1') setFullscreenId(frame.id);
       void prototype.enter();
     }
   }, [prototype.available, frame?.id, frame?.kind]);
@@ -180,10 +180,12 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
   if (!frame) return <div className="gallery-empty">No frames in this date range. Choose a wider range to play.</div>;
   const viewport = t.viewportPresets.find(option => option.value === preset)!;
   const dimensions = preset === 'original' ? baseline : preset === 'custom' ? custom : viewport;
-  const naturalFrame = theaterFrameSize(stageSize, baseline, dimensions);
-  const frameRatio = dimensions.width / Math.max(dimensions.height, 1);
-  const frameHeight = Math.min(naturalFrame.height, stageSize.height);
-  const frameSize = { width: frameHeight * frameRatio, height: frameHeight };
+  const naturalFrame = theaterFrameSize(stageSize, baseline, baseline);
+  const staticRatio = baseline.width / Math.max(baseline.height, 1);
+  const staticHeight = Math.min(naturalFrame.height, stageSize.height);
+  const staticFrame = { width: staticHeight * staticRatio, height: staticHeight };
+  const prototypeFrame = fitPrototypeFrame({ width: stageSize.width, height: staticFrame.height }, dimensions);
+  const frameSize = frame?.kind === 'push' && prototype.open ? prototypeFrame : staticFrame;
   function selectFrame(next: number) {
     prototype.exit();
     const nextFrame = frames[next];
@@ -263,6 +265,30 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
     ? <button className="theater-text-action is-exit" onClick={() => { prototype.exit(); setFullscreenId(null); }}><Icon name="close"/>Exit prototype</button>
     : null;
 
+  function resizeSide(side: 'left' | 'right', event: ReactPointerEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    event.preventDefault();
+    const startX = event.clientX;
+    const start = frameSize;
+    const handle = event.currentTarget;
+    try { handle.setPointerCapture(event.pointerId); } catch { /* A captured pointer is optional; window listeners still resize. */ }
+    const move = (pointer: PointerEvent) => {
+      const dx = pointer.clientX - startX;
+      const width = Math.max(120, Math.min(stageSize.width, start.width + (side === 'right' ? dx : -dx)));
+      setPreset('custom');
+      setCustom({ width: Math.round(width), height: Math.round(start.height) });
+    };
+    const end = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+  }
+  const prototypeMode = frame.kind === 'push' && prototype.open;
+
   return <div className="theater-view" data-frame-id={frame?.id} data-selected-frame-id={requested?.id} data-preview-frame-id={previewFrame?.id} data-frame-ready={ready && stageMeasured}
     style={{ '--theater-footer-gap': `${t.theater.playbackFooterGap}px` } as CSSProperties}
     onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} onLostPointerCapture={pointerEnd}>
@@ -275,6 +301,7 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
     </FullscreenPreview>}
     <div className="gallery-toolbar" data-orbit-blocked>
       <TrackedInterface value={interfaceId} onChange={onInterface}/>
+      {prototypeMode && <>
       <select value={preset} onChange={event => setPreset(event.target.value)} aria-label="Preview viewport">
         {t.viewportPresets.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
@@ -283,10 +310,11 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
         <span>×</span><input aria-label="Custom viewport height" type="number" min="120" max="4096" value={custom.height} onChange={event => setCustom({ ...custom, height: Math.max(120, Math.min(4096, +event.target.value || 120)) })}/>
       </div>}
       <span className="gallery-small">{aspectRatioLabel(dimensions.width, dimensions.height)}</span>
+      </>}
 
     </div>
     <div className="theater-body" ref={bodyRef} style={{ '--theater-metadata-height': `${t.theater.metadataHeight}px`, '--theater-metadata-max': `${t.theater.metadataHeightMaxVh}vh`, '--theater-metadata-gap': `${t.theater.metadataGap}px` } as CSSProperties}>
-      <div className="theater-stage" style={{ width: frameSize.width, '--theater-action-gap': `${t.theater.actionGap}px` } as CSSProperties}>
+      <div className="theater-stage" style={{ width: prototypeMode ? '100%' : frameSize.width, '--theater-action-gap': `${t.theater.actionGap}px`, '--theater-frame-bed': t.theater.frameBed } as CSSProperties}>
       <div className="theater-frame-actions" data-orbit-blocked ref={actionsRef}>
         {exitPrototype}
         <button className="theater-text-action" onClick={goToCommit}><Icon name="commit"/>Go to commit</button>
@@ -297,14 +325,21 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
             <span ref={enterLabel} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="arrow"/>Enter prototype</span>
           </button>)}
       </div>
-        <div className={`theater-screen${displayed?.kind === 'push' ? ' is-push' : ''}`} ref={screenRef} data-orbit-blocked={prototype.open || undefined} style={{ height: frameSize.height, width: '100%' }}>
-          {!fullscreen && prototype.open && prototype.url && <iframe className="theater-prototype" src={prototype.url}
-            title={`${formatVersion(frame.version)} interactive archived prototype`} sandbox="allow-scripts" referrerPolicy="no-referrer"/>}
+        {prototypeMode ? <div className="theater-frame-bed" style={{ '--theater-bed-height': `${staticFrame.height}px` } as CSSProperties}><div className={`theater-screen${displayed?.kind === 'push' ? ' is-push' : ''}`} ref={screenRef} data-orbit-blocked style={{ height: frameSize.height, width: frameSize.width }}>
+          {!fullscreen && prototype.url && <iframe className="theater-prototype" src={prototype.url} title={`${formatVersion(frame.version)} interactive archived prototype`} sandbox="allow-scripts" referrerPolicy="no-referrer"/>}
           {displayed ? <img draggable={false} src={`${import.meta.env.BASE_URL}${displayed.url}`} alt={`${formatVersion(displayed.version)}: ${displayed.summary}`} aria-hidden={showingPreview}/>
             : <div className="gallery-empty">{failedImage ? 'This saved image could not be loaded.' : 'Loading frame…'}</div>}
           {showingPreview && <img draggable={false} className="theater-preview-image" src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`Preview ${formatVersion(frame.version)}: ${frame.summary}`}/>}
           {prototype.loading && <div className="theater-loading" role="status">Building prototype…</div>}
-        </div>
+          {!fullscreen && <>
+            <button type="button" className="theater-resize is-left" aria-label="Resize frame from the left" data-orbit-blocked onPointerDown={event => resizeSide('left', event)}/>
+            <button type="button" className="theater-resize is-right" aria-label="Resize frame from the right" data-orbit-blocked onPointerDown={event => resizeSide('right', event)}/>
+          </>}
+        </div></div> : <div className={`theater-screen${displayed?.kind === 'push' ? ' is-push' : ''}`} ref={screenRef} style={{ height: frameSize.height, width: '100%' }}>
+          {displayed ? <img draggable={false} src={`${import.meta.env.BASE_URL}${displayed.url}`} alt={`${formatVersion(displayed.version)}: ${displayed.summary}`} aria-hidden={showingPreview}/>
+            : <div className="gallery-empty">{failedImage ? 'This saved image could not be loaded.' : 'Loading frame…'}</div>}
+          {showingPreview && <img draggable={false} className="theater-preview-image" src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`Preview ${formatVersion(frame.version)}: ${frame.summary}`}/>}
+        </div>}
       <div className="theater-metadata" ref={metaRef} style={{ '--line-added': t.theater.addedColor, '--line-removed': t.theater.removedColor, '--theater-row-gap': `${t.theater.metadataRowGap}px`, '--theater-summary-gap': `${t.theater.metadataRowGap * (t.theater.summaryGapScale - 1)}px` } as CSSProperties}>
         {failedImage && displayed && <span role="status" data-orbit-blocked>The next image could not be loaded. The previous frame is still shown.</span>}
         <div className="theater-version" data-orbit-blocked>

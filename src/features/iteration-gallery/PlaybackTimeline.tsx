@@ -18,9 +18,8 @@ export function PlaybackTimeline({ frames, catalog, range, now, index, selectedI
     const rect = event.currentTarget.getBoundingClientRect();
     return timelinePointerIndex(timeline, (event.clientX - rect.left) / rect.width);
   }
-  return <div className="gallery-timeline"
-    style={{ '--timeline-push-background': t.timeline.pushBackground, '--timeline-push-hover': t.timeline.pushHoverBackground, '--timeline-height': `${t.timeline.height}px`, '--timeline-playhead-height': `${t.timeline.height + t.timeline.playheadOverhang * 2}px`, '--timeline-playhead-width': `${t.timeline.playheadWidth}px`, '--timeline-preview-opacity': t.timeline.previewOpacity, '--timeline-minor-height': `${t.timeline.minorTickHeight}px`, '--timeline-progress': `${position * 100}%`, '--gallery-disabled': t.timeline.disabledOpacity, '--timeline-disabled-border': t.timeline.disabledBorderOpacity } as CSSProperties}
-    >
+  const span = `${Math.max(100, timeline.versions.length / t.timeline.visibleBlocks * 100)}%`;
+  return <div className="gallery-timeline-scroll" style={{ '--timeline-span': span, '--timeline-push-background': t.timeline.pushBackground, '--timeline-push-hover': t.timeline.pushHoverBackground, '--timeline-height': `${t.timeline.height}px`, '--timeline-playhead-height': `${t.timeline.height + t.timeline.playheadOverhang * 2}px`, '--timeline-playhead-width': `${t.timeline.playheadWidth}px`, '--timeline-preview-opacity': t.timeline.previewOpacity, '--timeline-minor-height': `${t.timeline.minorTickHeight}px`, '--timeline-progress': `${position * 100}%`, '--gallery-disabled': t.timeline.disabledOpacity, '--timeline-disabled-border': t.timeline.disabledBorderOpacity } as CSSProperties}><div className="gallery-timeline">
     <div className="gallery-timeline-scrubber" role="slider" tabIndex={0} aria-label="Playback position"
     aria-valuemin={0} aria-valuemax={Math.max(0, frames.length - 1)} aria-valuenow={index}
     aria-valuetext={`Frame ${index + 1} of ${frames.length}, ${formatVersion(frames[index]?.version)}`}
@@ -70,5 +69,5 @@ export function PlaybackTimeline({ frames, catalog, range, now, index, selectedI
     </button>)}
     <div className="gallery-timeline-playhead" aria-hidden="true"/>
     {previewPosition !== undefined && <div className="gallery-timeline-playhead gallery-timeline-preview" aria-hidden="true" style={{ left: `${previewPosition * 100}%` }}/> }
-  </div>;
+  </div></div>;
 }
