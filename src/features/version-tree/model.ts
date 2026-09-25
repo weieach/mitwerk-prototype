@@ -18,7 +18,7 @@ export function isPictureFile(name: string) {
 
 /** Saved frames from the capture catalog, not planning references. */
 export function isCaptureImage(file: Pick<VersionFile, 'name' | 'url'>) {
-  return Boolean(file.url) && isPictureFile(file.name);
+  return Boolean(file.url?.startsWith('gallery/images/')) && isPictureFile(file.name);
 }
 
 export type VersionNode = {

@@ -12,7 +12,7 @@ import { VersionCard } from './VersionCard';
 import { branchName, isBranchDivergence, mergedBranchIds, presentTree } from './presentation';
 import { canEditTree, treeModes, type TreeMode } from './panel-state';
 
-type Props = { status?: string; graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; modeSwitchVisible: boolean; onModeChange: (mode: TreeMode) => void };
+type Props = { onOpenPush?: (version: number) => void; status?: string; graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; modeSwitchVisible: boolean; onModeChange: (mode: TreeMode) => void };
 
 function graphBounds(nodes: { x: number; y: number; title: string }[]) {
   const label = stationLabelOffset();
@@ -33,7 +33,7 @@ const screenshotFlags = typeof window !== 'undefined'
 const screenshotCapture = screenshotFlags.capture;
 if (screenshotFlags.countHover) document.documentElement.dataset.screenshotCountHover = '1';
 
-export function VersionTreePanel({ graph, dispatch, mode, modeSwitchVisible, onModeChange, status = '' }: Props) {
+export function VersionTreePanel({ graph, dispatch, onOpenPush, mode, modeSwitchVisible, onModeChange, status = '' }: Props) {
   const activePath = useMemo(() => branchPathIds(graph.nodes, graph.activeBranchId), [graph.nodes, graph.activeBranchId]);
   const layout = useMemo(() => mode === 'history' && graph.nodes.some(node => node.git) ? layoutGitHistory(graph.nodes) : layoutBranchView(layoutGraph(graph.nodes), graph.selectedId, activePath), [graph.nodes, graph.selectedId, activePath, mode]);
   const levelColor = useMemo(() => levelColorLookup(layout.nodes), [layout.nodes]);
@@ -328,6 +328,8 @@ export function VersionTreePanel({ graph, dispatch, mode, modeSwitchVisible, onM
   const worldHeight = Math.max(layout.height + 240, viewportSize.height / zoom);
 
   return <section className="tree-panel" data-tree-mode={mode} aria-labelledby="tree-title" data-selected-branch={presentation.selectedBranchId || undefined} data-active-branch={graph.activeBranchId} style={{
+    '--card-hover-inset': `${treeTheme.cardHoverBorderInset}px`,
+    '--card-hover-transition': `${treeTheme.cardHoverTransitionMs}ms`,
     '--node-card-width': `${geometry.cardWidth}px`,
     '--station-size': `${treeTheme.stationDiameter}px`,
     '--station-border-width': `${treeTheme.stationBorderWidth}px`,
@@ -438,7 +440,7 @@ export function VersionTreePanel({ graph, dispatch, mode, modeSwitchVisible, onM
                   canDeleteCurrent={canDeleteCurrent(graph.nodes, node.id)}
                   canDeleteFuture={canDeleteFuture(graph.nodes, node.id)}
                   color={color} reverted={reverted} merged={merged} readOnly={!canEditTree(mode)}
-                  onSelect={() => dispatch({ type: 'select', id: node.id })}
+                  onSelect={() => { dispatch({ type: 'select', id: node.id }); if (mode === 'history' && node.capture?.pushed) onOpenPush?.(node.capture.version); }}
                   onBranch={() => dispatch({ type: 'add-branch', sourceId: node.id })}
                   onCommit={() => dispatch({ type: 'add-commit', sourceId: node.id })}
                   onRevert={() => dispatch({ type: 'revert', sourceId: node.id })}

@@ -9,6 +9,13 @@ export type Capture = {
 export type GalleryFrame = Capture & { version: number; position: number };
 export type GalleryVersion = { number: number; index: number; frames: GalleryFrame[] };
 export type RangeKey = 'today' | '3' | '7' | '30' | 'all';
+
+/** Planning references carry a prompt prefix but do not require a capture timestamp. */
+export function visualPromptNumber(filename: string): number | null {
+  const match = /^\[prompt #(\d+)\]\s+[^/\\]+\.png$/i.exec(filename);
+  return match && Number.isSafeInteger(+match[1]) && +match[1] > 0 ? +match[1] : null;
+}
+
 export const ranges: { value: RangeKey; label: string }[] = [
   { value: 'today', label: 'Today' }, { value: '3', label: 'Last 3 days' },
   { value: '7', label: 'Last 7 days' }, { value: '30', label: 'Last 30 days' }, { value: 'all', label: 'All time' },

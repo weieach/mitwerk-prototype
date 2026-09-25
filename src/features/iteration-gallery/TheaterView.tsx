@@ -1,3 +1,6 @@
+import "@phosphor-icons/web/fill/style.css";
+import { ReferenceFiles } from '../../components/ReferenceFiles';
+import { frameReferences, type VisualReference } from './references';
 import { FullscreenPreview } from './FullscreenPreview';
 import { usePrototype } from './usePrototype';
 import { BranchTag } from '../../components/BranchTag';
@@ -5,7 +8,7 @@ import { formatVersion, galleryBranchPaint } from './model';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { GalleryFrame, LoopMode, RangeKey } from './model';
-import { formatTime, playbackStep } from './model';
+import { formatTime, playbackStep, ranges, inRange } from './model';
 import { galleryTokens as t } from './tokens';
 import { aspectRatioLabel, fitPrototypeFrame, presentedFrame, theaterFrameSize, wheelFrameDelta } from './theater-layout';
 import { FrameLoader } from './frame-loader';
@@ -17,15 +20,16 @@ import { theaterCaption, theaterCaptionLead } from './theater-layout';
 import { Icon } from '../../components/Icon';
 import { TrackedInterface } from './TrackedInterface';
 
-function PlaybackTip({ label, children }: { label: string; children: ReactNode }) {
+function PlaybackTip({ label, children, edge }: { label: string; children: ReactNode; edge?: 'start' | 'end' }) {
   const [hover, setHover] = useState(false);
-  return <span className="playback-tip" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+  return <span className={`playback-tip${edge ? ` is-${edge}` : ''}`} onFocus={() => setHover(true)} onBlur={() => setHover(false)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
     {children}
     {hover && <span className="capsule-tooltip" role="tooltip">{label}</span>}
   </span>;
 }
 
-export function TheaterView({ frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline, interfaceId, onInterface }: { baseline: { width: number; height: number }; active: boolean; interfaceId: string; onInterface: (value: string) => void; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string) => void }) {
+export function TheaterView({ navigationKey, references, frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline, interfaceId, onInterface }: { navigationKey: number; references: VisualReference[]; baseline: { width: number; height: number }; active: boolean; interfaceId: string; onInterface: (value: string) => void; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string, animate?: boolean) => void }) {
+  const timelineRef = useRef<HTMLDivElement>(null);
   const gesture = useRef<{ pointer: number; x: number; y: number; frameClick: boolean; orbit: TheaterOrbit | null } | null>(null);
   const [playing, setPlaying] = useState(false);
   const [fullscreenId, setFullscreenId] = useState<string | null>(null);
@@ -61,6 +65,9 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
   const previewFrame = frames[previewIndex];
   const frame = presentedFrame(!!previewFrame, previewImage, displayed, requested);
   const prototype = usePrototype(frame, active);
+  useEffect(() => {
+    setPlaying(false); setPreviewId(null); setPreviewImage(null); prototype.exit();
+  }, [navigationKey]);
   const fullscreen = active && frame?.kind === 'push' && fullscreenId === frame.id;
   const showingPreview = !!previewFrame && !!previewImage;
   const previousPush = adjacentPushIndex(catalog, Math.max(0, catalog.findIndex(item => item.id === selectedId)), -1);
@@ -289,6 +296,19 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
   }
   const prototypeMode = frame.kind === 'push' && prototype.open;
 
+  const playbackOptions = <div className="playback-options">
+        <label><span className="sr-only">Playback speed</span><select aria-label="Playback speed" value={speed} onChange={event => setSpeed(+event.target.value)}>{t.speeds.map(value => <option key={value} value={value}>{value}×</option>)}</select></label>
+        <select aria-label="Playback loop" value={mode} onChange={event => { setMode(event.target.value as LoopMode); setDirection(1); }}><option value="once">Play once</option><option value="loop">Loop</option><option value="ping-pong">Ping-pong</option></select>
+        </div>;
+  const rangeLabel = ranges.find(option => option.value === range)!.label.toLowerCase();
+  const rangeFrames = catalog.filter(frame => inRange(frame, range, now));
+  function scrollTimeline(edge: 'start' | 'end') {
+    const next = edge === 'start' ? rangeFrames[0] : rangeFrames.at(-1);
+    if (!next) return;
+    prototype.exit(); setPlaying(false); setPreviewId(null); setPreviewImage(null);
+    onSelect(next.id, true);
+  }
+
   return <div className="theater-view" data-frame-id={frame?.id} data-selected-frame-id={requested?.id} data-preview-frame-id={previewFrame?.id} data-frame-ready={ready && stageMeasured}
     style={{ '--theater-footer-gap': `${t.theater.playbackFooterGap}px` } as CSSProperties}
     onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} onLostPointerCapture={pointerEnd}>
@@ -299,8 +319,9 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
             sandbox="allow-scripts" referrerPolicy="no-referrer"/>
         : <img draggable={false} src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`${formatVersion(frame.version)}: ${frame.summary}`}/>}
     </FullscreenPreview>}
-    <div className="gallery-toolbar" data-orbit-blocked>
+    <div className="gallery-toolbar theater-top-toolbar" data-orbit-blocked>
       <TrackedInterface value={interfaceId} onChange={onInterface}/>
+      <div className="playback-options-top">{playbackOptions}</div>
       {prototypeMode && <>
       <select value={preset} onChange={event => setPreset(event.target.value)} aria-label="Preview viewport">
         {t.viewportPresets.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -340,7 +361,7 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
             : <div className="gallery-empty">{failedImage ? 'This saved image could not be loaded.' : 'Loading frame…'}</div>}
           {showingPreview && <img draggable={false} className="theater-preview-image" src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`Preview ${formatVersion(frame.version)}: ${frame.summary}`}/>}
         </div>}
-      <div className="theater-metadata" ref={metaRef} style={{ '--line-added': t.theater.addedColor, '--line-removed': t.theater.removedColor, '--theater-row-gap': `${t.theater.metadataRowGap}px`, '--theater-summary-gap': `${t.theater.metadataRowGap * (t.theater.summaryGapScale - 1)}px` } as CSSProperties}>
+      <div className="theater-metadata" ref={metaRef} style={{ '--theater-reference-width': `${t.theater.referenceChipWidth}px`, '--line-added': t.theater.addedColor, '--line-removed': t.theater.removedColor, '--theater-row-gap': `${t.theater.metadataRowGap}px`, '--theater-summary-gap': `${t.theater.metadataRowGap * (t.theater.summaryGapScale - 1)}px` } as CSSProperties}>
         {failedImage && displayed && <span role="status" data-orbit-blocked>The next image could not be loaded. The previous frame is still shown.</span>}
         <div className="theater-version" data-orbit-blocked>
           <span className="theater-version-group">
@@ -351,22 +372,23 @@ export function TheaterView({ frames, catalog, range, now, selectedId, onSelect,
           <time dateTime={new Date(frame.timestamp).toISOString()}>{formatTime(frame.timestamp)}</time>
         </div>
         <p className="theater-summary"><span data-orbit-blocked data-orbit-inline>{frame.kind === 'push' ? <strong>{theaterCaptionLead(frame)}</strong> : theaterCaptionLead(frame)}{theaterCaption(frame)}</span></p>
+        <ReferenceFiles files={frameReferences(frame, catalog, references)}/>
       </div>
       </div>
     </div>
     <div className="theater-playback" data-orbit-blocked>
       <div className="gallery-toolbar playback-controls">
+        <PlaybackTip label={`Scroll to timeline start (${rangeLabel})`} edge="start"><button className="icon-button" aria-label="Scroll to timeline start" disabled={!rangeFrames.length} onClick={() => scrollTimeline('start')}><i className="ph-fill ph-caret-line-left" aria-hidden="true"/></button></PlaybackTip>
         <div className="playback-transport">
         <PlaybackTip label="Jump to last push"><button className="icon-button" onClick={() => skipPush(previousPush)} disabled={previousPush === null} aria-label="Previous push"><span className="skip-marks is-previous"><Icon name="play" size={16}/><Icon name="play" size={16}/></span></button></PlaybackTip>
         <PlaybackTip label={playing ? 'Pause' : 'Play'}><button className="icon-button playback-toggle" onClick={() => { prototype.exit(); if (!playing && mode === 'once' && index === frames.length - 1) onSelect(frames[0].id); setPlaying(!playing); }} disabled={frames.length < 2} aria-label={playing ? 'Pause playback' : 'Play frames'}><Icon name={playing ? 'pause' : 'play'} size={26}/></button></PlaybackTip>
         <PlaybackTip label="Jump to next push"><button className="icon-button" onClick={() => skipPush(nextPush)} disabled={nextPush === null} aria-label="Next push"><span className="skip-marks"><Icon name="play" size={16}/><Icon name="play" size={16}/></span></button></PlaybackTip>
         </div>
-        <div className="playback-options">
-        <label><span className="sr-only">Playback speed</span><select aria-label="Playback speed" value={speed} onChange={event => setSpeed(+event.target.value)}>{t.speeds.map(value => <option key={value} value={value}>{value}×</option>)}</select></label>
-        <select aria-label="Playback loop" value={mode} onChange={event => { setMode(event.target.value as LoopMode); setDirection(1); }}><option value="once">Play once</option><option value="loop">Loop</option><option value="ping-pong">Ping-pong</option></select>
+        <div className="playback-end-controls">
+          <PlaybackTip label={`Scroll to timeline end (${rangeLabel})`} edge="end"><button className="icon-button" aria-label="Scroll to timeline end" disabled={!rangeFrames.length} onClick={() => scrollTimeline('end')}><i className="ph-fill ph-caret-line-right" aria-hidden="true"/></button></PlaybackTip>
         </div>
       </div>
-      <PlaybackTimeline frames={frames} catalog={catalog} range={range} now={now} index={Math.max(0, index)} selectedId={selectedId} previewIndex={previewIndex} onPreview={next => { if (prototype.open || prototype.loading) return; setPreviewId(next === null ? null : frames[next].id); if (next === null) setPreviewImage(null); }} onSelect={selectFrame} onSelectPush={id => { prototype.exit(); setPlaying(false); setPreviewId(null); setPreviewImage(null); onSelect(id); }}/>
+      <PlaybackTimeline navigationKey={navigationKey} viewportRef={timelineRef} frames={frames} catalog={catalog} range={range} now={now} index={Math.max(0, index)} selectedId={selectedId} previewIndex={previewIndex} onPreview={next => { if (prototype.open || prototype.loading) return; setPreviewId(next === null ? null : frames[next].id); if (next === null) setPreviewImage(null); }} onSelect={selectFrame} onSelectPush={id => { prototype.exit(); setPlaying(false); setPreviewId(null); setPreviewImage(null); onSelect(id); }}/>
       {toast && <div className="project-toast" role="status">{toast}</div>}
     </div>
   </div>;

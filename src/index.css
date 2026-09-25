@@ -69,10 +69,10 @@ button svg { flex: 0 0 auto; }
 .branch-count:focus-visible .branch-count-hint,
 html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .version-position { position: absolute; width: var(--node-card-width); }
-.version-card { position: relative; width: var(--node-card-width); padding: 11px 13px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); cursor: default; }
+.version-card { --card-border-color: var(--line); box-shadow: inset 0 0 0 0 var(--card-border-color); transition: border-color var(--card-hover-transition) ease, box-shadow var(--card-hover-transition) ease; position: relative; width: var(--node-card-width); padding: 11px 13px 12px; border: 1px solid var(--card-border-color); border-radius: 6px; background: var(--paper); cursor: default; }
 .version-card.is-compact { cursor: pointer; }
-.version-card.is-selected { background: var(--paper); border-color: var(--line-strong); }
-.version-card:hover { border-color: #b5b5b5; }
+.version-card.is-selected { background: var(--paper); --card-border-color: var(--line-strong); }
+.version-card:hover { --card-border-color: var(--line-strong); box-shadow: inset 0 0 0 var(--card-hover-inset) var(--card-border-color); }
 .station { width: var(--station-size); height: var(--station-size); border-radius: 50%; display: grid; place-items: center; padding: 0; position: absolute; left: var(--station-offset-x); top: var(--station-offset-y); border: var(--station-border-width) solid var(--station-color, var(--route-color)); background: var(--station-color, var(--route-color)); box-shadow: 0 0 0 var(--station-clearance) var(--canvas-bg); }
 .station.is-merged { opacity: var(--merged-branch-opacity, 0.4); }
 .station span { width: var(--station-inner-size); height: var(--station-inner-size); border-radius: 50%; background: var(--station-open-fill); }
@@ -88,7 +88,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .card-menu-panel button:disabled { color: var(--faint); }
 .version-card.is-selected .station { border-color: var(--station-color, var(--route-color)); background: var(--station-color, var(--route-color)); box-shadow: 0 0 0 var(--station-selected-ring) var(--station-fill), 0 0 0 calc(var(--station-selected-ring) + var(--station-clearance)) var(--canvas-bg); }
 .version-card.is-selected .station span { background: var(--station-open-fill); box-shadow: none; }
-.version-card.is-active-branch { border-color: var(--route-color); }
+.version-card.is-active-branch { --card-border-color: var(--route-color); }
 .version-card.is-reverted { --station-color: var(--reverted-route-color); }
 .version-card.is-reverted .version-title { color: var(--reverted-title-color, #9a9a9a); text-decoration: line-through; }
 .station-label { position: absolute; z-index: 4; transform: translate(-100%, -50%) scale(var(--version-label-zoom, 1)); transform-origin: right center; display: inline-flex; align-items: center; gap: 6px; font: var(--version-label-weight, 700) var(--version-label-size) var(--sans); color: var(--version-label-color, #000); pointer-events: none; white-space: nowrap; }

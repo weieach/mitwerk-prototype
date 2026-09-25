@@ -474,6 +474,7 @@ function screenshotUrl(prompt = '') {
   const centered = /\bv(\d+(?:\.\d+)?)(?:\s+\w+){0,3}\s+centered\b/i.exec(prompt);
   if (centered) target.searchParams.set('treeCenter', centered[1]);
   if (/\b(?:near\s+)?bottom of (?:the )?(?:page|panel)\b/i.test(prompt) || /recapture last prompt/i.test(prompt)) target.searchParams.set('treeFrame', 'bottom');
+  if (centered) target.searchParams.delete('treeFrame');
   if (/a bit more upward/i.test(prompt)) target.searchParams.set('treeLift', '0.22');
   if (/same (?:spot|zone) as (?:the )?last (?:prompt|one)|recapture last frame/i.test(prompt)) {
     try {
@@ -638,6 +639,18 @@ async function capture(chrome, outFile, prompt = '') {
       }
     }
     await delay(['top', 'overhead'].includes(argValue('gallery-view')) ? 500 : 150);
+    const hoverControl = argValue('hover-control');
+    if (hoverControl) {
+      const hovered = await cdp('Runtime.evaluate', { expression: `(() => {
+        const control = [...document.querySelectorAll('button[aria-label]')].find(button => button.getAttribute('aria-label') === ${JSON.stringify(hoverControl)});
+        if (!control) return null;
+        const rect = control.getBoundingClientRect(); return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+      })()`, returnByValue: true });
+      const point = hovered.result?.value;
+      if (!point) throw new Error(`Could not find capture hover control: ${hoverControl}`);
+      await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
+      await delay(150);
+    }
     const shot = await cdp('Page.captureScreenshot', { format: 'png', fromSurface: true });
     writeFileSync(outFile, Buffer.from(shot.data, 'base64'));
     ws.close();

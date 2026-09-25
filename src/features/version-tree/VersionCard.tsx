@@ -1,3 +1,4 @@
+import { ReferenceFiles } from '../../components/ReferenceFiles';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Icon, type IconName } from '../../components/Icon';
@@ -76,7 +77,7 @@ export function VersionCard({
     };
   }, [menuOpen, forceMenuOpen]);
 
-  return <article className={`version-card ${selected ? 'is-selected' : ''} ${onActivePath ? 'is-active-branch' : ''} ${compact ? 'is-compact' : ''} ${reverted ? 'is-reverted' : ''}`} style={{ '--route-color': color } as CSSProperties} data-node-id={node.id} data-active-branch={onActivePath} data-compact={compact || undefined} data-reverted={reverted || undefined} onClick={compact ? onSelect : undefined}>
+  return <article className={`version-card ${selected ? 'is-selected' : ''} ${onActivePath ? 'is-active-branch' : ''} ${compact ? 'is-compact' : ''} ${reverted ? 'is-reverted' : ''}`} style={{ '--route-color': color } as CSSProperties} data-node-id={node.id} data-active-branch={onActivePath} data-compact={compact || undefined} data-reverted={reverted || undefined} onClick={event => { if (!(event.target as HTMLElement).closest('button, a, input, select, summary')) onSelect(); }}>
     <button className={`station ${hasDescendants ? 'has-descendants' : 'is-terminal'} ${merged ? 'is-merged' : ''}`} aria-label={`Select ${node.label}`} aria-pressed={selected} onClick={onSelect}>
       <span />
     </button>
@@ -105,12 +106,9 @@ export function VersionCard({
     </div>}
     <button className="version-heading" onClick={onSelect} aria-label={`View ${node.label}: ${node.title || 'Untitled version'}`}>
       <span className="version-meta"><span className="save-label">{node.saveType === 'auto' ? <Icon name="spark" size={11}/> : <Icon name="commit" size={12}/>} {node.git ? 'Git commit' : node.capture ? node.capture.pushed ? 'Saved push' : 'Work in progress' : node.saveType === 'auto' ? 'Autosave' : 'Manual save'}</span></span>
-      <span className={`version-title ${!node.title ? 'untitled' : ''} ${titleExpanded ? 'is-expanded' : ''}`} title={node.title || 'Untitled version'} onClick={event => { event.stopPropagation(); setTitleExpanded(open => !open); }}>{node.title || 'Untitled version'}</span>
+      <span className={`version-title ${!node.title ? 'untitled' : ''} ${titleExpanded ? 'is-expanded' : ''}`} title={node.title || 'Untitled version'} onClick={event => { event.stopPropagation(); setTitleExpanded(open => !open); onSelect(); }}>{node.title || 'Untitled version'}</span>
     </button>
-    {(references.length > 0 || (node.capture && !node.capture.pushed)) && <div className="reference-files">
-      {references.length > 0 ? references.slice(0, 2).map(file => <span className="file-chip" key={file.name} title={file.name}><Icon name={fileChipIcon(file)} size={12}/>{file.url ? <a className="file-chip-name capture-frame-link" href={`${import.meta.env.BASE_URL}${file.url}`} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()}>{file.name}</a> : <span className="file-chip-name">{file.name}</span>}</span>) : <span className="empty-reference">No references yet</span>}
-      {references.length > 2 && <span className="mono">+{references.length - 2}</span>}
-    </div>}
+    {references.length > 0 ? <ReferenceFiles files={references} limit={2}/> : node.capture && !node.capture.pushed && <div className="reference-files"><span className="empty-reference">No references yet</span></div>}
     {!compact && <>
       <div className="version-stats"><span><Icon name="code" size={13}/>{`${node.git ? node.git.filesChanged : codeFiles.length} ${(node.git ? node.git.filesChanged : codeFiles.length) === 1 ? 'file' : 'files'} changed`}</span><span className="stat-divider"/><button onClick={() => { onSelect(); if (node.capture) setDetailsOpen(true); }}>{node.prompts.length} {node.prompts.length === 1 ? 'prompt' : 'prompts'}<Icon name="arrow" size={11}/></button></div>
       <div className="version-card-bottom"><button className="details-toggle" onClick={() => setDetailsOpen(!detailsOpen)} aria-expanded={detailsOpen}><Icon name="chevron" size={10} style={{ transform: detailsOpen ? 'rotate(90deg)' : undefined }}/>{detailsOpen ? 'Hide details' : 'Show details'}</button><span className="line-count"><span className="is-added">+{node.git ? node.git.added : node.capture ? node.capture.added ?? '—' : added}</span><span className="is-removed">−{node.git ? node.git.removed : node.capture ? node.capture.removed ?? '—' : removed}</span></span></div>

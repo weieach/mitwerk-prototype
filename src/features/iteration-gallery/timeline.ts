@@ -3,8 +3,21 @@ import { galleryTokens as t } from './tokens.ts';
 
 export type TimelineInput = Pick<GalleryFrame, 'id' | 'version'> & { enabled?: boolean; branch?: string | null; kind?: GalleryFrame['kind'] };
 
+/** Share the available width between equal version slots and their push gutters. */
+export function fitTimeline(versionCount: number, availableWidth: number) {
+  const slots = Math.max(1, versionCount);
+  const visibleSlots = Math.min(slots, t.timeline.visibleBlocks);
+  const contentScale = slots / visibleSlots;
+  const slotWidth = availableWidth > 0 ? availableWidth / visibleSlots : t.versionDepth;
+  const gapWidth = Math.min(slotWidth * t.timeline.maxGapFraction,
+    Math.max(t.timeline.pushMinWidth, slotWidth * t.blockGap * t.timeline.gapScale / t.versionDepth));
+  const gapDepth = gapWidth / slotWidth * t.versionDepth;
+  // The final push stays outside the version track, with space reserved inside the viewport.
+  return { gapDepth, contentScale, trackFraction: 1 - gapDepth / (slots * t.versionDepth) };
+}
+
 /** Each version occupies one equal slot; its captured commits subdivide that slot. */
-export function buildTimeline(frames: TimelineInput[]) {
+export function buildTimeline(frames: TimelineInput[], gap = t.blockGap * t.timeline.gapScale) {
   const groups = new Map<number, { id: string; index: number; enabled: boolean; branch: string | null; kind?: GalleryFrame['kind'] }[]>();
   frames.forEach(frame => {
     if (!groups.has(frame.version)) groups.set(frame.version, []);
@@ -15,7 +28,6 @@ export function buildTimeline(frames: TimelineInput[]) {
   for (const [version, items] of groups) for (const item of items) {
     if (item.enabled && (item.kind !== 'push' || showPush.get(version))) item.index = playable++;
   }
-  const gap = t.blockGap * t.timeline.gapScale;
   const span = Math.max(t.versionDepth, groups.size * t.versionDepth) - gap;
   const blockDepth = t.versionDepth - gap;
   const contentDepth = blockDepth - 2 * t.timeline.inlinePadding;

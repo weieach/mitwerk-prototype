@@ -124,7 +124,7 @@ test('local catalog discovers real PNG dimensions and safely encodes filenames',
     assert.equal(decodeURIComponent(frame.url.slice('gallery/images/'.length)), frame.filename);
     assert.ok(Number.isFinite(frame.timestamp));
   }
-  assert.deepEqual(readCaptureCatalog('/nonexistent-iteration-gallery-test'), { frames: [], ignored: 0 });
+  assert.deepEqual(readCaptureCatalog('/nonexistent-iteration-gallery-test'), { frames: [], ignored: 0, references: [] });
 });
 
 

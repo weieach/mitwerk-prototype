@@ -1,3 +1,4 @@
+import type { VisualReference } from './features/iteration-gallery/references';
 import { useEffect, useReducer, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { VersionTreePanel } from './features/version-tree/VersionTreePanel';
@@ -22,6 +23,7 @@ export default function App() {
   const [panels, dispatchPanel] = useReducer(panelReducer, undefined, () => loadTreePanels(loadGraphState(), panelBrowserStorage()));
   const captureMode = captureTreeMode(location.search);
   const mode = captureMode ?? panels.mode;
+  const [pushRequest, setPushRequest] = useState<{ version: number } | null>(null);
   const [historyReady, setHistoryReady] = useState(false);
   const [modeSwitchVisible, setModeSwitchVisible] = useState(false);
   useEffect(() => {
@@ -46,11 +48,11 @@ export default function App() {
           fetch(`${import.meta.env.BASE_URL}gallery/git-history.json`, { signal: abort.signal, cache: 'no-cache' }),
         ]);
         if (!response.ok || !gitResponse.ok) throw new Error('Could not load captured history. Retrying automatically.');
-        const catalog = await response.json() as { frames: Capture[] };
+        const catalog = await response.json() as { frames: Capture[]; references?: VisualReference[] };
         const git = await gitResponse.json() as GitHistory;
         if (!Array.isArray(catalog.frames)) throw new Error('The capture catalog is invalid.');
         if (!abort.signal.aborted) {
-          dispatchPanel({ type: 'history', graph: buildGitCaptureHistory(catalog.frames, git) });
+          dispatchPanel({ type: 'history', graph: buildGitCaptureHistory(catalog.frames, git, catalog.references) });
           setHistoryReady(true); setHistoryError('');
         }
       } catch (error) { if (!abort.signal.aborted) setHistoryError(error instanceof Error ? error.message : 'Could not load history.'); }
@@ -158,10 +160,10 @@ export default function App() {
     style={{ '--split': leftWidth === null ? '50%' : `${leftWidth}px` } as CSSProperties}
   >
     <div className="workspace-split" style={{ gridTemplateColumns: leftWidth === null ? 'minmax(0, 1fr) minmax(0, 1fr)' : `${leftWidth}px minmax(0, 1fr)` }}>
-      <IterationGallery />
+      <IterationGallery pushRequest={pushRequest}/>
       <VersionTreePanel key={`${mode}-${mode === 'history' && historyReady}`} graph={panels[mode]}
         status={mode === 'history' ? historyError || (!historyReady ? 'Reading capture history…' : !panels.history.nodes.length ? 'No saved captures found.' : '') : ''}
-        mode={mode} modeSwitchVisible={modeSwitchVisible} onModeChange={mode => dispatchPanel({ type: 'switch', mode })}
+        onOpenPush={version => setPushRequest({ version })} mode={mode} modeSwitchVisible={modeSwitchVisible} onModeChange={mode => dispatchPanel({ type: 'switch', mode })}
         dispatch={action => dispatchPanel({ type: 'graph', mode, action })} />
     </div>
     <div

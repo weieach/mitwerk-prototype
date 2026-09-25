@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { galleryTokens as t } from '../src/features/iteration-gallery/tokens.ts';
-import { adjacentPushIndex, buildTimeline, nearestTimelineFrame, timelineBranch, timelinePointerIndex, timelineRangeLabelAt } from '../src/features/iteration-gallery/timeline.ts';
+import { adjacentPushIndex, buildTimeline, fitTimeline, nearestTimelineFrame, timelineBranch, timelinePointerIndex, timelineRangeLabelAt } from '../src/features/iteration-gallery/timeline.ts';
 
 test('unequal commit counts preserve equal version spacing and exact frame lookup', () => {
   const timeline = buildTimeline([{ id: 'a', version: 4 }, { id: 'b', version: 5 }, { id: 'c', version: 5 }, { id: 'd', version: 5 }]);
@@ -97,4 +97,36 @@ test('push targets never substitute prompt frames for missing or filtered pushes
   const single = buildTimeline([{ id: 'only', version: 19, kind: 'push' }]);
   assert.equal(single.pushes[0].index, null); assert.equal(single.pushes[0].frameId, 'only'); assert.equal(single.pushes[0].start, 1);
   assert.deepEqual(single.versions[0].marks.map(mark => mark.id), ['only']);
+});
+
+
+test('responsive slots fit the final push and center rulers without gutter overlap', () => {
+  for (const count of [1, 7, 20, 40, 200]) for (const width of [240, 620, 1400]) {
+    const sizing = fitTimeline(count, width);
+    const frames = Array.from({ length: count }, (_, i) => [
+      { id: `a${i}`, version: i + 1 }, { id: `b${i}`, version: i + 1 },
+      { id: `p${i}`, version: i + 1, kind: 'push' as const },
+    ]).flat();
+    const timeline = buildTimeline(frames, sizing.gapDepth);
+    const trackWidth = width * sizing.contentScale * sizing.trackFraction;
+    assert.ok(Math.abs(timeline.pushes.at(-1)!.end * trackWidth - width * sizing.contentScale) < 1e-8);
+    for (const [i, version] of timeline.versions.entries()) {
+      const rulersCenter = version.marks.reduce((sum, mark) => sum + mark.position, 0) / version.marks.length;
+      assert.ok(Math.abs(rulersCenter - (version.start + version.end) / 2) < 1e-8);
+      assert.ok(version.end > version.start);
+      const push = timeline.pushes[i];
+      assert.equal(push.start, version.end);
+      if (i + 1 < count) assert.equal(push.end, timeline.versions[i + 1].start);
+      for (const mark of version.marks) assert.equal(timelinePointerIndex(timeline, mark.position), mark.index);
+    }
+  }
+});
+
+
+test('at most twenty equal version slots fit before horizontal scrolling starts', () => {
+  const width = 600;
+  assert.equal(fitTimeline(20, width).contentScale, 1);
+  assert.equal(fitTimeline(40, width).contentScale, 2);
+  const twenty = fitTimeline(20, width), forty = fitTimeline(40, width);
+  assert.equal(twenty.gapDepth, forty.gapDepth);
 });

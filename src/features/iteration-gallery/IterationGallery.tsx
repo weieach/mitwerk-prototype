@@ -1,3 +1,4 @@
+import type { VisualReference } from './references';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { containedFrameTarget, frameBorderEntrance, timelineEntrance } from './theater-transition';
 import type { GalleryCamera, TheaterTarget } from './theater-transition';
@@ -10,9 +11,9 @@ import type { Capture, RangeKey } from './model';
 import { galleryTokens as t } from './tokens';
 import './gallery.css';
 
-type Catalog = { frames: Capture[]; ignored: number };
+type Catalog = { frames: Capture[]; ignored: number; references?: VisualReference[] };
 
-export function IterationGallery() {
+export function IterationGallery({ pushRequest }: { pushRequest: { version: number } | null }) {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
@@ -22,6 +23,7 @@ export function IterationGallery() {
   const [zoom, setZoom] = useState(1);
   const [view, setView] = useState<'album' | 'turning' | 'theater' | 'returning' | 'orbiting'>('album');
   const [selectedId, setSelectedId] = useState('');
+  const [navigationKey, setNavigationKey] = useState(0);
   const [target, setTarget] = useState<TheaterTarget | null>(null);
   const viewStack = useRef<HTMLDivElement>(null);
   const galleryRoot = useRef<HTMLElement>(null);
@@ -68,7 +70,16 @@ export function IterationGallery() {
   const counts = useMemo(() => rangeCounts(versions, range, now), [versions, range, now]);
   const rangePrompts = visibleFrames.filter(frame => frame.kind === 'prompt').length;
   const rangePromptLabel = ` (${rangePrompts} ${rangePrompts === 1 ? 'prompt' : 'prompts'})`;
-  const select = useCallback((id: string) => setSelectedId(id), []);
+  const select = useCallback((id: string, animate = false) => { setSelectedId(id); if (animate) setNavigationKey(key => key + 1); }, []);
+  const handledPush = useRef(pushRequest);
+  useEffect(() => {
+    if (!pushRequest || handledPush.current === pushRequest) return;
+    const push = versions.flatMap(version => version.frames).find(frame => frame.kind === 'push' && frame.version === pushRequest.version);
+    if (!push) return;
+    handledPush.current = pushRequest;
+    select(push.id, true);
+    if (view === 'album') { updateTimelineMotion(0); setView('turning'); }
+  }, [pushRequest, versions, view, select, updateTimelineMotion]);
   function open(id: string) { if (view !== 'album') return; updateTimelineMotion(0); setSelectedId(id); setView('turning'); }
 
   useLayoutEffect(() => {
@@ -115,7 +126,7 @@ export function IterationGallery() {
       : !versions.length ? <div className="gallery-empty">No saved frames found.</div>
       : <div className="gallery-view-stack" ref={viewStack}>
       {<><AlbumView onMotion={updateTimelineMotion} turning={view === 'turning'} returning={view === 'returning'} hidden={view === 'theater' || view === 'orbiting'} onReturnStarted={startReturn} theaterTarget={target} theaterId={selectedId} onTurnComplete={finishTurn} versions={versions} range={range} now={now} zoom={zoom} interfaceId={interfaceId} onInterface={setInterfaceId} onOpen={open} onZoom={setZoom} onCamera={api => { camera.current = api; }}/>{!visibleFrames.length && <div className="gallery-message">No frames in this range. Earlier versions remain visible in gray.</div>}</>}
-      {view !== 'album' && <div className="gallery-theater-layer" inert={view === 'turning' || view === 'returning'} aria-hidden={view === 'turning' || view === 'returning'}><TheaterView baseline={baseline ?? t.viewportPresets[1]} interfaceId={interfaceId} onInterface={setInterfaceId} frames={visibleFrames} catalog={versions.flatMap(version => version.frames)} range={range} now={now} selectedId={selectedId} onSelect={select} onOrbit={(id, rect) => camera.current?.orbit(id, rect, () => { setSelectedId(id); setView('orbiting'); }, () => { setView('album'); setTarget(null); }) ?? null} onDismiss={exit} active={view === 'theater'}/></div>}
+      {view !== 'album' && <div className="gallery-theater-layer" inert={view === 'turning' || view === 'returning'} aria-hidden={view === 'turning' || view === 'returning'}><TheaterView navigationKey={navigationKey} references={catalog?.references ?? []} baseline={baseline ?? t.viewportPresets[1]} interfaceId={interfaceId} onInterface={setInterfaceId} frames={visibleFrames} catalog={versions.flatMap(version => version.frames)} range={range} now={now} selectedId={selectedId} onSelect={select} onOrbit={(id, rect) => camera.current?.orbit(id, rect, () => { setSelectedId(id); setView('orbiting'); }, () => { setView('album'); setTarget(null); }) ?? null} onDismiss={exit} active={view === 'theater'}/></div>}
       </div>}
     <footer className="gallery-footer" inert={view === 'turning' || view === 'returning' || view === 'orbiting'}>
       <div className="gallery-range">

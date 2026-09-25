@@ -1,9 +1,14 @@
+import { promptReferences, type VisualReference } from '../iteration-gallery/references.ts';
 import { buildVersions } from '../iteration-gallery/model.ts';
 import type { Capture } from '../iteration-gallery/model.ts';
 import type { GraphState, VersionNode } from './model.ts';
 
 /** Capture chronology only: filenames do not contain Git parent hashes. */
-export function buildCaptureHistory(captures: Capture[]): GraphState {
+export function promptReferenceFiles(references: VisualReference[], prompts: number[]) {
+  return promptReferences(references, prompts).map(file => ({ ...file, kind: 'reference' as const, added: 0, removed: 0 }));
+}
+
+export function buildCaptureHistory(captures: Capture[], references: VisualReference[] = []): GraphState {
   const versions = buildVersions([...new Map(captures.map(frame => [frame.id, frame])).values()]);
   const nodes: VersionNode[] = versions.map((version, index) => {
     const push = version.frames.filter(frame => frame.kind === 'push').at(-1);
@@ -15,7 +20,8 @@ export function buildCaptureHistory(captures: Capture[]): GraphState {
       relation: index ? 'commit' : 'root',
       summary: push ? `Push #${push.number} · ${latest.summary}` : `Work in progress · ${latest.summary}`,
       prompts: version.frames.filter(frame => frame.kind === 'prompt').map(frame => ({ id: frame.id, text: frame.summary })),
-      files: version.frames.map(frame => ({ name: frame.filename, kind: 'reference', added: 0, removed: 0, url: frame.url })),
+      files: [...version.frames.map(frame => ({ name: frame.filename, kind: 'reference' as const, added: 0, removed: 0, url: frame.url })),
+        ...promptReferenceFiles(references, version.frames.flatMap(frame => frame.kind === 'prompt' && frame.number !== null ? [frame.number] : []))],
       capture: { version: version.number, pushed: !!push, branches: [...new Set(version.frames.map(frame => frame.branch ?? 'main'))], added: latest.added, removed: latest.removed },
     };
   });
@@ -32,8 +38,8 @@ import { normalizedCaptureSubject } from './git-history.ts';
 import type { GitHistory } from './git-history.ts';
 
 /** Attach saved versions to Git commits; uncaptured commits remain part of the graph. */
-export function buildGitCaptureHistory(captures: Capture[], git: GitHistory): GraphState {
-  const saved = buildCaptureHistory(captures);
+export function buildGitCaptureHistory(captures: Capture[], git: GitHistory, references: VisualReference[] = []): GraphState {
+  const saved = buildCaptureHistory(captures, references);
   if (!git.commits.length) return saved;
   const matched = new Map<string, VersionNode>();
   const unmatched: VersionNode[] = [];

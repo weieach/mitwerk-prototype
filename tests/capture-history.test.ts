@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildCaptureHistory, refreshCaptureHistory } from '../src/features/version-tree/capture-history.ts';
+import { buildCaptureHistory, promptReferenceFiles, refreshCaptureHistory } from '../src/features/version-tree/capture-history.ts';
 import { createInitialGraphState } from '../src/features/version-tree/model.ts';
 import { captureTreeMode, createTreePanels, panelReducer, loadTreePanels, panelStorageKey } from '../src/features/version-tree/panel-state.ts';
 import { layoutGraph } from '../src/features/version-tree/layout.ts';
@@ -37,4 +37,10 @@ test('progress captures default to history while an explicit debug capture can u
   assert.equal(captureTreeMode('?screenshot=1'), 'history');
   assert.equal(captureTreeMode('?screenshot=1&treeMode=test'), 'test');
   assert.equal(captureTreeMode('?treeMode=history'), null);
+});
+test('prompt-numbered visual references append only to the commit that contains that prompt', () => {
+  const references = [{ name: '[prompt #2] note.png', url: 'gallery/references/note.png', prompt: 2 }, { name: 'plan.png', url: 'visual_ref/plan.png', prompt: 9 }];
+  const graph = buildCaptureHistory([frame('prompt-a', 'prompt', 1, 1), frame('prompt-b', 'prompt', 2, 2), frame('push', 'push', 4, 3)], references.filter(file => file.name.startsWith('[')));
+  assert.deepEqual(promptReferenceFiles(references, [2]).map(file => file.name), ['[prompt #2] note.png']);
+  assert.deepEqual(graph.nodes[0].files.filter(file => !file.url?.includes('gallery/images/')).map(file => file.name), ['[prompt #2] note.png']);
 });

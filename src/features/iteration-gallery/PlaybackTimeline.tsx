@@ -1,16 +1,40 @@
+import { usePlayheadMotion } from './usePlayheadMotion';
 import { formatVersion, inRange } from './model';
-import { useMemo, useState } from 'react';
-import type { CSSProperties, PointerEvent } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
+import type { CSSProperties, PointerEvent, RefObject } from 'react';
 import type { GalleryFrame, RangeKey } from './model';
-import { buildTimeline, timelinePointerIndex } from './timeline';
+import { buildTimeline, fitTimeline, timelinePointerIndex } from './timeline';
 import { galleryTokens as t } from './tokens';
 
-export function PlaybackTimeline({ frames, catalog, range, now, index, selectedId, previewIndex, onPreview, onSelect, onSelectPush }: { catalog: GalleryFrame[]; range: RangeKey; now: number; previewIndex: number; onPreview: (index: number | null) => void; frames: GalleryFrame[]; index: number; selectedId: string; onSelect: (index: number) => void; onSelectPush: (id: string) => void }) {
+export function PlaybackTimeline({ navigationKey, frames, catalog, range, now, index, selectedId, previewIndex, onPreview, onSelect, onSelectPush, viewportRef }: { navigationKey: number; viewportRef: RefObject<HTMLDivElement | null>; catalog: GalleryFrame[]; range: RangeKey; now: number; previewIndex: number; onPreview: (index: number | null) => void; frames: GalleryFrame[]; index: number; selectedId: string; onSelect: (index: number) => void; onSelectPush: (id: string) => void }) {
   const [pushTip, setPushTip] = useState<number | null>(null);
-  const timeline = useMemo(() => buildTimeline(catalog.map(frame => ({ ...frame, enabled: inRange(frame, range, now) }))), [catalog, range, now]);
+  const containerRef = viewportRef;
+  const [availableWidth, setAvailableWidth] = useState(0);
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver(([entry]) => setAvailableWidth(entry.contentRect.width));
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+  const versionCount = useMemo(() => new Set(catalog.map(frame => frame.version)).size, [catalog]);
+  const sizing = fitTimeline(versionCount, availableWidth);
+  const timeline = useMemo(() => buildTimeline(catalog.map(frame => ({ ...frame, enabled: inRange(frame, range, now) })), sizing.gapDepth), [catalog, range, now, sizing.gapDepth]);
   const selectedMark = timeline.marks.find(mark => mark.id === selectedId);
   const selectedPush = timeline.pushes.find(node => node.frameId === selectedId);
-  const position = selectedMark?.position ?? (selectedPush ? (selectedPush.start + selectedPush.end) / 2 : timeline.marks.find(mark => mark.index === index)?.position ?? 0);
+  const targetPosition = selectedPush ? (selectedPush.start + selectedPush.end) / 2 : selectedMark?.position ?? timeline.marks.find(mark => mark.index === index)?.position ?? 0;
+  const position = usePlayheadMotion(targetPosition, navigationKey);
+  useLayoutEffect(() => {
+    if (!navigationKey) return;
+    const viewport = containerRef.current;
+    const track = viewport?.querySelector<HTMLElement>('.gallery-timeline');
+    if (!viewport || !track) return;
+    const x = viewport.scrollLeft + track.getBoundingClientRect().left - viewport.getBoundingClientRect().left + targetPosition * track.clientWidth;
+    const padding = t.timeline.edgePadding + t.timeline.playheadWidth;
+    const left = x < viewport.scrollLeft + padding ? x - padding
+      : x > viewport.scrollLeft + viewport.clientWidth - padding ? x - viewport.clientWidth + padding : viewport.scrollLeft;
+    viewport.scrollTo({ left, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+  }, [navigationKey, targetPosition]);
   const tipIndex = previewIndex;
   const tipPosition = tipIndex >= 0 ? timeline.marks.find(mark => mark.index === tipIndex)?.position : undefined;
   const previewPosition = previewIndex >= 0 ? tipPosition : undefined;
@@ -18,8 +42,8 @@ export function PlaybackTimeline({ frames, catalog, range, now, index, selectedI
     const rect = event.currentTarget.getBoundingClientRect();
     return timelinePointerIndex(timeline, (event.clientX - rect.left) / rect.width);
   }
-  const span = `${Math.max(100, timeline.versions.length / t.timeline.visibleBlocks * 100)}%`;
-  return <div className="gallery-timeline-scroll" style={{ '--timeline-span': span, '--timeline-push-background': t.timeline.pushBackground, '--timeline-push-hover': t.timeline.pushHoverBackground, '--timeline-height': `${t.timeline.height}px`, '--timeline-playhead-height': `${t.timeline.height + t.timeline.playheadOverhang * 2}px`, '--timeline-playhead-width': `${t.timeline.playheadWidth}px`, '--timeline-preview-opacity': t.timeline.previewOpacity, '--timeline-minor-height': `${t.timeline.minorTickHeight}px`, '--timeline-progress': `${position * 100}%`, '--gallery-disabled': t.timeline.disabledOpacity, '--timeline-disabled-border': t.timeline.disabledBorderOpacity } as CSSProperties}><div className="gallery-timeline">
+  const span = `${sizing.trackFraction * 100}%`;
+  return <div className="gallery-timeline-scroll" ref={containerRef} style={{ '--timeline-span': span, '--timeline-content-span': `${sizing.contentScale * 100}%`, '--timeline-tooltip-space': `${t.timeline.tooltipSpace}px`, '--timeline-edge-padding': `${t.timeline.edgePadding}px`, '--timeline-push-background': t.timeline.pushBackground, '--timeline-push-hover': t.timeline.pushHoverBackground, '--timeline-height': `${t.timeline.height}px`, '--timeline-playhead-height': `${t.timeline.height + t.timeline.playheadOverhang * 2}px`, '--timeline-playhead-width': `${t.timeline.playheadWidth}px`, '--timeline-preview-opacity': t.timeline.previewOpacity, '--timeline-minor-height': `${t.timeline.minorTickHeight}px`, '--timeline-progress': `${position * 100}%`, '--gallery-disabled': t.timeline.disabledOpacity, '--timeline-disabled-border': t.timeline.disabledBorderOpacity } as CSSProperties}><div className="gallery-timeline-width"><div className="gallery-timeline">
     <div className="gallery-timeline-scrubber" role="slider" tabIndex={0} aria-label="Playback position"
     aria-valuemin={0} aria-valuemax={Math.max(0, frames.length - 1)} aria-valuenow={index}
     aria-valuetext={`Frame ${index + 1} of ${frames.length}, ${formatVersion(frames[index]?.version)}`}
@@ -65,9 +89,9 @@ export function PlaybackTimeline({ frames, catalog, range, now, index, selectedI
       onPointerEnter={() => { onPreview(null); setPushTip(node.version); }}
       onPointerLeave={() => setPushTip(null)} onFocus={() => { onPreview(null); setPushTip(node.version); }} onBlur={() => setPushTip(null)}
       onClick={event => { event.stopPropagation(); onPreview(null); if (node.frameId) onSelectPush(node.frameId); }}>
-      {pushTip === node.version && <span className="capsule-tooltip gallery-timeline-tip" role="tooltip">{formatVersion(node.version)} · push node{node.index === null && <span className="sr-only"> — no push in this date range</span>}</span>}
+      {pushTip === node.version && <span className="capsule-tooltip gallery-timeline-tip" role="tooltip">{formatVersion(node.version)} · push node{node.frameId === null && <span className="sr-only"> — no saved push</span>}</span>}
     </button>)}
     <div className="gallery-timeline-playhead" aria-hidden="true"/>
     {previewPosition !== undefined && <div className="gallery-timeline-playhead gallery-timeline-preview" aria-hidden="true" style={{ left: `${previewPosition * 100}%` }}/> }
-  </div></div>;
+  </div></div></div>;
 }
