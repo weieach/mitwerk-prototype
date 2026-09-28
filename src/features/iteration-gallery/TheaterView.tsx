@@ -301,7 +301,9 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
         <select aria-label="Playback loop" value={mode} onChange={event => { setMode(event.target.value as LoopMode); setDirection(1); }}><option value="once">Play once</option><option value="loop">Loop</option><option value="ping-pong">Ping-pong</option></select>
         </div>;
   const rangeLabel = ranges.find(option => option.value === range)!.label.toLowerCase();
-  const rangeFrames = catalog.filter(frame => inRange(frame, range, now));
+  const rangeFrames = catalog.filter(item => inRange(item, range, now));
+  const atRangeStart = rangeFrames[0]?.id === selectedId;
+  const atRangeEnd = rangeFrames.at(-1)?.id === selectedId;
   function scrollTimeline(edge: 'start' | 'end') {
     const next = edge === 'start' ? rangeFrames[0] : rangeFrames.at(-1);
     if (!next) return;
@@ -309,7 +311,7 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
     onSelect(next.id, true);
   }
 
-  return <div className="theater-view" data-frame-id={frame?.id} data-selected-frame-id={requested?.id} data-preview-frame-id={previewFrame?.id} data-frame-ready={ready && stageMeasured}
+  return <div className="theater-view" data-frame-id={frame?.id} data-selected-frame-id={requested?.id} data-preview-frame-id={previewFrame?.id} data-range-edge={atRangeEnd ? 'end' : atRangeStart ? 'start' : ''} data-frame-ready={ready && stageMeasured}
     style={{ '--theater-footer-gap': `${t.theater.playbackFooterGap}px` } as CSSProperties}
     onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} onLostPointerCapture={pointerEnd}>
     {fullscreen && <FullscreenPreview label={`${formatVersion(frame.version)} full screen`} ratio={dimensions.width / dimensions.height}
@@ -377,15 +379,15 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
       </div>
     </div>
     <div className="theater-playback" data-orbit-blocked>
-      <div className="gallery-toolbar playback-controls">
-        <PlaybackTip label={`Scroll to timeline start (${rangeLabel})`} edge="start"><button className="icon-button" aria-label="Scroll to timeline start" disabled={!rangeFrames.length} onClick={() => scrollTimeline('start')}><i className="ph-fill ph-caret-line-left" aria-hidden="true"/></button></PlaybackTip>
+      <div className="gallery-toolbar playback-controls" style={{ '--playback-enabled': t.theater.playbackEnabled, '--playback-disabled': t.theater.playbackDisabled } as CSSProperties}>
+        <PlaybackTip label={`Jump to timeline start (${rangeLabel})`} edge="start"><button className="icon-button" aria-label="Jump to timeline start" disabled={!rangeFrames.length || atRangeStart} onClick={() => scrollTimeline('start')}><i className="ph-fill ph-caret-line-left" aria-hidden="true"/></button></PlaybackTip>
         <div className="playback-transport">
         <PlaybackTip label="Jump to last push"><button className="icon-button" onClick={() => skipPush(previousPush)} disabled={previousPush === null} aria-label="Previous push"><span className="skip-marks is-previous"><Icon name="play" size={16}/><Icon name="play" size={16}/></span></button></PlaybackTip>
         <PlaybackTip label={playing ? 'Pause' : 'Play'}><button className="icon-button playback-toggle" onClick={() => { prototype.exit(); if (!playing && mode === 'once' && index === frames.length - 1) onSelect(frames[0].id); setPlaying(!playing); }} disabled={frames.length < 2} aria-label={playing ? 'Pause playback' : 'Play frames'}><Icon name={playing ? 'pause' : 'play'} size={26}/></button></PlaybackTip>
         <PlaybackTip label="Jump to next push"><button className="icon-button" onClick={() => skipPush(nextPush)} disabled={nextPush === null} aria-label="Next push"><span className="skip-marks"><Icon name="play" size={16}/><Icon name="play" size={16}/></span></button></PlaybackTip>
         </div>
         <div className="playback-end-controls">
-          <PlaybackTip label={`Scroll to timeline end (${rangeLabel})`} edge="end"><button className="icon-button" aria-label="Scroll to timeline end" disabled={!rangeFrames.length} onClick={() => scrollTimeline('end')}><i className="ph-fill ph-caret-line-right" aria-hidden="true"/></button></PlaybackTip>
+          <PlaybackTip label={`Jump to timeline end (${rangeLabel})`} edge="end"><button className="icon-button" aria-label="Jump to timeline end" disabled={!rangeFrames.length || atRangeEnd} onClick={() => scrollTimeline('end')}><i className="ph-fill ph-caret-line-right" aria-hidden="true"/></button></PlaybackTip>
         </div>
       </div>
       <PlaybackTimeline navigationKey={navigationKey} viewportRef={timelineRef} frames={frames} catalog={catalog} range={range} now={now} index={Math.max(0, index)} selectedId={selectedId} previewIndex={previewIndex} onPreview={next => { if (prototype.open || prototype.loading) return; setPreviewId(next === null ? null : frames[next].id); if (next === null) setPreviewImage(null); }} onSelect={selectFrame} onSelectPush={id => { prototype.exit(); setPlaying(false); setPreviewId(null); setPreviewImage(null); onSelect(id); }}/>

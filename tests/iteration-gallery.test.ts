@@ -108,6 +108,16 @@ test('version depth stays equal for unequal frame counts; day ticks follow first
   assert.notEqual(ticks[1].position - ticks[0].position, ticks[2].position - ticks[1].position);
 });
 
+test('an omitted push does not park its day label on the first block', () => {
+  const at = (id: string, day: number, hour: number, kind: Capture['kind'] = 'prompt', number = 1): Capture => ({ ...capture(id, day, kind, number), timestamp: date(day, hour) });
+  const versions = buildVersions([at('early', 17, 12), at('mid', 22, 12), at('push14', 24, 8, 'push', 14), at('day24', 24, 10), at('push15', 24, 18, 'push', 15)]);
+  const shown = versions.flatMap(version => version.frames.filter(frame => frame.kind !== 'push' || version.frames.filter(item => item.kind === 'prompt').length <= 1));
+  const album = buildAlbum(versions, 'all', date(26));
+  assert.equal(shown.some(frame => frame.id === 'push14'), false);
+  assert.equal(dateTicks(shown).some(tick => tick.id === 'push14'), false);
+  assert.notEqual(album.planes.find(plane => plane.frame.id === 'day24')?.depth, album.planes[0]?.depth);
+});
+
 test('playback wraps, stops and bounces without duplicate endpoints', () => {
   assert.deepEqual(playbackStep(2, 3, 1, 'once'), { index: 2, direction: 1, playing: false });
   assert.deepEqual(playbackStep(2, 3, 1, 'loop'), { index: 0, direction: 1, playing: true });

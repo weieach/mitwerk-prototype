@@ -32,8 +32,9 @@ export function createXRManifest(captures: Capture[], range: RangeKey = 'all', n
   const label = (id: string, text: string, x: number, y: number, z: number, face: 'ground' | 'wall') => labels.push({ id, text, position: point(x, y, z), rotation: face === 'ground' ? [-Math.PI / 2, 0, 0] : [0, Math.PI / 2, 0], height: xrTokens.labelHeightMeters });
   label('date-title', 'Date', 0, t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, -album.depth / 2, 'wall');
   label('version-title', 'Version', album.width + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, floor, -album.depth / 2, 'ground');
-  for (const tick of dateTicks(versions.flatMap(version => version.frames))) {
-    const plane = album.planes.find(plane => plane.frame.id === tick.id)!;
+  for (const tick of dateTicks(album.planes.map(plane => plane.frame))) {
+    const plane = album.planes.find(item => item.frame.id === tick.id);
+    if (!plane) continue;
     const pose = dateLabelPose(plane.depth);
     const id = `date-${tick.timestamp}`;
     guides.push({ id, axis: 'date', points: [point(0, 0, -plane.depth), point(0, t.rulerTickLength, -plane.depth)] });

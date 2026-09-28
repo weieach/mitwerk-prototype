@@ -25,7 +25,7 @@ export const galleryTokens = {
   fullscreen: { scrim: 'rgba(0, 0, 0, .8)', gutter: 48, closeGap: 8, closeSize: 28 },
   theaterReference: { kind: 'prompt', number: 56 } as const,
   capturePushVersion: 16,
-  theater: { focusBackground: '#fff', frameShadow: 'none', frameBed: '#F4F4F4', metadataHeight: 112, metadataGap: 16, metadataHeightMaxVh: 20, metadataRowGap: 4, referenceChipWidth: 180, summaryGapScale: 1.75, playbackFooterGap: 4, actionGap: 8, enterDelayMs: 1000, enterExpandMs: 280, enterFadeMs: 180, imageCacheSize: 8, preloadFrames: 3, wheelStep: 80, addedColor: '#1f8a4c', removedColor: '#d12b2b' },
+  theater: { focusBackground: '#fff', frameShadow: 'none', frameBed: '#F4F4F4', metadataHeight: 112, metadataGap: 16, metadataHeightMaxVh: 20, metadataRowGap: 4, referenceChipWidth: 180, summaryGapScale: 1.75, playbackFooterGap: 4, playbackEnabled: 'var(--ink)', playbackDisabled: 'var(--faint)', actionGap: 8, enterDelayMs: 1000, enterExpandMs: 280, enterFadeMs: 180, imageCacheSize: 8, preloadFrames: 3, wheelStep: 80, addedColor: '#1f8a4c', removedColor: '#d12b2b' },
   viewportPresets: [
     { value: 'original', label: 'Original size', width: 0, height: 0 },
     { value: 'desktop', label: 'Desktop', width: 1440, height: 900 },

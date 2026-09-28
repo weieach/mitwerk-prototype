@@ -6,7 +6,7 @@ import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { GalleryVersion } from './model';
-import { dateTicks, edgePanArmed, edgePanStrength, formatDate, formatVersion, hoverCaptionLines, wrapTextToWidth } from './model';
+import { dateTicks, edgePanArmed, edgePanStrength, formatDate, formatVersion, hoverCaptionLines, versionKeepsPush, wrapTextToWidth } from './model';
 import type { buildAlbum, FramePlane, LabelFace } from './geometry';
 import { albumBlockBounds, albumFloorY, containingBlock, dateLabelPose, featuredFrameAxis, featuredTickLength, frameFocus, hoverCaptionHeight, resetCameraDestination, versionLabelPose } from './geometry';
 import { galleryTokens as t } from './tokens';
@@ -744,8 +744,10 @@ export class AlbumScene {
     const floor = albumFloorY(album);
     this.axisLabel('Date', 0, t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, -album.depth / 2, 'wall', new THREE.Vector3(0, t.rulerTickLength + t.rulerLabelGap, -album.depth / 2));
     this.axisLabel('Version', album.width + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, floor, -album.depth / 2, 'ground', new THREE.Vector3(album.width + t.rulerTickLength + t.rulerLabelGap, floor, -album.depth / 2));
-    for (const tick of dateTicks(versions.flatMap(version => version.frames))) {
-      const depth = this.frames.get(tick.id)?.plane.depth ?? 0;
+    const shown = versions.flatMap(version => versionKeepsPush(version.frames) ? version.frames : version.frames.filter(frame => frame.kind !== 'push'));
+    for (const tick of dateTicks(shown)) {
+      const depth = this.frames.get(tick.id)?.plane.depth;
+      if (depth === undefined) continue;
       this.line([new THREE.Vector3(0, 0, -depth), new THREE.Vector3(0, t.rulerTickLength, -depth)], 'wall');
       const pose = dateLabelPose(depth);
       this.axisLabel(formatDate(tick.timestamp), pose.x, pose.y, pose.z, pose.face);

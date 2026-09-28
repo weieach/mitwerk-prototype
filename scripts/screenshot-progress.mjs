@@ -285,6 +285,10 @@ function shouldSkipAskScreenshot(payload) {
   return hasSkipMarker(conversationId(payload));
 }
 
+function excludesCounter(text) {
+  return /\bx counter\b/i.test(text);
+}
+
 function saveStash(conversationId, prompt) {
   mkdirSync(stashDir, { recursive: true });
   writeFileSync(stashPath(conversationId), prompt, 'utf8');
@@ -430,6 +434,7 @@ function screenshotInteractFromPrompt(prompt) {
 
 function wantsResetCapture(prompt = '') {
   return ['reset', 'frontal', 'top', 'overhead'].includes(argValue('gallery-view')) || /\bisometric\b/i.test(prompt)
+    || /\bc gallery\b/i.test(prompt) && /\breset view\b/i.test(prompt)
     || /\bcapture\b[\s\S]{0,80}\breset view\b/i.test(prompt) || /\breset view\b[\s\S]{0,40}\bcapture\b/i.test(prompt);
 }
 
@@ -489,6 +494,7 @@ function screenshotUrl(prompt = '') {
   if (/push frame selected|push node/i.test(prompt)) target.searchParams.set('frameKind', 'push');
   const namedPush = /push node(?:\s+\w+){0,3}\s+v?(\d+)/i.exec(prompt);
   if (namedPush) target.searchParams.set('pushVersion', namedPush[1]);
+  if (/playhead at last frame/i.test(prompt)) target.searchParams.set('playhead', 'end');
   if (/show the toast/i.test(prompt)) target.searchParams.set('prototypeToast', '1');
   if (/overlay open/i.test(prompt)) target.searchParams.set('overlay', '1');
   if (/mobile breakpoint|\bat mobile\b/i.test(prompt)) { target.searchParams.set('viewport', 'phone'); target.searchParams.set('frameKind', 'push'); target.searchParams.set('prototypeOpen', '1'); }
@@ -558,7 +564,7 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
       expression: wantsTransitionCapture(prompt)
         ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.transitionReady === "true"'
         : wantsTheaterCapture(prompt)
-        ? `document.documentElement.dataset.screenshotReady === "1" && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete${/overlay open/i.test(prompt) ? ' && !!document.querySelector(".theater-fullscreen") && !document.querySelector(".theater-fullscreen .is-exit")' : ''}${/mobile breakpoint|\bat mobile\b/i.test(prompt) ? ' && document.querySelector("[aria-label=\\"Preview viewport\\"]")?.value === "phone" && !!document.querySelector(".theater-frame-bed")' : ''}${/prototype (?:is )?entered|prototype mode/i.test(prompt) ? ' && !!document.querySelector("[aria-label=\\"Preview viewport\\"]")' : ''}`
+        ? `document.documentElement.dataset.screenshotReady === "1" && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete${/overlay open/i.test(prompt) ? ' && !!document.querySelector(".theater-fullscreen") && !document.querySelector(".theater-fullscreen .is-exit")' : ''}${/mobile breakpoint|\bat mobile\b/i.test(prompt) ? ' && document.querySelector("[aria-label=\\"Preview viewport\\"]")?.value === "phone" && !!document.querySelector(".theater-frame-bed")' : ''}${/prototype (?:is )?entered|prototype mode/i.test(prompt) ? ' && !!document.querySelector("[aria-label=\\"Preview viewport\\"]")' : ''}${/playhead at last frame/i.test(prompt) ? ' && document.querySelector(".theater-view")?.dataset.rangeEdge === "end" && (() => { const head = document.querySelector(".gallery-timeline-playhead"); const scroller = document.querySelector(".gallery-timeline-scroll"); if (!head || !scroller) return false; const h = head.getBoundingClientRect(); const s = scroller.getBoundingClientRect(); return h.left >= s.left - 4 && h.right <= s.right + 4; })()' : ''}`
         : wantsGalleryHover(prompt)
         ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.inspectionReady === "true"'
         : 'document.documentElement.dataset.screenshotReady === "1"',
@@ -1062,9 +1068,10 @@ async function main() {
     const id = conversationId(payload);
     const mode = composerMode(payload) || 'unknown';
     captureLog(`prompt submit mode=${mode}${mode === 'unknown' ? ` keys=${Object.keys(payload).join(',')}` : ''}`);
-    if (isAskMode(payload)) {
+    const submitted = textFromUnknown(payload.prompt) || '';
+    if (isAskMode(payload) || excludesCounter(submitted)) {
       saveSkip(id);
-      captureLog(`skip ask prompt (${mode})`);
+      captureLog(`skip ${isAskMode(payload) ? 'ask' : 'x counter'} prompt (${mode})`);
       emitHook({ continue: true });
       return;
     }
@@ -1110,7 +1117,7 @@ async function main() {
     || (tag === 'prompt' ? labelFromHook(payload) : git(['log', '-1', '--pretty=%s', sha]));
 
   try {
-    if (hookMode && tag === 'prompt' && shouldSkipAskScreenshot(payload)) {
+    if (hookMode && tag === 'prompt' && (shouldSkipAskScreenshot(payload) || excludesCounter(label))) {
       clearSkip(conversationId(payload));
       captureLog(`skip ask screenshot (${composerMode(payload) || 'stashed'})`);
       emitHook({});

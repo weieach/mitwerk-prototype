@@ -97,12 +97,18 @@ export function IterationGallery({ pushRequest }: { pushRequest: { version: numb
     if (params.get('screenshot') !== '1' || !['theater', 'transition', 'timeline-transition'].includes(params.get('galleryView') ?? '')) return;
     const frames = versions.flatMap(version => version.frames);
     const pushVersion = Number(params.get('pushVersion')) || t.capturePushVersion;
-    const featured = params.get('frameKind') === 'push'
+    const ranged = frames.filter(frame => inRange(frame, range, now));
+    const featured = params.get('playhead') === 'end' ? ranged.at(-1)
+      : params.get('frameKind') === 'push'
       ? frames.find(frame => frame.kind === 'push' && (frame.version === pushVersion || frame.number === pushVersion)) ?? frames.find(frame => frame.kind === 'push')
       : referenceCapture(frames, t.theaterReference);
     if (featured && !inRange(featured, range, now)) { setRange('all'); return; }
     const id = featured?.id;
-    if (id) { setSelectedId(id); setView(params.get('galleryView') === 'theater' ? 'theater' : 'turning'); }
+    if (id) {
+      setSelectedId(id);
+      if (params.get('playhead') === 'end') setNavigationKey(key => key + 1);
+      setView(params.get('galleryView') === 'theater' ? 'theater' : 'turning');
+    }
   }, [versions, range, now]);
 
   return <section ref={galleryRoot} data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-labelledby="gallery-title" style={{ '--theater-focus-background': t.theater.focusBackground, '--theater-frame-shadow': t.theater.frameShadow, '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px` } as CSSProperties}>
