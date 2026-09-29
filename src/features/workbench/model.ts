@@ -1,7 +1,7 @@
 export type TaskStatus = 'To do' | 'In progress' | 'Ready for review' | 'Complete';
 export type View = 'Home' | 'Projects' | 'Todos' | 'Inbox' | 'Mits' | 'Library' | 'Settings' | 'dialog' | 'project' | 'Co-workers';
 export type Message = { id: string; role: 'user' | 'mit' | 'colleague'; name: string; text: string; assetId?: string; assetIds?: string[]; time: string };
-export type Task = { id: string; title: string; status: TaskStatus; creator: string; mit: string; mitId?: string; participantMitIds?:string[]; parentId?: string; project: boolean; projectId?: string; kind: 'mit' | 'colleague'; unread: boolean; updated: string; created?: string; messages: Message[]; input: string[]; output: string[] };
+export type Task = { id: string; title: string; status: TaskStatus; creator: string; mit: string; mitId?: string; participantMitIds?:string[]; project: boolean; projectId?: string; kind: 'mit' | 'colleague'; unread: boolean; updated: string; created?: string; messages: Message[]; input: string[]; output: string[] };
 export type Asset = { id: string; title: string; kind: 'document' | 'image' | 'prototype'; detail: string; url?: string; content?: string; local?: boolean };
 export const statuses: TaskStatus[] = ['To do', 'In progress', 'Ready for review', 'Complete'];
 export const team = ['Design Mit', 'Research Mit', 'Accessibility Mit'];
@@ -20,7 +20,7 @@ export function seedTasks(): Task[] {
       { id:'m4', role:'mit', name:'Design Mit', time:'10:42', text:'The first direction is ready for a look.\n\nPersonal details now lead the panel, with sleep preferences below. Account settings sit in a quieter, separate section. The close control stays visible while you explore.\n\nOpen the prototype to try it, or check the design notes before we decide what to refine.', assetId:'prototype' },
     ] },
     { id:'research', title:'Map everyday profile actions', status:'Complete', creator:'Research Mit', mit:'Research Mit', project:true, kind:'mit', unread:false, updated:'Yesterday', input:['brief'], output:['notes'], messages:[{id:'r1',role:'mit',name:'Research Mit',time:'Yesterday',text:'The sample review groups actions into identity, sleep preferences and account settings. The component brief captures the questions for the next iteration.',assetId:'brief'}] },
-    { id:'access', title:'Check keyboard navigation', status:'To do', creator:'Nicole Wei', mit:'Accessibility Mit', parentId:'panel', project:true, kind:'mit', unread:false, updated:'Yesterday', input:['brief','prototype'], output:[], messages:[{id:'a1',role:'colleague',name:'Nicole Wei',time:'Yesterday',text:'Let’s check focus order, the close action and labels on the preference controls once the layout is ready.'}] },
+    { id:'access', title:'Check keyboard navigation', status:'To do', creator:'Nicole Wei', mit:'Accessibility Mit', project:true, kind:'mit', unread:false, updated:'Yesterday', input:['brief','prototype'], output:[], messages:[{id:'a1',role:'colleague',name:'Nicole Wei',time:'Yesterday',text:'Let’s check focus order, the close action and labels on the preference controls once the layout is ready.'}] },
     { id:'nicole', title:'Nicole Wei', status:'In progress', creator:'Nicole Wei', mit:'Nicole Wei', project:false, kind:'colleague', unread:true, updated:'11:08', input:[],output:[], messages:[{id:'n1',role:'colleague',name:'Nicole Wei',time:'11:08',text:'I’ve been looking at the reading window. Can we keep the chat visible when opening an output? It would help us discuss the design while looking at it.'}] },
   ];
 }
@@ -49,9 +49,9 @@ export function migrateState(raw:Partial<SavedState>|null): SavedState {
   {id:'mobile',name:projectName,description:'A calmer profile experience, shaped together.',members:['Waiting Wong','Nicole Wei'],instructions},
   {id:'onboarding',name:'Workspace onboarding',description:'Help a new team find its first shared task. Sample project.',members:['Waiting Wong','Alex Chen','Maya Lin'],instructions:''},
  ];
- const tasks=Array.isArray(raw?.tasks)&&raw.tasks.length?raw.tasks:seedTasks();
+ const tasks=(Array.isArray(raw?.tasks)?raw.tasks:seedTasks()).filter(t=>!(t.kind==='mit'&&t.title==='New chat'&&!t.project&&!t.projectId&&!t.messages.length&&!t.input.length&&!t.output.length&&!raw?.drafts?.[t.id]?.trim()));
  const mits=Array.isArray(raw?.mits)&&raw.mits.length?raw.mits:seedMits();
- return {projects:projects.map(p=>({...p,mitIds:[...new Set([...(p.mitIds||[]),...tasks.filter(t=>t.projectId===p.id||(t.project&&!t.projectId&&p.id==='mobile')).map(t=>t.mitId||mits.find(m=>m.name===t.mit)?.id).filter((id):id is string=>!!id)])]})),mits,projectName,instructions,tasks:tasks.map(t=>({...t,mitId:t.kind==='mit'?(t.mitId||mits.find(m=>m.name===t.mit)?.id):undefined,projectId:t.projectId||(t.project?'mobile':undefined)})),drafts:raw?.drafts||{}};
+ return {projects:projects.map(p=>({...p,mitIds:[...new Set([...(p.mitIds||[]),...tasks.filter(t=>t.projectId===p.id||(t.project&&!t.projectId&&p.id==='mobile')).map(t=>t.mitId||mits.find(m=>m.name===t.mit)?.id).filter((id):id is string=>!!id)])]})),mits,projectName,instructions,tasks:tasks.map(legacy=>{const {parentId: _parentId,...t}=legacy as Task & {parentId?:string};return {...t,mitId:t.kind==='mit'?(t.mitId||mits.find(m=>m.name===t.mit)?.id):undefined,projectId:t.projectId||(t.project?'mobile':undefined)};}),drafts:raw?.drafts||{}};
 }
 export function loadState(): SavedState {
  try {

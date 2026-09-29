@@ -306,7 +306,7 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Application shell — confirmed 2026-09-25
 
 - The main application uses navigation, a central conversation/work surface, and an on-demand reading window. The Iteration Gallery and Version stream remain together inside that window and at `?view=history`.
-- Dialog is a task or subtask. Builder means creator (current user, another person, or Mit), not execution owner. Direct colleague messages may have no task association.
+- Dialog is a task. Builder means creator (current user, another person, or Mit), not execution owner. Direct colleague messages may have no task association.
 - Input and Output are permanent compact attachment cards at the top right of the conversation. Selecting a file opens the reading window. Closing or switching files must preserve drafts.
 - Inbox filters are All, Mits, Co-workers. Use identity, latest message and attention state in each entry.
 - Palette authority is the `#mitwerk-overview` section of `Brand/mitwerk-light-dark-design-system.html`: Werk Blue #1D4AB9, Mit Sky #E4ECFF, Workshop Text #191A1B, Panel White #FAFAFA, Steel #65676C, Rail #E7E7E7. Its outer HTML demo styling is not the product palette.
@@ -353,3 +353,105 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - The reading experience has at most two top-level header rows: workspace navigation and one unified reading-control row. Place resource selection, Preview/Iteration history and window controls together; do not add a separate toolbar row.
 - In narrow reading panes, use a compact mode dropdown instead of wrapping mode tabs onto another row.
+
+## Personal workspace and project task navigation — 2026-09-29
+
+- Supersedes earlier human collaboration navigation: the current product includes the current user and Mits only. Remove Co-workers, colleague discovery/invitation, human Inbox filters and human membership pickers from the UI. Preserve existing saved records without destructive migration. Builder still means creator.
+- Keep a single Projects section in the lower sidebar. Its heading opens the project directory; each project name expands its tasks, and each task opens its conversation. Include a project overview link; all tasks use equal indentation. Archived projects stay out of this section.
+- Workspace-history scope information is available through an information button in the unified reader header, rather than a persistent notice row. It must still explain that captures are not yet linked to individual outputs.
+- File selectors reserve sufficient inline space for their leading icon and trailing disclosure indicator, including when embedded in the application shell.
+
+## Flat tasks — 2026-09-29
+
+- All tasks are peers within their project. Remove subtask creation, parent navigation, child lists and subtask badges or indentation.
+- On loading saved workspaces, discard legacy parent links while preserving task IDs, project membership, messages, drafts, status and attachments. New tasks are always independent.
+
+## Full navigation toggle and task options — 2026-09-29
+
+- Navigation is either fully expanded, including names and project task lists, or completely hidden. A top-bar button restores hidden navigation. Narrow screens use a full sidebar drawer with a dismissible backdrop; selecting a destination closes it. Do not force an icon-only rail.
+- Mit customization lives in a three-dot options menu in the Task details card header. Keep its profile destination and remove the full-width button from task metadata. Support keyboard access, Escape and focus-out dismissal.
+
+## Sidebar search, inbox and new chat — 2026-09-29
+
+- Search and Inbox are icon buttons beside the sidebar workspace name. Inbox uses a bell and an unread dot. Hidden navigation exposes these actions in the workspace top bar.
+- The bell toggles the sidebar between standard navigation and an Inbox feed, preserving the main conversation. Group attention items under Priority and other conversations under Recent; show task title, project/Mit and latest message excerpt. Selecting an item opens its task.
+- Replace Home in sidebar navigation with New chat, which opens a fresh project-independent conversation with a Mit and focuses the composer. The first sent message supplies its task title; existing drafts remain intact.
+
+## Compact sidebar inbox — 2026-09-30
+
+- Each Inbox item has at most two lines: a task title and one truncated latest-message excerpt. Remove the separate project/Mit metadata row; retain that context in the hover title and the opened conversation. Preserve Priority/Recent groups, unread dots and selected state.
+
+- Sidebar chrome: omit the chevron beside MitWerk and the bottom Interactive prototype status label. Retain brand-button collapse behavior and the user/settings row.
+
+## Immersive New chat — 2026-09-30
+
+- A new, unsent project-independent chat is a focused launch surface: hide the task heading, status, date divider and context rail (Task details, Input, Output). Center the welcome and composer with room to attach files and mention Mits.
+- Sending the first message transitions to the existing task conversation and restores its context cards. Empty named project tasks keep their existing layout; drafts and queued attachments remain usable on the launch surface.
+
+## Inline task status interaction — 2026-09-30
+
+- Replace the task-card native select with a compact current-status button. Expand four status choices within the card, using existing status colors and a check for the current value. Choosing a status collapses the choices and gives the card a brief subtle color response.
+- Support Tab, arrow keys, Home/End and Escape; restore focus to the trigger after selection. Close on focus leaving, disable changes during runs and honor reduced motion.
+
+## Reading resource icon strip — 2026-09-30
+
+- Replace the reader resource dropdown with a single horizontal strip of compact resource icons (image thumbnails when available). Each has an accessible name and hover title; highlight the active resource and allow horizontal scrolling instead of wrapping when space is tight.
+- Remove the separate prototype Preview surface and preview/history mode switch. Prototype resources open the existing Iteration Gallery and Version stream directly; documents and images retain their readers. Workspace history scope information remains available via its information button.
+
+## Single-line conversation heading — 2026-09-30
+
+- Place task title, status, Mit participants and details action in one header row. Let the title truncate with its complete hover title rather than adding a second metadata row.
+- Adapt to the actual conversation-heading container width, including reader-divider resizing: wide panes show status/Mit labels; narrow panes retain the status glyph, Mit avatar and additional participant count. Preserve full status and participant names as hover titles and accessible labels.
+
+## Reader resource order — 2026-09-30
+
+- Place prototype resources first in the reader icon strip; preserve the relative order within prototypes and all other resources. Keep this order stable when selecting a different resource.
+
+## Image resources and gallery — 2026-09-30
+
+- Represent image resources with a dedicated image icon rather than a miniature thumbnail in the reader bar. Two or more images in the current resource scope share one gallery icon with a count.
+- Opening the gallery shows a responsive thumbnail grid below the reader bar. Selecting a thumbnail opens that image; All images returns to the grid. Opening an attachment directly still opens the chosen image. Prototype resources remain first.
+
+## Project asset collections — 2026-09-30
+
+- Library contains Skills and Plugins only. Project files belong in project details → Assets, replacing separate Knowledge and Output tabs with task-based collections.
+- Collections gather each task’s inputs, outputs and message attachments, deduplicate within the collection, and expand to open individual assets in the reader. Empty projects show an empty state. Project reader navigation includes only that project’s resources.
+
+## Composer shape and attention emphasis — 2026-09-30
+
+- Use a shared 18px composer radius in new chats and existing conversations.
+- Home’s Needs your attention heading retains the original plain section-heading style with an inline muted count. The blue banner, leading border and filled count badge were reverted on user request.
+
+## Collapsible workspace bar and compact reader — 2026-09-30
+
+- The workspace breadcrumb bar can be fully hidden with its collapse control; a small top-edge control restores it without reserving a full row. Preserve keyboard focus when toggling.
+- Keep the reader resource header compact: 42px minimum height, 4px vertical padding and 30px resource buttons.
+
+## Conversation opening — 2026-09-30
+
+- Start existing conversations directly with messages, without a date banner or horizontal separator. Keep individual message timestamps.
+
+## Project identity colors — 2026-09-30
+
+- Distinguish projects with the approved palette: Route yellow (#ffc629), Assemble green (#00a66a) and Misregister purple (#9a85f0), repeating in that order. Apply restrained color to project folder marks, cover accents and sidebar dots; keep text neutral.
+- A shared helper assigns colors from the full saved project order, so Home, Projects, sidebar and project detail agree and filtering/archiving does not change identity. Background tints blend palette tokens with the active page surface for both themes.
+
+## Kanban task movement — 2026-09-30
+
+- Omit trailing navigation arrows from Todo cards; clicking the whole card opens its conversation. Dragging a card onto a status column updates its saved status and timestamp. Highlight the destination during dragging, with no status change on cancellation or same-column drop.
+- Alt + Left/Right moves a focused card between adjacent status columns with a confirmation announcement. Running tasks cannot be moved.
+
+## Sidebar project disclosure — 2026-09-30
+
+- Show only the project color dot and name; omit the leading disclosure chevron. The project-name button still toggles its task list and exposes aria-expanded.
+
+## New chat creation timing — 2026-09-30
+
+- New chat opens a reusable composer draft, not a saved task. Create the task only on the first sent message or attachment; repeated visits reuse the unsent draft.
+- Remove legacy unnamed New chat placeholders only when they have no project, messages, assets or nonblank draft. Preserve intentional named tasks and all user content.
+
+## Stable sidebar width — 2026-09-30
+
+- Inbox and regular navigation share the same responsive sidebar width. Switching the bell changes sidebar content only, without widening the desktop sidebar or mobile drawer.
+
+- The workspace-bar restore control sits at the upper-right edge. When the reader is open, reserve space beside its actions to prevent overlap.

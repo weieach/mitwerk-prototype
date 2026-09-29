@@ -9,7 +9,7 @@ Web, desktop-first collaborative design workspace.
 Designers collaborate with people and Mits (AI agents) to evolve a design, review outputs, and revisit earlier iterations. The main application connects projects, task conversations and assets to the existing reading workspace.
 
 ## Confirmed model — 2026-09-25
-- Dialog is a continuing task or subtask. Builder means creator, who can be the current user, another person or a Mit.
+- Dialog is a continuing task. All tasks have equal hierarchy within their project. Builder means creator, who can be the current user, another person or a Mit.
 - Inbox filters: All, Mits, Co-workers. Human messages may be unassigned to a task.
 - Input and Output attachment cards stay at the conversation's upper right. Clicking an attachment opens a resizable, closable, expandable reading pane.
 - Projects organize instructions, knowledge, outputs, collaborators and dialogs.

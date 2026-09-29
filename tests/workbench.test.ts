@@ -69,3 +69,26 @@ test('mentioned Mits join only the conversation project, without duplicating mem
  assert.deepEqual(joined.tasks[0].messages,state.tasks[0].messages);
  assert.deepEqual(migrateState(joined).projects[0].mitIds,joined.projects[0].mitIds);
 });
+
+test('legacy subtasks become peers without losing saved task content or drafts',()=>{
+ const original=migrateState(null);
+ const legacy={...original,tasks:original.tasks.map(t=>t.id==='access'?{...t,parentId:'panel'}:t),drafts:{access:'Keep this unsent draft'}};
+ const restored=migrateState(legacy);
+ assert.equal(restored.tasks.length,original.tasks.length);
+ assert.deepEqual(restored.tasks,original.tasks);
+ assert.equal('parentId' in restored.tasks.find(t=>t.id==='access')!,false);
+ assert.equal(restored.drafts.access,'Keep this unsent draft');
+ assert.equal(legacy.tasks.find(t=>t.id==='access')?.parentId,'panel');
+ assert.deepEqual(migrateState(restored),restored);
+});
+
+test('migration removes only unused New chat placeholders and remains idempotent',()=>{
+ const blank={...seedTasks()[0],id:'empty',title:'New chat',project:false,projectId:undefined,input:[],output:[],messages:[]};
+ const state=migrateState({tasks:[blank,{...blank,id:'draft'},{...blank,id:'file',input:['brief']},{...blank,id:'named',title:'Planned task'},{...blank,id:'project',project:true,projectId:'mobile'}],drafts:{draft:'Keep my draft'}});
+ assert.deepEqual(state.tasks.map(t=>t.id),['draft','file','named','project']);
+ assert.equal(state.drafts.draft,'Keep my draft');
+ assert.deepEqual(migrateState(state).tasks,state.tasks);
+ const empty=migrateState({tasks:[blank]});
+ assert.deepEqual(empty.tasks,[]);
+ assert.deepEqual(migrateState(empty).tasks,[]);
+});
