@@ -104,7 +104,7 @@ export function projectAxisLabels(anchors: AxisAnchor[], camera: THREE.Orthograp
     }
     const pinnedTitle = AXIS_TITLES.has(anchor.text) && (anchor.overheadDate || anchor.face === 'ground');
     if (pinnedTitle) point.x = THREE.MathUtils.lerp(point.x, t.tokenUsage.axisInsetPx, tokenBlend);
-    const align = (.5 + (anchor.overheadDate ? -.5 : anchor.face === 'ground' ? .5 : 0) * topBlend) * (pinnedTitle ? 1 - tokenBlend : 1);
+    const align = anchor.id.startsWith('tokens:') ? 0 : (.5 + (anchor.overheadDate ? -.5 : anchor.face === 'ground' ? .5 : 0) * topBlend) * (pinnedTitle ? 1 - tokenBlend : 1);
     const titleClearance = t.tokenUsage.axisInsetPx + 'Version'.length * fontSize * .55 + t.tokenUsage.axisTitleGapPx;
     const underTitle = !pinnedTitle && (anchor.overheadDate || anchor.face === 'ground')
       && point.x - anchor.text.length * fontSize * align < titleClearance;

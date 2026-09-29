@@ -217,5 +217,3 @@
 .theater-fullscreen-close:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
 .theater-fullscreen-footer { position: absolute; top: calc(100% + var(--fullscreen-close-gap)); width: 100%; display: flex; justify-content: flex-start; font-size: 11px; color: white; }
 .theater-fullscreen-footer .theater-text-action { color: white; }
-
-.album-token-summary { position: absolute; top: 12px; left: 24px; right: 24px; z-index: 2; pointer-events: none; opacity: var(--token-usage-opacity, 0); }

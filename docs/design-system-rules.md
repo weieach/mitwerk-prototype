@@ -420,3 +420,11 @@ This file is reserved for project-wide design-system rules requested by the user
 - Keep the chronological branch palette across the full catalog when filtering ranges. Historical branch colors appear only when their frames are in the selected range; do not include out-of-range tokens in the cumulative total. Strengthen branch tints and bars with shared `tokenUsage.branchTint` / `barOpacity` tokens so short branch runs remain visible.
 - In token view, draw block wireframes above the area and bars, blending to shared token outline opacity/width. Preserve inactive-block dimming and restore ordinary depth testing on exit.
 - Reset while in token view re-centers and fits the selected time range at the token-view orientation. Exit explicitly returns to the gallery orientation.
+
+
+## Full-width selectors and token-view controls — 2026-09-29
+
+- Header and footer selectors fill their available space. Reuse `RowSelect` with a native select for keyboard/menu behavior and a flex presentation using space-between for content and chevron. Date-range counts belong inside that selector, with shared control typography.
+- All leftmost row elements use `--header-padding-left` once; remove double row-plus-control padding. Date range and saved frame share `--selector-padding-right`. Keep responsive compact-title measurement based on intrinsic selector content rather than stretched width.
+- Halve active, hovered and disabled version-block outline opacity through shared tokens. Token percentage labels use a larger `tokenUsage.labelGap` (44 scene units) and extend rightward from their anchor.
+- Remove the simulated-usage annotation from the viewport. Show a small Token usage heading above Exit while token view is active. Token and Open frame actions share `controls.floatingWidth`, `floatingPaddingInline` and `floatingPaddingBlock`; both remain white.

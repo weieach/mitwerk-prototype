@@ -1,3 +1,4 @@
+import { RowSelect } from '../../components/RowSelect';
 import { AdaptivePanelTitle } from '../../components/AdaptivePanelTitle';
 import { ResetViewButton } from '../../components/ResetViewButton';
 import '@phosphor-icons/web/regular/style.css';
@@ -122,7 +123,7 @@ export function IterationGallery({ pushRequest }: { pushRequest: { version: numb
     }
   }, [versions, range, now]);
 
-  return <section ref={galleryRoot} data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-label="Iteration Visualizer" style={{ '--gallery-header-gap': `${t.controls.headerGap}px`, '--gallery-token-lift': `${t.controls.tokenLift}px`, '--gallery-floating-background': t.controls.floatingBackground, '--gallery-file-max-width': `${t.controls.fileMaxWidth}px`, '--gallery-control-inset': `${t.controls.inset}px`, '--gallery-control-gap': `${t.controls.gap}px`, '--gallery-frame-select-max-width': `${t.controls.frameSelectMaxWidth}px`, '--theater-focus-background': t.theater.focusBackground, '--theater-frame-shadow': t.theater.frameShadow, '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px` } as CSSProperties}>
+  return <section ref={galleryRoot} data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-label="Iteration Visualizer" style={{ '--gallery-header-gap': `${t.controls.headerGap}px`, '--gallery-token-lift': `${t.controls.tokenLift}px`, '--gallery-floating-background': t.controls.floatingBackground, '--gallery-floating-width': `${t.controls.floatingWidth}px`, '--gallery-floating-pad-inline': `${t.controls.floatingPaddingInline}px`, '--gallery-floating-pad-block': `${t.controls.floatingPaddingBlock}px`, '--gallery-file-max-width': `${t.controls.fileMaxWidth}px`, '--gallery-control-inset': `${t.controls.inset}px`, '--gallery-control-gap': `${t.controls.gap}px`, '--gallery-frame-select-max-width': `${t.controls.frameSelectMaxWidth}px`, '--theater-focus-background': t.theater.focusBackground, '--theater-frame-shadow': t.theater.frameShadow, '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px` } as CSSProperties}>
     <header className="panel-header">
       <div className="panel-heading">
         {(view === 'theater' || view === 'orbiting') && <button className="icon-button album-reset gallery-back" onClick={exit}>← Gallery</button>}
@@ -146,8 +147,9 @@ export function IterationGallery({ pushRequest }: { pushRequest: { version: numb
       </div>}
     <footer className="gallery-footer" inert={view === 'turning' || view === 'returning' || view === 'orbiting'}>
       <div className="gallery-range">
-        <label><span className="sr-only">Date range</span><select aria-label="Date range" value={range} onChange={event => { setRange(event.target.value as RangeKey); setNow(Date.now()); }}>{ranges.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-        <span className="gallery-small">{catalog ? counts.versions + '/' + counts.versionTotal + ' versions' + rangePromptLabel : 'Loading frames…'}</span>
+        <RowSelect label="Date range" value={range} onChange={value => { setRange(value as RangeKey); setNow(Date.now()); }}
+          options={ranges.map(option => ({ ...option, detail: option.value === range ? catalog ? counts.versions + '/' + counts.versionTotal + ' versions' + rangePromptLabel : 'Loading frames…' : undefined }))}/>
+
       </div>
       <div className="gallery-frame-picker-slot" ref={setFramePickerSlot}/>
     </footer>

@@ -1,3 +1,4 @@
+import { RowSelect } from '../../components/RowSelect';
 import { AdaptivePanelTitle } from '../../components/AdaptivePanelTitle';
 import { ResetViewButton } from '../../components/ResetViewButton';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -370,11 +371,11 @@ export function VersionTreePanel({ graph, dispatch, onOpenPush, mode, modeSwitch
     '--merged-branch-opacity': treeTheme.mergedBranchOpacity,
   } as CSSProperties}>
     <div className="panel-header tree-header"><div className="panel-heading"><AdaptivePanelTitle id="tree-title" full="Version stream" short="Stream"/>
-        <div ref={branchMenu} className="branch-controls header-branch-controls">
-          <button className="branch-current" onClick={() => setBranchMenuOpen(open => !open)}
+        <div ref={branchMenu} className="branch-controls header-branch-controls" data-header-fill>
+          <button className="branch-current" data-header-fill-content onClick={() => setBranchMenuOpen(open => !open)}
             aria-haspopup="menu" aria-expanded={branchMenuOpen} aria-label={`Active branch ${activeBranchName}. Switch branch`}
             title="Switch branch">
-            <Icon name="branch" size={13}/>{activeBranchName}<Icon name="chevron" size={10} style={{ transform: branchMenuOpen ? 'rotate(-90deg)' : 'rotate(90deg)' }}/>
+            <span className="header-fill-label"><Icon name="branch" size={13}/>{activeBranchName}</span><Icon name="chevron" size={10} style={{ transform: branchMenuOpen ? 'rotate(-90deg)' : 'rotate(90deg)' }}/>
           </button>
           {branchMenuOpen && <ul className="branch-menu" role="menu" aria-label="Branches">
             {branches.map(branch => <li key={branch.branchId} role="none">
@@ -390,10 +391,8 @@ export function VersionTreePanel({ graph, dispatch, onOpenPush, mode, modeSwitch
           </ul>}
         </div>
 
-      {modeSwitchVisible && <select className="tree-mode-switch" aria-label="Version stream panel" value={mode} onChange={event => onModeChange(event.target.value as TreeMode)}
-        title={mode === 'test' ? 'Independent sandbox. Edits stay in Test visual.' : 'History from saved screenshot captures, linked by Git parents and branch history. Editing is disabled.'}>
-        {treeModes.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-      </select>}
+      {modeSwitchVisible && <RowSelect label="Version stream panel" value={mode}
+        options={treeModes.map(item => ({ value: item.id, label: item.label }))} onChange={value => onModeChange(value as TreeMode)}/>}
     </div><div className="panel-header-actions">
 
           <button className="icon-button" onClick={() => changeZoom(zoom - treeTheme.zoomStep)} disabled={zoom <= treeTheme.minZoom} aria-label="Zoom out">−</button>

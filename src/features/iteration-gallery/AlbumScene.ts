@@ -402,7 +402,7 @@ export class AlbumScene {
       const highlighted = key === hoveredKey;
       material.color.set(highlighted ? this.colors.ink : this.colors.muted);
       material.linewidth = highlighted ? t.webgl.hoverEdgeWidth : t.webgl.edgeWidth;
-      const target = !block.active ? t.disabledOpacity : highlighted ? t.webgl.hoverEdgeOpacity : t.webgl.edgeOpacity;
+      const target = !block.active ? t.disabledOpacity * t.webgl.disabledOutlineScale : highlighted ? t.webgl.hoverEdgeOpacity : t.webgl.edgeOpacity;
       const fade = this.fades.get(material);
       if (fade) fade.target = target;
       else material.opacity = target;
@@ -745,7 +745,7 @@ export class AlbumScene {
       this.content.add(box);
       this.pickTargets.push(box);
       const edgeMaterial = new LineMaterial({ color: this.colors.muted, linewidth: t.webgl.edgeWidth, transparent: true, depthWrite: false, worldUnits: false });
-      this.fade(edgeMaterial, block.active ? t.webgl.edgeOpacity : t.disabledOpacity, previous, `edge:${block.key}`);
+      this.fade(edgeMaterial, block.active ? t.webgl.edgeOpacity : t.disabledOpacity * t.webgl.disabledOutlineScale, previous, `edge:${block.key}`);
       const edges = new LineSegments2(new LineSegmentsGeometry().fromEdgesGeometry(new THREE.EdgesGeometry(geometry)), edgeMaterial);
       edges.position.copy(box.position);
       this.content.add(edges);
@@ -856,8 +856,8 @@ export class AlbumScene {
       const highlighted = key === hoveredKey;
       const baseWidth = highlighted ? t.webgl.hoverEdgeWidth : t.webgl.edgeWidth;
       material.linewidth = THREE.MathUtils.lerp(baseWidth, Math.max(baseWidth, t.tokenUsage.outlineWidth), this.tokenBlend);
-      const baseOpacity = this.fades.get(material)?.opacity ?? (block.active ? t.webgl.edgeOpacity : t.disabledOpacity);
-      material.opacity = THREE.MathUtils.lerp(baseOpacity, block.active ? Math.max(baseOpacity, t.tokenUsage.outlineOpacity) : t.disabledOpacity, this.tokenBlend);
+      const baseOpacity = this.fades.get(material)?.opacity ?? (block.active ? t.webgl.edgeOpacity : t.disabledOpacity * t.webgl.disabledOutlineScale);
+      material.opacity = THREE.MathUtils.lerp(baseOpacity, block.active ? Math.max(baseOpacity, t.tokenUsage.outlineOpacity) : t.disabledOpacity * t.webgl.disabledOutlineScale, this.tokenBlend);
     }
     for (const mesh of this.tokenGroup.children) if (mesh instanceof THREE.Mesh) mesh.material.opacity = this.tokenBlend * mesh.userData.opacity;
     this.host.style.setProperty('--token-usage-opacity', String(this.tokenBlend));

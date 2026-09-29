@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { tokenUsageArea } from './token-usage';
+import { RowSelect } from '../../components/RowSelect';
 import { rotationCaptureProgress, timelineCaptureProgress } from './theater-transition';
 import { formatVersion } from './model';
 import type { GalleryCamera, TheaterTarget } from './theater-transition';
@@ -31,7 +31,6 @@ export function AlbumView({ framePickerSlot, versions, range, now, zoom, onOpen,
   const [keyboardId, setKeyboardId] = useState('');
   const keyboardIdRef = useRef(keyboardId);
   keyboardIdRef.current = keyboardId;
-  const usage = tokenUsageArea(album.planes);
   const active = album.planes.filter(plane => plane.active);
   const hovered = active.find(plane => plane.frame.id === hoveredId);
   const chosen = active.find(plane => plane.frame.id === keyboardId);
@@ -73,19 +72,17 @@ export function AlbumView({ framePickerSlot, versions, range, now, zoom, onOpen,
 
   return <div className="album-webgl" inert={turning || returning || hidden}>
     <div ref={host} className="album-3d-viewport" aria-label="Interactive 3D album">
-      <div className="album-token-summary gallery-small">Simulated cumulative token usage · {usage.samples.length} frames · total {usage.total.toLocaleString()} tokens
-        {!usage.samples.length && <span> · No frames in this range</span>}
-      </div>
       <AxisLabels ref={axisLabels}/>
       <div className="album-navigation-help"><InfoTooltip label="Gallery navigation help">{tokenView ? 'Drag to pan · Scroll to zoom · Exit to rotate the gallery' : 'Drag to rotate · Scroll to zoom · Right-drag to pan · Click a frame to play'}</InfoTooltip></div>
       {framePickerSlot && !hidden && createPortal(<div className="album-saved-frame" inert={turning || returning}>
-        <select aria-label="Saved frame" disabled={!active.length} value={chosen?.frame.id ?? ''} onChange={event => { setKeyboardId(event.target.value); scene.current?.pin(event.target.value || null); scene.current?.inspect(event.target.value || null); }}>
-          <option value="">{active.length ? 'Select a saved frame' : 'No frames in range'}</option>
-          {active.map(({ frame }) => <option key={frame.id} value={frame.id}>{formatFrameLabel(frame)}</option>)}
-        </select>
+        <RowSelect label="Saved frame" disabled={!active.length} value={chosen?.frame.id ?? ''}
+          onChange={value => { setKeyboardId(value); scene.current?.pin(value || null); scene.current?.inspect(value || null); }}
+          options={[{ value: '', label: active.length ? 'Select a saved frame' : 'No frames in range' }, ...active.map(({ frame }) => ({ value: frame.id, label: formatFrameLabel(frame) }))]}/>
+
       </div>, framePickerSlot)}
 
       <div className="album-floating-actions">
+        {tokenView && <h3 className="token-view-heading">Token usage</h3>}
         <button className="gallery-play album-token-toggle" aria-pressed={tokenView} onClick={() => tokenView ? scene.current?.reset(true) : scene.current?.top()}><i className={tokenView ? 'ph ph-arrow-u-up-left' : 'ph ph-chart-line'} aria-hidden="true" />{tokenView ? 'Exit' : 'See token usage'}</button>
         {chosen && <button className="album-open-frame gallery-play" onClick={() => onOpen(chosen.frame.id)}>Open frame</button>}
       </div>
