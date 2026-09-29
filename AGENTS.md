@@ -2,7 +2,7 @@
 
 Whenever a user request establishes or changes a rule for the entire design system, record it in `docs/design-system-rules.md` and implement it using shared tokens or reusable graph-derived logic. Do not hardcode node-specific or screenshot-specific exceptions. Read that file before changing shared diagram behavior.
 
-The left panel now contains the Iteration Gallery, as requested on 2026-09-22. Preserve the Version stream and do not introduce unrelated design changes or external design systems.
+The main application now contains navigation, task conversations and an on-demand reading window, confirmed 2026-09-25. The existing Iteration Gallery and Version stream remain together inside the reading window and at `?view=history`. Preserve their behavior. Builder means creator; Inbox currently contains Mits only; human collaboration is out of scope; Input / Output cards stay at the conversation’s upper right. Use the user-supplied MitWerk design-system palette with the existing reading-window typography and density; see `docs/design-system-rules.md`.
 
 The local app always runs on port **5173** (`http://localhost:5173`). Do not change this port, pick a fallback port, or point screenshots, OAuth redirects, or other local URLs at a different one.
 
