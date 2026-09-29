@@ -235,3 +235,17 @@ test('caption wrapping stays within the measured width', () => {
   assert.deepEqual(wrapTextToWidth('supercalifragilistic', 5, measure), ['super', 'calif', 'ragil', 'istic']);
   assert.deepEqual(wrapTextToWidth('fits', 10, measure), ['fits']);
 });
+
+test('push previews reuse only their version’s final prompt image while retaining push metadata', () => {
+  const first = { ...capture('first', 17), url: 'first.png', width: 120, height: 80 };
+  const last = { ...capture('last', 18), url: 'last.png', width: 180, height: 100 };
+  const push = { ...capture('push', 19, 'push', 1), url: 'push.png' };
+  const emptyPush = { ...capture('empty', 20, 'push', 2), url: 'empty.png' };
+  const versions = buildVersions([emptyPush, push, last, first]);
+  const preview = versions[0].frames.at(-1)!;
+  assert.equal(preview.url, last.url);
+  assert.equal(preview.width, last.width); assert.equal(preview.height, last.height);
+  for (const key of ['id', 'filename', 'kind', 'number', 'summary', 'timestamp'] as const) assert.equal(preview[key], push[key]);
+  assert.equal(versions[1].frames[0].url, emptyPush.url);
+  assert.equal(push.url, 'push.png');
+});

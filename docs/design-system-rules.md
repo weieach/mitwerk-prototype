@@ -332,3 +332,91 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Commit-card hover — 2026-09-25
 
 - Hovering a version card smoothly strengthens its border without changing card size or moving its contents. Preserve the active branch border color. Use shared `cardHoverBorderInset` and `cardHoverTransitionMs` tokens for the inset stroke and transition; respect reduced-motion preferences.
+
+## Gallery label overlap — 2026-09-29
+
+- Stack date and version labels by capture timestamp, newer above older, independent of projection and rendering order. Hovering any visible label brings it above the other labels and draws a white outline using shared `axisText.hoverBorderWidth`, `hoverBorderColor`, and `hoverBorderGap` tokens. The hovered label has an opaque white background, including the clearance inside its outline, using `axisText.hoverBackground`; it obscures labels underneath without changing its size or position. On pointer exit remove the background and restore chronological layering. Invisible labels must not intercept the pointer.
+
+## Top-view token usage — 2026-09-29
+
+- Store simulated input, output, total, and simulation status per capture ID in `data/token-usage.json`. Initialize new captures once; preserve existing values across refreshes, range changes, and builds. Expose these objects with the capture catalog, and label the visualization as simulated.
+- Draw one continuous cumulative area across active frames, rising from a shared lower edge rather than mirrored around a centerline. Connect chronological frame values linearly, starting at 0% before the first frame and reaching 100% of the selected range’s total at the last frame. Place the 0–100% scale beyond the ending block. Exclude inactive frames from the area and its total; preserve their disabled blocks. Use reusable data-derived geometry and shared `tokenUsage` tokens.
+- Fade the area and scale in only near a complete top view (87–89 degrees elevation), and fade out on orbit away. “See token usage” rotates 90° clockwise so later frames extend right, centering and fitting the entire active block range with space for labels. Center view while viewing token usage restores this active-range framing. Keep labels upright as the camera turns. Preserve the range and respect reduced motion. Empty or zero-usage ranges render no filled area.
+
+## Push preview images — 2026-09-29
+
+- Every push node displays the last prompt image within its version, including its image dimensions. Preserve the push ID, date, message, version grouping, timeline position, and archive lookup number. A version without prompt captures keeps its own push image; never borrow from a different version.
+- Archived prototypes must serve their allowlisted screenshot and reference assets within their sandbox asset namespace, preserving read-only isolation from the live project.
+- A pending archived build displays “Building prototype…” in both the theater frame and fullscreen overlay. Closing an overlay during its build cancels the waiting UI request and restores a usable Enter prototype action. Build failures and timeouts are visible and retryable. Stage runtime files asynchronously, excluding unrelated historical documentation and captures; do not run archived build scripts.
+
+## Token area segments and anchored titles — 2026-09-29
+
+- Use light gray for the cumulative area, with subtle branch-color tints for contiguous branch runs. Keep visible equal-width cumulative bars in the corresponding branch color. Reuse the gallery/version-stream branch palette; a branch change never resets the selected range’s cumulative total.
+- Align the area’s start and end to the actual first and last active frame planes, retaining their natural in-block padding instead of filling to block or hit-region edges. Interpolate the cumulative boundary between adjacent branch runs so segments meet without gaps or double-counting.
+- In token view, float Date and Version titles at one shared fixed pixel inset from the panel’s left edge. Keep their vertical positions on the corresponding numeric-label rows, independent of zoom; blend back to normal projected placement when leaving token view. Colors, bar widths, tint strength and inset belong to shared tokenUsage tokens.
+
+## Gallery control placement — 2026-09-29
+
+- Replace the gallery heading with the shared file dropdown, displaying **Gallery:** followed by the file name. Cap its width with `controls.fileMaxWidth` and ellipsize long names. Keep one accessible native selector in the panel header across gallery and theater views.
+- Use Phosphor fill `crosshair-simple` for Center view and `corners-out` for Reset view, retaining accessible names and tooltips.
+- In the gallery viewport, keep See token usage visible independently of frame selection, floating above Open frame. Change it to Exit whenever camera orientation enters token view; Exit returns to the ordinary reset framing. Open frame remains conditional on a selected saved frame.
+- Place the saved-frame dropdown at the viewport’s bottom right. Use shared control insets, gaps and maximum widths; on narrower panels lift the action stack to avoid overlap. These controls follow the existing theater-transition visibility and do not intercept canvas drags outside their bounds.
+
+## Visualizer navigation refinements — 2026-09-29
+
+- Restore the panel title as Iteration Visualizer. Put the plain file dropdown directly to its right, retaining its maximum width. Center and Reset use regular (unfilled) Phosphor icons without a button background or border.
+- Place the saved-frame selector at the right end of the date-range footer, on the same row. Keep its selection and Open frame behavior unchanged; hide it during theater as before.
+- Tighten the date/version hover isolation to a 1px white outline and 1px clearance. Reduce the reserved title-overlay clearance in token view so nearby numeric labels remain visible.
+- Token view maps the primary mouse drag to panning, preserving the top orientation; ordinary gallery view restores rotation. Do not add automatic edge travel while token view is active.
+- Animate camera azimuth, elevation, target and scale together into and out of top view. Exit/Reset from token view returns smoothly to gallery framing, including the turn away from the top, while reduced motion completes immediately.
+
+## Consolidated camera control and floating buttons — 2026-09-29
+
+- Show only the unfilled Reset view icon. Single-click resets framing; double-click centers using the existing Center view behavior. Delay pointer single-click by the shared double-click window so a double-click cancels the pending reset. Keyboard activation resets immediately. Expose the double-click action in its tooltip.
+- Floating See token usage / Exit and Open frame buttons use white backgrounds. Raise the token button by `controls.tokenLift` (24px) while preserving Open frame’s position. Increase the title/file-dropdown gap to `controls.headerGap` (14px). Keep these values in shared control tokens.
+
+
+## Shared responsive control sizing — 2026-09-29
+
+- All page action buttons and dropdowns share the date-range selector’s height, including playback, card actions and canvas controls. Use the responsive `--control-height` and `--control-font-size` tokens in `src/control-tokens.css`; keep spatial diagram nodes, clickable card headings, timeline push blocks and resize handles governed by their geometry.
+- Halve header and bottom-row vertical and inline padding through shared responsive row tokens. Row heights follow their control height and padding rather than a fixed minimum. Titles and supporting row text scale with the control font.
+- Raise See token usage / Exit using `controls.tokenLift` (48px). Add regular Phosphor chart-line / return icons, retaining white floating-button backgrounds.
+
+
+## Fixed-height divided control rows — 2026-09-29
+
+- Headers and bottom rows have zero vertical padding and fixed responsive heights, preserving their previous total heights through `--header-row-height` and `--footer-row-height`. Inner groups and controls stretch to fill the row. Keep responsive typography.
+- Use one shared `--row-padding-inline` value for row and control horizontal padding, doubled from the previous spacing. Replace individual dropdown outlines with shared thin vertical dividers between titles, selectors and actions. Preserve focus indicators.
+- Version stream floating controls use the same inline token for left/right/bottom offsets and inter-group spacing. Remove their inner padding and match their controls to footer dropdown height. Spatial diagram controls retain their graph-derived dimensions.
+
+
+## Docked version controls and header edges — 2026-09-29
+
+- Version stream view controls occupy a fixed bottom row outside the scrollable canvas. Share the gallery footer height, control sizing, horizontal padding and divider tokens; do not overlay graph content. Preserve upward-opening branch menus.
+- Panel headers have zero right padding so their final action reaches the panel edge. Add a leading divider to the header action group, including before the gallery minus button.
+
+
+## Shared reset button and branch navigation — 2026-09-29
+
+- Both panels use `ResetViewButton` with the regular Phosphor corners-out icon, no visible text, and the shared `controlTokens.doubleClickMs` delay. Single-click fits/resets; double-click cancels the reset and centers. Keyboard activation fits/resets immediately.
+- Version stream double-click targets the current active branch endpoint, independent of the selected card or endpoint pager. Reveal collapsed content before navigating.
+- Put the active branch dropdown immediately after the Version stream title; its menu opens downward. The Grid toggle keeps its label as Grid, with a closed-eye Phosphor icon while enabled and an open eye while disabled, exposing its pressed state.
+
+
+## Version stream scale placement — 2026-09-29
+
+- Place Version stream zoom out, percentage/reset and zoom in in its header immediately before Fit all, matching the gallery’s control order, shared sizing and dividers. Keep the remaining center-selection and endpoint controls right-aligned in the bottom row.
+
+
+## Compact headers and Grid placement — 2026-09-29
+
+- Grid stays at the bottom-left of Version stream; remaining footer controls stay right-aligned.
+- Use the reusable `AdaptivePanelTitle` to measure full title plus sibling controls against available header width. Show Visualizer or Stream only when the full title cannot fit; restore the full title when space returns. Compact titles use `--compact-title-weight` (500), preserving full accessible names.
+- Both panels use the gallery’s text minus (−) and plus (+) symbols. Header zoom and reset controls share `--zoom-padding-inline`, 80% of regular row padding.
+
+
+## Token colors, wireframes and reset — 2026-09-29
+
+- Keep the chronological branch palette across the full catalog when filtering ranges. Historical branch colors appear only when their frames are in the selected range; do not include out-of-range tokens in the cumulative total. Strengthen branch tints and bars with shared `tokenUsage.branchTint` / `barOpacity` tokens so short branch runs remain visible.
+- In token view, draw block wireframes above the area and bars, blending to shared token outline opacity/width. Preserve inactive-block dimming and restore ordinary depth testing on exit.
+- Reset while in token view re-centers and fits the selected time range at the token-view orientation. Exit explicitly returns to the gallery orientation.

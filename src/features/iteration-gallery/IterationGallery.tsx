@@ -1,3 +1,7 @@
+import { AdaptivePanelTitle } from '../../components/AdaptivePanelTitle';
+import { ResetViewButton } from '../../components/ResetViewButton';
+import '@phosphor-icons/web/regular/style.css';
+import { TrackedInterface } from './TrackedInterface';
 import type { VisualReference } from './references';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { containedFrameTarget, frameBorderEntrance, timelineEntrance } from './theater-transition';
@@ -17,7 +21,11 @@ export function IterationGallery({ pushRequest }: { pushRequest: { version: numb
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
-  const [range, setRange] = useState<RangeKey>('7');
+  const [range, setRange] = useState<RangeKey>(() => {
+    const params = new URLSearchParams(location.search);
+    const capturedRange = params.get('range');
+    return params.get('screenshot') === '1' && ranges.some(option => option.value === capturedRange) ? capturedRange as RangeKey : '7';
+  });
   const [interfaceId, setInterfaceId] = useState<string>(t.interfaces[0].value);
   const [now, setNow] = useState(Date.now);
   const [zoom, setZoom] = useState(1);
@@ -25,6 +33,7 @@ export function IterationGallery({ pushRequest }: { pushRequest: { version: numb
   const [selectedId, setSelectedId] = useState('');
   const [navigationKey, setNavigationKey] = useState(0);
   const [target, setTarget] = useState<TheaterTarget | null>(null);
+  const [framePickerSlot, setFramePickerSlot] = useState<HTMLDivElement | null>(null);
   const viewStack = useRef<HTMLDivElement>(null);
   const galleryRoot = useRef<HTMLElement>(null);
   const updateTimelineMotion = useCallback((progress: number) => {
@@ -47,6 +56,8 @@ export function IterationGallery({ pushRequest }: { pushRequest: { version: numb
     setReturnReady(false); setView('returning');
   }, [view]);
   const camera = useRef<GalleryCamera | null>(null);
+
+
 
   useEffect(() => {
     const abort = new AbortController();
@@ -111,19 +122,18 @@ export function IterationGallery({ pushRequest }: { pushRequest: { version: numb
     }
   }, [versions, range, now]);
 
-  return <section ref={galleryRoot} data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-labelledby="gallery-title" style={{ '--theater-focus-background': t.theater.focusBackground, '--theater-frame-shadow': t.theater.frameShadow, '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px` } as CSSProperties}>
+  return <section ref={galleryRoot} data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-label="Iteration Visualizer" style={{ '--gallery-header-gap': `${t.controls.headerGap}px`, '--gallery-token-lift': `${t.controls.tokenLift}px`, '--gallery-floating-background': t.controls.floatingBackground, '--gallery-file-max-width': `${t.controls.fileMaxWidth}px`, '--gallery-control-inset': `${t.controls.inset}px`, '--gallery-control-gap': `${t.controls.gap}px`, '--gallery-frame-select-max-width': `${t.controls.frameSelectMaxWidth}px`, '--theater-focus-background': t.theater.focusBackground, '--theater-frame-shadow': t.theater.frameShadow, '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px` } as CSSProperties}>
     <header className="panel-header">
       <div className="panel-heading">
         {(view === 'theater' || view === 'orbiting') && <button className="icon-button album-reset gallery-back" onClick={exit}>← Gallery</button>}
-        <h2 id="gallery-title">Iteration gallery</h2>
+        <AdaptivePanelTitle full="Iteration Visualizer" short="Visualizer"/><TrackedInterface value={interfaceId} onChange={setInterfaceId}/>
       </div>
       {view !== 'theater' && view !== 'orbiting' && <div className="panel-header-actions" inert={view === 'turning' || view === 'returning'}>
         <button className="icon-button" aria-label="Zoom gallery out" disabled={zoom <= t.zoomMin} onClick={() => setZoom(Math.max(t.zoomMin, zoom - t.zoomStep))}>−</button>
         <button className="icon-button" aria-label="Reset gallery zoom" onClick={() => setZoom(1)}>{Math.round(zoom * 100)}%</button>
         <button className="icon-button" aria-label="Zoom gallery in" disabled={zoom >= t.zoomMax} onClick={() => setZoom(Math.min(t.zoomMax, zoom + t.zoomStep))}>+</button>
         <div className="album-camera-actions">
-          <button className="icon-button album-reset" onClick={() => camera.current?.center()}>Center view</button>
-          <button className="icon-button album-reset" onClick={() => camera.current?.reset()}>Reset view</button>
+          <ResetViewButton onReset={() => camera.current?.reset()} onCenter={() => camera.current?.center()}/>
         </div>
       </div>}
     </header>
@@ -131,15 +141,15 @@ export function IterationGallery({ pushRequest }: { pushRequest: { version: numb
     {!catalog ? <div className="gallery-empty">{error ? 'Screenshot catalog unavailable.' : 'Reading saved frames…'}</div>
       : !versions.length ? <div className="gallery-empty">No saved frames found.</div>
       : <div className="gallery-view-stack" ref={viewStack}>
-      {<><AlbumView onMotion={updateTimelineMotion} turning={view === 'turning'} returning={view === 'returning'} hidden={view === 'theater' || view === 'orbiting'} onReturnStarted={startReturn} theaterTarget={target} theaterId={selectedId} onTurnComplete={finishTurn} versions={versions} range={range} now={now} zoom={zoom} interfaceId={interfaceId} onInterface={setInterfaceId} onOpen={open} onZoom={setZoom} onCamera={api => { camera.current = api; }}/>{!visibleFrames.length && <div className="gallery-message">No frames in this range. Earlier versions remain visible in gray.</div>}</>}
-      {view !== 'album' && <div className="gallery-theater-layer" inert={view === 'turning' || view === 'returning'} aria-hidden={view === 'turning' || view === 'returning'}><TheaterView navigationKey={navigationKey} references={catalog?.references ?? []} baseline={baseline ?? t.viewportPresets[1]} interfaceId={interfaceId} onInterface={setInterfaceId} frames={visibleFrames} catalog={versions.flatMap(version => version.frames)} range={range} now={now} selectedId={selectedId} onSelect={select} onOrbit={(id, rect) => camera.current?.orbit(id, rect, () => { setSelectedId(id); setView('orbiting'); }, () => { setView('album'); setTarget(null); }) ?? null} onDismiss={exit} active={view === 'theater'}/></div>}
+      {<><AlbumView framePickerSlot={framePickerSlot} onMotion={updateTimelineMotion} turning={view === 'turning'} returning={view === 'returning'} hidden={view === 'theater' || view === 'orbiting'} onReturnStarted={startReturn} theaterTarget={target} theaterId={selectedId} onTurnComplete={finishTurn} versions={versions} range={range} now={now} zoom={zoom} onOpen={open} onZoom={setZoom} onCamera={api => { camera.current = api; }}/>{!visibleFrames.length && <div className="gallery-message">No frames in this range. Earlier versions remain visible in gray.</div>}</>}
+      {view !== 'album' && <div className="gallery-theater-layer" inert={view === 'turning' || view === 'returning'} aria-hidden={view === 'turning' || view === 'returning'}><TheaterView navigationKey={navigationKey} references={catalog?.references ?? []} baseline={baseline ?? t.viewportPresets[1]} frames={visibleFrames} catalog={versions.flatMap(version => version.frames)} range={range} now={now} selectedId={selectedId} onSelect={select} onOrbit={(id, rect) => camera.current?.orbit(id, rect, () => { setSelectedId(id); setView('orbiting'); }, () => { setView('album'); setTarget(null); }) ?? null} onDismiss={exit} active={view === 'theater'}/></div>}
       </div>}
     <footer className="gallery-footer" inert={view === 'turning' || view === 'returning' || view === 'orbiting'}>
       <div className="gallery-range">
         <label><span className="sr-only">Date range</span><select aria-label="Date range" value={range} onChange={event => { setRange(event.target.value as RangeKey); setNow(Date.now()); }}>{ranges.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
         <span className="gallery-small">{catalog ? counts.versions + '/' + counts.versionTotal + ' versions' + rangePromptLabel : 'Loading frames…'}</span>
       </div>
-      <button className="icon-button" disabled title="Token usage is not included in capture filenames.">See token usage</button>
+      <div className="gallery-frame-picker-slot" ref={setFramePickerSlot}/>
     </footer>
   </section>;
 }

@@ -460,6 +460,7 @@ function screenshotUrl(prompt = '') {
   const target = new URL(url);
   target.searchParams.set('screenshot', '1');
   target.searchParams.set('treeMode', argValue('tree-mode', 'history'));
+  if (argValue('gallery-view') === 'tokens') { target.searchParams.set('galleryView', 'tokens'); return target.href; }
   const hover = wantsGalleryHover(prompt);
   if (wantsTransitionCapture(prompt)) { target.searchParams.set('galleryView', argValue('gallery-view') === 'timeline-transition' ? 'timeline-transition' : 'transition'); return target.href; }
   if (hover) target.searchParams.set('galleryHover', '1');
@@ -561,7 +562,9 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
     const result = await cdp('Runtime.evaluate', {
-      expression: wantsTransitionCapture(prompt)
+      expression: argValue('gallery-view') === 'tokens'
+        ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.tokenUsageReady === "true"'
+        : wantsTransitionCapture(prompt)
         ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.transitionReady === "true"'
         : wantsTheaterCapture(prompt)
         ? `document.documentElement.dataset.screenshotReady === "1" && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete${/overlay open/i.test(prompt) ? ' && !!document.querySelector(".theater-fullscreen") && !document.querySelector(".theater-fullscreen .is-exit")' : ''}${/mobile breakpoint|\bat mobile\b/i.test(prompt) ? ' && document.querySelector("[aria-label=\\"Preview viewport\\"]")?.value === "phone" && !!document.querySelector(".theater-frame-bed")' : ''}${/prototype (?:is )?entered|prototype mode/i.test(prompt) ? ' && !!document.querySelector("[aria-label=\\"Preview viewport\\"]")' : ''}${/playhead at last frame/i.test(prompt) ? ' && document.querySelector(".theater-view")?.dataset.rangeEdge === "end" && (() => { const head = document.querySelector(".gallery-timeline-playhead"); const scroller = document.querySelector(".gallery-timeline-scroll"); if (!head || !scroller) return false; const h = head.getBoundingClientRect(); const s = scroller.getBoundingClientRect(); return h.left >= s.left - 4 && h.right <= s.right + 4; })()' : ''}`
@@ -645,6 +648,19 @@ async function capture(chrome, outFile, prompt = '') {
       }
     }
     await delay(['top', 'overhead'].includes(argValue('gallery-view')) ? 500 : 150);
+    const hoverLabel = argValue('hover-label');
+    if (hoverLabel) {
+      const hovered = await cdp('Runtime.evaluate', { expression: `(() => {
+        const label = [...document.querySelectorAll('.album-axis-label > span')].find(element => element.textContent === ${JSON.stringify(hoverLabel)} && !element.parentElement.hidden && +getComputedStyle(element.parentElement).opacity > .05);
+        if (!label) return null;
+        const rect = label.getBoundingClientRect(); return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+      })()`, returnByValue: true });
+      if (!hovered.result?.value) throw new Error(`Could not find gallery label: ${hoverLabel}`);
+      await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', ...hovered.result.value });
+      await delay(150);
+      const result = await cdp('Runtime.evaluate', { expression: `document.querySelector('.album-axis-label.is-hovered')?.textContent`, returnByValue: true });
+      if (result.result?.value !== hoverLabel) throw new Error(`Gallery label was not hovered: ${hoverLabel}`);
+    }
     const hoverControl = argValue('hover-control');
     if (hoverControl) {
       const hovered = await cdp('Runtime.evaluate', { expression: `(() => {

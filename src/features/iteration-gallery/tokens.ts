@@ -1,6 +1,7 @@
 export const galleryTokens = {
   theaterMotion: { rotateMs: 1100, verticalAxisFadeMs: 180, frameBorderMs: 180, controlsFadeMs: 280, captureProgress: .5, timelineMs: 320, timelineOffsetVh: 5 },
   theaterDrag: { radiansPerViewport: Math.PI, pitchLimit: Math.PI * .45 },
+  controls: { headerGap: 14, tokenLift: 48, floatingBackground: '#ffffff', fileMaxWidth: 240, frameSelectMaxWidth: 200, inset: 24, gap: 8 },
   interfaces: [{ value: 'index.html', label: 'index.html' }],
   webgl: { pixelRatioMax: 2, rotateSpeed: .7, zoomSpeed: .55, keyRotateRadians: .12, dragThreshold: 5,
     blockOpacity: .035, edgeOpacity: .75, hoverEdgeOpacity: 1, edgeWidth: 1, hoverEdgeWidth: 1.5, frameOutlineOpacity: .92, frontViewPadding: 1.8, frontViewLift: .15,
@@ -11,8 +12,9 @@ export const galleryTokens = {
   hoverLift: 32, rulerGap: 36, transitionMs: 240,
   rulerTickLength: 144, rulerLabelGap: 24,
   axisTitle: { valueGap: 138, zoomGapPower: .25, minProjection: .1 },
+  tokenUsage: { clockwiseDegrees: 90, startDegrees: 87, fullDegrees: 89, fadeMs: 300, rotateMs: 850, areaOpacity: .85, areaColor: '#E5E5E5', branchTint: .5, barOpacity: .8, barWidth: .7, barSpacingRatio: .45, axisInsetPx: 24, axisTitleGapPx: 6, scaleTicks: [0, .5, 1], surfaceLift: 1, labelGap: 22, outlineOpacity: .85, outlineWidth: 1.3, outlineRenderOrder: 2 },
   featuredTickScale: .5,
-  axisText: { minPx: 8, basePx: 9, maxPx: 11, referenceViewport: 640, minProjection: .55 },
+  axisText: { hoverBackground: '#ffffff', hoverBorderWidth: 1, hoverBorderColor: '#ffffff', hoverBorderGap: 1, minPx: 8, basePx: 9, maxPx: 11, referenceViewport: 640, minProjection: .55 },
   axisFacing: { startDegrees: 30, fullyFrontDegrees: 12 },
   topView: { startDegrees: 55, fullDegrees: 75, dateFadeMs: 240, titleEndGap: 48 },
   labelFontSize: 10, labelWorldHeight: 22, labelTextureMin: 96, labelTextureMax: 512,
@@ -25,7 +27,7 @@ export const galleryTokens = {
   fullscreen: { scrim: 'rgba(0, 0, 0, .8)', gutter: 48, closeGap: 8, closeSize: 28 },
   theaterReference: { kind: 'prompt', number: 56 } as const,
   capturePushVersion: 16,
-  theater: { focusBackground: '#fff', frameShadow: 'none', frameBed: '#F4F4F4', metadataHeight: 112, metadataGap: 16, metadataHeightMaxVh: 20, metadataRowGap: 4, referenceChipWidth: 180, summaryGapScale: 1.75, playbackFooterGap: 4, playbackEnabled: 'var(--ink)', playbackDisabled: 'var(--faint)', actionGap: 8, enterDelayMs: 1000, enterExpandMs: 280, enterFadeMs: 180, imageCacheSize: 8, preloadFrames: 3, wheelStep: 80, addedColor: '#1f8a4c', removedColor: '#d12b2b' },
+  theater: { prototypeTimeoutMs: 60000, focusBackground: '#fff', frameShadow: 'none', frameBed: '#F4F4F4', metadataHeight: 112, metadataGap: 16, metadataHeightMaxVh: 20, metadataRowGap: 4, referenceChipWidth: 180, summaryGapScale: 1.75, playbackFooterGap: 4, playbackEnabled: 'var(--ink)', playbackDisabled: 'var(--faint)', actionGap: 8, enterDelayMs: 1000, enterExpandMs: 280, enterFadeMs: 180, imageCacheSize: 8, preloadFrames: 3, wheelStep: 80, addedColor: '#1f8a4c', removedColor: '#d12b2b' },
   viewportPresets: [
     { value: 'original', label: 'Original size', width: 0, height: 0 },
     { value: 'desktop', label: 'Desktop', width: 1440, height: 900 },

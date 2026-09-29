@@ -1,3 +1,4 @@
+import { readTokenUsage } from './token-usage.ts';
 import { readGitHistory } from './git-history.ts';
 import { closeSync, createReadStream, existsSync, openSync, readFileSync, readdirSync, readSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -29,7 +30,8 @@ export function readCaptureCatalog(root: string) {
       return [{ ...metadata, id: filename, filename, width, height, url: `gallery/images/${encodeURIComponent(filename)}` }];
     } catch { ignored++; return []; }
   });
-  return { frames, ignored, references: readVisualReferences(root) };
+  const usage = readTokenUsage(root, frames.map(frame => frame.id));
+  return { frames: frames.map(frame => ({ ...frame, tokenUsage: usage[frame.id] })), ignored, references: readVisualReferences(root) };
 }
 
 export type VisualReference = { name: string; url: string; prompt: number };

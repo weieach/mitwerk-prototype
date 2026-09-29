@@ -18,7 +18,6 @@ import { containedFrameTarget, reservedControlContains } from './theater-transit
 import type { TheaterOrbit, TheaterTarget } from './theater-transition';
 import { theaterCaption, theaterCaptionLead } from './theater-layout';
 import { Icon } from '../../components/Icon';
-import { TrackedInterface } from './TrackedInterface';
 
 function PlaybackTip({ label, children, edge }: { label: string; children: ReactNode; edge?: 'start' | 'end' }) {
   const [hover, setHover] = useState(false);
@@ -28,7 +27,7 @@ function PlaybackTip({ label, children, edge }: { label: string; children: React
   </span>;
 }
 
-export function TheaterView({ navigationKey, references, frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline, interfaceId, onInterface }: { navigationKey: number; references: VisualReference[]; baseline: { width: number; height: number }; active: boolean; interfaceId: string; onInterface: (value: string) => void; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string, animate?: boolean) => void }) {
+export function TheaterView({ navigationKey, references, frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline }: { navigationKey: number; references: VisualReference[]; baseline: { width: number; height: number }; active: boolean; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string, animate?: boolean) => void }) {
   const timelineRef = useRef<HTMLDivElement>(null);
   const gesture = useRef<{ pointer: number; x: number; y: number; frameClick: boolean; orbit: TheaterOrbit | null } | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -315,14 +314,13 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
     style={{ '--theater-footer-gap': `${t.theater.playbackFooterGap}px` } as CSSProperties}
     onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} onLostPointerCapture={pointerEnd}>
     {fullscreen && <FullscreenPreview label={`${formatVersion(frame.version)} full screen`} ratio={dimensions.width / dimensions.height}
-      onClose={() => setFullscreenId(null)} footer={null}>
-      {prototype.open && prototype.url
+      onClose={() => { if (prototype.loading) prototype.exit(); setFullscreenId(null); }} footer={null}>
+      {prototype.loading ? <div className="theater-loading" role="status">Building prototype…</div> : prototype.error ? <div className="gallery-empty" role="alert">{prototype.error}</div> : prototype.open && prototype.url
         ? <iframe className="theater-prototype" src={prototype.url} title={`${formatVersion(frame.version)} interactive archived prototype`}
             sandbox="allow-scripts" referrerPolicy="no-referrer"/>
         : <img draggable={false} src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`${formatVersion(frame.version)}: ${frame.summary}`}/>}
     </FullscreenPreview>}
     <div className="gallery-toolbar theater-top-toolbar" data-orbit-blocked>
-      <TrackedInterface value={interfaceId} onChange={onInterface}/>
       <div className="playback-options-top">{playbackOptions}</div>
       {prototypeMode && <>
       <select value={preset} onChange={event => setPreset(event.target.value)} aria-label="Preview viewport">
@@ -362,6 +360,7 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
           {displayed ? <img draggable={false} src={`${import.meta.env.BASE_URL}${displayed.url}`} alt={`${formatVersion(displayed.version)}: ${displayed.summary}`} aria-hidden={showingPreview}/>
             : <div className="gallery-empty">{failedImage ? 'This saved image could not be loaded.' : 'Loading frame…'}</div>}
           {showingPreview && <img draggable={false} className="theater-preview-image" src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`Preview ${formatVersion(frame.version)}: ${frame.summary}`}/>}
+          {prototype.loading && <div className="theater-loading" role="status">Building prototype…</div>}
         </div>}
       <div className="theater-metadata" ref={metaRef} style={{ '--theater-reference-width': `${t.theater.referenceChipWidth}px`, '--line-added': t.theater.addedColor, '--line-removed': t.theater.removedColor, '--theater-row-gap': `${t.theater.metadataRowGap}px`, '--theater-summary-gap': `${t.theater.metadataRowGap * (t.theater.summaryGapScale - 1)}px` } as CSSProperties}>
         {failedImage && displayed && <span role="status" data-orbit-blocked>The next image could not be loaded. The previous frame is still shown.</span>}

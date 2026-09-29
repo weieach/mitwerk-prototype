@@ -18,7 +18,7 @@ export function containedFrameTarget(rect: TheaterTarget, width: number, height:
 
 export type TheaterOrbit = { move: (dx: number, dy: number) => void; end: () => void };
 export type GalleryCamera = {
-  center: () => void; reset: () => void;
+  center: () => void; reset: () => void; top: () => void;
   orbit: (id: string, target: TheaterTarget, ready: () => void, complete: () => void) => TheaterOrbit | null;
 };
 

@@ -2,6 +2,7 @@ import { activeRouteColor, branchColor } from '../version-tree/tokens.ts';
 import { galleryTokens as t } from './tokens.ts';
 
 export type Capture = {
+  tokenUsage?: { input: number; output: number; total: number; simulated: boolean };
   id: string; filename: string; url: string; width: number; height: number;
   kind: 'prompt' | 'push' | 'capture'; number: number | null; branch: string | null;
   timestamp: number; summary: string; added: string | null; removed: string | null;
@@ -64,8 +65,14 @@ export function buildVersions(captures: Capture[]): GalleryVersion[] {
     if (!groups.has(version)) groups.set(version, []);
     groups.get(version)!.push(frame);
   }
-  return [...groups].sort(([a], [b]) => a - b).map(([number, frames], index) => ({ number, index,
-    frames: frames.map((frame, i) => ({ ...frame, version: number, position: index + (i + 0.5) / frames.length })) }));
+  return [...groups].sort(([a], [b]) => a - b).map(([number, frames], index) => {
+    const lastPrompt = frames.filter(frame => frame.kind === 'prompt').at(-1);
+    return { number, index, frames: frames.map((frame, i) => ({ ...frame,
+      // Keep push identity and metadata; only its displayed image comes from the final prompt.
+      ...(frame.kind === 'push' && lastPrompt ? { url: lastPrompt.url, width: lastPrompt.width, height: lastPrompt.height } : {}),
+      version: number, position: index + (i + 0.5) / frames.length,
+    })) };
+  });
 }
 
 export function rangeStart(range: RangeKey, now = Date.now()) {

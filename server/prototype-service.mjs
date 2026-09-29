@@ -1,7 +1,8 @@
 import { build } from 'vite';
 import react from '@vitejs/plugin-react';
-import { cpSync, createReadStream, existsSync, mkdirSync, rmSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
-import { extname, join, resolve, sep } from 'node:path';
+import { createReadStream, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
+import { cp, rm } from 'node:fs/promises';
+import { extname, join, relative, resolve, sep } from 'node:path';
 
 export const archiveDirectory = '[ver capture] codebase';
 export const prototypeApi = '/__mitwerk/prototypes';
@@ -21,7 +22,7 @@ export function findArchive(root, number) {
 
 /** A sandboxed archive gets ephemeral storage and access only to its frozen, read-only assets. */
 export function prototypeBootstrap(base) {
-  return `<script>(()=>{const base=${JSON.stringify(base)};const memory=()=>{const data=new Map();return {getItem:k=>data.get(String(k))??null,setItem:(k,v)=>data.set(String(k),String(v)),removeItem:k=>data.delete(String(k)),clear:()=>data.clear(),key:i=>[...data.keys()][i]??null,get length(){return data.size}}};for(const key of ['localStorage','sessionStorage'])Object.defineProperty(window,key,{value:memory()});const request=window.fetch.bind(window);window.fetch=(input,init)=>{let url=new URL(typeof input==='string'?input:input.url,location.href);if(url.pathname.startsWith('/__mitwerk/graph'))return Promise.resolve(new Response('null',{headers:{'Content-Type':'application/json'}}));if(url.pathname.startsWith('/gallery/'))url=new URL(base+url.pathname.slice(1),location.origin);if(url.origin!==location.origin||!url.pathname.startsWith(base))return Promise.reject(new Error('This archived prototype only accesses its saved assets.'));return request(url,{...init,credentials:'omit'});};})();</script>`;
+  return `<script>(()=>{const base=${JSON.stringify(base)};const memory=()=>{const data=new Map();return {getItem:k=>data.get(String(k))??null,setItem:(k,v)=>data.set(String(k),String(v)),removeItem:k=>data.delete(String(k)),clear:()=>data.clear(),key:i=>[...data.keys()][i]??null,get length(){return data.size}}};for(const key of ['localStorage','sessionStorage'])Object.defineProperty(window,key,{value:memory()});const request=window.fetch.bind(window);window.fetch=(input,init)=>{let url=new URL(typeof input==='string'?input:input instanceof URL?input.href:input.url,location.href);if(url.pathname.startsWith('/__mitwerk/graph'))return Promise.resolve(new Response('null',{headers:{'Content-Type':'application/json'}}));if(url.pathname.startsWith('/gallery/'))url=new URL(base+url.pathname.slice(1),location.origin);if(url.origin!==location.origin||!url.pathname.startsWith(base))return Promise.reject(new Error('This archived prototype only accesses its saved assets.'));return request(url,{...init,credentials:'omit'});};})();</script>`;
 }
 
 export function snapshotCatalog(catalog, push) {
@@ -42,10 +43,14 @@ export function createPrototypeService(root, { catalog, history }) {
       const sourceDir = join(cache, `source-${number}`);
       const outDir = join(cache, `push-${number}`);
       mkdirSync(cache, { recursive: true });
-      rmSync(sourceDir, { recursive: true, force: true });
+      await rm(sourceDir, { recursive: true, force: true });
       // Archive names contain #, which Vite interprets as a URL fragment in CSS assets.
       // Stage a disposable copy under a URL-safe path, leaving the archive untouched.
-      cpSync(archive, sourceDir, { recursive: true });
+      // Stage runtime source/assets without blocking the dev server on historical docs/captures.
+      const excluded = new Set(['.git', '.cursor', '.githooks', 'node_modules', 'dist', 'archive', 'docs', 'tests', 'scripts', 'server', 'visual_ref', archiveDirectory, '[frame capture] screenshots']);
+      await cp(archive, sourceDir, { recursive: true,
+        filter: path => !excluded.has(relative(archive, path).split(sep)[0]),
+      });
       const frozen = snapshotCatalog(catalog(), push);
       const git = history();
       const commits = (git.commits ?? []).filter(commit => commit.timestamp <= push.timestamp);
@@ -63,7 +68,7 @@ export function createPrototypeService(root, { catalog, history }) {
         }],
         build: { outDir, emptyOutDir: true, sourcemap: false },
       });
-      ready.set(number, { outDir, images: new Set(frozen.frames.map(frame => frame.filename)) });
+      ready.set(number, { outDir, images: new Set(frozen.frames.map(frame => frame.filename)), references: new Set((frozen.references ?? []).map(reference => reference.name)) });
       return { url: `${base}index.html`, number };
     })();
     builds.set(number, pending);
@@ -98,6 +103,10 @@ export function createPrototypeService(root, { catalog, history }) {
         const name = relative.slice('gallery/images/'.length);
         if (!built.images.has(name) || name.includes('/') || name.includes('\\')) throw new Error('Unknown image');
         path = join(root, '[frame capture] screenshots', name);
+      } else if (relative.startsWith('gallery/references/')) {
+        const name = relative.slice('gallery/references/'.length);
+        if (!built.references.has(name) || name.includes('/') || name.includes('\\')) throw new Error('Unknown reference');
+        path = join(root, 'visual_ref', name);
       } else {
         path = resolve(built.outDir, relative);
         if (!realpathSync(path).startsWith(realpathSync(built.outDir) + sep)) throw new Error('Outside build');

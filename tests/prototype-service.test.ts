@@ -19,12 +19,14 @@ test('archive service maps push numbers, bypasses archived hooks, freezes data, 
     assert.equal(findArchive(root, 7), archive);
     assert.equal(findArchive(root, 8), null);
     assert.equal(findArchive(root, -1), null);
+    mkdirSync(join(root, 'visual_ref'));
+    writeFileSync(join(root, 'visual_ref', 'reference.png'), 'reference-image');
     const before = readFileSync(join(archive, 'index.html'), 'utf8');
     const service = createPrototypeService(root, { catalog: () => ({ frames: [
       { id: 'old', kind: 'prompt', timestamp: 1, filename: 'old.png' },
       { id: 'push', kind: 'push', number: 7, timestamp: 2, filename: 'push.png' },
       { id: 'future', kind: 'prompt', timestamp: 3, filename: 'future.png' },
-    ] }), history: () => ({ commits: [], branches: [], merges: [] }) });
+    ], references: [{ name: 'reference.png', prompt: 1 }] }), history: () => ({ commits: [], branches: [], merges: [] }) });
     const [a, b] = await Promise.all([service.prepare(7), service.prepare(7)]);
     assert.deepEqual(a, b);
     const out = join(root, '.mitwerk-prototypes/push-7');
@@ -44,6 +46,8 @@ test('archive service maps push numbers, bypasses archived hooks, freezes data, 
     assert.equal((await request('/__mitwerk/prototype-assets/7/%2e%2e%2fsource-7/package.json')).status, 404);
     assert.equal((await request('/__mitwerk/prototype-assets/7/gallery/images/future.png')).status, 404);
     assert.equal((await request('/__mitwerk/prototype-assets/7/index.html', 'POST')).status, 405);
+    assert.equal((await request('/__mitwerk/prototype-assets/7/gallery/references/reference.png')).body, 'reference-image');
+    assert.equal((await request('/__mitwerk/prototype-assets/7/gallery/references/unknown.png')).status, 404);
     const page = await request(a.url);
     assert.equal(page.status, 200);
     assert.ok(page.headers['Content-Security-Policy'].includes('sandbox allow-scripts'));
@@ -62,4 +66,13 @@ test('embedded storage is ephemeral and fetch cannot access the current graph or
   await assert.rejects(window.fetch('https://example.com/'), /only accesses/);
   await assert.rejects(window.fetch('/__mitwerk/prototypes/8'), /only accesses/);
   await window.fetch('/gallery/manifest.json'); assert.equal(calls[0], 'http://localhost:5173/__mitwerk/prototype-assets/7/gallery/manifest.json');
+});
+
+test('archived fetch accepts URL objects as well as string paths', async () => {
+  const calls: string[] = [];
+  const window: Record<string, any> = { fetch: async (url: URL) => { calls.push(url.href); return new Response('{}'); } };
+  runInNewContext(prototypeBootstrap('/__mitwerk/prototype-assets/7/').replace(/^<script>|<\/script>$/g, ''),
+    { window, URL, Response, location: new URL('http://localhost:5173/__mitwerk/prototype-assets/7/index.html') });
+  await window.fetch(new URL('http://localhost:5173/gallery/manifest.json'));
+  assert.equal(calls[0], 'http://localhost:5173/__mitwerk/prototype-assets/7/gallery/manifest.json');
 });

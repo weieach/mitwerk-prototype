@@ -1,3 +1,5 @@
+import { interpolateOrbit } from './camera-motion';
+import { tokenUsageArea } from './token-usage';
 import * as THREE from 'three';
 import { dragAngles, transitionProgress, theaterEntranceDuration, theaterRotationProgress } from './theater-transition';
 import type { TheaterOrbit, TheaterTarget } from './theater-transition';
@@ -6,7 +8,7 @@ import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { GalleryVersion } from './model';
-import { dateTicks, edgePanArmed, edgePanStrength, formatDate, formatVersion, hoverCaptionLines, versionKeepsPush, wrapTextToWidth } from './model';
+import { galleryBranchPaint, dateTicks, edgePanArmed, edgePanStrength, formatDate, formatVersion, hoverCaptionLines, versionKeepsPush, wrapTextToWidth } from './model';
 import type { buildAlbum, FramePlane, LabelFace } from './geometry';
 import { albumBlockBounds, albumFloorY, containingBlock, dateLabelPose, featuredFrameAxis, featuredTickLength, frameFocus, hoverCaptionHeight, resetCameraDestination, versionLabelPose } from './geometry';
 import { galleryTokens as t } from './tokens';
@@ -16,7 +18,7 @@ import type { AxisAnchor, AxisLabel } from './axis-label-layout';
 
 type Album = ReturnType<typeof buildAlbum>;
 type FrameObject = { plane: FramePlane; group: THREE.Group; image: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>; outline: THREE.LineBasicMaterial };
-type Callbacks = { motion: (progress: number) => void; hover: (id: string | null) => void; open: (id: string) => void; zoom: (value: number) => void; error: (message: string) => void; labels: (labels: AxisLabel[]) => void };
+type Callbacks = { tokenView: (active: boolean) => void; motion: (progress: number) => void; hover: (id: string | null) => void; open: (id: string) => void; zoom: (value: number) => void; error: (message: string) => void; labels: (labels: AxisLabel[]) => void };
 
 /** Owns GPU resources and controls; React owns the data, filters and theater selection. */
 export class AlbumScene {
@@ -25,11 +27,16 @@ export class AlbumScene {
   private camera = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 100_000);
   private controls: OrbitControls;
   private content = new THREE.Group();
+  private tokenGroup = new THREE.Group();
+  private tokenAnchors: AxisAnchor[] = [];
+  private tokenBlend = 0;
+  private tokenActive = false;
+  private topMotion: ((time: number) => boolean) | null = null;
   private axisAnchors: AxisAnchor[] = [];
   private featuredAnchors: AxisAnchor[] = [];
   private featuredGuides = new THREE.Group();
   private frames = new Map<string, FrameObject>();
-  private blockEdges = new Map<string, { block: Album['blocks'][number]; material: LineMaterial }>();
+  private blockEdges = new Map<string, { block: Album['blocks'][number]; material: LineMaterial; edges: LineSegments2 }>();
   private pickTargets: THREE.Mesh[] = [];
   private textures = new Map<string, THREE.Texture>();
   private pending = new Set<string>();
@@ -99,11 +106,11 @@ export class AlbumScene {
     const dt = Math.min(64, time - (this.lastTime || time));
     this.lastTime = time;
     const blend = this.reducedMotion ? 1 : 1 - Math.exp(-dt / (t.transitionMs / 3));
-    let moving = false;
+    let moving = this.topMotion?.(time) ?? false;
     if (this.pointer && !this.down && this.album) {
       this.inspect(this.pick(this.pointer));
       const rect = this.host.getBoundingClientRect();
-      const strength = this.overBlock ? edgePanStrength(this.pointer.clientX - rect.left, this.pointer.clientY - rect.top, rect.width, rect.height) : 0;
+      const strength = this.overBlock && !this.tokenActive ? edgePanStrength(this.pointer.clientX - rect.left, this.pointer.clientY - rect.top, rect.width, rect.height) : 0;
       this.edgeHoldMs = strength > 0 ? this.edgeHoldMs + dt : 0;
       const armed = edgePanArmed(this.edgeHoldMs);
       this.edgeVelocity += ((armed ? strength : 0) * t.edgePan.speed - this.edgeVelocity) * (1 - Math.exp(-dt / t.edgePan.accelerationMs));
@@ -131,8 +138,12 @@ export class AlbumScene {
       if (Math.abs(target - frame.group.position.y) < .05) frame.group.position.y = target; else moving = true;
     }
     if (this.syncTopView(dt)) moving = true;
+    if (this.syncTokenUsage(dt)) moving = true;
     this.renderer.render(this.scene, this.camera);
-    this.callbacks.labels(projectAxisLabels(withOverheadDates(mergeAxisAnchors(this.axisAnchors, this.featuredAnchors), this.album ? albumFloorY(this.album) : 0, this.album ? -albumBlockBounds(this.album).min.z : undefined), this.camera, this.host.clientWidth, this.host.clientHeight, this.overheadBlend));
+    this.callbacks.labels([
+      ...projectAxisLabels(withOverheadDates(mergeAxisAnchors(this.axisAnchors, this.featuredAnchors), this.album ? albumFloorY(this.album) : 0, this.album ? -albumBlockBounds(this.album).min.z : undefined), this.camera, this.host.clientWidth, this.host.clientHeight, this.overheadBlend, this.tokenBlend),
+      ...projectAxisLabels(this.tokenAnchors, this.camera, this.host.clientWidth, this.host.clientHeight).map(label => ({ ...label, opacity: this.tokenBlend, hidden: label.hidden || this.tokenBlend < .01 })),
+    ]);
     const hovered = this.hovered ? this.frames.get(this.hovered) : undefined;
     this.host.dataset.inspectionReady = String(!!hovered && this.textures.has(hovered.plane.frame.id) && hovered.group.position.y === t.hoverLift && (!edgePanArmed(this.edgeHoldMs) || this.lookSettled(hovered.plane)));
     if (moving) this.invalidate();
@@ -146,6 +157,7 @@ export class AlbumScene {
     const selected = this.frames.get(id);
     if (!selected) { complete(); return; }
     if (this.theaterTurn) return;
+    this.topMotion = null;
     this.pointer = null; this.down = null; this.edgeVelocity = 0; this.controls.enabled = false;
     this.inspect(id);
     this.caption && (this.caption.visible = false);
@@ -202,6 +214,7 @@ export class AlbumScene {
       selected.group.position.y = originalLift * (1 - eased);
       selected.image.scale.x = THREE.MathUtils.lerp(1, imageScale, eased);
       selected.image.material.opacity = THREE.MathUtils.lerp(originalOpacity, 1, eased);
+      this.host.style.setProperty('--token-usage-opacity', String(this.tokenBlend * (1 - eased)));
       const axisOpacity = 1 - transitionProgress((reverse ? 1 - progress : rotation.progress) * t.theaterMotion.rotateMs, t.theaterMotion.verticalAxisFadeMs).eased;
       for (const [material, opacity] of otherMaterials) {
         material.opacity = opacity * (material.userData.axisFace === 'wall' ? axisOpacity : 1 - eased);
@@ -212,7 +225,7 @@ export class AlbumScene {
       if (finished && ready) {
         if (reverse) {
           restore(); this.restoreAlbum = null; this.theaterTurn = null;
-          this.reset(); this.controls.enabled = true; this.placeCaption();
+          this.reset(true); this.controls.enabled = true; this.placeCaption();
           delete this.host.dataset.transitionProgress;
           this.invalidate();
         } else this.theaterTurn = () => {};
@@ -303,6 +316,7 @@ export class AlbumScene {
     }
   };
   private pointerDown = (event: PointerEvent) => {
+    this.topMotion = null; this.controls.enabled = true;
     this.buttons = event.buttons;
     this.pointer = null;
     this.edgeVelocity = 0;
@@ -406,8 +420,8 @@ export class AlbumScene {
     if (!frame || !this.album) return;
     const pair = featuredFrameAxis(this.album, frame.plane);
     this.featuredAnchors = [
-      { id: 'featured:date', text: pair.date.text, position: new THREE.Vector3(pair.date.x, pair.date.y, pair.date.z), face: pair.date.face, featured: true },
-      { id: 'featured:version', text: pair.version.text, position: new THREE.Vector3(pair.version.x, pair.version.y, pair.version.z), face: pair.version.face, featured: true },
+      { id: 'featured:date', text: pair.date.text, position: new THREE.Vector3(pair.date.x, pair.date.y, pair.date.z), face: pair.date.face, timestamp: frame.plane.frame.timestamp, featured: true },
+      { id: 'featured:version', text: pair.version.text, position: new THREE.Vector3(pair.version.x, pair.version.y, pair.version.z), face: pair.version.face, timestamp: frame.plane.frame.timestamp, featured: true },
     ];
     const floor = albumFloorY(this.album);
     const tick = featuredTickLength();
@@ -465,32 +479,61 @@ export class AlbumScene {
     this.resize();
   }
   center() {
+    if (this.tokenBlend > .99) { this.top(); return; }
+    this.topMotion = null; this.controls.enabled = true;
     const first = this.album?.planes.find(plane => plane.active) ?? this.album?.planes[0];
     if (!first || !this.album) return;
     this.frameView(this.lookAt(frameFocus(first)),
       Math.max(this.album.blocks[0].width, this.album.blocks[0].height) * t.webgl.frontViewPadding, 'center');
   }
-  /** North-up overhead framing includes both numeric rails and the end titles. */
-  private top() {
+  /** Center all active blocks, with chronological depth running toward screen right. */
+  top() {
     if (!this.album?.blocks.length) return;
     const inspected = this.hovered;
-    const bounds = albumBlockBounds(this.album);
-    const rail = t.rulerTickLength + t.rulerLabelGap;
-    const end = bounds.min.z - t.topView.titleEndGap;
+    const active = this.album.blocks.filter(block => block.active);
+    const bounds = albumBlockBounds({ blocks: active.length ? active : this.album.blocks });
     const aspect = this.host.clientWidth / Math.max(1, this.host.clientHeight);
-    const vertical = Math.max(bounds.max.z - end, (this.album.width + 2 * rail) / aspect) * t.overviewPadding;
-    const center = new THREE.Vector3(bounds.center.x, bounds.center.y, (end + bounds.max.z) / 2);
-    this.frameView(center, vertical * Math.min(1, aspect), 'reset');
-    this.camera.position.copy(center).add(new THREE.Vector3(0, vertical * 2, .001));
-    this.controls.update();
-    this.inspect(inspected);
+    const rail = t.rulerTickLength + t.rulerLabelGap;
+    const endGap = Math.max(t.topView.titleEndGap, t.tokenUsage.labelGap);
+    const vertical = Math.max(bounds.max.x - bounds.min.x + 2 * rail,
+      (bounds.max.z - bounds.min.z + 2 * endGap) / aspect) * t.overviewPadding;
+    const center = new THREE.Vector3(bounds.center.x, 0, bounds.center.z);
+    const azimuth = THREE.MathUtils.degToRad(t.tokenUsage.clockwiseDegrees);
+    const direction = new THREE.Vector3(Math.sin(azimuth) * 1e-6, 1, Math.cos(azimuth) * 1e-6).normalize();
+    this.framing = 'center';
+    this.animateCamera(center, center.clone().addScaledVector(direction, vertical * 2), vertical * Math.min(1, aspect), () => this.inspect(inspected));
+  }
+
+  private animateCamera(center: THREE.Vector3, position: THREE.Vector3, destinationSpan: number, complete = () => {}) {
+    const origin = this.controls.target.clone();
+    const fromOffset = this.camera.position.clone().sub(origin), toOffset = position.clone().sub(center);
+    const span = this.span, zoom = this.camera.zoom;
+    const began = performance.now();
+    this.pointer = null; this.edgeVelocity = 0; this.inspect(null);
+    this.controls.enabled = false;
+    this.topMotion = time => {
+      const { eased, complete: finished } = transitionProgress(time - began, this.reducedMotion ? 0 : t.tokenUsage.rotateMs);
+      this.controls.target.copy(origin).lerp(center, eased);
+      this.camera.position.copy(this.controls.target).add(interpolateOrbit(fromOffset, toOffset, eased));
+      this.span = THREE.MathUtils.lerp(span, destinationSpan, eased);
+      this.camera.zoom = THREE.MathUtils.lerp(zoom, 1, eased);
+      this.controls.update(); this.resize();
+      if (finished) { this.topMotion = null; this.controls.enabled = true; this.callbacks.zoom(this.camera.zoom); complete(); }
+      return !finished;
+    };
     this.invalidate();
   }
-  reset() {
+  reset(exitTokenView = false) {
+    if (this.tokenActive && !exitTokenView) { this.top(); return; }
+    const animate = this.tokenActive || this.topMotion !== null;
+    this.topMotion = null; this.controls.enabled = true;
     if (!this.album) return;
     this.inspect(null);
-    this.applyResetCamera();
-    this.resize();
+    const dest = this.resetDestination();
+    if (animate && dest) {
+      this.framing = 'reset';
+      this.animateCamera(dest.center, dest.position, dest.span);
+    } else { this.applyResetCamera(); this.resize(); }
   }
 
   private resetDestination() {
@@ -545,7 +588,7 @@ export class AlbumScene {
       this.renderer.render(this.scene, this.camera);
       this.host.dataset.transitionProgress = String(eased);
       if (finished) {
-        this.theaterTurn = null; this.reset(); this.controls.enabled = true; this.placeCaption();
+        this.theaterTurn = null; this.reset(true); this.controls.enabled = true; this.placeCaption();
         delete this.host.dataset.transitionProgress;
         complete();
         return;
@@ -563,8 +606,8 @@ export class AlbumScene {
     this.fades.set(material, { opacity: start, target: opacity });
     material.userData.fadeKey = key;
   }
-  private axisLabel(text: string, x: number, y: number, z: number, face: LabelFace, valueOrigin?: THREE.Vector3) {
-    this.axisAnchors.push({ id: `${face}:${text}:${z}`, text, position: new THREE.Vector3(x, y, z), face, valueOrigin });
+  private axisLabel(text: string, x: number, y: number, z: number, face: LabelFace, valueOrigin?: THREE.Vector3, timestamp?: number) {
+    this.axisAnchors.push({ id: `${face}:${text}:${z}`, text, position: new THREE.Vector3(x, y, z), face, valueOrigin, timestamp });
   }
 
   private makePlate(text: string, ink: string, worldLineH: number, maxWorldW?: number) {
@@ -706,7 +749,7 @@ export class AlbumScene {
       const edges = new LineSegments2(new LineSegmentsGeometry().fromEdgesGeometry(new THREE.EdgesGeometry(geometry)), edgeMaterial);
       edges.position.copy(box.position);
       this.content.add(edges);
-      this.blockEdges.set(block.key, { block, material: edgeMaterial });
+      this.blockEdges.set(block.key, { block, material: edgeMaterial, edges });
     }
     for (const plane of album.planes) {
       const group = new THREE.Group();
@@ -732,6 +775,7 @@ export class AlbumScene {
     }
     this.resize();
     this.paintGuides(versions);
+    this.paintTokenUsage();
     this.featuredGuides = new THREE.Group();
     this.content.add(this.featuredGuides);
     if (this.pinned && !this.frames.get(this.pinned)?.plane.active) this.pinned = null;
@@ -750,13 +794,75 @@ export class AlbumScene {
       if (depth === undefined) continue;
       this.line([new THREE.Vector3(0, 0, -depth), new THREE.Vector3(0, t.rulerTickLength, -depth)], 'wall');
       const pose = dateLabelPose(depth);
-      this.axisLabel(formatDate(tick.timestamp), pose.x, pose.y, pose.z, pose.face);
+      this.axisLabel(formatDate(tick.timestamp), pose.x, pose.y, pose.z, pose.face, undefined, tick.timestamp);
     }
     for (const version of versions) {
       const pose = versionLabelPose(album, version.index);
       this.line([new THREE.Vector3(album.width, floor, pose.z), new THREE.Vector3(album.width + t.rulerTickLength, floor, pose.z)], 'ground');
-      this.axisLabel(formatVersion(version.number), pose.x, pose.y, pose.z, pose.face);
+      this.axisLabel(formatVersion(version.number), pose.x, pose.y, pose.z, pose.face, undefined, Math.max(...version.frames.map(frame => frame.timestamp)));
     }
+  }
+
+  private paintTokenUsage() {
+    if (!this.album) return;
+    this.tokenGroup = new THREE.Group(); this.tokenAnchors = [];
+    this.content.add(this.tokenGroup);
+    const chart = tokenUsageArea(this.album.planes);
+    const branches = [...new Set(this.album.planes.map(plane => plane.frame.branch).filter((branch): branch is string => !!branch))];
+    const addShape = (points: { x: number; depth: number }[], color: THREE.Color, opacity: number, lift: number) => {
+      const shape = new THREE.Shape(points.map(point => new THREE.Vector2(point.x, point.depth)));
+      const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+      const mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape), material);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.y = t.tokenUsage.surfaceLift + lift;
+      mesh.userData.opacity = opacity;
+      mesh.renderOrder = lift;
+      this.tokenGroup.add(mesh);
+    };
+    for (const segment of chart.segments) {
+      const color = new THREE.Color(t.tokenUsage.areaColor);
+      if (segment.branch !== 'main') color.lerp(new THREE.Color(galleryBranchPaint(segment.branch, branches)), t.tokenUsage.branchTint);
+      addShape(segment.outline, color, t.tokenUsage.areaOpacity, 0);
+    }
+    for (const bar of chart.bars) {
+      const left = bar.plane.depth - bar.width / 2, right = bar.plane.depth + bar.width / 2;
+      addShape([{ x: chart.baseline, depth: left }, { x: chart.baseline - bar.height, depth: left },
+        { x: chart.baseline - bar.height, depth: right }, { x: chart.baseline, depth: right }],
+      new THREE.Color(galleryBranchPaint(bar.branch, branches)), t.tokenUsage.barOpacity, 1);
+    }
+    const last = chart.samples.at(-1)?.plane;
+    if (last) for (const fraction of t.tokenUsage.scaleTicks) {
+      this.tokenAnchors.push({ id: `tokens:${fraction}`, text: `${fraction * 100}%`, face: 'ground',
+        position: new THREE.Vector3(chart.baseline - chart.height * fraction, t.tokenUsage.surfaceLift, -last.depth - t.tokenUsage.labelGap) });
+    }
+  }
+
+  private syncTokenUsage(dt: number) {
+    const outward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.camera.quaternion);
+    const elevation = THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(outward.y, -1, 1)));
+    const target = THREE.MathUtils.smoothstep(elevation, t.tokenUsage.startDegrees, t.tokenUsage.fullDegrees);
+    this.tokenBlend += (target - this.tokenBlend) * (this.reducedMotion ? 1 : 1 - Math.exp(-dt / (t.tokenUsage.fadeMs / 3)));
+    const moving = Math.abs(target - this.tokenBlend) > .002;
+    if (!moving) this.tokenBlend = target;
+    const active = target > .5;
+    this.controls.mouseButtons.LEFT = active ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE;
+    if (active !== this.tokenActive) { this.tokenActive = active; this.callbacks.tokenView(active); }
+    this.tokenGroup.visible = this.tokenBlend > .001;
+    const hoveredKey = this.hoveredBlockKey();
+    for (const [key, { block, material, edges }] of this.blockEdges) {
+      // Paint the wireframe last in token view so the filled area cannot bury it.
+      edges.renderOrder = this.tokenBlend > .001 ? t.tokenUsage.outlineRenderOrder : 0;
+      material.depthTest = this.tokenBlend <= .001;
+      const highlighted = key === hoveredKey;
+      const baseWidth = highlighted ? t.webgl.hoverEdgeWidth : t.webgl.edgeWidth;
+      material.linewidth = THREE.MathUtils.lerp(baseWidth, Math.max(baseWidth, t.tokenUsage.outlineWidth), this.tokenBlend);
+      const baseOpacity = this.fades.get(material)?.opacity ?? (block.active ? t.webgl.edgeOpacity : t.disabledOpacity);
+      material.opacity = THREE.MathUtils.lerp(baseOpacity, block.active ? Math.max(baseOpacity, t.tokenUsage.outlineOpacity) : t.disabledOpacity, this.tokenBlend);
+    }
+    for (const mesh of this.tokenGroup.children) if (mesh instanceof THREE.Mesh) mesh.material.opacity = this.tokenBlend * mesh.userData.opacity;
+    this.host.style.setProperty('--token-usage-opacity', String(this.tokenBlend));
+    this.host.dataset.tokenUsageReady = String(this.tokenBlend > .99 && !this.topMotion);
+    return moving;
   }
 
   private updateImages() {

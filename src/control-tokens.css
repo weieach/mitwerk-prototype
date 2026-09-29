@@ -1,0 +1,143 @@
+/* Shared chrome sizing, based on the date-range selector's 29px height.
+   Diagram nodes, timeline geometry and resize handles retain spatial sizing. */
+:root {
+  --base-control-height: clamp(26px, calc(23px + .42vw), 32px);
+  --control-height: var(--base-control-height);
+  --control-font-size: clamp(10px, calc(8px + .21vw), 12px);
+  --control-icon-size: calc(var(--control-font-size) + 6px);
+  --row-title-size: calc(var(--control-font-size) + 1px);
+  --row-meta-size: calc(var(--control-font-size) - 1px);
+  --row-size-unit: clamp(3px, .28vw, 5px);
+  --header-row-height: calc(var(--base-control-height) + 2 * var(--row-size-unit) + 1px);
+  --footer-row-height: calc(var(--base-control-height) + 4 * var(--row-size-unit) + 1px);
+  --row-padding-inline: clamp(14px, 1.68vw, 28px);
+  --zoom-padding-inline: calc(var(--row-padding-inline) * .8);
+  --compact-title-weight: 500;
+  --row-divider: 1px solid var(--line);
+}
+
+:is(.workspace, .theater-fullscreen) button:not(.station, .branch-count, .version-heading, .gallery-timeline-push, .theater-resize),
+:is(.workspace, .theater-fullscreen) select,
+:is(.workspace, .theater-fullscreen) input[type=number] {
+  height: var(--control-height);
+  min-height: var(--control-height);
+  padding-block: 0;
+  font-size: var(--control-font-size);
+  line-height: 1.25;
+}
+.workspace .card-menu-trigger,
+.workspace .node-details-label button { align-items: center; justify-content: center; }
+.workspace .panel-header,
+.workspace .gallery-footer,
+.workspace .gallery-toolbar.album-frame-bar,
+.workspace .canvas-controls {
+  --row-height: var(--header-row-height);
+  --control-height: calc(var(--row-height) - 1px);
+  height: var(--row-height);
+  min-height: var(--row-height);
+  flex: 0 0 var(--row-height);
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0;
+  padding: 0 var(--row-padding-inline);
+  font-size: var(--control-font-size);
+}
+.workspace .gallery-footer,
+.workspace .canvas-controls { --row-height: var(--footer-row-height); }
+.workspace .panel-header { padding-right: 0; }
+.workspace .panel-header h2 {
+  display: flex;
+  align-items: center;
+  font-size: var(--row-title-size);
+}
+/* Nested groups inherit the row height, including controls mounted in a portal. */
+.workspace :is(.panel-heading, .panel-header-actions, .album-camera-actions, .gallery-range, .gallery-frame-picker-slot, .album-saved-frame, .playback-options-top) {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  gap: 0;
+  min-width: 0;
+}
+.workspace :is(.panel-heading, .panel-header-actions, .gallery-range, .gallery-frame-picker-slot) > * + *,
+.workspace .album-camera-actions,
+.workspace .gallery-frame-picker-slot:has(select) {
+  border-left: var(--row-divider);
+}
+.workspace .panel-heading > h2 { padding-right: var(--row-padding-inline); }
+.workspace .panel-heading > .gallery-back { margin-right: var(--row-padding-inline); }
+.workspace :is(.panel-header, .gallery-footer, .album-frame-bar, .canvas-controls) :is(button, select) {
+  border: 0;
+  border-radius: 0;
+  padding-inline: var(--row-padding-inline);
+}
+.workspace :is(.panel-header-actions, .zoom-controls) > button + button {
+  border-left: var(--row-divider);
+}
+.workspace .panel-heading > select,
+.workspace .panel-header-actions > button:first-child { border-left: var(--row-divider); }
+.workspace .panel-header-actions .album-camera-actions { margin-left: 0; }
+.workspace .tracked-interface svg { left: var(--row-padding-inline); }
+.workspace .tracked-interface select { padding-left: calc(var(--row-padding-inline) + 20px); }
+.workspace .gallery-range > label { display: flex; align-items: stretch; }
+.workspace .gallery-range .gallery-small {
+  display: flex;
+  align-items: center;
+  flex-shrink: 1;
+  overflow: hidden;
+  padding-inline: var(--row-padding-inline);
+}
+.workspace .gallery-frame-picker-slot { flex-shrink: 1; }
+.workspace .album-saved-frame select { min-width: 0; }
+.workspace .panel-header select,
+.workspace .gallery-footer select,
+.workspace .album-frame-bar select { background: transparent; }
+.workspace .gallery-small { font-size: var(--row-meta-size); }
+.workspace .gallery-toolbar,
+.workspace .theater-frame-actions { font-size: var(--control-font-size); }
+.workspace .theater-view { padding-inline: var(--row-padding-inline); }
+.workspace .canvas-controls {
+  position: relative;
+  inset: auto;
+  border-top: var(--row-divider);
+  background: var(--paper);
+  pointer-events: auto;
+}
+.workspace .canvas-controls .zoom-controls {
+  padding: 0;
+  gap: 0;
+  height: 100%;
+  align-items: stretch;
+  border: 0;
+  border-left: var(--row-divider);
+  border-radius: 0;
+}
+.workspace .zoom-controls .control-divider { height: auto; margin: 0; }
+/* Native selectors use their row's dividers rather than individual outlines. */
+:is(.workspace, .theater-fullscreen) select { border: 0; border-radius: 0; }
+.workspace .album-camera-actions .ph,
+.workspace .playback-controls .ph-fill { font-size: var(--control-icon-size); }
+.album-token-toggle { display: inline-flex; align-items: center; justify-content: center; gap: var(--gallery-control-gap); }
+.album-token-toggle .ph { font-size: var(--control-icon-size); }
+
+/* Branch selection lives beside the title; its menu opens into the panel. */
+.workspace .header-branch-controls { display: flex; align-items: stretch; min-width: 0; }
+.workspace .header-branch-controls .branch-current {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--ink); white-space: nowrap;
+}
+.workspace .header-branch-controls .branch-menu { top: calc(100% + 1px); bottom: auto; z-index: 10; }
+.workspace .tree-header { position: relative; z-index: 6; }
+.workspace .panel-header .ph { font-size: var(--control-icon-size); }
+.workspace .reset-view-button,
+.workspace .reset-view-button:hover { background: transparent; }
+
+.workspace .canvas-controls .tree-grid-toggle { margin-right: auto; border-right: var(--row-divider); }
+.workspace .tree-grid-toggle .ph { font-size: var(--control-icon-size); }
+.workspace .panel-header-actions button { padding-inline: var(--zoom-padding-inline); }
+.workspace .panel-header > .panel-heading,
+.workspace .panel-header > .panel-header-actions { flex-shrink: 0; }
+.workspace .adaptive-panel-title { position: relative; flex-shrink: 0; white-space: nowrap; }
+.panel-title-measure { position: absolute; visibility: hidden; pointer-events: none; width: max-content; font-weight: 700; }
+.panel-title-visible.is-compact { font-weight: var(--compact-title-weight); }
+/* Once the title is compact, let the file selector give up remaining width. */
+.workspace .panel-header > .panel-heading:has(.panel-title-visible.is-compact) { flex-shrink: 1; }

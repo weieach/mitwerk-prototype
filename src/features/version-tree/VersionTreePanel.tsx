@@ -1,8 +1,10 @@
+import { AdaptivePanelTitle } from '../../components/AdaptivePanelTitle';
+import { ResetViewButton } from '../../components/ResetViewButton';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, Dispatch, PointerEvent as ReactPointerEvent } from 'react';
 import { BranchTag } from '../../components/BranchTag';
 import { Icon } from '../../components/Icon';
-import { branchPathIds, canDeleteCurrent, canDeleteFuture, isBranchEndpoint, isReverted, isRevertedRoute, screenshotFocusId, screenshotQueryFlags, type GraphAction, type GraphState } from './model';
+import { branchTip, branchPathIds, canDeleteCurrent, canDeleteFuture, isBranchEndpoint, isReverted, isRevertedRoute, screenshotFocusId, screenshotQueryFlags, type GraphAction, type GraphState } from './model';
 import { fitAllFrame, frameScreenshotTargets, frameVersionLevel, geometry, layoutBranchView, layoutGraph, screenshotNodeTargets } from './layout';
 import { galleryTokens } from '../iteration-gallery/tokens';
 import { activeRouteColor, levelColorLookup, palerAccent, stationLabelOffset, treeTheme, versionLabelZoomScale } from './tokens';
@@ -273,6 +275,14 @@ export function VersionTreePanel({ graph, dispatch, onOpenPush, mode, modeSwitch
     return () => window.removeEventListener('mitwerk-go-to-commit', onGoToCommit);
   }, [layout.nodes, dispatch]);
 
+  function focusCurrentBranchEndpoint() {
+    const tip = branchTip(graph.nodes, graph.activeBranchId);
+    const endpoint = layout.nodes.find(node => node.id === tip?.id);
+    if (!endpoint) return;
+    setCollapsedLevels(new Set());
+    goToEndpoint(endpoint);
+  }
+
   function goToEndpoint(node: typeof jumperEndpoint) {
     if (!node) return;
     dispatch({ type: 'select', id: node.id });
@@ -359,13 +369,39 @@ export function VersionTreePanel({ graph, dispatch, onOpenPush, mode, modeSwitch
     '--reverted-route-color': treeTheme.revertedRouteColor,
     '--merged-branch-opacity': treeTheme.mergedBranchOpacity,
   } as CSSProperties}>
-    <div className="panel-header tree-header"><div className="panel-heading"><h2 id="tree-title">Version stream</h2>
+    <div className="panel-header tree-header"><div className="panel-heading"><AdaptivePanelTitle id="tree-title" full="Version stream" short="Stream"/>
+        <div ref={branchMenu} className="branch-controls header-branch-controls">
+          <button className="branch-current" onClick={() => setBranchMenuOpen(open => !open)}
+            aria-haspopup="menu" aria-expanded={branchMenuOpen} aria-label={`Active branch ${activeBranchName}. Switch branch`}
+            title="Switch branch">
+            <Icon name="branch" size={13}/>{activeBranchName}<Icon name="chevron" size={10} style={{ transform: branchMenuOpen ? 'rotate(-90deg)' : 'rotate(90deg)' }}/>
+          </button>
+          {branchMenuOpen && <ul className="branch-menu" role="menu" aria-label="Branches">
+            {branches.map(branch => <li key={branch.branchId} role="none">
+              <button role="menuitemradio" aria-checked={branch.branchId === graph.activeBranchId}
+                onClick={() => checkoutBranch(branch.branchId)}>
+                <span className="branch-menu-name">
+                  <Icon name="check" size={11} style={{ visibility: branch.branchId === graph.activeBranchId ? 'visible' : 'hidden' }}/>
+                  {branch.name}
+                </span>
+                <small>{branch.endpoint.label}</small>
+              </button>
+            </li>)}
+          </ul>}
+        </div>
+
       {modeSwitchVisible && <select className="tree-mode-switch" aria-label="Version stream panel" value={mode} onChange={event => onModeChange(event.target.value as TreeMode)}
         title={mode === 'test' ? 'Independent sandbox. Edits stay in Test visual.' : 'History from saved screenshot captures, linked by Git parents and branch history. Editing is disabled.'}>
         {treeModes.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
       </select>}
-    </div><div className="panel-header-actions"><button className="icon-button" onClick={() => setGrid(!grid)} aria-label={grid ? 'Hide grid' : 'Show grid'} title={grid ? 'Hide grid' : 'Show grid'}><Icon name="grid"/>{grid ? 'Hide grid' : 'Show grid'}</button><button className="icon-button" onClick={fitAll} aria-label="Fit all versions" title="Fit all versions"><Icon name="expand"/>Fit all</button></div></div>
-    {status ? <p className="tree-history-message" role="status">{status}</p> : <div className="canvas-shell">
+    </div><div className="panel-header-actions">
+
+          <button className="icon-button" onClick={() => changeZoom(zoom - treeTheme.zoomStep)} disabled={zoom <= treeTheme.minZoom} aria-label="Zoom out">−</button>
+          <button className="icon-button" onClick={() => changeZoom(1)} aria-label="Reset zoom to 100 percent">{Math.round(zoom * 100)}%</button>
+          <button className="icon-button" onClick={() => changeZoom(zoom + treeTheme.zoomStep)} disabled={zoom >= treeTheme.maxZoom} aria-label="Zoom in">+</button>
+      <ResetViewButton label="Fit all versions" centerLabel="center current branch endpoint" onReset={fitAll} onCenter={focusCurrentBranchEndpoint}/>
+    </div></div>
+    {status ? <p className="tree-history-message" role="status">{status}</p> : <><div className="canvas-shell">
       <div ref={viewport} className={`tree-viewport ${isPanning ? 'is-panning' : ''}`} tabIndex={0} aria-label="Version tree canvas. Scroll in any direction to pan. Control plus scroll to zoom. Click empty canvas to deselect." onPointerDown={startPan} onPointerMove={pan} onPointerUp={endPan} onPointerCancel={endPan} onLostPointerCapture={endPan}>
         <div className="canvas-size" style={{ width: (worldWidth + worldShift + fitInset) * zoom, height: worldHeight * zoom }}>
           <div className="canvas-world" style={{ width: worldWidth, height: worldHeight, transform: `scale(${zoom}) translate(${worldShift + fitInset}px, 0)` }}>
@@ -455,32 +491,14 @@ export function VersionTreePanel({ graph, dispatch, onOpenPush, mode, modeSwitch
           </div>
         </div>
       </div>
-      <div className="canvas-controls">
+    </div>
+      <footer className="canvas-controls" aria-label="Version stream view controls">
+      <button className="icon-button tree-grid-toggle" onClick={() => setGrid(!grid)} aria-label="Grid" aria-pressed={grid} title={grid ? 'Hide grid' : 'Show grid'}>
+        <i className={grid ? 'ph ph-eye-closed' : 'ph ph-eye'} aria-hidden="true"/>Grid
+      </button>
         <div className="zoom-controls">
           <button onClick={focusSelected} disabled={!selected} aria-label="Center selected version" title="Center selected version"><Icon name="locate" size={15}/></button>
-          <span className="control-divider"/>
-          <button onClick={() => changeZoom(zoom - treeTheme.zoomStep)} disabled={zoom <= treeTheme.minZoom} aria-label="Zoom out"><Icon name="minus" size={14}/></button>
-          <button className="zoom-value" onClick={() => changeZoom(1)} aria-label="Reset zoom to 100 percent">{Math.round(zoom * 100)}%</button>
-          <button onClick={() => changeZoom(zoom + treeTheme.zoomStep)} disabled={zoom >= treeTheme.maxZoom} aria-label="Zoom in"><Icon name="plus" size={14}/></button>
-        </div>
-        <div ref={branchMenu} className="zoom-controls branch-controls">
-          <button className="branch-current" onClick={() => setBranchMenuOpen(open => !open)}
-            aria-haspopup="menu" aria-expanded={branchMenuOpen} aria-label={`Active branch ${activeBranchName}. Switch branch`}
-            title="Switch branch">
-            <Icon name="branch" size={13}/>{activeBranchName}<Icon name="chevron" size={10} style={{ transform: branchMenuOpen ? 'rotate(-90deg)' : 'rotate(90deg)' }}/>
-          </button>
-          {branchMenuOpen && <ul className="branch-menu" role="menu" aria-label="Branches">
-            {branches.map(branch => <li key={branch.branchId} role="none">
-              <button role="menuitemradio" aria-checked={branch.branchId === graph.activeBranchId}
-                onClick={() => checkoutBranch(branch.branchId)}>
-                <span className="branch-menu-name">
-                  <Icon name="check" size={11} style={{ visibility: branch.branchId === graph.activeBranchId ? 'visible' : 'hidden' }}/>
-                  {branch.name}
-                </span>
-                <small>{branch.endpoint.label}</small>
-              </button>
-            </li>)}
-          </ul>}
+
         </div>
         <div className="zoom-controls endpoint-controls">
           <button onClick={() => stepEndpoint(-1)} disabled={endpoints.length < 2} aria-label="Previous endpoint" title="Previous endpoint">
@@ -495,8 +513,8 @@ export function VersionTreePanel({ graph, dispatch, onOpenPush, mode, modeSwitch
             <Icon name="arrow" size={14}/>
           </button>
         </div>
-      </div>
-    </div>
+      </footer>
+    </>
     }
     <div className="sr-only" role="status" aria-live="polite">{graph.nodes.length} versions. {selected ? `Selected ${selected.label}.` : 'No version selected.'}</div>
     {toast && <div className="project-toast" role="status">{toast}</div>}

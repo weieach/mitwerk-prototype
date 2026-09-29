@@ -188,3 +188,39 @@ test('top titles move beyond the actual sequence end and align to their numeric 
   }
   assert.equal(originals[0].position.z, -700);
 });
+
+
+test('label layers use capture recency rather than input order or label text', () => {
+  const labels = projectAxisLabels([
+    { ...anchors[0], id: 'new', timestamp: 300 },
+    { ...anchors[0], id: 'old', timestamp: 100 },
+    { ...anchors[0], id: 'same-day-feature', timestamp: 200, featured: true },
+    { ...anchors[0], id: 'title', text: 'Date' },
+  ], camera(), 800, 640);
+  assert.deepEqual(labels.map(label => label.layer), [3, 1, 2, 0]);
+});
+
+
+test('token titles keep a fixed left inset and remain on their numeric rail rows at different zooms', async () => {
+  const { withOverheadDates } = await import('../src/features/iteration-gallery/axis-label-layout.ts');
+  const { galleryTokens: t } = await import('../src/features/iteration-gallery/tokens.ts');
+  const view = camera();
+  view.position.set(.001, 3000, 0); view.lookAt(0, 0, 0); view.updateMatrixWorld();
+  const all = withOverheadDates([
+    { id: 'date-title', text: 'Date', face: 'wall', position: new THREE.Vector3(0, 306, -700), valueOrigin: new THREE.Vector3(0, 168, -700) },
+    { id: 'version-title', text: 'Version', face: 'ground', position: new THREE.Vector3(666, -260, -700), valueOrigin: new THREE.Vector3(528, -260, -700) },
+    { id: 'date-value', text: 'Sep 24', face: 'wall', position: new THREE.Vector3(0, 168, -1300) },
+    { id: 'version-value', text: 'v16', face: 'ground', position: new THREE.Vector3(528, -260, -1300) },
+  ], -260, 1400);
+  for (const zoom of [.4, 1, 2]) {
+    view.zoom = zoom; view.updateProjectionMatrix();
+    const labels = projectAxisLabels(all, view, 800, 640, 1, 1);
+    for (const [titleId, valueId] of [['date-title:overhead', 'date-value:overhead'], ['version-title', 'version-value']]) {
+      const title = labels.find(label => label.id === titleId)!;
+      const value = labels.find(label => label.id === valueId)!;
+      assert.equal(matrix(title.transform)[12], t.tokenUsage.axisInsetPx);
+      assert.equal(title.align, 0);
+      assert.ok(Math.abs(matrix(title.transform)[13] - matrix(value.transform)[13]) < .001);
+    }
+  }
+});
