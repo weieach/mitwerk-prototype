@@ -302,3 +302,54 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Apply the same frame → timeline → remaining UI sequence to the first theater entrance after opening or refreshing the site and to later entrances. Wait for the selected frame texture before starting the clock, so cold image loading cannot collapse or reorder the stages.
 - Keep the default landing view unchanged. The sequence applies when entering theater; reduced motion settles both stages immediately. The midpoint timeline capture freezes after the frame is fully frontal and before the other theater elements appear.
+
+## Application shell — confirmed 2026-09-25
+
+- The main application uses navigation, a central conversation/work surface, and an on-demand reading window. The Iteration Gallery and Version stream remain together inside that window and at `?view=history`.
+- Dialog is a task or subtask. Builder means creator (current user, another person, or Mit), not execution owner. Direct colleague messages may have no task association.
+- Input and Output are permanent compact attachment cards at the top right of the conversation. Selecting a file opens the reading window. Closing or switching files must preserve drafts.
+- Inbox filters are All, Mits, Co-workers. Use identity, latest message and attention state in each entry.
+- Palette authority is the `#mitwerk-overview` section of `Brand/mitwerk-light-dark-design-system.html`: Werk Blue #1D4AB9, Mit Sky #E4ECFF, Workshop Text #191A1B, Panel White #FAFAFA, Steel #65676C, Rail #E7E7E7. Its outer HTML demo styling is not the product palette.
+- Keep the incumbent Neurial Grotesk, restrained density, fine borders and compact corners. Color is implemented through shared `--mw-*` tokens. Preserve graph-specific branch colors and interactions.
+- No Stage Brief or Grill Me flows are introduced merely because older references include them.
+- Initial implementation is a locally persisted frontend demo, with explicitly simulated AI responses. No real colleague messages or external model calls.
+
+## People and projects — 2026-09-27
+
+- Home summarizes attention across projects and messages. Projects is a multi-project directory; a selected project owns its tasks, instructions, shared files and members.
+- Human colleagues have a Co-workers directory alongside Mits. Inbox provides New message; the directory supports name/role search, messaging and starting a shared project.
+- Creating a project selects people and creates a separate project record. Direct messages remain independent of projects. Builder continues to mean creator.
+- Files can be queued, removed and sent with or without message text. Sent/received file cards open the existing reader. Local demo replies are explicitly triggered and labelled; no actual messages or invitations are sent.
+
+## Mit creation and customization — 2026-09-28
+
+- Mits supports Create Mit, editable identity/role and working instructions, skills/tools, and permission/review triggers. Persist each profile under a stable ID; rename active task references without rewriting historical messages.
+- Save returns to the Mit profile, from which users can start a task in a chosen project or directly in Inbox. Custom Mits appear in the conversation selector.
+- Reject blank names/roles and duplicate names. Cancel/back protects unsaved edits; drafts survive navigation within the app.
+- Show external tool connection state honestly. This frontend stores configuration and demonstrates its use in sample responses; it does not execute tools or enforce runtime permissions. Task completion remains a human decision.
+
+## Single Mits navigation entry — 2026-09-28
+
+- Use the main Mits navigation entry for managing AI teammates. Do not repeat a Your Mits list in the sidebar.
+
+## Floating conversation context and reader switching — 2026-09-28
+
+- Task metadata, Input and Output use matching cards in a reserved floating rail to the right of a conversation; metadata no longer spans the thread as a horizontal strip.
+- Opening an attachment collapses the cards and opens the full reading window. A narrow content bar switches between the conversation’s available attachments, with the current item visibly selected. Preserve preview/history controls.
+- Closing the reader restores the cards and the existing conversation draft. On small screens the cards occupy a bounded scrolling area above the thread.
+
+## Project cards and compact reader selector — 2026-09-28
+
+- Projects uses a responsive card grid, with previews derived from actual project tasks, member indicators and per-project archive/restore actions. Active and Archived views are separate; archive retains project data and removes its shortcut from the active sidebar and Home.
+- Reading resources are selected through a labelled dropdown in the reader title row. Remove the separate file-tab row; retain preview/history and reading controls.
+
+## Mention Mits from the composer — 2026-09-29
+
+- Remove the Active Mit dropdown. Typing @ searches Mits, with existing project collaborators ranked first and others labelled Add to project.
+- Selecting a suggestion inserts the mention. Sending adds the mentioned Mits to that task and its project using stable IDs; repeated mentions do not duplicate membership. Unsent drafts do not add members.
+- Support multiple Mit mentions, keyboard selection and Escape dismissal. The project Co-workers view includes its Mits. Current responses remain explicit local simulations.
+
+## Two header levels maximum — 2026-09-29
+
+- The reading experience has at most two top-level header rows: workspace navigation and one unified reading-control row. Place resource selection, Preview/Iteration history and window controls together; do not add a separate toolbar row.
+- In narrow reading panes, use a compact mode dropdown instead of wrapping mode tabs onto another row.

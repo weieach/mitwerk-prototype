@@ -8,7 +8,6 @@ import { buildAlbum } from './geometry';
 import { AlbumScene } from './AlbumScene';
 import { InfoTooltip } from '../../components/InfoTooltip';
 import { TrackedInterface } from './TrackedInterface';
-import { galleryTokens as t } from './tokens';
 import { AxisLabels } from './AxisLabels';
 import type { AxisLabelsHandle } from './AxisLabels';
 
