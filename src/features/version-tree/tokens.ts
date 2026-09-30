@@ -6,6 +6,7 @@ const stationBorderWidth = 5;
 const stationInnerDiameter = stationDiameter - stationBorderWidth * 2;
 export const treeTheme = {
   historyCaptureVersions: 3,
+  mergeOriginLandingRows: 2,
   cardHoverBorderInset: 1,
   cardHoverTransitionMs: 180,
   debugBorderColor: '#00A66A',
@@ -31,6 +32,9 @@ export const treeTheme = {
   mergedBranchPale: 0.45,
   mergedBranchOpacity: 1,
   /** Square marks on a re-merge stem. One grid is the diamond between intersections. */
+  chronologyWidth: geometry.gridTriangleSide / 4,
+  chronologyDash: geometry.gridRise,
+  chronologyClearance: geometry.gridRise * 2,
   mergedStemDotSize: geometry.gridTriangleSide,
   mergedStemDotGrids: 3,
   stationBorderWidth,

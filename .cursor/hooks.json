@@ -10,7 +10,7 @@
     "stop": [
       {
         "command": ".cursor/hooks/screenshot-prompt.sh",
-        "timeout": 20,
+        "timeout": 90,
         "failClosed": false
       }
     ],

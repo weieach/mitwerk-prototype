@@ -16,7 +16,9 @@
 .album-axis-label > span { display: block; transform: translate(-50%, -50%); }
 .gallery-toolbar.album-frame-bar { position: relative; z-index: 2; container-type: inline-size; flex-wrap: nowrap; flex-shrink: 0; padding: 8px 24px; border: none; background: none; }
 .iteration-gallery .panel-heading { gap: var(--gallery-header-gap); }
-.gallery-back { flex-shrink: 0; }
+.gallery-back { flex-shrink: 0; display: inline-flex; align-items: center; gap: var(--row-size-unit); padding-inline: calc(var(--row-padding-inline) / 2); border: 1px solid var(--line-strong); border-radius: var(--surface-radius); color: var(--ink); background: var(--paper); cursor: pointer; }
+.gallery-back:hover { background: var(--fill-hover); }
+.gallery-back i { font-size: var(--control-icon-size); }
 .iteration-gallery .panel-header-actions { margin-left: auto; }
 .iteration-gallery .panel-header-actions .album-camera-actions { margin-left: 8px; }
 .iteration-gallery .album-frame-bar select { min-width: 0; background: transparent; border: 1px solid var(--line-strong); }

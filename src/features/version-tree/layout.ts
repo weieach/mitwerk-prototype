@@ -45,7 +45,8 @@ export type GraphEdge = { id: string; sourceId: string; targetId: string; path: 
 export type VersionLevel = { id: string; row: number; label: string; nodeIds: string[]; x: number; y: number };
 export type Fork = VersionLevel & { parentId: string | null; horizontal: boolean; branchId: string };
 export type OriginStation = { id: string; x: number; y: number; forkId: string };
-export type GraphLayout = { nodes: PositionedNode[]; edges: GraphEdge[]; levels: VersionLevel[]; width: number; height: number; forks?: Fork[]; origins?: OriginStation[] };
+export type MergeOrigin = { id: string; x: number; y: number; branchId: string; targetId: string; sha: string };
+export type GraphLayout = { mergeOrigins?: MergeOrigin[]; nodes: PositionedNode[]; edges: GraphEdge[]; levels: VersionLevel[]; width: number; height: number; forks?: Fork[]; origins?: OriginStation[] };
 
 const rise = (run: number) => run / Math.sqrt(3);
 

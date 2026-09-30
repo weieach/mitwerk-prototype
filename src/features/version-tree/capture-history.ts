@@ -58,20 +58,55 @@ export function buildGitCaptureHistory(captures: Capture[], git: GitHistory, ref
     if (!first || commit.sha === first.sha || matched.has(commit.sha) || commit.parents.some(parent => included.has(parent))) included.add(commit.sha);
   }
   const visible = new Set(git.commits.filter(commit => included.has(commit.sha) && (matched.has(commit.sha) || commit.subject !== 'chore: progress screenshot')).map(commit => commit.sha));
+  const ancestors = (sha: string) => {
+    const found = new Set<string>();
+    const pending = [sha];
+    while (pending.length) {
+      const id = pending.pop()!;
+      if (found.has(id)) continue;
+      found.add(id);
+      pending.push(...(bySha.get(id)?.parents ?? []));
+    }
+    return found;
+  };
+  // Uncaptured remote contributions enter as a branch tip, not numbered local work.
+  const remoteSources = new Map<string, string>();
+  for (const commit of git.commits.filter(commit => commit.parents.length > 1)) {
+    const mainline = ancestors(commit.parents[0]);
+    for (const sha of commit.parents.slice(1)) {
+      if (git.branches.some(ref => ref.tip === sha)) continue;
+      const remote = git.remoteBranches?.find(ref => ref.tip === sha)
+        ?? git.remoteBranches?.find(ref => ancestors(ref.tip).has(sha));
+      if (!remote) continue;
+      const contribution = [...ancestors(sha)].filter(id => !mainline.has(id));
+      if (!contribution.length || contribution.some(id => matched.has(id))) continue;
+      remoteSources.set(sha, remote.name);
+      for (const id of contribution) visible.delete(id);
+    }
+  }
   const nearest = (sha: string): string[] => {
     if (visible.has(sha)) return [sha];
     return bySha.get(sha)?.parents.flatMap(nearest) ?? [];
   };
   const nodes: VersionNode[] = git.commits.filter(commit => visible.has(commit.sha)).map(commit => {
     const captured = matched.get(commit.sha);
-    const parents = [...new Set(commit.parents.flatMap(nearest))];
+    const incomingBranches = commit.parents.slice(1).filter(sha => !visible.has(sha)).map(sha => ({
+      sha,
+      name: remoteSources.get(sha) ?? [...git.branches, ...(git.remoteBranches ?? [])].find(ref => ref.tip === sha)?.name
+        ?? bySha.get(sha)?.branch
+        ?? git.merges.find(merge => merge.sha === commit.sha && !merge.fastForward)?.source
+        ?? `Branch at ${sha.slice(0, 7)}`,
+    }));
+    // Never project an unseen merge parent onto an unrelated visible ancestor.
+    const parents = [...new Set(commit.parents.flatMap((sha, index) => index > 0 && !visible.has(sha) ? [] : nearest(sha)))];
     const branch = commit.branch ?? captured?.capture?.branches.at(-1) ?? git.branches.find(ref => ref.tip === commit.sha)?.name ?? 'main';
     return {
       ...captured, id: commit.sha, label: captured?.label ?? commit.sha.slice(0, 7), title: commit.subject,
       saveType: 'manual', createdAt: new Date(commit.timestamp).toISOString(), parentId: parents[0] ?? null,
       relation: parents.length ? 'commit' : 'root', branchId: branch,
       files: captured?.files ?? [], prompts: captured?.prompts ?? [], summary: commit.subject,
-      git: { sha: commit.sha, parents, refs: git.branches.filter(ref => nearest(ref.tip).includes(commit.sha)).map(ref => ref.name),
+      incomingBranches,
+      git: { sha: commit.sha, rawParents: commit.parents, parents, refs: git.branches.filter(ref => nearest(ref.tip).includes(commit.sha)).map(ref => ref.name),
         filesChanged: commit.filesChanged ?? 0, added: commit.added ?? 0, removed: commit.removed ?? 0,
         merges: git.merges.filter(merge => merge.sha === commit.sha).map(merge => `${merge.source} → ${merge.branch}${merge.fastForward ? ' (fast-forward)' : ''}`) },
     };
@@ -119,19 +154,38 @@ export function displayedCommitTitle(label: string) {
   return displayedCommitTitles[label.toLowerCase()] ?? null;
 }
 
-/** Uncaptured commits between saved versions keep a dotted number off the previous version. */
+/** Captured versions and real merges are milestones; other commits keep dotted labels. */
 export function assignInterimVersionLabels(nodes: VersionNode[]) {
-  let major = '';
-  let minor = 0;
-  for (const node of nodes) {
-    if (/^V\d+$/.test(node.label)) {
-      major = node.label;
-      minor = 0;
-      continue;
+  let major = 0, minor = 0;
+  let previousMilestone: VersionNode | undefined;
+  const byId = new Map(nodes.map(node => [node.id, node]));
+  function hasAncestor(node: VersionNode, id: string): boolean {
+    const pending = [...(node.git?.parents ?? (node.parentId ? [node.parentId] : []))];
+    const seen = new Set<string>();
+    while (pending.length) {
+      const next = pending.pop()!;
+      if (next === id) return true;
+      if (seen.has(next)) continue;
+      seen.add(next);
+      const parent = byId.get(next);
+      if (parent) pending.push(...(parent.git?.parents ?? (parent.parentId ? [parent.parentId] : [])));
     }
-    if (/^V\d+\.\d+$/.test(node.label) || !major) continue;
-    minor += 1;
-    node.label = `${major}.${minor}`;
+    return false;
+  }
+  for (const node of nodes) {
+    const recorded = /^V(\d+)$/.exec(node.label);
+    const merge = (node.git?.rawParents?.length ?? node.git?.parents.length ?? 0) > 1;
+    if (recorded || merge && major > 0) {
+      major = Math.max(major + 1, recorded ? Number(recorded[1]) : 0);
+      node.label = `V${major}`;
+      minor = 0;
+      if (merge && previousMilestone && !hasAncestor(node, previousMilestone.id)) {
+        node.chronologyParentId = previousMilestone.id;
+      }
+      previousMilestone = node;
+    } else if (major && !/^V\d+\.\d+$/.test(node.label)) {
+      node.label = `V${major}.${++minor}`;
+    }
   }
   return nodes;
 }

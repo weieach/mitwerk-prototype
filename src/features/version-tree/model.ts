@@ -22,7 +22,11 @@ export function isCaptureImage(file: Pick<VersionFile, 'name' | 'url'>) {
 }
 
 export type VersionNode = {
-  git?: { sha: string; parents: string[]; refs: string[]; merges: string[]; filesChanged: number; added: number; removed: number };
+  /** Display-only milestone ordering; never replaces recorded Git ancestry. */
+  chronologyParentId?: string;
+  /** Secondary Git parents outside the visible capture history, shown as floating branch origins. */
+  incomingBranches?: { sha: string; name: string }[];
+  git?: { sha: string; rawParents?: string[]; parents: string[]; refs: string[]; merges: string[]; filesChanged: number; added: number; removed: number };
 
   capture?: { version: number; pushed: boolean; branches: string[]; added: string | null; removed: string | null };
   id: string;

@@ -125,11 +125,13 @@ function mitwerkPushCapture(): Plugin {
 export default defineConfig({
   plugins: [react(), mitwerkGraphPersist(), mitwerkPushCapture(), iterationGalleryCatalog(), archivedPrototypes()],
   server: {
+    host: true,
     port: 5173,
     strictPort: true,
     watch: { ignored: (path: string) => path.includes('/[ver capture] codebase') || path.includes('/.mitwerk-prototypes') },
   },
   preview: {
+    host: true,
     port: 5173,
     strictPort: true,
   },

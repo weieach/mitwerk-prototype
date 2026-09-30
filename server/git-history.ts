@@ -9,6 +9,10 @@ export function readGitHistory(root: string): GitHistory {
     const branches = run(['for-each-ref', '--format=%(refname:short)%09%(objectname)', 'refs/heads']).split('\n').filter(Boolean).map(row => {
       const [name, tip] = row.split('\t'); return { name, tip, base: null as string | null };
     });
+    const remoteBranches = run(['for-each-ref', '--format=%(refname:short)%09%(objectname)%09%(symref)', 'refs/remotes']).split('\n').filter(Boolean).flatMap(row => {
+      const [name, tip, symbolic] = row.split('\t');
+      return symbolic ? [] : [{ name, tip, base: null }];
+    });
     const owners = new Map<string, string>();
     const merges: GitHistory['merges'] = [];
     for (const branch of branches) {
@@ -22,7 +26,7 @@ export function readGitHistory(root: string): GitHistory {
         if (merge) merges.push({ branch: branch.name, source: merge[1], sha, fastForward: merge[2] === 'Fast-forward' });
       }
     }
-    const commits = parseGitLog(run(['log', '--all', '--topo-order', '--reverse', '--format=%H%x09%P%x09%ct%x09%s', '--shortstat'])).map(commit => ({ ...commit, branch: owners.get(commit.sha) ?? null }));
-    return { commits, branches, merges, currentBranch: run(['branch', '--show-current']), head: run(['rev-parse', 'HEAD']) };
+    const commits = parseGitLog(run(['log', '--branches', '--remotes', 'HEAD', '--date-order', '--reverse', '--format=%H%x09%P%x09%ct%x09%s', '--shortstat'])).map(commit => ({ ...commit, branch: owners.get(commit.sha) ?? null }));
+    return { commits, branches, remoteBranches, merges, currentBranch: run(['branch', '--show-current']), head: run(['rev-parse', 'HEAD']) };
   } catch { return { commits: [], branches: [], merges: [], currentBranch: '', head: '', error: 'Git history is unavailable.' }; }
 }

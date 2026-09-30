@@ -321,6 +321,7 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
         : <img draggable={false} src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`${formatVersion(frame.version)}: ${frame.summary}`}/>}
     </FullscreenPreview>}
     <div className="gallery-toolbar theater-top-toolbar" data-orbit-blocked>
+      <button type="button" className="gallery-back" onClick={onDismiss} aria-label="Return to gallery"><i className="ph ph-arrow-left" aria-hidden="true"/>Gallery</button>
       <div className="playback-options-top">{playbackOptions}</div>
       {prototypeMode && <>
       <select value={preset} onChange={event => setPreset(event.target.value)} aria-label="Preview viewport">

@@ -1,6 +1,6 @@
 import { geometry, layoutGraph } from './layout.ts';
 import { treeTheme } from './tokens.ts';
-import type { GraphEdge } from './layout.ts';
+import type { GraphEdge, MergeOrigin } from './layout.ts';
 import type { VersionNode } from './model.ts';
 import { mergedBranchIds } from './presentation.ts';
 
@@ -43,10 +43,10 @@ export function layoutGitHistory(source: VersionNode[]) {
   const placed = new Map<string, number>();
   const titleOf = new Map(source.map(node => [node.id, node.title]));
   const nodes = base.nodes.map(node => {
-    const parents = node.git?.parents ?? (node.parentId ? [node.parentId] : []);
+    const parents = [...(node.git?.parents ?? (node.parentId ? [node.parentId] : [])), ...(node.chronologyParentId ? [node.chronologyParentId] : [])];
     const row = parents.length ? Math.max(...parents.map(id => rows.get(id) ?? -1)) + 1 : 0;
     const y = parents.length
-      ? Math.max(...parents.map(id => (placed.get(id) ?? geometry.originY) + commitBranchGap(titleOf.get(id) ?? '')))
+      ? Math.max(...parents.map(id => (placed.get(id) ?? geometry.originY) + (id === node.chronologyParentId ? Math.max(commitBranchGap(titleOf.get(id) ?? ''), geometry.cardHeight + treeTheme.chronologyClearance * 2) : commitBranchGap(titleOf.get(id) ?? ''))))
       : geometry.originY;
     rows.set(node.id, row);
     placed.set(node.id, y);
@@ -54,12 +54,25 @@ export function layoutGitHistory(source: VersionNode[]) {
   });
   alignLatestBranch(nodes);
   const byId = new Map(nodes.map(node => [node.id, node]));
+  // An imported merge follows its preceding displayed milestone in the same lane.
+  for (const node of nodes) {
+    const previous = node.chronologyParentId ? byId.get(node.chronologyParentId) : undefined;
+    if (previous && node.incomingBranches?.length) node.x = previous.x;
+  }
+  const mergeOrigins: MergeOrigin[] = nodes.flatMap(target => (target.incomingBranches ?? []).map((source, index) => {
+    const preceding = byId.get(target.chronologyParentId ?? target.parentId ?? '');
+    return { id: `origin:merge:${target.id}:${source.sha}`, sha: source.sha, branchId: source.name, targetId: target.id,
+      x: Math.max(target.x, ...nodes.filter(node => node.y === preceding?.y).map(node => node.x)) + geometry.columnGap * (index + 1),
+      y: preceding?.y ?? target.y - commitBranchGap('') };
+  }));
   const merged = mergedBranchIds(nodes);
   const firstOfBranch = new Map<string, string>();
   for (const node of nodes) if (!firstOfBranch.has(node.branchId)) firstOfBranch.set(node.branchId, node.id);
   const edges: GraphEdge[] = nodes.flatMap(target => (target.git?.parents ?? (target.parentId ? [target.parentId] : [])).flatMap(id => {
     const from = byId.get(id);
     if (!from) return [];
+    // The chronological stem supersedes this long side approach only in the display.
+    if (target.incomingBranches?.length && target.chronologyParentId && id === target.parentId) return [];
     const dx = target.x - from.x, dy = target.y - from.y;
     const rise = Math.min(dy / 3, Math.abs(dx) / Math.sqrt(3));
     const run = Math.sign(dx) * rise * Math.sqrt(3);
@@ -70,6 +83,21 @@ export function layoutGitHistory(source: VersionNode[]) {
     const branchId = from.branchId !== target.branchId && merged.has(from.branchId) && !branchStart ? from.branchId : target.branchId;
     return [{ id: `${id}:${target.id}`, sourceId: id, targetId: target.id, branchId, path, dashed: false }];
   }));
+  for (const origin of mergeOrigins) {
+    const target = byId.get(origin.targetId)!;
+    const junctionY = target.y - geometry.gridRise * treeTheme.mergeOriginLandingRows;
+    edges.push({ id: `merge-origin:${origin.id}`, sourceId: origin.id, targetId: target.id, branchId: origin.branchId,
+      path: `M ${origin.x} ${origin.y} L ${origin.x} ${junctionY} L ${target.x} ${junctionY} L ${target.x} ${target.y}` });
+  }
+  // Chronological milestones can be siblings in Git. Show their sequence separately.
+  for (const target of nodes) {
+    const from = target.chronologyParentId ? byId.get(target.chronologyParentId) : undefined;
+    if (!from) continue;
+    const middle = from.y + geometry.cardHeight + treeTheme.chronologyClearance;
+    edges.push({ id: `chronology:${from.id}:${target.id}`, sourceId: from.id, targetId: target.id,
+      branchId: target.branchId, dashed: true,
+      path: `M ${from.x} ${from.y} L ${from.x} ${middle} L ${target.x} ${middle} L ${target.x} ${target.y}` });
+  }
   for (const branchId of merged) {
     const stations = nodes.filter(node => node.branchId === branchId).sort((a, b) => a.row - b.row || a.x - b.x);
     for (let index = 0; index < stations.length - 1; index++) {
@@ -85,7 +113,7 @@ export function layoutGitHistory(source: VersionNode[]) {
       edges.push({ id: `merged-span:${anchor.id}:${target.id}`, sourceId: anchor.id, targetId: target.id, branchId: target.branchId, dashed: true, path: `M ${anchor.x} ${anchor.y} L ${target.x} ${target.y}` });
     }
   }
-  return { ...base, nodes, edges, levels: [], forks: [], width: Math.max(...nodes.map(node => node.x)) + geometry.cardOffsetX + geometry.cardWidth + geometry.padding, height: Math.max(...nodes.map(node => node.y)) + geometry.cardHeight + geometry.padding };
+  return { ...base, nodes, edges, mergeOrigins, levels: [], forks: [], width: Math.max(...nodes.map(node => node.x), ...mergeOrigins.map(origin => origin.x)) + geometry.cardOffsetX + geometry.cardWidth + geometry.padding, height: Math.max(...nodes.map(node => node.y)) + geometry.cardHeight + geometry.padding };
 }
 
 /** Square dots on grid intersections along a vertical re-merge stem, three grids apart. */

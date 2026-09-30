@@ -39,7 +39,8 @@ if (screenshotFlags.countHover) document.documentElement.dataset.screenshotCount
 export function VersionTreePanel({ graph, dispatch, onOpenPush, mode, modeSwitchVisible, onModeChange, status = '' }: Props) {
   const activePath = useMemo(() => branchPathIds(graph.nodes, graph.activeBranchId), [graph.nodes, graph.activeBranchId]);
   const layout = useMemo(() => mode === 'history' && graph.nodes.some(node => node.git) ? layoutGitHistory(graph.nodes) : layoutBranchView(layoutGraph(graph.nodes), graph.selectedId, activePath), [graph.nodes, graph.selectedId, activePath, mode]);
-  const levelColor = useMemo(() => levelColorLookup(layout.nodes), [layout.nodes]);
+  const boundsNodes = useMemo(() => [...layout.nodes, ...(layout.mergeOrigins ?? []).map(origin => ({ ...origin, title: '' }))], [layout]);
+  const levelColor = useMemo(() => levelColorLookup([...layout.nodes, ...(layout.mergeOrigins ?? []).map(origin => ({ branchId: origin.branchId, row: 0 }))]), [layout]);
   const mergedBranches = useMemo(() => mergedBranchIds(graph.nodes), [graph.nodes]);
   const viewport = useRef<HTMLDivElement>(null);
   const branchMenu = useRef<HTMLDivElement>(null);
@@ -121,7 +122,7 @@ export function VersionTreePanel({ graph, dispatch, onOpenPush, mode, modeSwitch
         initialFit.current = true;
         if (screenshotCapture) {
           if (screenshotFlags.treeFit) {
-            const raw = graphBounds(layout.nodes);
+            const raw = graphBounds(boundsNodes);
             const frame = fitAllFrame({ ...raw, left: raw.left + Math.max(0, -raw.left + 48) }, width, height, treeTheme.minZoom);
             setFitInset(frame.inset);
             zoomRef.current = frame.zoom;
@@ -236,7 +237,7 @@ export function VersionTreePanel({ graph, dispatch, onOpenPush, mode, modeSwitch
   function fitAll() {
     const element = viewport.current;
     if (!element) return;
-    const frame = fitAllFrame({ ...graphBounds(layout.nodes), left: graphBounds(layout.nodes).left + worldShift }, element.clientWidth, element.clientHeight, treeTheme.minZoom);
+    const frame = fitAllFrame({ ...graphBounds(boundsNodes), left: graphBounds(boundsNodes).left + worldShift }, element.clientWidth, element.clientHeight, treeTheme.minZoom);
     setFitInset(frame.inset);
     zoomRef.current = frame.zoom;
     setZoom(frame.zoom);
@@ -333,7 +334,7 @@ export function VersionTreePanel({ graph, dispatch, onOpenPush, mode, modeSwitch
     if (start.moved) setIsPanning(false);
     else dispatch({ type: 'select', id: null });
   }
-  const bounds = graphBounds(layout.nodes);
+  const bounds = graphBounds(boundsNodes);
   const worldShift = Math.max(0, -bounds.left + 48);
   const worldWidth = Math.max(layout.width + 240, viewportSize.width / zoom) + worldShift + fitInset;
   const worldHeight = Math.max(layout.height + 240, viewportSize.height / zoom);
@@ -342,6 +343,7 @@ export function VersionTreePanel({ graph, dispatch, onOpenPush, mode, modeSwitch
     '--card-hover-inset': `${treeTheme.cardHoverBorderInset}px`,
     '--card-hover-transition': `${treeTheme.cardHoverTransitionMs}ms`,
     '--node-card-width': `${geometry.cardWidth}px`,
+    '--merge-origin-tag-gap': `${geometry.cardOffsetX}px`,
     '--station-size': `${treeTheme.stationDiameter}px`,
     '--station-border-width': `${treeTheme.stationBorderWidth}px`,
     '--station-inner-size': `${treeTheme.stationInnerDiameter}px`,
@@ -424,7 +426,8 @@ export function VersionTreePanel({ graph, dispatch, onOpenPush, mode, modeSwitch
                 const dot = treeTheme.mergedStemDotSize;
                 return <g key={route.id} className="route" data-route-kind={route.kind} data-active={route.active} data-spine={route.spine || undefined} data-reverted={routeReverted || undefined} data-merged={routeMerged || undefined} data-dashed={route.dashed || undefined}
                   opacity={route.kind === 'horizontal-branch' ? treeTheme.levelConnectorOpacity : routeReverted ? treeTheme.revertedRouteOpacity : routeMerged ? treeTheme.mergedBranchOpacity : 1}>
-                  {route.dashed && from ? dots.map(y => <rect key={y} x={from.x - dot / 2} y={y - dot / 2} width={dot} height={dot} fill={stroke}/>) : <>
+                  {route.id.startsWith('chronology:') && <title>Chronological sequence · not a Git parent</title>}
+                  {route.id.startsWith('chronology:') ? <path d={route.path} fill="none" stroke={stroke} strokeWidth={treeTheme.chronologyWidth} strokeDasharray={`${treeTheme.chronologyDash} ${treeTheme.chronologyDash}`} /> : route.dashed && from ? dots.map(y => <rect key={y} x={from.x - dot / 2} y={y - dot / 2} width={dot} height={dot} fill={stroke}/>) : <>
                   <path d={route.path} fill="none" stroke={stroke} strokeWidth={treeTheme.routeWidth} strokeLinejoin="round" strokeLinecap="round"/>
                   <path d={route.path} fill="none" stroke={treeTheme.routeStripeColor} strokeWidth={treeTheme.routeStripeWidth} opacity={treeTheme.routeStripeOpacity} strokeLinejoin="round" strokeLinecap="round"/>
                   </>}
@@ -449,6 +452,13 @@ export function VersionTreePanel({ graph, dispatch, onOpenPush, mode, modeSwitch
                 style={{ left: origin.x, top: origin.y, '--route-color': activeRouteColor(levelColor(fork?.branchId ?? graph.activeBranchId, 0), onSpine) } as CSSProperties}
                 role="img" aria-label="Starting point">
                 <span />
+              </div>;
+            })}
+            {(layout.mergeOrigins ?? []).map(origin => {
+              const color = levelColor(origin.branchId, 0);
+              return <div key={origin.id} className="merge-origin" style={{ left: origin.x, top: origin.y, '--route-color': color } as CSSProperties}>
+                <div className="station has-descendants origin-station" role="img" aria-label={`Incoming branch ${origin.branchId}`}><span /></div>
+                <div className="merge-origin-tag"><BranchTag name={origin.branchId} color={color}/></div>
               </div>;
             })}
             {layout.nodes.filter(node => !presentation.hiddenNodeIds.has(node.id)).map(node => {

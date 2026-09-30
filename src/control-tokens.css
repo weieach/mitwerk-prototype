@@ -1,6 +1,16 @@
 /* Shared chrome sizing, based on the date-range selector's 29px height.
    Diagram nodes, timeline geometry and resize handles retain spatial sizing. */
 :root {
+  --surface-radius: 6px;
+  --control-radius: 4px;
+  --card-padding: 11px 13px 12px;
+  --card-title-size: 17px;
+  --card-title-weight: 700;
+  --body-font-size: 12px;
+  --message-line-height: 1.45;
+  --meta-font-size: 10px;
+  --surface-hover-inset: 1px;
+  --surface-transition: 180ms;
   --base-control-height: clamp(26px, calc(23px + .42vw), 32px);
   --control-height: var(--base-control-height);
   --control-font-size: clamp(10px, calc(8px + .21vw), 12px);
@@ -13,6 +23,9 @@
   --row-padding-inline: clamp(14px, 1.68vw, 28px);
   --zoom-padding-inline: calc(var(--row-padding-inline) * .8);
   --compact-title-weight: 500;
+  --sidebar-project-title-size: 12px;
+  --sidebar-chat-title-size: 11px;
+  --sidebar-section-size: calc((var(--sidebar-project-title-size) + var(--sidebar-chat-title-size)) / 2);
   --row-divider: 1px solid var(--line);
 }
 
@@ -64,7 +77,6 @@
   border-left: var(--row-divider);
 }
 .workspace .panel-heading > h2 { padding-right: var(--row-padding-inline); }
-.workspace .panel-heading > .gallery-back { margin-right: var(--row-padding-inline); }
 .workspace :is(.panel-header, .gallery-footer, .album-frame-bar, .canvas-controls) :is(button, select) {
   border: 0;
   border-radius: 0;
@@ -158,8 +170,15 @@
 .workspace .header-branch-controls { flex: 1 1 0; max-width: none; }
 .workspace .header-branch-controls .branch-current { width: 100%; min-width: 0; justify-content: space-between; gap: var(--selector-content-gap); }
 .header-fill-label { display: inline-flex; align-items: center; gap: var(--selector-content-gap); min-width: 0; white-space: nowrap; }
-.workspace .gallery-range,
-.workspace .gallery-frame-picker-slot { flex: 1 1 0; margin-left: 0; }
+.workspace .gallery-range { flex: 1 1 0; margin-left: 0; }
+.workspace .gallery-frame-picker-slot { flex: 0 0 var(--gallery-frame-selector-share); margin-left: 0; }
+.workspace .gallery-range > .row-select { flex: 0 1 45%; }
+.workspace .gallery-range-stats {
+  display: flex; align-items: center; flex: 1 1 0; min-width: 0;
+  border-left: 0; padding-right: var(--selector-padding-right);
+  color: var(--muted); font-size: var(--control-font-size);
+  overflow: hidden; white-space: nowrap;
+}
 .workspace .gallery-frame-picker-slot:empty { display: none; }
 .workspace .album-saved-frame { width: 100%; max-width: none; }
 .workspace .row-select {
@@ -186,4 +205,12 @@
   width: 100%; height: auto; min-height: calc(var(--base-control-height) + 2 * var(--gallery-floating-pad-block));
   padding: var(--gallery-floating-pad-block) var(--gallery-floating-pad-inline);
 }
-.token-view-heading { font-size: var(--control-font-size); font-weight: 500; text-align: center; }
+.token-view-heading { opacity: var(--gallery-floating-label-opacity); font-size: var(--control-font-size); font-weight: 500; text-align: center; }
+
+/* Let endpoint navigation consume the footer's remaining width. */
+.workspace .canvas-controls .tree-grid-toggle { margin-right: 0; }
+.workspace .canvas-controls .endpoint-controls { flex: 1 1 0; min-width: 0; }
+.workspace .endpoint-controls .endpoint-jump { flex: 1 1 0; min-width: 0; }
+
+.album-token-label { opacity: var(--gallery-floating-label-opacity); }
+.workspace .gallery-range > .gallery-range-stats { border-left: 0; }

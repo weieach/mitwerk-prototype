@@ -15,7 +15,7 @@ test('legacy workspace migration preserves task messages, drafts and renamed pro
 });
 test('multiple projects and membership survive loading without copying tasks into another project',()=>{
  const state=migrateState(null);
- state.projects.push({id:'new',name:'Team work',description:'',members:['Waiting Wong','Maya Lin'],instructions:'New scope'});
+ state.projects.push({id:'new',name:'Team work',description:'',members:['User Example','Maya Lin'],instructions:'New scope'});
  state.tasks.push({...state.tasks[0],id:'new-task',projectId:'new',input:[],output:[],messages:[]});
  const restored=migrateState(JSON.parse(JSON.stringify(state)));
  assert.deepEqual(restored.projects.map(p=>[p.id,p.name,p.members,p.instructions]),state.projects.map(p=>[p.id,p.name,p.members,p.instructions]));
@@ -91,4 +91,28 @@ test('migration removes only unused New chat placeholders and remains idempotent
  const empty=migrateState({tasks:[blank]});
  assert.deepEqual(empty.tasks,[]);
  assert.deepEqual(migrateState(empty).tasks,[]);
+});
+
+
+test('product sample migration updates old examples once while retaining added work',()=>{
+ const seeded=migrateState(null);
+ const old={...seeded,sampleContentVersion:undefined,projectName:'Mobile app component revamp',
+  projects:seeded.projects.map(p=>p.id==='mobile'?{...p,name:'Mobile app component revamp',members:['Waiting Wong']}:p),
+  tasks:seeded.tasks.map(t=>t.id==='panel'?{...t,title:'Explore a clearer profile panel',creator:'Waiting Wong',status:'Complete' as const,messages:[
+   {id:'m1',role:'user' as const,name:'You',time:'10:24',text:'Old profile example'},
+   {id:'custom-message',role:'user' as const,name:'Waiting Wong',time:'11:30',text:'Keep this added feedback'},
+  ]}:t),drafts:{panel:'Keep this unsent draft'}};
+ const migrated=migrateState(old);
+ const task=migrated.tasks.find(t=>t.id==='panel')!;
+ assert.equal(task.title,'Implementing 3D version blocks');
+ assert.equal(task.creator,'User Example');
+ assert.equal(task.status,'Complete');
+ assert.equal(task.messages.at(-1)?.text,'Keep this added feedback');
+ assert.equal(task.messages.at(-1)?.name,'User Example');
+ assert.equal(migrated.drafts.panel,'Keep this unsent draft');
+ assert.deepEqual(migrated.projects[0].members,['User Example']);
+ assert.equal(migrated.projects[0].name,'MitWerk product prototype');
+ assert.equal(task.messages.some(m=>m.text==='Old profile example'),false);
+ const edited={...migrated,tasks:migrated.tasks.map(t=>t.id==='panel'?{...t,title:'My revised task',messages:t.messages.slice(1)}:t)};
+ assert.deepEqual(migrateState(edited),edited);
 });

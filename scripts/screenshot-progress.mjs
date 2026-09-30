@@ -350,6 +350,19 @@ function lastUserPrompt(transcriptPath) {
   return '';
 }
 
+function writePromptCounter(outFile) {
+  const count = Number(/^\[prompt #(\d+)\]/i.exec(basename(outFile))?.[1] ?? 0);
+  if (!count) return;
+  const agentsPath = join(root, 'AGENTS.md');
+  try {
+    const text = readFileSync(agentsPath, 'utf8');
+    const next = text.replace(/(\*\*push #\d+ · )prompt #\d+/, `$1prompt #${count}`);
+    if (next !== text) writeFileSync(agentsPath, next);
+  } catch (error) {
+    captureLog(`prompt counter update failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 function labelFromHook(payload) {
   const fromPrompt = textFromUnknown(payload.prompt);
   if (fromPrompt) {
@@ -438,7 +451,32 @@ function wantsResetCapture(prompt = '') {
     || /\bcapture\b[\s\S]{0,80}\breset view\b/i.test(prompt) || /\breset view\b[\s\S]{0,40}\bcapture\b/i.test(prompt);
 }
 
+function wantsHomeCapture(prompt = '') {
+  return argValue('gallery-view') === 'home' || /\bc home\b/i.test(prompt);
+}
+
+function chatCaptureTitle(prompt = '') {
+  const quoted = /\bc chat\s+"([^"]+)"/i.exec(prompt);
+  if (quoted) return quoted[1].trim();
+  const plain = /\bc chat\s+([^\n]+)/i.exec(prompt);
+  if (!plain) return '';
+  return plain[1].replace(/\s+w\/\s+[\s\S]*$/i, '').replace(/\s+/g, ' ').trim();
+}
+
+function wantsTodosCapture(prompt = '') {
+  return /\bc to-?dos\b/i.test(prompt);
+}
+
+function wantsSideBySideCapture(prompt = '') {
+  return /\bc chat and version side by side\b/i.test(prompt);
+}
+
+function wantsChatCapture(prompt = '') {
+  return /\bc chat\b/i.test(prompt) && !wantsSideBySideCapture(prompt);
+}
+
 function wantsTheaterCapture(prompt = '') {
+  if (wantsHomeCapture(prompt)) return false;
   if (argValue('gallery-view') === 'theater') return true;
   if (/\bisometric\b/i.test(prompt) && !/\btheater\b/i.test(prompt)) return false;
   const theaterSubject = prompt.split(/tree-panel|version-card/i)[0] ?? '';
@@ -459,7 +497,26 @@ function wantsGalleryHover(prompt = '') {
 function screenshotUrl(prompt = '') {
   const target = new URL(url);
   target.searchParams.set('screenshot', '1');
+  // Capture the complete prototype shell, retaining gallery state parameters.
+  target.searchParams.delete('view');
   target.searchParams.set('treeMode', argValue('tree-mode', 'history'));
+  if (wantsTodosCapture(prompt)) {
+    target.searchParams.set('page', 'todos');
+    return target.href;
+  }
+  if (wantsSideBySideCapture(prompt)) {
+    target.searchParams.set('layout', 'side-by-side');
+    if (/\btoast\b/i.test(prompt)) target.searchParams.set('toast', '1');
+    return target.href;
+  }
+  if (wantsChatCapture(prompt)) {
+    const title = chatCaptureTitle(prompt);
+    if (title) target.searchParams.set('chat', title);
+    else target.searchParams.set('layout', 'chat');
+    if (/page scrolled to top/i.test(prompt)) target.searchParams.set('scroll', 'top');
+    return target.href;
+  }
+  if (wantsHomeCapture(prompt)) { target.searchParams.delete('galleryView'); return target.href; }
   if (argValue('gallery-view') === 'tokens') { target.searchParams.set('galleryView', 'tokens'); return target.href; }
   const hover = wantsGalleryHover(prompt);
   if (wantsTransitionCapture(prompt)) { target.searchParams.set('galleryView', argValue('gallery-view') === 'timeline-transition' ? 'timeline-transition' : 'transition'); return target.href; }
@@ -562,7 +619,15 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
     const result = await cdp('Runtime.evaluate', {
-      expression: argValue('gallery-view') === 'tokens'
+      expression: wantsTodosCapture(prompt)
+        ? 'document.documentElement.dataset.screenshotReady === "1" && !!document.querySelector(".todos-page .kanban") && !document.querySelector(".mw-reader")'
+        : wantsSideBySideCapture(prompt)
+        ? `document.documentElement.dataset.screenshotReady === "1" && !!document.querySelector(".mw-dialog") && !!document.querySelector(".mw-reader .workspace") && !document.querySelector(".reader-expanded")${/\btoast\b/i.test(prompt) ? ' && !!document.querySelector(".mw-toast")' : ''}`
+        : wantsChatCapture(prompt)
+        ? `document.documentElement.dataset.screenshotReady === "1" && !!document.querySelector(".mw-dialog") && !document.querySelector(".mw-reader")${/page scrolled to top/i.test(prompt) ? ' && document.querySelector(".conversation-scroll")?.scrollTop === 0' : ''}`
+        : wantsHomeCapture(prompt)
+        ? 'document.documentElement.dataset.screenshotReady === "1"'
+        : argValue('gallery-view') === 'tokens'
         ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.tokenUsageReady === "true"'
         : wantsTransitionCapture(prompt)
         ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.transitionReady === "true"'
@@ -573,7 +638,11 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
         : 'document.documentElement.dataset.screenshotReady === "1"',
       returnByValue: true,
     });
-    if (result.result?.value === true) return;
+    if (result.result?.value === true) {
+      if (wantsChatCapture(prompt)||wantsTodosCapture(prompt)) return;
+      const shell = await cdp('Runtime.evaluate', { expression: '!!document.querySelector(".mw-reader .workspace") && !!document.querySelector("#main-navigation")', returnByValue: true });
+      if (shell.result?.value === true) return;
+    }
     await delay(100);
   }
   throw new Error('Timed out waiting for the requested diagram and gallery capture state');
@@ -1132,6 +1201,11 @@ async function main() {
   const label = argValue('label')
     || (tag === 'prompt' ? labelFromHook(payload) : git(['log', '-1', '--pretty=%s', sha]));
 
+  if (!hookMode && tag === 'prompt' && !hasFlag('manual-prompt')) {
+    console.error('Skipped. The stop hook saves the one prompt capture from the user prompt, including its cued location.');
+    return;
+  }
+
   try {
     if (hookMode && tag === 'prompt' && (shouldSkipAskScreenshot(payload) || excludesCounter(label))) {
       clearSkip(conversationId(payload));
@@ -1146,6 +1220,7 @@ async function main() {
       return;
     }
     const outFile = await takeScreenshot({ tag, label, sha, base });
+    if (tag === 'prompt') writePromptCounter(outFile);
     if (hookMode) {
       console.error(`Saved ${outFile}`);
       emitHook({});

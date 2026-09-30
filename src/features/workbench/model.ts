@@ -1,3 +1,4 @@
+import { userName } from './user-profile.ts';
 export type TaskStatus = 'To do' | 'In progress' | 'Ready for review' | 'Complete';
 export type View = 'Home' | 'Projects' | 'Todos' | 'Inbox' | 'Mits' | 'Library' | 'Settings' | 'dialog' | 'project' | 'Co-workers';
 export type Message = { id: string; role: 'user' | 'mit' | 'colleague'; name: string; text: string; assetId?: string; assetIds?: string[]; time: string };
@@ -6,26 +7,77 @@ export type Asset = { id: string; title: string; kind: 'document' | 'image' | 'p
 export const statuses: TaskStatus[] = ['To do', 'In progress', 'Ready for review', 'Complete'];
 export const team = ['Design Mit', 'Research Mit', 'Accessibility Mit'];
 export const assets: Asset[] = [
-  { id: 'brief', title: 'Component brief', kind: 'document', detail: 'Project knowledge · 3 min read', content: 'Mobile app component revamp\n\nThe challenge\nMake a sleep tracker’s profile panel easier to understand and quicker to navigate. This sample brief gives the team a shared starting point.\n\nWhat we are exploring\nA clear separation between personal information, sleep preferences and account settings. Progressive disclosure should keep everyday actions close without crowding the first view.\n\nKeep in place\nExisting information, familiar navigation labels and accessible controls. Avoid introducing a new account flow.\n\nReview together\nCan someone find their sleep goal without opening several menus? Is the panel easy to close? Does the layout work at a narrow viewport?\n\nDeliverables\nAn interactive component, a short explanation of the changes, and a reviewable version history.' },
-  { id: 'ia', title: 'Information architecture', kind: 'image', detail: 'Reference image · PNG', url: '/demo/information-architecture.png' },
-  { id: 'prototype', title: 'Profile panel', kind: 'prototype', detail: 'Interactive prototype · Current output', url: '/demo/profile-panel.html' },
-  { id: 'notes', title: 'Design notes', kind: 'document', detail: 'Design Mit · Review notes', content: 'Profile panel — design notes\n\nA clearer starting point\nPersonal details sit at the top. Sleep preferences and account settings have their own sections, so identity and configuration no longer compete.\n\nInteraction\nThe menu opens a compact profile panel. Preferences can be expanded in place, and a clearly labelled close control returns to the main screen.\n\nWhat to review\nCheck the language of the sleep-goal control and the visibility of the close action. Try the prototype with keyboard navigation.\n\nOpen question\nShould reminders follow the device’s quiet hours or use their own schedule?\n\nAbout this output\nThis is sample content for the MitWerk frontend demonstration, not the result of a live AI run.' },
+  { id: 'brief', title: 'MitWerk product brief', kind: 'document', detail: 'Project context · 3 min read', content: `MitWerk — make the work visible
+
+The challenge
+AI-assisted creation produces many prompts, commits and visual iterations. Help the creator understand what changed, explore alternatives and return to a useful moment without losing the surrounding conversation.
+
+Iteration Visualizer
+Represent saved screenshots as padded, translucent 3D version blocks. Preserve each image’s aspect ratio. Versions are evenly spaced; dates reflect the captures within them. A selected time range highlights the relevant blocks while older work stays visible in a disabled state.
+
+Version stream
+Use Git ancestry and capture metadata to connect commits, branches and merges. Keep Commit history separate from Test visual so experiments never alter recorded history.
+
+Review and replay
+Hover to inspect a frame, open theater to scrub or play the sequence, and enter a saved prototype from a push frame. A top-view token chart shows cumulative usage for the selected range.
+
+Prototype scope
+Use reusable components and shared design tokens. Current token values are simulated. XR hand interactions are a separate exploration.` },
+  { id: 'ia', title: 'Iteration data model', kind: 'document', detail: 'Reference · Capture and Git relationships', content: `From conversation to version history
+
+Prompt → frame
+Each saved prompt frame includes its timestamp, prompt number, summary and reference files. Read this metadata from the capture filename rather than hardcoding individual frames.
+
+Push → version
+A push closes a version’s frame sequence. Its preview uses the last prompt frame from that version; a saved codebase archive supports entering the interactive prototype.
+
+Git → stream
+Git supplies parent commits, branch refs and merges. Keep source capture identifiers separate from displayed version numbers. Summarize uncaptured collaborator work as an unnumbered incoming branch node.
+
+Selection → shared context
+Opening a commit card moves the theater playhead to its corresponding push frame. Time-range filtering changes the active frames in the visualizer without rewriting the history.` },
+  { id: 'prototype', title: 'Iteration Visualizer', kind: 'prototype', detail: 'Interactive prototype · Current output', url: '/?view=history' },
+  { id: 'notes', title: 'Iteration review notes', kind: 'document', detail: 'Design Mit · Sample review notes', content: `Iteration Visualizer — review notes
+
+3D gallery
+Drag to orbit the blocks. Use Reset view to fit the sequence and double-click it to center. Hovered frames lift slightly and expose their summary; dates and version labels adapt as the camera approaches the top view.
+
+Theater
+Rotate the selected frame into a frontal view, then introduce the timeline and remaining controls. Preserve the last decoded image while the next frame loads. Hovering the timeline previews a frame; leaving restores the selected frame.
+
+Timeline and versions
+Each rectangle represents a version, with smaller marks for its prompt frames. Push nodes provide access to the archived prototype. Keep play controls centered and range navigation at the ends of the row.
+
+Review next
+Check focus visibility, keyboard access, narrow reading-window layouts and reduced-motion behavior. Confirm that commit selection resolves to the correct push frame.
+
+About these conversations
+These are sample exchanges describing the MitWerk prototype, not transcripts of live Mit runs.` },
 ];
 export function seedTasks(): Task[] {
   return [
-    { id: 'panel', title: 'Explore a clearer profile panel', status: 'Ready for review', creator: 'Waiting Wong', mit: 'Design Mit', project: true, kind: 'mit', unread: true, updated: '10:42', input: ['brief','ia'], output: ['prototype','notes'], messages: [
-      { id:'m1', role:'user', name:'You', time:'10:24', text:'Let’s rethink the profile panel. The current layout puts personal information and settings at the same level. I’d like it to feel calmer, without hiding the things people use every day.' },
-      { id:'m2', role:'mit', name:'Design Mit', time:'10:25', text:'I’ll separate identity from preferences and keep the everyday actions within reach. I’m using the component brief and your information architecture as context.\n\nI’ll keep the existing content and focus this iteration on hierarchy, spacing and how the panel opens.' },
-      { id:'m3', role:'user', name:'You', time:'10:28', text:'Yes. Keep the sleep goal easy to find, and make sure the panel has an obvious way to close.' },
-      { id:'m4', role:'mit', name:'Design Mit', time:'10:42', text:'The first direction is ready for a look.\n\nPersonal details now lead the panel, with sleep preferences below. Account settings sit in a quieter, separate section. The close control stays visible while you explore.\n\nOpen the prototype to try it, or check the design notes before we decide what to refine.', assetId:'prototype' },
+    { id: 'panel', title: 'Implementing 3D version blocks', status: 'Ready for review', creator: userName, mit: 'Design Mit', project: true, kind: 'mit', unread: true, updated: '10:42', input: ['brief','ia'], output: ['prototype','notes'], messages: [
+      { id:'m1', role:'user', name:userName, time:'10:24', text:'Build an iteration gallery from the screenshots saved during this project. Each version should become a translucent, wireframed 3D block, with its frames arranged along the time axis. Keep the screenshots’ proportions and leave some padding inside the blocks.' },
+      { id:'m2', role:'mit', name:'Design Mit', time:'10:25', text:'I’ll parse the capture filenames into frames and versions, then render the blocks with WebGL. Versions will be evenly spaced, with a separate date ruler showing when the frames were saved. The block geometry and spacing will come from shared tokens.\n\nDragging will orbit the gallery. Hovering a frame will lift it slightly and show its summary without opening it.' },
+      { id:'m3', role:'user', name:userName, time:'10:28', text:'Keep out-of-range versions visible but dimmed. Clicking a frame should rotate it into theater view, where I can play the sequence like a timelapse. Show the frame first, then the timeline, then the other controls.' },
+      { id:'m4', role:'mit', name:'Design Mit', time:'10:42', text:'The sample direction is ready to review. The gallery groups frames by version and supports date-range filtering, orbiting and hover inspection. Theater uses a segmented version timeline, and its preview stays visible while the next image loads.\n\nOpen the Iteration Visualizer to explore the blocks. The review notes cover the camera transition, timeline behavior and checks for the next iteration.', assetId:'prototype' },
     ] },
-    { id:'research', title:'Map everyday profile actions', status:'Complete', creator:'Research Mit', mit:'Research Mit', project:true, kind:'mit', unread:false, updated:'Yesterday', input:['brief'], output:['notes'], messages:[{id:'r1',role:'mit',name:'Research Mit',time:'Yesterday',text:'The sample review groups actions into identity, sleep preferences and account settings. The component brief captures the questions for the next iteration.',assetId:'brief'}] },
-    { id:'access', title:'Check keyboard navigation', status:'To do', creator:'Nicole Wei', mit:'Accessibility Mit', project:true, kind:'mit', unread:false, updated:'Yesterday', input:['brief','prototype'], output:[], messages:[{id:'a1',role:'colleague',name:'Nicole Wei',time:'Yesterday',text:'Let’s check focus order, the close action and labels on the preference controls once the layout is ready.'}] },
+    { id:'research', title:'Mapping commits, branches and frames', status:'Complete', creator:userName, mit:'Research Mit', project:true, kind:'mit', unread:false, updated:'Yesterday', input:['brief'], output:['ia'], messages:[
+      {id:'r1',role:'user',name:userName,time:'09:10',text:'How should the version stream relate to the gallery? A saved screenshot is not always a Git commit, and I need branches and merges to remain understandable.'},
+      {id:'r2',role:'mit',name:'Research Mit',time:'09:14',text:'Treat capture history and Git ancestry as related sources. Capture filenames describe the visual frames; Git supplies the commit parents and branch refs. Match push captures to commits, but keep the original capture identifier separate from the displayed version number.\n\nTest visual should use its own editable graph so adding sample nodes cannot change Commit history.'},
+      {id:'r3',role:'user',name:userName,time:'09:18',text:'Include work merged from a collaborator. If their branch has no local prompt captures, show its branch name on a floating node rather than inventing numbered versions. Selecting a commit should open its matching push frame in theater.'},
+      {id:'r4',role:'mit',name:'Research Mit',time:'09:23',text:'The reference now distinguishes prompt frames, push versions and Git commits. Incoming collaborator work can appear as an unnumbered branch origin, while recorded Git parents remain available. Commit-to-frame navigation uses the source capture identifier, so a display numbering change will not break the link.',assetId:'ia'},
+    ] },
+    { id:'access', title:'Reviewing theater playback and navigation', status:'To do', creator:userName, mit:'Accessibility Mit', project:true, kind:'mit', unread:false, updated:'Yesterday', input:['brief','prototype'], output:[], messages:[
+      {id:'a1',role:'user',name:userName,time:'11:05',text:'Review the theater controls and timeline. Keyboard users should be able to select a frame, play or pause, jump to the next push, and return to the gallery. Keep focus visible in the narrow reading window.'},
+      {id:'a2',role:'mit',name:'Accessibility Mit',time:'11:07',text:'I’ll check the control labels, focus order and range navigation. Timeline hover should remain a temporary preview; moving away restores the selected frame. Keyboard selection needs an equivalent path that does not depend on hover.\n\nI’ll also check reduced-motion behavior for the camera transition and ensure the controls’ full padded areas cannot accidentally trigger a drag out of theater.'},
+      {id:'a3',role:'user',name:userName,time:'11:09',text:'Also check that changing playback speed or loop does not move the selected frame. The previous and next controls should move between pushes, not individual prompts. Record anything that still needs fixing before marking this complete.'},
+    ] },
     { id:'nicole', title:'Nicole Wei', status:'In progress', creator:'Nicole Wei', mit:'Nicole Wei', project:false, kind:'colleague', unread:true, updated:'11:08', input:[],output:[], messages:[{id:'n1',role:'colleague',name:'Nicole Wei',time:'11:08',text:'I’ve been looking at the reading window. Can we keep the chat visible when opening an output? It would help us discuss the design while looking at it.'}] },
   ];
 }
 const KEY = 'mitwerk-workbench-v1';
-export const defaultInstructions = 'Keep the existing information architecture. Make everyday actions easy to find. Use the MitWerk palette, clear labels and accessible focus states.';
+export const defaultInstructions = 'Build MitWerk’s iteration visualizer and version stream with reusable components and shared design tokens. Derive frames from capture metadata and branching from Git. Keep test data separate from recorded history; preserve clear labels, keyboard access and stable playback.';
 export type Project = {mitIds?:string[];archived?:boolean;id:string; name:string; description:string; members:string[]; instructions:string};
 export const colleagues = [
  {name:'Nicole Wei', role:'Product designer', detail:'Interaction design · Reading experience'},
@@ -41,17 +93,53 @@ export function saveMit(state:SavedState,mit:Mit):SavedState {
  const old=state.mits.find(m=>m.id===mit.id);
  return {...state,mits:old?state.mits.map(m=>m.id===mit.id?mit:m):[...state.mits,mit],tasks:state.tasks.map(t=>t.kind==='mit'&&(t.mitId===mit.id||(!t.mitId&&t.mit===old?.name))?{...t,mitId:mit.id,mit:mit.name}:t)};
 }
-export type SavedState = {tasks:Task[]; drafts:Record<string,string>; projectName:string; instructions:string; projects:Project[]; mits:Mit[]};
+export type SavedState = {tasks:Task[]; drafts:Record<string,string>; projectName:string; instructions:string; sampleContentVersion?:number; projects:Project[]; mits:Mit[]};
+const legacySampleTitles: Record<string, string> = {
+ panel: 'Explore a clearer profile panel', research: 'Map everyday profile actions', access: 'Check keyboard navigation',
+};
+const legacyInstructions = 'Keep the existing information architecture. Make everyday actions easy to find. Use the MitWerk palette, clear labels and accessible focus states.';
+
+/** Refresh bundled examples once; retain appended conversation, drafts and custom projects. */
+function migrateSampleContent(raw: Partial<SavedState> | null): Partial<SavedState> | null {
+ if (!raw) return raw;
+ const renameUser = (name: string) => name === 'Waiting Wong' ? userName : name;
+ const refresh = (raw.sampleContentVersion ?? 0) < 1;
+ const seeds = new Map(seedTasks().map(task => [task.id, task]));
+ return {...raw,
+  projectName: refresh && raw.projectName === 'Mobile app component revamp' ? 'MitWerk product prototype' : raw.projectName,
+  instructions: refresh && raw.instructions === legacyInstructions ? defaultInstructions : raw.instructions,
+  projects: raw.projects?.map(project => ({...project, members: project.members.map(renameUser),
+   ...(refresh && project.id === 'mobile' ? {
+    name: project.name === 'Mobile app component revamp' ? 'MitWerk product prototype' : project.name,
+    description: project.description === 'A calmer profile experience, shaped together.' ? 'Explore how conversations, saved frames and Git history make the design process visible.' : project.description,
+    instructions: project.instructions === legacyInstructions ? defaultInstructions : project.instructions,
+   } : {}),
+  })),
+  tasks: raw.tasks?.map(task => {
+   const sample = refresh && legacySampleTitles[task.id] && (task.projectId === 'mobile' || task.project && !task.projectId) ? seeds.get(task.id) : undefined;
+   const seedIds = new Set(sample?.messages.map(message => message.id));
+   return {...task, creator: renameUser(sample && task.id === 'access' && task.creator === 'Nicole Wei' ? userName : task.creator),
+    ...(sample ? {
+     title: task.title === legacySampleTitles[task.id] ? sample.title : task.title,
+     output: [...new Set([...task.output, ...sample.output])],
+     messages: [...sample.messages, ...task.messages.filter(message => !seedIds.has(message.id)).map(message => ({...message, name: message.role === 'user' ? userName : renameUser(message.name)}))],
+    } : {}),
+    ...(!sample ? {messages: task.messages.map(message => ({...message, name: message.role === 'user' ? userName : renameUser(message.name)}))} : {}),
+   };
+  }),
+ };
+}
 export function migrateState(raw:Partial<SavedState>|null): SavedState {
- const projectName=typeof raw?.projectName==='string'?raw.projectName:'Mobile app component revamp';
+ raw = migrateSampleContent(raw);
+ const projectName=typeof raw?.projectName==='string'?raw.projectName:'MitWerk product prototype';
  const instructions=typeof raw?.instructions==='string'?raw.instructions:defaultInstructions;
  const projects=Array.isArray(raw?.projects)&&raw.projects.length?raw.projects:[
-  {id:'mobile',name:projectName,description:'A calmer profile experience, shaped together.',members:['Waiting Wong','Nicole Wei'],instructions},
-  {id:'onboarding',name:'Workspace onboarding',description:'Help a new team find its first shared task. Sample project.',members:['Waiting Wong','Alex Chen','Maya Lin'],instructions:''},
+  {id:'mobile',name:projectName,description:'Explore how conversations, saved frames and Git history make the design process visible.',members:[userName,'Nicole Wei'],instructions},
+  {id:'onboarding',name:'Workspace onboarding',description:'Help a new team find its first shared task. Sample project.',members:[userName,'Alex Chen','Maya Lin'],instructions:''},
  ];
  const tasks=(Array.isArray(raw?.tasks)?raw.tasks:seedTasks()).filter(t=>!(t.kind==='mit'&&t.title==='New chat'&&!t.project&&!t.projectId&&!t.messages.length&&!t.input.length&&!t.output.length&&!raw?.drafts?.[t.id]?.trim()));
  const mits=Array.isArray(raw?.mits)&&raw.mits.length?raw.mits:seedMits();
- return {projects:projects.map(p=>({...p,mitIds:[...new Set([...(p.mitIds||[]),...tasks.filter(t=>t.projectId===p.id||(t.project&&!t.projectId&&p.id==='mobile')).map(t=>t.mitId||mits.find(m=>m.name===t.mit)?.id).filter((id):id is string=>!!id)])]})),mits,projectName,instructions,tasks:tasks.map(legacy=>{const {parentId: _parentId,...t}=legacy as Task & {parentId?:string};return {...t,mitId:t.kind==='mit'?(t.mitId||mits.find(m=>m.name===t.mit)?.id):undefined,projectId:t.projectId||(t.project?'mobile':undefined)};}),drafts:raw?.drafts||{}};
+ return {sampleContentVersion:1,projects:projects.map(p=>({...p,mitIds:[...new Set([...(p.mitIds||[]),...tasks.filter(t=>t.projectId===p.id||(t.project&&!t.projectId&&p.id==='mobile')).map(t=>t.mitId||mits.find(m=>m.name===t.mit)?.id).filter((id):id is string=>!!id)])]})),mits,projectName,instructions,tasks:tasks.map(legacy=>{const {parentId: _parentId,...t}=legacy as Task & {parentId?:string};return {...t,mitId:t.kind==='mit'?(t.mitId||mits.find(m=>m.name===t.mit)?.id):undefined,projectId:t.projectId||(t.project?'mobile':undefined)};}),drafts:raw?.drafts||{}};
 }
 export function loadState(): SavedState {
  try {
@@ -75,4 +163,13 @@ export function joinTaskMits(state:SavedState,taskId:string,ids:string[]):SavedS
  const valid=ids.filter(id=>state.mits.some(m=>m.id===id));if(!valid.length)return state;
  const primary=state.mits.find(m=>m.id===valid[0])!;
  return {...state,projects:state.projects.map(p=>p.id===task.projectId?{...p,mitIds:[...new Set([...(p.mitIds||[]),...valid])]}:p),tasks:state.tasks.map(t=>t.id===taskId?{...t,mitId:primary.id,mit:primary.name,participantMitIds:[...new Set([...(t.participantMitIds||[]),...(t.mitId?[t.mitId]:[]),...valid])]}:t)};
+}
+
+/** Default launch destination; resolve against saved tasks without replacing user data. */
+export const defaultWorkbenchEntry = { taskId: 'panel', assetId: 'prototype' } as const;
+export function workbenchEntry(state: SavedState) {
+  const task = state.tasks.find(task => task.id === defaultWorkbenchEntry.taskId);
+  const asset = task && [...task.input, ...task.output].includes(defaultWorkbenchEntry.assetId)
+    ? assets.find(asset => asset.id === defaultWorkbenchEntry.assetId) : undefined;
+  return { task, asset };
 }

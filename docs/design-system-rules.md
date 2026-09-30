@@ -579,3 +579,80 @@ This file is reserved for project-wide design-system rules requested by the user
 - Inbox and regular navigation share the same responsive sidebar width. Switching the bell changes sidebar content only, without widening the desktop sidebar or mobile drawer.
 
 - The workspace-bar restore control sits at the upper-right edge. When the reader is open, reserve space beside its actions to prevent overlap.
+
+
+## Reading-window panel refinements — 2026-09-29
+
+- Keep the gallery and stream inside the merged reading window. Floating gallery actions share a 144px width and 16px/6px inline/block padding; the token button label and Token usage heading use 60% opacity.
+- Saved-frame selection reserves 30% of the footer and uses “See frame” as its placeholder. Version statistics are a separate muted element to the right of the time-range selector, separated by spacing rather than a dot. Both remain inside the remaining flexible row space.
+- Ordinary active gallery block outlines use 0.75px strokes at 30% opacity in gallery and token views; preserve the existing hover emphasis and inactive dimming.
+- The stream endpoint field expands to consume remaining footer space between its navigation arrows.
+
+
+## Prototype landing and full-interface captures — 2026-09-29
+
+- Open “Explore a clearer profile panel” with its Profile panel resource expanded on initial load and refresh. Resolve this launch destination by stable task/asset IDs against existing saved data; retain Home as a fallback if that task is missing. Expand its project in navigation. Do not reset saved workspace data.
+- Progress captures show the full prototype shell, including navigation and the workspace bar, rather than the isolated version panels. Preserve gallery/theater/token capture states inside that shell. `c home` captures the new default landing state; the explicit `?view=history` route remains available for direct panel access.
+
+## Version control in the workspace bar — 2026-09-29
+
+- Replace the workspace-bar local-demo label and avatar with a Version control button. It opens the prototype reading window (Iteration Gallery and Version stream) on the task that owns that resource.
+- When that version-control screen is already open, replace the button with expand/restore and close. Those window controls stay in the workspace bar when another attachment is open. Do not put a resource-icon strip in the workspace bar.
+- Remove the separate unified reader header row. The reading surface begins at its content.
+
+## Conversation chrome — 2026-09-29
+
+- The sidebar lists projects that contain tasks. Empty projects stay in the Projects directory and on Home. Do not add a Project overview link under a project; the project name still expands its tasks, and the Projects heading still opens the directory.
+- The workspace bar stays visible. Remove its collapse and restore controls.
+- Workspace-bar reading controls are expand/restore and close. Remove the source label, the workspace-history information button, and the resource-icon strip.
+- A conversation has no title row. The chat name is the last breadcrumb segment and updates with the task title. Status, participants, and the heading’s task-details toggle are not repeated there; task details remain in the context card. `c chat "Title"` captures that conversation with the reading window closed.
+
+
+## Merge milestones in version stream — 2026-09-29
+
+- Read reachable branch/remote history in parent-safe date order; exclude stash-only and index bookkeeping commits by selecting branch/remote refs rather than all refs.
+- Real merge commits receive a whole-number milestone even without a push capture. Later saved versions advance as needed, and WIP follows the final milestone. Keep capture.version unchanged as the source lookup key so push-frame navigation still finds its saved frame. Other uncaptured commits retain dotted labels.
+- Preserve actual Git parents. If consecutive milestones on parallel histories have no ancestral connection, a merge may additionally carry a dashed chronological connection from the previous milestone. Use this display dependency for vertical placement without rewriting Git metadata or ancestry.
+
+## Shared interface foundations — 2026-09-29
+
+- Apply the version panels’ neutral surfaces, text hierarchy, compact controls, fine borders and card hover treatment to the imported navigation, conversations, directories, forms and Todos board. Preserve existing icons, layout behavior and semantic project/status colors.
+- Both interfaces consume shared control, row-padding, card-padding, radius and typography tokens in `src/control-tokens.css`. The imported interface bridges its surface variables to the panel foundations through `workbench-system.css`; retain theme-aware contrast for dark mode. Selection and primary actions use the panel’s neutral accent rather than a separate blue interface style.
+- `c to-dos` (or `c todos`) captures the full prototype shell on the Todos board with its reading window closed.
+
+## Incoming collaborator branches — 2026-09-29
+
+- Summarize a remote branch’s uncaptured contribution to a merge as a floating origin station with its Git ref name and no version number or commit card. Discover local and remote refs from Git; do not infer collaborator names from screenshots or special-case version numbers. Captured contributions retain their full history.
+- Place that origin level with the milestone immediately preceding the merge, in a separate lane. Connect it to the merge using horizontal and vertical segments. Omit the long diagonal routes from the summarized contribution’s older ancestors.
+- When a chronological connection is present, align this imported merge with the preceding milestone and use that chronological stem in place of the old side approach. Keep the original Git parent hashes separately from the projected display parents, and preserve subsequent merge and WIP numbering.
+
+
+## Product sample workspace — 2026-09-29
+
+- Use the shared prototype profile (`firstName: User`, `lastName: Example`) for identity, initials, greetings, task creators and user messages. Historical captures and Git metadata retain their original contents.
+- The former Mobile app sample project is now MitWerk product prototype. Its three sample conversations cover 3D version blocks, commits/branches/frames, and theater playback/navigation, with matching reference documents. Keep stable task and asset IDs so navigation and reader behavior continue to work.
+- Upgrade bundled sample conversations once in existing saved workspaces. Preserve custom titles, appended messages, drafts, task statuses and unrelated projects. The default task remains `panel`, now titled Implementing 3D version blocks; its opened resource is Iteration Visualizer.
+
+## Unavailable actions and interface type — 2026-09-29
+
+- Mits, Library, and sending from any chat field do not navigate or add a message. Each shows one notice: “This isn't available yet.” The notice is fixed to the bottom of the screen and enters from below. It dismisses on its own except during a capture that asks for the toast.
+- The sidebar user mark uses the same muted color as the other navigation icons on a light line-colored disc. The name stays in the primary text color, with no workspace subtitle.
+- Remove the composer caption under every chat field, including the new-chat launch.
+- The imported workbench and the version panels do not set letter-spacing. Do not keep a tracking token for titles, labels, or mono text.
+- `c chat and version side by side` opens the default conversation with the version-control reader beside it, unexpanded. `w/ toast triggered` leaves the unavailable-action notice visible.
+
+## Sidebar and workspace bar — 2026-09-29
+
+- New chat and every conversation row in the sidebar share one button: ink text, the same padding, height, radius and gap. Their type size is the sidebar section size. Conversation icons match the project folder, smaller than the New chat icon.
+- The project block (Projects, the project name, and its conversation titles) uses one size, halfway between the former 12px project title and the former 11px conversation title (`--sidebar-section-size`).
+- The workspace bar’s inline padding is the same row padding as the reading-panel title.
+- The sidebar surface is a lighter gray than the panel fill (`--sidebar`). The MitWerk wordmark is bold. The sidebar user mark uses a light line-colored disc.
+
+
+## Theater return and sidebar navigation — 2026-09-29
+
+- Place the Gallery return action as a bordered, clickable chip inside the theater’s content toolbar, below the Iteration Visualizer header. Reuse shared surface, control-size and padding tokens. Its padded toolbar area remains excluded from drag-to-exit, and clicking preserves the existing reverse transition.
+- The Projects heading is one row: clicking the label or its upward-right arrow opens the project directory. The arrow has no extra control padding. Each project row leads with a Phosphor folder icon and still expands and collapses its conversations. Conversation icons match that folder size. Conversation lists have no left border or row gap. Their left margin is the project name’s offset minus each conversation button’s left padding, so the conversation icon starts where the name starts.
+- The sidebar’s top padding is the shared row padding. The user row has no top border. The user mark is a light disc and shows the name only.
+- A conversation’s message column has a maximum width of 80 characters, a larger top margin, and a shorter message line height (`--message-line-height`). `w/ page scrolled to top` captures that conversation at the start of its messages.
+- New chat, Mits, Todos and Library are one navigation group and share the New chat button: ink text, the section type size, and no filled resting background. The current page still uses the active treatment.

@@ -77,13 +77,13 @@ export function AlbumView({ framePickerSlot, versions, range, now, zoom, onOpen,
       {framePickerSlot && !hidden && createPortal(<div className="album-saved-frame" inert={turning || returning}>
         <RowSelect label="Saved frame" disabled={!active.length} value={chosen?.frame.id ?? ''}
           onChange={value => { setKeyboardId(value); scene.current?.pin(value || null); scene.current?.inspect(value || null); }}
-          options={[{ value: '', label: active.length ? 'Select a saved frame' : 'No frames in range' }, ...active.map(({ frame }) => ({ value: frame.id, label: formatFrameLabel(frame) }))]}/>
+          options={[{ value: '', label: active.length ? 'See frame' : 'No frames in range' }, ...active.map(({ frame }) => ({ value: frame.id, label: formatFrameLabel(frame) }))]}/>
 
       </div>, framePickerSlot)}
 
       <div className="album-floating-actions">
         {tokenView && <h3 className="token-view-heading">Token usage</h3>}
-        <button className="gallery-play album-token-toggle" aria-pressed={tokenView} onClick={() => tokenView ? scene.current?.reset(true) : scene.current?.top()}><i className={tokenView ? 'ph ph-arrow-u-up-left' : 'ph ph-chart-line'} aria-hidden="true" />{tokenView ? 'Exit' : 'See token usage'}</button>
+        <button className="gallery-play album-token-toggle" aria-pressed={tokenView} onClick={() => tokenView ? scene.current?.reset(true) : scene.current?.top()}><i className={tokenView ? 'ph ph-arrow-u-up-left' : 'ph ph-chart-line'} aria-hidden="true" /><span className="album-token-label">{tokenView ? 'Exit' : 'See token usage'}</span></button>
         {chosen && <button className="album-open-frame gallery-play" onClick={() => onOpen(chosen.frame.id)}>Open frame</button>}
       </div>
       {error && <div className="gallery-empty album-3d-error" role="status">{error}</div>}

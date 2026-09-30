@@ -62,3 +62,65 @@ test('fast-forward branch activity records the merge without inventing a merge c
   assert.deepEqual(graph.nodes[1].git?.merges, ['feature → main (fast-forward)']);
   assert.equal(layoutGitHistory(graph.nodes).edges.length, 1);
 });
+
+test('parallel merge milestones advance labels without changing Git ancestry or push lookup keys', () => {
+  const history: GitHistory = { commits: [
+    { sha: 'base', parents: [], subject: 'base', timestamp: 1, branch: 'main' },
+    { sha: 'external', parents: ['base'], subject: 'collaborator work', timestamp: 2, branch: 'collaborator' },
+    { sha: 'fix', parents: ['base'], subject: 'layout fix', timestamp: 3, branch: 'main' },
+    { sha: 'import', parents: ['base', 'external'], subject: 'import workspace', timestamp: 4, branch: 'integration' },
+    { sha: 'merge', parents: ['fix', 'import'], subject: 'final merge', timestamp: 5, branch: 'main' },
+  ], branches: [{ name: 'main', tip: 'merge', base: null }], merges: [], currentBranch: 'main', head: 'merge' };
+  const shots: Capture[] = [[23, 'base', 1], [24, 'layout fix', 3], [25, 'final merge', 5]].map(([number, summary, timestamp]) => ({
+    ...captures[0], id: String(number), filename: String(number), number: Number(number), summary: String(summary), timestamp: Number(timestamp),
+  }));
+  shots.push({ ...captures[0], kind: 'prompt', number: 200, id: 'wip', filename: 'wip', summary: 'pending', timestamp: 6 });
+  const graph = buildGitCaptureHistory(shots, history);
+  const lookup = (id: string) => graph.nodes.find(node => node.id === id)!;
+  assert.equal(lookup('fix').label, 'V24');
+  assert.equal(lookup('import').label, 'V25');
+  assert.equal(lookup('merge').label, 'V26');
+  assert.equal(graph.nodes.at(-1)?.label, 'V27');
+  assert.equal(lookup('merge').capture?.version, 25);
+  assert.deepEqual(lookup('import').git?.parents, ['base', 'external']);
+  assert.equal(lookup('import').chronologyParentId, 'fix');
+  const layout = layoutGitHistory(graph.nodes);
+  assert.ok(layout.edges.some(edge => edge.id === 'chronology:fix:import' && edge.dashed));
+  assert.equal(layout.edges.filter(edge => edge.targetId === 'import' && !edge.dashed).length, 2);
+  assert.ok(layout.nodes.find(node => node.id === 'import')!.y > layout.nodes.find(node => node.id === 'fix')!.y);
+});
+
+test('uncaptured remote merge work becomes an unnumbered origin beside the preceding milestone', () => {
+  const history: GitHistory = { commits: [
+    { sha: 'base', parents: [], subject: 'base', timestamp: 1, branch: 'main' },
+    { sha: 'external-a', parents: ['base'], subject: 'remote work', timestamp: 2, branch: null },
+    { sha: 'external-b', parents: ['external-a'], subject: 'remote refinement', timestamp: 3, branch: null },
+    { sha: 'fix', parents: ['base'], subject: 'layout fix', timestamp: 4, branch: 'main' },
+    { sha: 'import', parents: ['base', 'external-b'], subject: 'import workspace', timestamp: 5, branch: 'integration' },
+    { sha: 'merge', parents: ['fix', 'import'], subject: 'final merge', timestamp: 6, branch: 'main' },
+  ], branches: [{ name: 'main', tip: 'merge', base: null }, { name: 'integration', tip: 'import', base: 'base' }],
+    remoteBranches: [{ name: 'origin/collaborator/workspace', tip: 'external-b', base: null }],
+    merges: [], currentBranch: 'main', head: 'merge' };
+  const shots: Capture[] = [[23, 'base', 1], [24, 'layout fix', 4], [25, 'final merge', 6]].map(([number, summary, timestamp]) => ({
+    ...captures[0], id: String(number), filename: String(number), number: Number(number), summary: String(summary), timestamp: Number(timestamp),
+  }));
+  const graph = buildGitCaptureHistory(shots, history);
+  assert.equal(graph.nodes.some(node => node.id.startsWith('external')), false);
+  const imported = graph.nodes.find(node => node.id === 'import')!;
+  assert.equal(imported.label, 'V25');
+  assert.deepEqual(imported.git?.rawParents, ['base', 'external-b']);
+  const layout = layoutGitHistory(graph.nodes);
+  const origin = layout.mergeOrigins![0];
+  const fix = layout.nodes.find(node => node.id === 'fix')!;
+  const merge = layout.nodes.find(node => node.id === 'import')!;
+  assert.equal(origin.branchId, 'origin/collaborator/workspace');
+  assert.equal(origin.y, fix.y);
+  assert.ok(origin.x > fix.x);
+  assert.equal('label' in origin, false);
+  assert.equal(merge.x, fix.x);
+  assert.equal(layout.edges.some(edge => edge.sourceId === 'base' && edge.targetId === 'import'), false);
+  const route = layout.edges.find(edge => edge.sourceId === origin.id)!;
+  const points = [...route.path.matchAll(/[ML] ([\d.-]+) ([\d.-]+)/g)].map(match => [Number(match[1]), Number(match[2])]);
+  for (let i = 1; i < points.length; i++) assert.ok(points[i][0] === points[i - 1][0] || points[i][1] === points[i - 1][1]);
+  assert.equal(layout.nodes.find(node => node.id === 'merge')?.label, 'V26');
+});

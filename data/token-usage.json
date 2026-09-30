@@ -1348,5 +1348,137 @@
     "output": 502,
     "total": 3912,
     "simulated": true
+  },
+  "[prompt #205] test-merging · +1-1 · go to test merge branch, and tell me what other branches are there-2026-09-29-122209.png": {
+    "input": 7236,
+    "output": 1893,
+    "total": 9129,
+    "simulated": true
+  },
+  "[prompt #206] test-merging · +25-1 · Help me merge waitingkawa's latest commit into this testing branch, cuz i want to test for merge conflict before putting-2026-09-29-123032.png": {
+    "input": 6229,
+    "output": 2807,
+    "total": 9036,
+    "simulated": true
+  },
+  "[push #24] 14 files · +135 -35 · UI layout fixes-2026-09-29-121951.png": {
+    "input": 13422,
+    "output": 6218,
+    "total": 19640,
+    "simulated": true
+  },
+  "[push #25] 72 files · +1178 -183 · Merge test-merging into main, keeping both design-system sections-2026-09-29-124102.png": {
+    "input": 10790,
+    "output": 4863,
+    "total": 15653,
+    "simulated": true
+  },
+  "[prompt #207] +58-10 · Compact reading-panel actions, See frame at 30 percent, separate version stats, lighter outlines and expanding endpoint-2026-09-29-125920.png": {
+    "input": 8208,
+    "output": 2024,
+    "total": 10232,
+    "simulated": true
+  },
+  "[prompt #208] +97-20 · Open profile-panel task and resource by default; full prototype progress captures; c home-2026-09-29-130846.png": {
+    "input": 6589,
+    "output": 1690,
+    "total": 8279,
+    "simulated": true
+  },
+  "[prompt #209] +126-27 · Replace local demo with Version control and lift reader actions into the workspace bar-2026-09-29-132034.png": {
+    "input": 15018,
+    "output": 3463,
+    "total": 18481,
+    "simulated": true
+  },
+  "[prompt #210] +126-27 · DOM Path- div#root - div.mw-app - div.mw-main - header#workspace-bar - div.topbar-right Position- top=11px, left=1055px,-2026-09-29-132050.png": {
+    "input": 676,
+    "output": 4663,
+    "total": 5339,
+    "simulated": true
+  },
+  "[prompt #211] +138-27 · remove DOM Path- div#root - div.mw-app - aside#main-navigation - div.idebar-.ection project-navigation - div.idebar-proj-2026-09-29-132310.png": {
+    "input": 1985,
+    "output": 7041,
+    "total": 9026,
+    "simulated": true
+  },
+  "[prompt #212] +176-34 · Move the chat title into the breadcrumb and remove the conversation heading; c chat -Explore a clearer profile panel--2026-09-29-132628.png": {
+    "input": 1335,
+    "output": 4290,
+    "total": 5625,
+    "simulated": true
+  },
+  "[prompt #213] +591-100 · v25 in my case is actually merging from a collaborator's branch; have a node floating at the height of v24 with the bran-2026-09-29-140511.png": {
+    "input": 10277,
+    "output": 1871,
+    "total": 12148,
+    "simulated": true
+  },
+  "[prompt #214] +755-130 · change the username across the prototype to -User Example-, which should fill in first name and last name respectively. -2026-09-29-141217.png": {
+    "input": 6416,
+    "output": 4812,
+    "total": 11228,
+    "simulated": true
+  },
+  "[prompt #215] +797-157 · @DOM Path- div#root - div.mw-app - aside#main-navigation - div.idebar-bottom - button.mw-u.er Position- top=686px, left=-2026-09-29-142207.png": {
+    "input": 14506,
+    "output": 7158,
+    "total": 21664,
+    "simulated": true
+  },
+  "[prompt #216] +803-157 · DOM Path- div#root - div.mw-app - aside#main-navigation - button.mw-nav-item new-chat Position- top=66px, left=12px, wid-2026-09-29-142233.png": {
+    "input": 7198,
+    "output": 936,
+    "total": 8134,
+    "simulated": true
+  },
+  "[prompt #217] +826-159 · DOM Path- div#root - div.mw-app - aside#main-navigation - button.mw-nav-item new-chat Position- top=66px, left=12px, wid-2026-09-29-142627.png": {
+    "input": 6639,
+    "output": 378,
+    "total": 7017,
+    "simulated": true
+  },
+  "[prompt #218] +832-159 · the return button on theater should be a clickable chip embedded inside the space of the iteration visualizer. Change th-2026-09-29-142938.png": {
+    "input": 9937,
+    "output": 5020,
+    "total": 14957,
+    "simulated": true
+  },
+  "[prompt #219] +838-159 · the return button on theater should be a clickable chip embedded inside the space of the iteration visualizer. Change th-2026-09-29-143042.png": {
+    "input": 10771,
+    "output": 4965,
+    "total": 15736,
+    "simulated": true
+  },
+  "[prompt #220] +863-163 · Move theater return into a clickable gallery chip; use up-right project arrow; remove project spacing and chat-list bord-2026-09-29-143720.png": {
+    "input": 3502,
+    "output": 6554,
+    "total": 10056,
+    "simulated": true
+  },
+  "[prompt #221] +869-163 · DOM Path- div#root - div.mw-app - aside#main-navigation - div.idebar-.ection project-navigation - div.idebar-project-gro-2026-09-29-150141.png": {
+    "input": 5356,
+    "output": 2905,
+    "total": 8261,
+    "simulated": true
+  },
+  "[prompt #222] +877-165 · DOM Path- div#root - div.mw-app - aside#main-navigation - nav Position- top=106px, left=12px, width=195px, height=90px H-2026-09-29-153530.png": {
+    "input": 7142,
+    "output": 1554,
+    "total": 8696,
+    "simulated": true
+  },
+  "[prompt #223] +883-165 · add left padding back to DOM Path- div#root - div.mw-app - aside#main-navigation - div.idebar-.ection project-navigation-2026-09-29-154932.png": {
+    "input": 6359,
+    "output": 2928,
+    "total": 9287,
+    "simulated": true
+  },
+  "[prompt #224] +894-166 · DOM Path- div#root - div.mw-app - aside#main-navigation - div.idebar-bottom - button.mw-u.er - span.mw-avatar Position- -2026-09-29-155339.png": {
+    "input": 15348,
+    "output": 2216,
+    "total": 17564,
+    "simulated": true
   }
 }

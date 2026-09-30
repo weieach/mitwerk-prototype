@@ -4,5 +4,5 @@ import './features/workbench/workbench.css';
 
 export default function App() {
   const params = new URLSearchParams(location.search);
-  return params.get('view') === 'history' || params.has('screenshot') ? <ReadingWorkspace /> : <Workbench />;
+  return params.get('view') === 'history' ? <ReadingWorkspace /> : <Workbench />;
 }

@@ -1,0 +1,122 @@
+/* Imported surfaces consume the same foundations as the reading panels.
+   Keep layout, semantic project/status colors, and Lucide artwork intact. */
+.mw-app {
+  --mw-ink: var(--ink);
+  --mw-muted: var(--muted);
+  --mw-page: var(--paper);
+  --mw-panel: var(--fill);
+  --mw-line: var(--line);
+  --mw-line-strong: var(--line-strong);
+  --mw-hover: var(--fill-hover);
+  --mw-accent: var(--accent);
+  --mw-selection: var(--fill);
+  --mw-radius: var(--surface-radius);
+  --sidebar: #fafafa;
+  font-size: var(--body-font-size);
+}
+.mw-app[data-theme=dark] {
+  --mw-ink: #fafafa;
+  --mw-muted: #b3b3b3;
+  --mw-page: #191a1b;
+  --mw-panel: #27272a;
+  --mw-line: #424247;
+  --mw-line-strong: #65676c;
+  --mw-hover: #39393e;
+  --mw-accent: var(--mw-ink);
+  --mw-selection: var(--mw-hover);
+  --sidebar: #27272a;
+}
+.mw-app :is(.page-title h1, .mw-modal h2) {
+  font-size: calc(var(--card-title-size) + 3px);
+  font-weight: var(--card-title-weight);
+}
+.mw-app :is(.kanban-task h3, .mit-directory h2, .project-entry-info h2) {
+  font-size: var(--card-title-size);
+  font-weight: var(--card-title-weight);
+  line-height: 1.25;
+}
+.mw-app :is(.page-title p, .message-content, .mit-directory p, .project-entry-info p) {
+  font-size: var(--body-font-size);
+}
+.mw-app :is(.mw-status, .kanban-task p, .kanban-task footer, .message-byline time, .sidebar-label) {
+  font-size: var(--meta-font-size);
+  color: var(--mw-muted);
+}
+.mw-app :is(.mw-button, .mw-icon, .mw-nav-item, .mw-tabs button, .mw-segmented button) {
+  min-height: var(--base-control-height);
+  font-size: var(--control-font-size);
+  border-radius: var(--control-radius);
+}
+.mw-app .mw-button {
+  min-height: var(--base-control-height);
+  padding: 0 calc(var(--row-padding-inline) / 2);
+  font-size: var(--control-font-size) !important;
+}
+.mw-app .mw-button.primary { color: var(--mw-page); }
+.mw-app :is(.mw-icon, .send-button) {
+  width: var(--base-control-height);
+  height: var(--base-control-height);
+}
+.mw-app .send-button:not(:disabled) { color: var(--mw-page); }
+.mw-app .mw-topbar {
+  height: var(--header-row-height);
+  padding-inline: var(--row-padding-inline);
+  font-size: var(--control-font-size);
+}
+.mw-app .topbar-reader-controls .reader-resource-icon {
+  width: var(--base-control-height);
+  height: var(--base-control-height);
+  flex-basis: var(--base-control-height);
+}
+.mw-app .mw-nav-item { padding-block: var(--row-size-unit); }
+.mw-app .mw-nav-item.new-chat { font-size: var(--sidebar-section-size); }
+.mw-app .workspace-brand strong { font-weight: 700; }
+.mw-app .page-scroll { padding: var(--row-padding-inline); }
+.mw-app .page-title { margin-bottom: var(--row-padding-inline); }
+.mw-app :is(.form-label input, .form-label select, .directory-search, .search-field input) {
+  min-height: var(--base-control-height);
+  padding-block: var(--row-size-unit);
+  font-size: var(--control-font-size);
+  border-radius: var(--control-radius);
+}
+.mw-app :is(.kanban-task, .mit-directory > button, .project-entry, .mw-attachment) {
+  border-radius: var(--surface-radius) !important;
+  transition: border-color var(--surface-transition) ease, box-shadow var(--surface-transition) ease, background-color var(--surface-transition) ease;
+}
+.mw-app :is(.kanban-task, .mit-directory > button) { padding: var(--card-padding); }
+.mw-app :is(.kanban-task, .mit-directory > button, .project-entry, .mw-attachment):hover {
+  border-color: var(--mw-line-strong) !important;
+  box-shadow: inset 0 0 0 var(--surface-hover-inset) var(--mw-line-strong);
+}
+.mw-app .mw-attachment.compact:hover { box-shadow: none; }
+.mw-app .kanban {
+  gap: calc(var(--row-size-unit) * 3);
+  padding-bottom: var(--row-padding-inline);
+}
+.mw-app .kanban > section {
+  padding: calc(var(--row-size-unit) * 2);
+  border-radius: var(--surface-radius);
+}
+.mw-app .kanban > section > header {
+  min-height: var(--base-control-height);
+  margin: 0 0 calc(var(--row-size-unit) * 2);
+  padding-inline: var(--row-size-unit);
+}
+.mw-app .kanban-task h3 { margin: 0 0 calc(var(--row-size-unit) * 2); }
+.mw-app .kanban-task footer { margin-top: calc(var(--row-size-unit) * 3); }
+.mw-app .mw-modal { border: 1px solid var(--mw-line); border-radius: var(--surface-radius); }
+@media (prefers-reduced-motion: reduce) {
+  .mw-app :is(.kanban-task, .mit-directory > button, .project-entry, .mw-attachment) { transition: none; }
+}
+
+.profile-name-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--row-padding-inline); max-width: 320px; }
+.profile-name-fields .form-label + .form-label { margin-top: 0; }
+
+/* Sidebar items remain visibly enabled, including actions that show a demo notice. */
+.mw-app .mw-sidebar nav .mw-nav-item { color: var(--mw-ink); background: transparent; font-size: var(--sidebar-section-size); font-weight: 400; }
+.mw-app .mw-sidebar nav .mw-nav-item:hover { background: var(--mw-hover); color: var(--mw-ink); }
+.mw-app .mw-sidebar nav .mw-nav-item.active { background: var(--mw-selection); color: var(--mw-accent); font-weight: 500; }
+.mw-app .project-navigation { margin-top: calc(var(--row-size-unit) * 4); }
+.mw-app .project-navigation .sidebar-label { width: 100%; margin-bottom: 0; padding-right: 0; padding-left: 9px; }
+.mw-app .project-navigation .sidebar-label:hover { background: var(--mw-hover); color: var(--mw-ink); }
+.mw-app .sidebar-project > .ph { flex: none; color: var(--mw-ink); }
