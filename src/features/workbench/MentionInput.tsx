@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { RefObject } from 'react';
-import { Workflow } from 'lucide-react';
+import { Workflow } from '../../components/PhosphorIcon';
 import type { Mit } from './model';
 
 type Props={inputRef:RefObject<HTMLTextAreaElement|null>;value:string;onChange:(value:string)=>void;onSend:()=>void;mits:Mit[];projectMitIds:string[];hasProject:boolean;placeholder:string;enabled:boolean};

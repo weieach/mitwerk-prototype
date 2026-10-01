@@ -1,24 +1,34 @@
+import { AnnotationOverlay } from '../annotations/FrameAnnotations';
+import { useAnnotations } from '../annotations/store';
 import { createPortal } from 'react-dom';
-import { RowSelect } from '../../components/RowSelect';
+import { SavedFrameSelect } from './SavedFrameSelect';
 import { rotationCaptureProgress, timelineCaptureProgress } from './theater-transition';
 import { formatVersion } from './model';
 import type { GalleryCamera, TheaterTarget } from './theater-transition';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GalleryVersion, RangeKey } from './model';
-import { formatFrameLabel, formatTime, representativeFrames } from './model';
+import { formatTime, representativeFrames } from './model';
 import { buildAlbum } from './geometry';
 import { AlbumScene } from './AlbumScene';
 import { InfoTooltip } from '../../components/InfoTooltip';
 import { AxisLabels } from './AxisLabels';
 import type { AxisLabelsHandle } from './AxisLabels';
 
-export function AlbumView({ framePickerSlot, versions, range, now, zoom, onOpen, onZoom, onCamera, turning, returning, hidden, onReturnStarted, theaterTarget, theaterId, onTurnComplete, onMotion }: {
+export function AlbumView({ framePickerSlot, onSelectFrame, rangeStats, versions, range, now, zoom, onOpen, onZoom, onCamera, turning, returning, hidden, onReturnStarted, theaterTarget, theaterId, onTurnComplete, onMotion }: {
   onMotion: (progress: number) => void; returning: boolean; hidden: boolean; onReturnStarted: () => void; turning: boolean; theaterTarget: TheaterTarget | null; theaterId: string; onTurnComplete: () => void;
-  framePickerSlot: HTMLDivElement | null;
+  framePickerSlot: HTMLDivElement | null; onSelectFrame: (id: string) => void; rangeStats: string;
   versions: GalleryVersion[]; range: RangeKey; now: number; zoom: number;
   onOpen: (id: string) => void; onZoom: (zoom: number) => void;
   onCamera?: (camera: GalleryCamera | null) => void;
 }) {
+  const annotations = useAnnotations();
+  const annotationCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    annotations.filter(note => note.frame.kind !== 'push').forEach(note => counts.set(note.frame.id, (counts.get(note.frame.id) ?? 0) + 1));
+    return counts;
+  }, [annotations]);
+  const [annotationId, setAnnotationId] = useState<string | null>(null);
+  const annotationFrame = versions.flatMap(version => version.frames).find(frame => frame.id === annotationId);
   const album = useMemo(() => buildAlbum(versions, range, now), [versions, range, now]);
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<AlbumScene | null>(null);
@@ -38,7 +48,7 @@ export function AlbumView({ framePickerSlot, versions, range, now, zoom, onOpen,
   useEffect(() => {
     try {
       scene.current = new AlbumScene(host.current!, {
-        tokenView: setTokenView, motion: progress => callbacks.current.onMotion(progress), hover: setHoveredId, open: id => callbacks.current.onOpen(id),
+        annotate: setAnnotationId, tokenView: setTokenView, motion: progress => callbacks.current.onMotion(progress), hover: setHoveredId, open: id => callbacks.current.onOpen(id),
         zoom: value => callbacks.current.onZoom(value), error: setError,
         labels: labels => axisLabels.current?.update(labels),
       });
@@ -60,6 +70,13 @@ export function AlbumView({ framePickerSlot, versions, range, now, zoom, onOpen,
       if (middle) { setKeyboardId(middle.frame.id); scene.current?.pin(middle.frame.id); scene.current?.inspect(middle.frame.id); }
     } else if (keyboardIdRef.current) scene.current?.pin(keyboardIdRef.current);
   }, [album, versions, range, now]);
+  useEffect(() => { scene.current?.setAnnotations(annotationCounts); }, [annotationCounts, album]);
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('screenshot') !== '1' || params.get('annotationOverlay') !== '1' || params.get('galleryView') === 'theater') return;
+    const frame = album.planes.find(plane => plane.active && annotationCounts.has(plane.frame.id));
+    if (frame) { setAnnotationId(frame.frame.id); scene.current?.reset(); }
+  }, [album, annotations]);
   useEffect(() => { scene.current?.setZoom(zoom); }, [zoom]);
   useEffect(() => {
     if ((!turning && !returning) || !theaterTarget) return;
@@ -71,19 +88,24 @@ export function AlbumView({ framePickerSlot, versions, range, now, zoom, onOpen,
   }, [turning, returning, theaterTarget, theaterId, onTurnComplete, onReturnStarted, error]);
 
   return <div className="album-webgl" inert={turning || returning || hidden}>
+    {annotationFrame && host.current && <AnnotationOverlay frame={annotationFrame} container={host.current.closest<HTMLElement>('.iteration-gallery')!}
+      onClose={() => setAnnotationId(null)} onReturn={() => { setAnnotationId(null); onOpen(annotationFrame.id); }}/>}
     <div ref={host} className="album-3d-viewport" aria-label="Interactive 3D album">
       <AxisLabels ref={axisLabels}/>
-      <div className="album-navigation-help"><InfoTooltip label="Gallery navigation help">{tokenView ? 'Drag to pan · Scroll to zoom · Exit to rotate the gallery' : 'Drag to rotate · Scroll to zoom · Right-drag to pan · Click a frame to play'}</InfoTooltip></div>
-      {framePickerSlot && !hidden && createPortal(<div className="album-saved-frame" inert={turning || returning}>
-        <RowSelect label="Saved frame" disabled={!active.length} value={chosen?.frame.id ?? ''}
-          onChange={value => { setKeyboardId(value); scene.current?.pin(value || null); scene.current?.inspect(value || null); }}
-          options={[{ value: '', label: active.length ? 'See frame' : 'No frames in range' }, ...active.map(({ frame }) => ({ value: frame.id, label: formatFrameLabel(frame) }))]}/>
+      {rangeStats && <span className="album-range-stats" title={rangeStats}>{rangeStats}</span>}
+      <div className="album-navigation-help"><InfoTooltip label="Gallery navigation help">{tokenView ? 'Drag to pan, Scroll to zoom, Exit to rotate the gallery' : 'Drag to rotate, Scroll to zoom, Right-drag to pan, Click a frame to play'}</InfoTooltip></div>
+      {framePickerSlot && createPortal(<div className="album-saved-frame" inert={turning || returning}>
+        <SavedFrameSelect frames={active.map(plane => plane.frame)} counts={annotationCounts} value={hidden ? theaterId : chosen?.frame.id ?? ''}
+          onChange={value => { if (hidden) { if (value) onSelectFrame(value); return; } setKeyboardId(value); scene.current?.pin(value || null); scene.current?.inspect(value || null); }}/>
 
       </div>, framePickerSlot)}
 
       <div className="album-floating-actions">
         {tokenView && <h3 className="token-view-heading">Token usage</h3>}
-        <button className="gallery-play album-token-toggle" aria-pressed={tokenView} onClick={() => tokenView ? scene.current?.reset(true) : scene.current?.top()}><i className={tokenView ? 'ph ph-arrow-u-up-left' : 'ph ph-chart-line'} aria-hidden="true" /><span className="album-token-label">{tokenView ? 'Exit' : 'See token usage'}</span></button>
+        <div className="album-token-stack">
+          <button className="gallery-play album-token-toggle" aria-pressed={tokenView} onClick={() => tokenView ? scene.current?.reset(true) : scene.current?.top()}><i className={tokenView ? 'ph ph-arrow-u-up-left' : 'ph ph-chart-line'} aria-hidden="true" /><span className="album-token-label">{tokenView ? 'Exit' : 'See token usage'}</span></button>
+        </div>
+        {chosen && annotationCounts.has(chosen.frame.id) && <button className="gallery-play" onClick={() => setAnnotationId(chosen.frame.id)}>Annotations</button>}
         {chosen && <button className="album-open-frame gallery-play" onClick={() => onOpen(chosen.frame.id)}>Open frame</button>}
       </div>
       {error && <div className="gallery-empty album-3d-error" role="status">{error}</div>}

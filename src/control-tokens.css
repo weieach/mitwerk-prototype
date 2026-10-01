@@ -1,6 +1,7 @@
 /* Shared chrome sizing, based on the date-range selector's 29px height.
    Diagram nodes, timeline geometry and resize handles retain spatial sizing. */
 :root {
+  --sidebar-item-icon-size: 14px;
   --surface-radius: 6px;
   --control-radius: 4px;
   --card-padding: 11px 13px 12px;
@@ -8,24 +9,104 @@
   --card-title-weight: 700;
   --body-font-size: 12px;
   --message-line-height: 1.45;
+  --message-output-gap: calc(var(--row-padding-inline) * 1.5);
+  --message-time-gap: calc(var(--row-size-unit) * 3);
+  --context-list-max-height: 180px;
+  --context-count-gap: calc(var(--row-size-unit) * 2);
+  --composer-attach-icon-size: 17px;
+  --composer-bottom-space: 17px;
+  --composer-chip-top-gap: 4px;
+  --message-byline-bottom-gap: 5px;
+  --message-byline-role-gap: 4px;
+  --gallery-stats-top-gap: calc(var(--row-size-unit) * 3);
+  --composer-inner-bottom-space: 4px;
+  --composer-top-space: 6px;
+  --composer-radius: 10px;
+  --composer-todo-pad-block: 4px;
+  --composer-todo-pad-inline: 8px;
+  --sidebar-bottom-padding: calc(var(--composer-bottom-space) + var(--composer-inner-bottom-space) + 1px);
+  --mit-role-dock-tint: 12%;
+  --mit-role-route-tint: 18%;
+  --mit-role-assemble-tint: 24%;
+  --mit-role-handoff-tint: 15%;
+  --mit-role-pulse-tint: 21%;
+  --mit-role-misregister-tint: 27%;
+  --mit-role-border-tint: 18%;
+  --context-action-icon-size: 12px;
+  --task-summary-opacity: .65;
+  --task-summary-padding-block: var(--row-size-unit);
+  --status-menu-gap: 4px;
+  --status-menu-width: 190px;
+  --task-summary-lines: 2;
+  --workspace-fullscreen-gap: calc(var(--row-size-unit) * 3);
+  --context-file-icon-size: 19px;
+  --context-file-padding-block: 5px;
+  --context-file-font-size: 11px;
+  --context-row-height: max(var(--base-control-height), calc(var(--context-file-icon-size) + 2 * var(--context-file-padding-block)));
+  --sidebar-complete-icon-size: 12px;
+  --context-icon-hover-opacity: .5;
+  --todo-picker-max-height: min(38vh, 320px);
+  --todo-picker-width: 340px;
+  --context-title-gap: calc(var(--row-size-unit) * 2);
+  --workspace-file-tab-width: 220px;
   --meta-font-size: 10px;
   --surface-hover-inset: 1px;
   --surface-transition: 180ms;
   --base-control-height: clamp(26px, calc(23px + .42vw), 32px);
   --control-height: var(--base-control-height);
   --control-font-size: clamp(10px, calc(8px + .21vw), 12px);
+  --action-button-font-increase: 1px;
+  --action-button-font-size: calc(var(--control-font-size) + var(--action-button-font-increase));
+  --primary-button-font-increase: var(--action-button-font-increase);
+  --primary-button-font-size: calc(var(--control-font-size) + var(--primary-button-font-increase));
   --control-icon-size: calc(var(--control-font-size) + 6px);
   --row-title-size: calc(var(--control-font-size) + 1px);
   --row-meta-size: calc(var(--control-font-size) - 1px);
   --row-size-unit: clamp(3px, .28vw, 5px);
+  --workspace-tab-pad-block: 0px;
+  --workspace-tab-icon-gap: calc(var(--row-size-unit) + 1px);
+  --workspace-tab-top-gap: 0px;
+  --workspace-tab-border-width: 1px;
+  --workspace-tab-close-gap: calc(var(--row-size-unit) * 3);
+  --workspace-tab-hover-opacity: .5;
+  --workspace-tab-active-border: var(--line-strong);
+  --workspace-panel-shadow: none;
+  --panel-control-icon-color: var(--muted);
+  --panel-title-switch-gap: var(--row-size-unit);
+  --workspace-tab-radius: 4px;
+  --workspace-tab-height: calc(var(--base-control-height) + var(--row-size-unit) + 1px);
   --header-row-height: calc(var(--base-control-height) + 2 * var(--row-size-unit) + 1px);
   --footer-row-height: calc(var(--base-control-height) + 4 * var(--row-size-unit) + 1px);
   --row-padding-inline: clamp(14px, 1.68vw, 28px);
   --zoom-padding-inline: calc(var(--row-padding-inline) * .8);
+  --zoom-icon-size: calc(var(--control-font-size) + 1px);
   --compact-title-weight: 500;
   --sidebar-project-title-size: 12px;
   --sidebar-chat-title-size: 11px;
   --sidebar-section-size: calc((var(--sidebar-project-title-size) + var(--sidebar-chat-title-size)) / 2);
+  --sidebar-list-gap: 2px;
+  --sidebar-nav-stack-gap: 2px;
+  --sidebar-nav-icon-size: 16px;
+  --sidebar-group-gap: 15px;
+  --sidebar-top-padding: calc(var(--header-row-height) / 2);
+  --sidebar-nav-top: calc(var(--sidebar-top-padding) + var(--header-row-height) + var(--sidebar-group-gap));
+  --sidebar-resize-hit-width: 8px;
+  --sidebar-status-size: 6px;
+  --todo-column-padding-inline: calc(var(--row-size-unit) * 3);
+  --todo-title-size: 0.675rem;
+  --todo-title-weight: 500;
+  --todo-navigation-width: 270px;
+  --todo-navigation-title-size: var(--card-title-size);
+  --todo-card-gap: 8px;
+  --todo-card-padding-block: 9px;
+  --todo-card-action-size: 22px;
+  --todo-column-radius: calc(var(--surface-radius) + 2px);
+  --todo-count-size: 18px;
+  --todo-count-font-size: calc(var(--meta-font-size) - 1px);
+  --todo-header-bottom-gap: calc(var(--row-padding-inline) + 12px);
+  --todo-project-size: calc(var(--meta-font-size) - 1px);
+  --todo-project-icon-size: 11px;
+  --todo-project-gap: calc(var(--row-size-unit) + 2px);
   --row-divider: 1px solid var(--line);
 }
 
@@ -88,7 +169,7 @@
 .workspace .panel-heading > select,
 .workspace .panel-header-actions > button:first-child { border-left: var(--row-divider); }
 .workspace .panel-header-actions .album-camera-actions { margin-left: 0; }
-.workspace .tracked-interface svg { left: var(--row-padding-inline); }
+.workspace .tracked-interface .ui-icon { left: var(--row-padding-inline); }
 .workspace .tracked-interface select { padding-left: calc(var(--row-padding-inline) + 20px); }
 .workspace .gallery-range > label { display: flex; align-items: stretch; }
 .workspace .gallery-range .gallery-small {
@@ -127,7 +208,7 @@
 /* Native selectors use their row's dividers rather than individual outlines. */
 :is(.workspace, .theater-fullscreen) select { border: 0; border-radius: 0; }
 .workspace .album-camera-actions .ph,
-.workspace .playback-controls .ph-fill { font-size: var(--control-icon-size); }
+.workspace .playback-controls :is(.ph, .ph-fill, .ui-icon) { width: var(--control-icon-size); height: var(--control-icon-size); font-size: var(--control-icon-size); }
 .album-token-toggle { display: inline-flex; align-items: center; justify-content: center; gap: var(--gallery-control-gap); }
 .album-token-toggle .ph { font-size: var(--control-icon-size); }
 
@@ -137,7 +218,9 @@
   display: inline-flex; align-items: center; gap: 6px;
   color: var(--ink); white-space: nowrap;
 }
-.workspace .header-branch-controls .branch-menu { top: calc(100% + 1px); bottom: auto; z-index: 10; }
+.workspace .panel-header .header-branch-controls .branch-menu { top: calc(100% + 1px); bottom: auto; z-index: 10; }
+.workspace .canvas-controls .header-branch-controls { position: relative; }
+.workspace .canvas-controls .header-branch-controls .branch-menu { top: auto; bottom: calc(100% + 1px); z-index: 10; }
 .workspace .tree-header { position: relative; z-index: 6; }
 .workspace .panel-header .ph { font-size: var(--control-icon-size); }
 .workspace .reset-view-button,
@@ -146,6 +229,11 @@
 .workspace .canvas-controls .tree-grid-toggle { margin-right: auto; border-right: var(--row-divider); }
 .workspace .tree-grid-toggle .ph { font-size: var(--control-icon-size); }
 .workspace .panel-header-actions button { padding-inline: var(--zoom-padding-inline); }
+.workspace :is(.gallery-footer, .canvas-controls) .panel-header-actions > .icon-button .ui-icon {
+  width: var(--zoom-icon-size);
+  height: var(--zoom-icon-size);
+  font-size: var(--zoom-icon-size);
+}
 .workspace .panel-header > .panel-heading,
 .workspace .panel-header > .panel-header-actions { flex-shrink: 0; }
 .workspace .adaptive-panel-title { position: relative; flex-shrink: 0; white-space: nowrap; }
@@ -159,19 +247,35 @@
   --header-padding-left: var(--row-padding-inline);
   --selector-padding-right: var(--row-padding-inline);
   --selector-content-gap: 8px;
+  --selector-caret-size: 12px;
 }
 .workspace :is(.panel-header, .gallery-footer, .canvas-controls) { padding-left: 0; }
-.workspace .gallery-footer { padding-right: 0; }
+.workspace :is(.gallery-footer, .canvas-controls) { padding-right: 0; }
 .workspace .panel-heading > :first-child { padding-left: var(--header-padding-left); }
-.workspace .canvas-controls > :first-child { padding-left: var(--header-padding-left); }
-.workspace .panel-header > .panel-heading { flex: 1 1 0; }
-.workspace .panel-header-actions { flex: 0 0 auto; }
+.workspace .canvas-controls > :first-child { padding-left: 0; }
+.workspace .panel-header > .panel-heading { flex: 0 1 auto; justify-content:space-between; }
+.workspace .iteration-gallery .panel-header > .panel-heading { flex: 1 1 auto; }
+.workspace .iteration-gallery .panel-header > .panel-heading > .adaptive-panel-title { flex: 1 1 auto; }
+.workspace .iteration-gallery .panel-header > .panel-header-actions { flex: 0 0 auto; }
+.workspace .tree-header > .panel-heading { flex: 1 1 auto; }
+.workspace .tree-header > .panel-header-actions { flex: 0 0 auto; }
+.workspace .panel-header-actions > .gallery-range { border-left: var(--row-divider); }
+.workspace .gallery-footer > .panel-header-actions,
+.workspace .canvas-controls > .panel-header-actions { margin-left: auto; flex: 0 0 auto; padding-left: 0; }
+.workspace .tree-header .endpoint-controls { flex: 1 1 0; min-width: 0; }
+.workspace .tree-header .zoom-controls {
+  padding: 0; gap: 0; height: 100%; align-items: stretch;
+  border: 0; border-left: var(--row-divider); border-radius: 0; background: transparent;
+}
+.workspace .canvas-controls { justify-content: flex-start; z-index: 6; }
 .workspace .tracked-interface,
-.workspace .header-branch-controls { flex: 1 1 0; max-width: none; }
+.workspace .header-branch-controls { flex: 0 0 auto; max-width: var(--gallery-file-max-width); }
+.workspace .header-branch-controls { max-width: none; }
+.workspace .panel-header .gallery-range > .row-select { flex: 1 1 0; }
 .workspace .header-branch-controls .branch-current { width: 100%; min-width: 0; justify-content: space-between; gap: var(--selector-content-gap); }
 .header-fill-label { display: inline-flex; align-items: center; gap: var(--selector-content-gap); min-width: 0; white-space: nowrap; }
 .workspace .gallery-range { flex: 1 1 0; margin-left: 0; }
-.workspace .gallery-frame-picker-slot { flex: 0 0 var(--gallery-frame-selector-share); margin-left: 0; }
+.workspace .gallery-frame-picker-slot { flex: 0 0 max(var(--gallery-frame-selector-share), 8.5rem); min-width: 8.5rem; margin-left: 0; }
 .workspace .gallery-range > .row-select { flex: 0 1 45%; }
 .workspace .gallery-range-stats {
   display: flex; align-items: center; flex: 1 1 0; min-width: 0;
@@ -194,7 +298,12 @@
 }
 .workspace .row-select:focus-within { outline: 2px solid var(--accent); outline-offset: -2px; }
 .workspace .row-select:has(select:disabled) { opacity: .35; }
-.workspace .row-select svg { position: static; flex-shrink: 0; pointer-events: none; }
+.workspace .row-select .ui-icon { position: static; flex-shrink: 0; pointer-events: none; }
+.workspace :is(.row-select, .header-branch-controls) .ph-caret-right {
+  width: var(--selector-caret-size);
+  height: var(--selector-caret-size);
+  font-size: var(--selector-caret-size);
+}
 .row-select-copy { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-select-detail { color: var(--muted); font: inherit; }
 .workspace .album-floating-actions {
@@ -205,12 +314,48 @@
   width: 100%; height: auto; min-height: calc(var(--base-control-height) + 2 * var(--gallery-floating-pad-block));
   padding: var(--gallery-floating-pad-block) var(--gallery-floating-pad-inline);
 }
-.token-view-heading { opacity: var(--gallery-floating-label-opacity); font-size: var(--control-font-size); font-weight: 500; text-align: center; }
+.mw-app h3.token-view-heading { opacity: var(--gallery-floating-label-opacity); font-size: var(--meta-font-size); font-weight: 500; text-align: center; }
 
 /* Let endpoint navigation consume the footer's remaining width. */
-.workspace .canvas-controls .tree-grid-toggle { margin-right: 0; }
+.workspace .canvas-controls .tree-grid-toggle { margin-right: 0; border-right: 0; }
+.workspace .endpoint-controls > button:not(.endpoint-jump) {
+  flex: 0 0 auto;
+  width: auto;
+  height: 100%;
+  aspect-ratio: 1;
+  padding-inline: 0;
+  box-sizing: border-box;
+}
+.workspace .endpoint-controls .ui-icon {
+  width: var(--zoom-icon-size);
+  height: var(--zoom-icon-size);
+  font-size: var(--zoom-icon-size);
+}
+.workspace .album-saved-frame .row-select.is-placeholder { color: var(--muted); }
+.workspace .tree-header .zoom-controls:not(.endpoint-controls) button {
+  color: var(--muted);
+}
 .workspace .canvas-controls .endpoint-controls { flex: 1 1 0; min-width: 0; }
 .workspace .endpoint-controls .endpoint-jump { flex: 1 1 0; min-width: 0; }
 
 .album-token-label { opacity: var(--gallery-floating-label-opacity); }
 .workspace .gallery-range > .gallery-range-stats { border-left: 0; }
+
+/* One icon box for Phosphor across the workbench and version panels. */
+.ui-icon { display: inline-flex; align-items: center; justify-content: center; width: var(--icon-size); height: var(--icon-size); font-size: var(--icon-size); line-height: 1; flex: none; }
+.workspace .playback-controls .ui-icon { font-size: var(--control-icon-size); }
+
+/* Shared visualizer/stream control colors and neighboring title switch. */
+.workspace .panel-header > .panel-heading:has(> .version-panel-switch) > .adaptive-panel-title { flex:0 1 auto; padding-right:var(--panel-title-switch-gap); }
+.workspace .panel-header .panel-heading > .version-panel-switch { border:0; padding-inline:var(--panel-title-switch-gap); }
+.workspace :is(.panel-header, .canvas-controls, .gallery-footer) :is(.ui-icon, .ph),
+.workspace .version-panel-switch { color:var(--panel-control-icon-color); }
+.workspace .row-select :is(.ph-caret-right, .ph-caret-down) { width:var(--selector-caret-size);height:var(--selector-caret-size);font-size:var(--selector-caret-size); }
+
+/* A native selector must occupy the same box as its visible row. */
+.workspace .tracked-interface { align-items:stretch; }
+.workspace .tracked-interface > .row-select { height:100%; }
+.workspace .row-select > select { min-height:0; max-height:100%; padding:0; }
+.panel-title-short-measure { position:absolute;visibility:hidden;pointer-events:none;width:max-content;font-weight:var(--compact-title-weight); }
+
+.workspace.workspace-compact .panel-header > .panel-heading { padding-right:var(--header-padding-left); }

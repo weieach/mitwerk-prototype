@@ -8,7 +8,7 @@ export function RowSelect({ label, value, options, onChange, leading, disabled =
   leading?: ReactNode; disabled?: boolean;
 }) {
   const selected = options.find(option => option.value === value);
-  return <span className="row-select" data-header-fill data-header-fill-content>
+  return <span className={`row-select${value === '' ? ' is-placeholder' : ''}`} data-header-fill data-header-fill-content>
     <span className="row-select-value header-fill-label" aria-hidden="true">
       {leading}<span className="row-select-copy">{selected?.label}{selected?.detail && <span className="row-select-detail"> · {selected.detail}</span>}</span>
     </span>

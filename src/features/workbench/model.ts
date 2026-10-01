@@ -1,9 +1,10 @@
+import type { FrameContext } from './frame-context.ts';
 import { userName } from './user-profile.ts';
 export type TaskStatus = 'To do' | 'In progress' | 'Ready for review' | 'Complete';
 export type View = 'Home' | 'Projects' | 'Todos' | 'Inbox' | 'Mits' | 'Library' | 'Settings' | 'dialog' | 'project' | 'Co-workers';
-export type Message = { id: string; role: 'user' | 'mit' | 'colleague'; name: string; text: string; assetId?: string; assetIds?: string[]; time: string };
-export type Task = { id: string; title: string; status: TaskStatus; creator: string; mit: string; mitId?: string; participantMitIds?:string[]; project: boolean; projectId?: string; kind: 'mit' | 'colleague'; unread: boolean; updated: string; created?: string; messages: Message[]; input: string[]; output: string[] };
-export type Asset = { id: string; title: string; kind: 'document' | 'image' | 'prototype'; detail: string; url?: string; content?: string; local?: boolean };
+export type Message = { annotationContext?: string; frames?:FrameContext[]; id: string; role: 'user' | 'mit' | 'colleague'; name: string; text: string; assetId?: string; assetIds?: string[]; time: string };
+export type Task = { origin?: 'chat' | 'todo'; todoPrompt?: string; annotationSourceId?: string; id: string; title: string; status: TaskStatus; creator: string; mit: string; mitId?: string; participantMitIds?:string[]; project: boolean; projectId?: string; kind: 'mit' | 'colleague'; unread: boolean; updated: string; created?: string; messages: Message[]; input: string[]; output: string[] };
+export type Asset = { id: string; title: string; kind: 'document' | 'image' | 'prototype'; detail: string; url?: string; content?: string; local?: boolean; previewPrompt?: number; previewUrl?: string };
 export const statuses: TaskStatus[] = ['To do', 'In progress', 'Ready for review', 'Complete'];
 export const team = ['Design Mit', 'Research Mit', 'Accessibility Mit'];
 export const assets: Asset[] = [
@@ -36,7 +37,7 @@ Git supplies parent commits, branch refs and merges. Keep source capture identif
 
 Selection → shared context
 Opening a commit card moves the theater playhead to its corresponding push frame. Time-range filtering changes the active frames in the visualizer without rewriting the history.` },
-  { id: 'prototype', title: 'Iteration Visualizer', kind: 'prototype', detail: 'Interactive prototype · Current output', url: '/?view=history' },
+  { id: 'prototype', title: 'Iteration Visualizer', kind: 'prototype', detail: 'Saved frame · Current output', previewPrompt: 240, url: '/?view=history' },
   { id: 'notes', title: 'Iteration review notes', kind: 'document', detail: 'Design Mit · Sample review notes', content: `Iteration Visualizer — review notes
 
 3D gallery
@@ -56,7 +57,7 @@ These are sample exchanges describing the MitWerk prototype, not transcripts of 
 ];
 export function seedTasks(): Task[] {
   return [
-    { id: 'panel', title: 'Implementing 3D version blocks', status: 'Ready for review', creator: userName, mit: 'Design Mit', project: true, kind: 'mit', unread: true, updated: '10:42', input: ['brief','ia'], output: ['prototype','notes'], messages: [
+    { id: 'panel', origin: 'chat', title: 'Implementing 3D version blocks', status: 'Ready for review', creator: userName, mit: 'Design Mit', project: true, kind: 'mit', unread: true, updated: '10:42', input: ['brief','ia'], output: ['prototype','notes'], messages: [
       { id:'m1', role:'user', name:userName, time:'10:24', text:'Build an iteration gallery from the screenshots saved during this project. Each version should become a translucent, wireframed 3D block, with its frames arranged along the time axis. Keep the screenshots’ proportions and leave some padding inside the blocks.' },
       { id:'m2', role:'mit', name:'Design Mit', time:'10:25', text:'I’ll parse the capture filenames into frames and versions, then render the blocks with WebGL. Versions will be evenly spaced, with a separate date ruler showing when the frames were saved. The block geometry and spacing will come from shared tokens.\n\nDragging will orbit the gallery. Hovering a frame will lift it slightly and show its summary without opening it.' },
       { id:'m3', role:'user', name:userName, time:'10:28', text:'Keep out-of-range versions visible but dimmed. Clicking a frame should rotate it into theater view, where I can play the sequence like a timelapse. Show the frame first, then the timeline, then the other controls.' },
@@ -93,7 +94,7 @@ export function saveMit(state:SavedState,mit:Mit):SavedState {
  const old=state.mits.find(m=>m.id===mit.id);
  return {...state,mits:old?state.mits.map(m=>m.id===mit.id?mit:m):[...state.mits,mit],tasks:state.tasks.map(t=>t.kind==='mit'&&(t.mitId===mit.id||(!t.mitId&&t.mit===old?.name))?{...t,mitId:mit.id,mit:mit.name}:t)};
 }
-export type SavedState = {tasks:Task[]; drafts:Record<string,string>; projectName:string; instructions:string; sampleContentVersion?:number; projects:Project[]; mits:Mit[]};
+export type SavedState = { frameAttachments?:Record<string,FrameContext[]>;taskDetailsLinks?:Record<string,{taskId?:string;annotationId?:string}>;todoAttachments?:Record<string,{text:string;annotationId?:string}>; tasks:Task[]; drafts:Record<string,string>; projectName:string; instructions:string; sampleContentVersion?:number; projects:Project[]; mits:Mit[]};
 const legacySampleTitles: Record<string, string> = {
  panel: 'Explore a clearer profile panel', research: 'Map everyday profile actions', access: 'Check keyboard navigation',
 };
@@ -135,11 +136,11 @@ export function migrateState(raw:Partial<SavedState>|null): SavedState {
  const instructions=typeof raw?.instructions==='string'?raw.instructions:defaultInstructions;
  const projects=Array.isArray(raw?.projects)&&raw.projects.length?raw.projects:[
   {id:'mobile',name:projectName,description:'Explore how conversations, saved frames and Git history make the design process visible.',members:[userName,'Nicole Wei'],instructions},
-  {id:'onboarding',name:'Workspace onboarding',description:'Help a new team find its first shared task. Sample project.',members:[userName,'Alex Chen','Maya Lin'],instructions:''},
+  {id:'onboarding',name:'Workspace onboarding',archived:true,description:'Help a new team find its first shared task. Sample project.',members:[userName,'Alex Chen','Maya Lin'],instructions:''},
  ];
- const tasks=(Array.isArray(raw?.tasks)?raw.tasks:seedTasks()).filter(t=>!(t.kind==='mit'&&t.title==='New chat'&&!t.project&&!t.projectId&&!t.messages.length&&!t.input.length&&!t.output.length&&!raw?.drafts?.[t.id]?.trim()));
+ const tasks=(Array.isArray(raw?.tasks)?raw.tasks:seedTasks()).filter(t=>!(t.kind==='mit'&&t.title==='New chat'&&t.origin!=='todo'&&!t.annotationSourceId&&((!t.project&&!t.projectId)||t.origin==='chat')&&!t.messages.length&&!t.input.length&&!t.output.length&&!raw?.drafts?.[t.id]?.trim()&&!raw?.todoAttachments?.[t.id]));
  const mits=Array.isArray(raw?.mits)&&raw.mits.length?raw.mits:seedMits();
- return {sampleContentVersion:1,projects:projects.map(p=>({...p,mitIds:[...new Set([...(p.mitIds||[]),...tasks.filter(t=>t.projectId===p.id||(t.project&&!t.projectId&&p.id==='mobile')).map(t=>t.mitId||mits.find(m=>m.name===t.mit)?.id).filter((id):id is string=>!!id)])]})),mits,projectName,instructions,tasks:tasks.map(legacy=>{const {parentId: _parentId,...t}=legacy as Task & {parentId?:string};return {...t,mitId:t.kind==='mit'?(t.mitId||mits.find(m=>m.name===t.mit)?.id):undefined,projectId:t.projectId||(t.project?'mobile':undefined)};}),drafts:raw?.drafts||{}};
+ return {sampleContentVersion:1,projects:projects.map(p=>({...p,archived:p.archived ?? p.id==='onboarding',mitIds:[...new Set([...(p.mitIds||[]),...tasks.filter(t=>t.projectId===p.id||(t.project&&!t.projectId&&p.id==='mobile')).map(t=>t.mitId||mits.find(m=>m.name===t.mit)?.id).filter((id):id is string=>!!id)])]})),mits,projectName,instructions,tasks:tasks.map(legacy=>{const {parentId: _parentId,...t}=legacy as Task & {parentId?:string};return {...t,origin:t.origin ?? (t.annotationSourceId ? 'todo' : seedTasks().find(sample=>sample.id===t.id)?.origin ?? 'todo'),mitId:t.kind==='mit'?(t.mitId||mits.find(m=>m.name===t.mit)?.id):undefined,projectId:t.projectId||(t.project?'mobile':undefined)};}),drafts:raw?.drafts||{},frameAttachments:raw?.frameAttachments||{},todoAttachments:raw?.todoAttachments||{},taskDetailsLinks:raw?.taskDetailsLinks||{}};
 }
 export function loadState(): SavedState {
  try {
@@ -173,3 +174,7 @@ export function workbenchEntry(state: SavedState) {
     ? assets.find(asset => asset.id === defaultWorkbenchEntry.assetId) : undefined;
   return { task, asset };
 }
+
+/** Task state is independent of who participates in a conversation. */
+export function isTodoChat(task: Task) { return task.kind === 'mit' && task.origin !== 'chat'; }
+export function todoContext(task: Task) { return task.todoPrompt || task.messages.find(message => message.role === 'user')?.text || task.title; }

@@ -363,6 +363,26 @@ function writePromptCounter(outFile) {
   }
 }
 
+function hookCommand(payload) {
+  const value = payload.command ?? payload.shell_command ?? payload.cmd ?? '';
+  return typeof value === 'string' ? value : '';
+}
+
+function promptStampPath() {
+  return join(screenshotsDir, '.last-prompt-label');
+}
+
+function promptAlreadyCaptured(label) {
+  if (!existsSync(promptStampPath())) return false;
+  const [stamp, previous] = readFileSync(promptStampPath(), 'utf8').split('\n');
+  return previous === sanitizeMessage(label, 'prompt') && Date.now() - Number(stamp) < 120000;
+}
+
+function stampPrompt(label) {
+  mkdirSync(screenshotsDir, { recursive: true });
+  writeFileSync(promptStampPath(), `${Date.now()}\n${sanitizeMessage(label, 'prompt')}\n`);
+}
+
 function labelFromHook(payload) {
   const fromPrompt = textFromUnknown(payload.prompt);
   if (fromPrompt) {
@@ -456,28 +476,29 @@ function wantsHomeCapture(prompt = '') {
 }
 
 function chatCaptureTitle(prompt = '') {
-  const quoted = /\bc chat\s+"([^"]+)"/i.exec(prompt);
+  const quoted = /\bc(?:\s*\/)? chat\s+"([^"]+)"/i.exec(prompt);
   if (quoted) return quoted[1].trim();
-  const plain = /\bc chat\s+([^\n]+)/i.exec(prompt);
+  const plain = /\bc(?:\s*\/)? chat\s+([^\n]+)/i.exec(prompt);
   if (!plain) return '';
   return plain[1].replace(/\s+w\/\s+[\s\S]*$/i, '').replace(/\s+/g, ' ').trim();
 }
 
 function wantsTodosCapture(prompt = '') {
-  return /\bc to-?dos\b/i.test(prompt);
+  return /\bc to-?dos?\b/i.test(prompt);
 }
 
 function wantsSideBySideCapture(prompt = '') {
-  return /\bc chat and version side by side\b/i.test(prompt);
+  return /\bc(?:\s*\/)? chat (?:and|&) version side[ -]by[ -]side\b/i.test(prompt);
 }
 
 function wantsChatCapture(prompt = '') {
-  return /\bc chat\b/i.test(prompt) && !wantsSideBySideCapture(prompt);
+  return /\bc(?:\s*\/)? chat\b/i.test(prompt) && !wantsSideBySideCapture(prompt);
 }
 
 function wantsTheaterCapture(prompt = '') {
   if (wantsHomeCapture(prompt)) return false;
   if (argValue('gallery-view') === 'theater') return true;
+  if (/\bc gallery\b/i.test(prompt) || ['reset', 'center', 'top'].includes(argValue('gallery-view'))) return false;
   if (/\bisometric\b/i.test(prompt) && !/\btheater\b/i.test(prompt)) return false;
   const theaterSubject = prompt.split(/tree-panel|version-card/i)[0] ?? '';
   if (/\bat mobile\b|mobile breakpoint/i.test(prompt)) return true;
@@ -490,7 +511,16 @@ function wantsTransitionCapture(prompt = '') {
   return ['transition', 'timeline-transition'].includes(argValue('gallery-view')) || /\bmidway\b[\s\S]{0,80}\btransition\b/i.test(prompt) || /\btransition\b[\s\S]{0,80}\bmidway\b/i.test(prompt) || /\bmid-transition\b/i.test(prompt);
 }
 
+function wantsTokenCapture(prompt = '') {
+  return argValue('gallery-view') === 'tokens' || /\bc token\b/i.test(prompt);
+}
+
+function wantsTipHover(prompt = '') {
+  return /\btip hovered\b/i.test(prompt);
+}
+
 function wantsGalleryHover(prompt = '') {
+  if (wantsTipHover(prompt) || wantsTokenCapture(prompt)) return false;
   return argValue('gallery-view') === 'top' || hasFlag('gallery-hover') || (/\bhover(?:ing|ed)?\b/i.test(prompt) && !wantsResetCapture(prompt));
 }
 
@@ -502,6 +532,7 @@ function screenshotUrl(prompt = '') {
   target.searchParams.set('treeMode', argValue('tree-mode', 'history'));
   if (wantsTodosCapture(prompt)) {
     target.searchParams.set('page', 'todos');
+    if (/todo navigation dialog/i.test(prompt)) target.searchParams.set('todoDialog', 'navigation');
     return target.href;
   }
   if (wantsSideBySideCapture(prompt)) {
@@ -516,8 +547,8 @@ function screenshotUrl(prompt = '') {
     if (/page scrolled to top/i.test(prompt)) target.searchParams.set('scroll', 'top');
     return target.href;
   }
-  if (wantsHomeCapture(prompt)) { target.searchParams.delete('galleryView'); return target.href; }
-  if (argValue('gallery-view') === 'tokens') { target.searchParams.set('galleryView', 'tokens'); return target.href; }
+  if (wantsHomeCapture(prompt)) { target.searchParams.delete('galleryView'); target.searchParams.set('layout', 'side-by-side'); return target.href; }
+  if (wantsTokenCapture(prompt)) { target.searchParams.set('galleryView', 'tokens'); return target.href; }
   const hover = wantsGalleryHover(prompt);
   if (wantsTransitionCapture(prompt)) { target.searchParams.set('galleryView', argValue('gallery-view') === 'timeline-transition' ? 'timeline-transition' : 'transition'); return target.href; }
   if (hover) target.searchParams.set('galleryHover', '1');
@@ -552,6 +583,9 @@ function screenshotUrl(prompt = '') {
   if (/push frame selected|push node/i.test(prompt)) target.searchParams.set('frameKind', 'push');
   const namedPush = /push node(?:\s+\w+){0,3}\s+v?(\d+)/i.exec(prompt);
   if (namedPush) target.searchParams.set('pushVersion', namedPush[1]);
+  const namedFrame = /\bframe\s+#?(\d+)/i.exec(prompt);
+  if (namedFrame) target.searchParams.set('frameNumber', namedFrame[1]);
+  if (/annotation overlay|\bc theater overlay\b/i.test(prompt)) target.searchParams.set('annotationOverlay', '1');
   if (/playhead at last frame/i.test(prompt)) target.searchParams.set('playhead', 'end');
   if (/show the toast/i.test(prompt)) target.searchParams.set('prototypeToast', '1');
   if (/overlay open/i.test(prompt)) target.searchParams.set('overlay', '1');
@@ -620,26 +654,28 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
   while (Date.now() - started < timeoutMs) {
     const result = await cdp('Runtime.evaluate', {
       expression: wantsTodosCapture(prompt)
-        ? 'document.documentElement.dataset.screenshotReady === "1" && !!document.querySelector(".todos-page .kanban") && !document.querySelector(".mw-reader")'
+        ? `document.documentElement.dataset.screenshotReady === "1" && !!document.querySelector(".todos-page .kanban") && !document.querySelector(".mw-reader")${/todo navigation dialog/i.test(prompt) ? ' && !!document.querySelector(".todo-navigation-dialog[open]")' : ''}`
         : wantsSideBySideCapture(prompt)
         ? `document.documentElement.dataset.screenshotReady === "1" && !!document.querySelector(".mw-dialog") && !!document.querySelector(".mw-reader .workspace") && !document.querySelector(".reader-expanded")${/\btoast\b/i.test(prompt) ? ' && !!document.querySelector(".mw-toast")' : ''}`
         : wantsChatCapture(prompt)
         ? `document.documentElement.dataset.screenshotReady === "1" && !!document.querySelector(".mw-dialog") && !document.querySelector(".mw-reader")${/page scrolled to top/i.test(prompt) ? ' && document.querySelector(".conversation-scroll")?.scrollTop === 0' : ''}`
         : wantsHomeCapture(prompt)
         ? 'document.documentElement.dataset.screenshotReady === "1"'
-        : argValue('gallery-view') === 'tokens'
+        : wantsTokenCapture(prompt)
         ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.tokenUsageReady === "true"'
         : wantsTransitionCapture(prompt)
         ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.transitionReady === "true"'
         : wantsTheaterCapture(prompt)
-        ? `document.documentElement.dataset.screenshotReady === "1" && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete${/overlay open/i.test(prompt) ? ' && !!document.querySelector(".theater-fullscreen") && !document.querySelector(".theater-fullscreen .is-exit")' : ''}${/mobile breakpoint|\bat mobile\b/i.test(prompt) ? ' && document.querySelector("[aria-label=\\"Preview viewport\\"]")?.value === "phone" && !!document.querySelector(".theater-frame-bed")' : ''}${/prototype (?:is )?entered|prototype mode/i.test(prompt) ? ' && !!document.querySelector("[aria-label=\\"Preview viewport\\"]")' : ''}${/playhead at last frame/i.test(prompt) ? ' && document.querySelector(".theater-view")?.dataset.rangeEdge === "end" && (() => { const head = document.querySelector(".gallery-timeline-playhead"); const scroller = document.querySelector(".gallery-timeline-scroll"); if (!head || !scroller) return false; const h = head.getBoundingClientRect(); const s = scroller.getBoundingClientRect(); return h.left >= s.left - 4 && h.right <= s.right + 4; })()' : ''}`
+        ? `document.documentElement.dataset.screenshotReady === "1" && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete && (() => { const tag = document.querySelector(".annotation-tag"); return !tag || (tag.classList.contains("is-ready") && !tag.getAnimations().some(animation => animation.playState === "running")); })()${/annotation overlay|\bc theater overlay\b/i.test(prompt) ? ' && !!document.querySelector(".annotation-overlay[open][data-entered=true]")' : ''}${/overlay open/i.test(prompt) ? ' && !!document.querySelector(".theater-fullscreen") && !document.querySelector(".theater-fullscreen .is-exit")' : ''}${/mobile breakpoint|\bat mobile\b/i.test(prompt) ? ' && document.querySelector("[aria-label=\\"Preview viewport\\"]")?.value === "phone" && !!document.querySelector(".theater-frame-bed")' : ''}${/prototype (?:is )?entered|prototype mode/i.test(prompt) ? ' && !!document.querySelector("[aria-label=\\"Preview viewport\\"]")' : ''}${/playhead at last frame/i.test(prompt) ? ' && document.querySelector(".theater-view")?.dataset.rangeEdge === "end" && (() => { const head = document.querySelector(".gallery-timeline-playhead"); const scroller = document.querySelector(".gallery-timeline-scroll"); if (!head || !scroller) return false; const h = head.getBoundingClientRect(); const s = scroller.getBoundingClientRect(); return h.left >= s.left - 4 && h.right <= s.right + 4; })()' : ''}`
+        : /annotation overlay|\bc theater overlay\b/i.test(prompt)
+        ? 'document.documentElement.dataset.screenshotReady === "1" && !!document.querySelector(".annotation-overlay[open][data-entered=true]") && document.querySelector(".annotation-preview")?.complete'
         : wantsGalleryHover(prompt)
         ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.inspectionReady === "true"'
         : 'document.documentElement.dataset.screenshotReady === "1"',
       returnByValue: true,
     });
     if (result.result?.value === true) {
-      if (wantsChatCapture(prompt)||wantsTodosCapture(prompt)) return;
+      if (wantsChatCapture(prompt)||wantsTodosCapture(prompt)||wantsHomeCapture(prompt)) return;
       const shell = await cdp('Runtime.evaluate', { expression: '!!document.querySelector(".mw-reader .workspace") && !!document.querySelector("#main-navigation")', returnByValue: true });
       if (shell.result?.value === true) return;
     }
@@ -697,6 +733,24 @@ async function capture(chrome, outFile, prompt = '') {
     await waitForSocket(ws);
     const cdp = createCdp(ws);
     await waitForScreenshotReady(cdp, 10000, prompt);
+    await cdp('Runtime.evaluate', { expression: 'document.fonts.ready.then(() => true)', awaitPromise: true, returnByValue: true });
+    if (/edit annotation overlay/i.test(prompt)) {
+      const note = await cdp('Runtime.evaluate', { expression: `(() => {
+        const item = document.querySelector('.annotation-list button');
+        if (!item) return null;
+        item.scrollIntoView({ block: 'nearest' });
+        const rect = item.getBoundingClientRect();
+        return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+      })()`, returnByValue: true });
+      if (!note.result?.value) throw new Error('The requested edit capture needs a frame with an existing annotation');
+      await delay(500);
+      await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...note.result.value });
+      await cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...note.result.value });
+      await delay(550);
+      const edited = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.annotation-overlay[aria-label="Edit annotation"] textarea')?.value`, returnByValue: true });
+      if (!edited.result?.value) throw new Error('Annotation edit capture did not open a populated editor');
+    }
+
     if (['frontal', 'top', 'overhead'].includes(argValue('gallery-view'))) {
       await cdp('Runtime.evaluate', { expression: `document.querySelector('.album-webgl canvas, canvas[aria-label^="3D iteration gallery"]')?.focus()` });
       if (argValue('gallery-view') === 'overhead') {
@@ -741,6 +795,26 @@ async function capture(chrome, outFile, prompt = '') {
       if (!point) throw new Error(`Could not find capture hover control: ${hoverControl}`);
       await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
       await delay(150);
+    }
+    if (wantsTipHover(prompt)) {
+      const hovered = await cdp('Runtime.evaluate', { expression: `(() => {
+        const control = document.querySelector('[aria-label="Gallery navigation help"]');
+        if (!control) return null;
+        const rect = control.getBoundingClientRect();
+        return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+      })()`, returnByValue: true });
+      const point = hovered.result?.value;
+      if (!point) throw new Error('Could not find the gallery info tip');
+      await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 0, y: 0 });
+      await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
+      const opened = Date.now();
+      let tipOpen = false;
+      while (Date.now() - opened < 2000) {
+        const result = await cdp('Runtime.evaluate', { expression: '!!document.querySelector(".info-tooltip-content")', returnByValue: true });
+        if (result.result?.value === true) { tipOpen = true; break; }
+        await delay(50);
+      }
+      if (!tipOpen) throw new Error('Gallery info tip did not open');
     }
     const shot = await cdp('Page.captureScreenshot', { format: 'png', fromSurface: true });
     writeFileSync(outFile, Buffer.from(shot.data, 'base64'));
@@ -1049,11 +1123,11 @@ async function reconcilePush({ commitAndPush }) {
     captureLog(`reconcile skip: screenshot commit ${sha}`);
     return '';
   }
-  const pending = newestUntrackedPushScreenshot(subject);
-  if (!pending && readPushMarker() === sha) {
+  if (readPushMarker() === sha) {
     captureLog(`reconcile skip: already captured ${sha}`);
     return '';
   }
+  const pending = newestUntrackedPushScreenshot(subject);
   if (!acquireCaptureLock()) {
     captureLog('reconcile skip: capture lock held');
     return '';
@@ -1167,6 +1241,11 @@ async function main() {
   }
 
   if (hasFlag('reconcile-push') || event === 'afterShellExecution') {
+    const command = hookCommand(payload);
+    if (event === 'afterShellExecution' && command && !/\bgit\s+push\b/.test(command)) {
+      if (hookMode) emitHook({});
+      return;
+    }
     try {
       if (process.env.MITWERK_SCREENSHOT_SKIP === '1') {
         if (hookMode) emitHook({});
@@ -1206,6 +1285,7 @@ async function main() {
     return;
   }
 
+  let promptLock = false;
   try {
     if (hookMode && tag === 'prompt' && (shouldSkipAskScreenshot(payload) || excludesCounter(label))) {
       clearSkip(conversationId(payload));
@@ -1219,8 +1299,24 @@ async function main() {
       }
       return;
     }
+    if (tag === 'prompt' && promptAlreadyCaptured(label)) {
+      captureLog('prompt skip: already captured this prompt');
+      if (hookMode) emitHook({});
+      return;
+    }
+    if (tag === 'prompt') {
+      if (!acquireCaptureLock()) {
+        captureLog('prompt skip: capture already running');
+        if (hookMode) emitHook({});
+        return;
+      }
+      promptLock = true;
+    }
     const outFile = await takeScreenshot({ tag, label, sha, base });
-    if (tag === 'prompt') writePromptCounter(outFile);
+    if (tag === 'prompt') {
+      stampPrompt(label);
+      writePromptCounter(outFile);
+    }
     if (hookMode) {
       console.error(`Saved ${outFile}`);
       emitHook({});
@@ -1238,6 +1334,8 @@ async function main() {
       return;
     }
     process.exit(1);
+  } finally {
+    if (promptLock) releaseCaptureLock();
   }
 }
 

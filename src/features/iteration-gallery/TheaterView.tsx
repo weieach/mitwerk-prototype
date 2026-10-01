@@ -1,3 +1,6 @@
+import { attachFrameEvent } from '../workbench/frame-context';
+import { annotationBookmarkColor } from '../annotations/appearance';
+import { FrameAnnotations } from '../annotations/FrameAnnotations';
 import "@phosphor-icons/web/fill/style.css";
 import { ReferenceFiles } from '../../components/ReferenceFiles';
 import { frameReferences, type VisualReference } from './references';
@@ -12,7 +15,7 @@ import { formatTime, playbackStep, ranges, inRange } from './model';
 import { galleryTokens as t } from './tokens';
 import { aspectRatioLabel, fitPrototypeFrame, presentedFrame, theaterFrameSize, wheelFrameDelta } from './theater-layout';
 import { FrameLoader } from './frame-loader';
-import { adjacentPushIndex } from './timeline';
+import { adjacentPromptIndex } from './timeline';
 import { PlaybackTimeline } from './PlaybackTimeline';
 import { containedFrameTarget, reservedControlContains } from './theater-transition';
 import type { TheaterOrbit, TheaterTarget } from './theater-transition';
@@ -47,6 +50,20 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
   const bodyRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const actions = actionsRef.current;
+    const buttons = actions?.querySelector<HTMLElement>('.theater-action-buttons');
+    if (!actions || !buttons) return;
+    const measure = () => {
+      const gap = parseFloat(getComputedStyle(buttons).columnGap) || 0;
+      const children = [...buttons.children] as HTMLElement[];
+      const required = children.reduce((sum, child) => sum + child.getBoundingClientRect().width, 0) + Math.max(0, children.length - 1) * gap;
+      buttons.classList.toggle('is-wrapped', required > buttons.clientWidth + 1);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(buttons); [...buttons.children].forEach(child => observer.observe(child)); measure();
+    return () => observer.disconnect();
+  });
   const metaRef = useRef<HTMLDivElement>(null);
   const wheel = useRef(0);
   const stepFrame = useRef<(move: number) => void>(() => {});
@@ -69,8 +86,9 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
   }, [navigationKey]);
   const fullscreen = active && frame?.kind === 'push' && fullscreenId === frame.id;
   const showingPreview = !!previewFrame && !!previewImage;
-  const previousPush = adjacentPushIndex(catalog, Math.max(0, catalog.findIndex(item => item.id === selectedId)), -1);
-  const nextPush = adjacentPushIndex(catalog, Math.max(0, catalog.findIndex(item => item.id === selectedId)), 1);
+  const navigationFrames = catalog.filter(item => inRange(item, range, now));
+  const previousPrompt = adjacentPromptIndex(navigationFrames, Math.max(0, navigationFrames.findIndex(item => item.id === selectedId)), -1);
+  const nextPrompt = adjacentPromptIndex(navigationFrames, Math.max(0, navigationFrames.findIndex(item => item.id === selectedId)), 1);
 
   useEffect(() => {
     if (!previewFrame) return;
@@ -203,9 +221,9 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
     const next = Math.max(0, Math.min(frames.length - 1, index + move));
     if (next !== index) selectFrame(next);
   };
-  function skipPush(next: number | null) {
+  function skipPrompt(next: number | null) {
     if (next === null) return;
-    const push = catalog[next];
+    const push = navigationFrames[next];
     if (!push) return;
     setDirection(1); setPlaying(false); setPreviewId(null); setPreviewImage(null); onSelect(push.id);
   }
@@ -338,14 +356,16 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
     <div className="theater-body" ref={bodyRef} style={{ '--theater-metadata-height': `${t.theater.metadataHeight}px`, '--theater-metadata-max': `${t.theater.metadataHeightMaxVh}vh`, '--theater-metadata-gap': `${t.theater.metadataGap}px` } as CSSProperties}>
       <div className="theater-stage" style={{ width: prototypeMode ? '100%' : frameSize.width, '--theater-action-gap': `${t.theater.actionGap}px`, '--theater-frame-bed': t.theater.frameBed } as CSSProperties}>
       <div className="theater-frame-actions" data-orbit-blocked ref={actionsRef}>
-        {exitPrototype}
+        {frame.kind !== 'push' && <FrameAnnotations color={annotationBookmarkColor(frame.branch, branches)} frame={frame} active={active && ready && !playing} onOpen={() => { setPlaying(false); setDisplayed(frame); setPreviewId(null); setPreviewImage(null); onSelect(frame.id); }}/>}
+        <div className="theater-action-buttons">{exitPrototype}
         <button className="theater-text-action" onClick={goToCommit}><Icon name="commit"/>Go to commit</button>
-        <button className="theater-text-action" onClick={event => event.stopPropagation()}><Icon name="plus"/>Add frame to chat</button>
+        <button className="theater-text-action" onClick={event => { event.stopPropagation(); window.dispatchEvent(new CustomEvent(attachFrameEvent, {detail:{id:frame.id, url:`${import.meta.env.BASE_URL}${frame.url}`, label:`${formatVersion(frame.version)} · ${frame.summary}`, filename:frame.filename}})); }}><Icon name="plus"/>Add frame to chat</button>
         {frame.kind === 'push' && (prototype.open
           ? <button className="theater-text-action" onClick={() => { setPlaying(false); setFullscreenId(frame.id); }}><Icon name="expand"/>Full screen</button>
           : enterReady && <button ref={enterShape} className={`theater-text-action is-enter${enterSettled ? ' is-shown' : ''}`} disabled={!active || prototype.loading} onClick={enterPrototype} style={{ transformOrigin: 'right center' }}>
             <span ref={enterLabel} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="arrow"/>Enter prototype</span>
           </button>)}
+        </div>
       </div>
         {prototypeMode ? <div className="theater-frame-bed" style={{ '--theater-bed-height': `${staticFrame.height}px` } as CSSProperties}><div className={`theater-screen${displayed?.kind === 'push' ? ' is-push' : ''}`} ref={screenRef} data-orbit-blocked style={{ height: frameSize.height, width: frameSize.width }}>
           {!fullscreen && prototype.url && <iframe className="theater-prototype" src={prototype.url} title={`${formatVersion(frame.version)} interactive archived prototype`} sandbox="allow-scripts" referrerPolicy="no-referrer"/>}
@@ -382,9 +402,9 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
       <div className="gallery-toolbar playback-controls" style={{ '--playback-enabled': t.theater.playbackEnabled, '--playback-disabled': t.theater.playbackDisabled } as CSSProperties}>
         <PlaybackTip label={`Jump to timeline start (${rangeLabel})`} edge="start"><button className="icon-button" aria-label="Jump to timeline start" disabled={!rangeFrames.length || atRangeStart} onClick={() => scrollTimeline('start')}><i className="ph-fill ph-caret-line-left" aria-hidden="true"/></button></PlaybackTip>
         <div className="playback-transport">
-        <PlaybackTip label="Jump to last push"><button className="icon-button" onClick={() => skipPush(previousPush)} disabled={previousPush === null} aria-label="Previous push"><span className="skip-marks is-previous"><Icon name="play" size={16}/><Icon name="play" size={16}/></span></button></PlaybackTip>
-        <PlaybackTip label={playing ? 'Pause' : 'Play'}><button className="icon-button playback-toggle" onClick={() => { prototype.exit(); if (!playing && mode === 'once' && index === frames.length - 1) onSelect(frames[0].id); setPlaying(!playing); }} disabled={frames.length < 2} aria-label={playing ? 'Pause playback' : 'Play frames'}><Icon name={playing ? 'pause' : 'play'} size={26}/></button></PlaybackTip>
-        <PlaybackTip label="Jump to next push"><button className="icon-button" onClick={() => skipPush(nextPush)} disabled={nextPush === null} aria-label="Next push"><span className="skip-marks"><Icon name="play" size={16}/><Icon name="play" size={16}/></span></button></PlaybackTip>
+        <PlaybackTip label="Jump to previous prompt"><button className="icon-button" onClick={() => skipPrompt(previousPrompt)} disabled={previousPrompt === null} aria-label="Previous prompt"><Icon name="previous"/></button></PlaybackTip>
+        <PlaybackTip label={playing ? 'Pause' : 'Play'}><button className="icon-button playback-toggle" onClick={() => { prototype.exit(); if (!playing && mode === 'once' && index === frames.length - 1) onSelect(frames[0].id); setPlaying(!playing); }} disabled={frames.length < 2} aria-label={playing ? 'Pause playback' : 'Play frames'}><Icon name={playing ? 'pause' : 'play'}/></button></PlaybackTip>
+        <PlaybackTip label="Jump to next prompt"><button className="icon-button" onClick={() => skipPrompt(nextPrompt)} disabled={nextPrompt === null} aria-label="Next prompt"><Icon name="next"/></button></PlaybackTip>
         </div>
         <div className="playback-end-controls">
           <PlaybackTip label={`Jump to timeline end (${rangeLabel})`} edge="end"><button className="icon-button" aria-label="Jump to timeline end" disabled={!rangeFrames.length || atRangeEnd} onClick={() => scrollTimeline('end')}><i className="ph-fill ph-caret-line-right" aria-hidden="true"/></button></PlaybackTip>

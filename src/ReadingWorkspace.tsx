@@ -11,6 +11,8 @@ import type { GitHistory } from './features/version-tree/git-history';
 import type { Capture } from './features/iteration-gallery/model';
 import { galleryTokens } from './features/iteration-gallery/tokens';
 
+import { versionPanelLayout } from './components/VersionPanelSwitch';
+
 const MIN_PANEL = 280;
 const KEY_STEP = 24;
 
@@ -65,6 +67,23 @@ export default function ReadingWorkspace({ initialMode }: {initialMode?: 'histor
   const divider = useRef<HTMLDivElement>(null);
   const [leftWidth, setLeftWidth] = useState<number | null>(null);
   const [workspaceWidth, setWorkspaceWidth] = useState(0);
+  const [activePanel, setActivePanel] = useState<'visualizer' | 'stream'>('visualizer');
+  const [headerMinimums, setHeaderMinimums] = useState([versionPanelLayout.compactWidth / 2, versionPanelLayout.compactWidth / 2]);
+  const proposedLeft = leftWidth ?? workspaceWidth / 2;
+  const compact = workspaceWidth > 0 && (proposedLeft < headerMinimums[0] || workspaceWidth - proposedLeft < headerMinimums[1]);
+  useEffect(() => {
+    const element = workspace.current;
+    if (!element) return;
+    const update = () => setHeaderMinimums(previous => {
+      const headers = element.querySelectorAll<HTMLElement>('.workspace-split > section > .panel-header');
+      const next = previous.map((width, index) => Number(headers[index]?.dataset.minHeaderWidth) || width);
+      return next.every((width, index) => width === previous[index]) ? previous : next;
+    });
+    const observer = new MutationObserver(update);
+    observer.observe(element, {subtree:true, attributes:true, attributeFilter:['data-min-header-width']});
+    update();
+    return () => observer.disconnect();
+  }, []);
   const [resizing, setResizing] = useState(false);
   const leftWidthRef = useRef(leftWidth);
   const drag = useRef<{ pointerId: number; startX: number; startWidth: number } | null>(null);
@@ -156,14 +175,15 @@ export default function ReadingWorkspace({ initialMode }: {initialMode?: 'histor
 
   return <main
     ref={workspace}
-    className={`workspace${resizing ? ' is-resizing' : ''}`}
-    style={{ '--split': leftWidth === null ? '50%' : `${leftWidth}px` } as CSSProperties}
+    className={`workspace${resizing ? ' is-resizing' : ''}${compact ? ' workspace-compact' : ''}`}
+    data-active-panel={activePanel}
+    style={{ '--panel-switch-ms': `${versionPanelLayout.transitionMs}ms`, '--split': leftWidth === null ? '50%' : `${leftWidth}px` } as CSSProperties}
   >
     <div className="workspace-split" style={{ gridTemplateColumns: leftWidth === null ? 'minmax(0, 1fr) minmax(0, 1fr)' : `${leftWidth}px minmax(0, 1fr)` }}>
-      <IterationGallery pushRequest={pushRequest}/>
-      <VersionTreePanel key={`${mode}-${mode === 'history' && historyReady}`} graph={panels[mode]}
+      <IterationGallery pushRequest={pushRequest} onSwitchPanel={compact ? () => setActivePanel('stream') : undefined}/>
+      <VersionTreePanel onSwitchPanel={compact ? () => setActivePanel('visualizer') : undefined} key={`${mode}-${mode === 'history' && historyReady}`} graph={panels[mode]}
         status={mode === 'history' ? historyError || (!historyReady ? 'Reading capture history…' : !panels.history.nodes.length ? 'No saved captures found.' : '') : ''}
-        onOpenPush={version => setPushRequest({ version })} mode={mode} modeSwitchVisible={modeSwitchVisible} onModeChange={mode => dispatchPanel({ type: 'switch', mode })}
+        onOpenPush={version => { setPushRequest({ version }); setActivePanel('visualizer'); }} mode={mode} modeSwitchVisible={modeSwitchVisible} onModeChange={mode => dispatchPanel({ type: 'switch', mode })}
         dispatch={action => dispatchPanel({ type: 'graph', mode, action })} />
     </div>
     <div

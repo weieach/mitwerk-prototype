@@ -193,7 +193,7 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Keep previous/play/next centered relative to the theater panel; align speed and loop controls to the right independently. Use the shared triangle play icon and pause icon, retaining accessible labels.
 - Represent progress with a fill clipped separately inside each version rectangle. Draw a narrow vertical playhead, vertically centered and extending slightly above and below that rectangle. Do not draw an additional inset track or rounded thumb. Size the ruler, minor marks and playhead through shared timeline tokens.
-- Allocate equal timeline width to each version in the filtered sequence. At most `timeline.visibleBlocks` (20) version blocks are visible at once; further blocks extend the track and scroll horizontally. The track fits its height, hides the scrollbar, and does not draw a focus outline when clicked. Subdivide each version by its saved captures (the prototype's commit/frame records); do not fabricate Git commits. Separate outlined version blocks identify versions without visible version numbers inside the timeline; version metadata remains available through hover titles and slider accessibility text, and one smaller mark identifies each saved frame. Scrubbing resolves against those same positions; keyboard arrows still move one frame at a time.
+- Allocate equal timeline width to each version in the filtered sequence. At most `timeline.visibleBlocks` (20) version blocks are visible at once; further blocks extend the track and scroll horizontally. The track’s scroll box fits the playhead height, sits a little above the theater footer, and the transport controls sit one row-size unit above that track. It hides the scrollbar, and does not draw a focus outline when clicked. Subdivide each version by its saved captures (the prototype's commit/frame records); do not fabricate Git commits. Separate outlined version blocks identify versions without visible version numbers inside the timeline; version metadata remains available through hover titles and slider accessibility text, and one smaller mark identifies each saved frame. Scrubbing resolves against those same positions; keyboard arrows still move one frame at a time.
 - Scrolling on the theater frame steps the current capture: down goes to the next frame, up to the previous. Use the shared `theater.wheelStep` threshold so one notch or a short trackpad flick moves one frame. Clamp at the ends of the filtered sequence, pause playback, and do not change frames from metadata, controls, or while a drag-to-exit gesture is active. Prevent the page from scrolling while the pointer is over the frame.
 
 - During theater transitions, vertical date-axis guides fade over `theaterMotion.verticalAxisFadeMs` (180 ms), ahead of the full block rotation. Tag guides by axis face so this applies to all vertical guides without affecting block edges or horizontal rulers; reverse the same fade on return.
@@ -215,7 +215,7 @@ This file is reserved for project-wide design-system rules requested by the user
 - Theater progress captures feature prompt 56, selected through capture kind/number metadata using `theaterReference`. Expand the capture date range to All time if necessary. This is an explicit capture preference; ordinary theater navigation still opens the user's chosen frame. If the reference is absent, fall back to the first available capture. The contained frame uses the full available width; its height follows that width and the viewport proportion.
 - Use that same reference image's dimensions as the shared theater size baseline, resolved from the full catalog independently of filtering. Keep the viewport rectangle's height constant across selected and hovered frames at a given panel size. Contain images without stretching/cropping. Reserve a tokenized metadata height with overflow scrolling so longer messages or branch tags cannot resize the frame. Resizing the panel or choosing a viewport preset may adjust the fit.
 - Moving between timeline hover targets retains the last decoded preview and its information until the replacement is decoded; never briefly restore the selected frame between hover targets. Restore selection only when the pointer leaves or preview is explicitly cleared. Clicking a ready preview hands it directly into selection.
-- Show the version as a bordered tag on its row with the date. The version number is bold. The shared `BranchTag` and the green/red line counts sit in that same left-aligned group, immediately after the version tag. Move the prompt or push number to the start of the next line, such as `Prompt #63: "In reset view..."`. Keep that line in roman type. Theater and the gallery share one tracked-interface menu, with the file icon inside the control in muted ink. The theater toolbar shows the viewport as a reduced aspect ratio such as `480:271`. Previous and next push use the same play-triangle size, and the playback buttons are larger than the other icon buttons. Hovering a playback button or the timeline shows a black rectangle with slightly rounded corners and no arrow, and only while the pointer is on that control. The double triangles read Jump to last push and Jump to next push. The timeline label names the version under the pointer. Playback speed is a dropdown using `theater` speeds. The default 1× plays at the previous 2× rate, and the other steps are faster by that same factor. A push lead, such as `Push #10:`, is bold. A prompt lead stays regular weight. A frame that belongs to a push uses a 2px black outline. The frame-action row sits `theater.actionGap` (12px) above the frame. Play, pause, and those skip marks use a solid fill. Clicking a version title expands the full title, and the card grows to fit. Clicking that caption does not dismiss theater; empty space on the row still does. The tag border uses the branch color; the name and icon stay black ink. The prompt sits `theater.metadataRowGap` plus `theater.summaryGapScale`’s extra 2px below that group. Omit the tag when branch metadata is absent. Render additions in `theater.addedColor` and removals in `theater.removedColor`. Enabled play/pause controls use the shared black ink color. The playback block sits `theater.playbackFooterGap` (4px) above the footer.
+- Show the version as a bordered tag on its row with the date. The version number is bold. The shared `BranchTag` and the green/red line counts sit in that same left-aligned group, immediately after the version tag. Move the prompt or push number to the start of the next line, such as `Prompt #63: "In reset view..."`. Keep that line in roman type. Theater and the gallery share one tracked-interface menu, with the file icon inside the control in muted ink. The theater toolbar shows the viewport as a reduced aspect ratio such as `480:271`. Previous, play, and next use the same icon size as the timeline start and end controls. Hovering a playback button or the timeline shows a black rectangle with slightly rounded corners and no arrow, and only while the pointer is on that control. The double triangles read Jump to last push and Jump to next push. The timeline label names the version under the pointer. Playback speed is a dropdown using `theater` speeds. The default 1× plays at the previous 2× rate, and the other steps are faster by that same factor. A push lead, such as `Push #10:`, is bold. A prompt lead stays regular weight. A frame that belongs to a push uses a 2px black outline. The frame-action row sits `theater.actionGap` (12px) above the frame. Play, pause, and those skip marks use a solid fill. Clicking a version title expands the full title, and the card grows to fit. Clicking that caption does not dismiss theater; empty space on the row still does. The tag border uses the branch color; the name and icon stay black ink. The prompt sits `theater.metadataRowGap` plus `theater.summaryGapScale`’s extra 2px below that group. Omit the tag when branch metadata is absent. Render additions in `theater.addedColor` and removals in `theater.removedColor`. Enabled play/pause controls use the shared black ink color. The playback block sits `theater.playbackFooterGap` (4px) above the footer.
 
 
 ## Direct theater orbit and prompt captions — 2026-09-22
@@ -563,6 +563,8 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Kanban task movement — 2026-09-30
 
 - Omit trailing navigation arrows from Todo cards; clicking the whole card opens its conversation. Dragging a card onto a status column updates its saved status and timestamp. Highlight the destination during dragging, with no status change on cancellation or same-column drop.
+- Todo columns fill the board height, use the lighter sidebar gray (`--todo-column`), and have no border. Their headers have no padding, with a slightly larger margin under the title, and each count is a circle. A card leads with a smaller project name and folder icon. The task title is 0.7rem at semibold weight (`--todo-title-size`, `--todo-title-weight`). Only a Ready for review card names its Mit, with a smaller mark and a short gap above that row. An empty column centers its message. The Todos page has no subtitle.
+- The main sidebar group separates the header, navigation, and project list with `--sidebar-group-gap`. Navigation items stack with a 2px gap.
 - Alt + Left/Right moves a focused card between adjacent status columns with a confirmation announcement. Running tasks cannot be moved.
 
 ## Sidebar project disclosure — 2026-09-30
@@ -583,10 +585,11 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Reading-window panel refinements — 2026-09-29
 
-- Keep the gallery and stream inside the merged reading window. Floating gallery actions share a 144px width and 16px/6px inline/block padding; the token button label and Token usage heading use 60% opacity.
-- Saved-frame selection reserves 30% of the footer and uses “See frame” as its placeholder. Version statistics are a separate muted element to the right of the time-range selector, separated by spacing rather than a dot. Both remain inside the remaining flexible row space.
+- Keep the gallery and stream inside the merged reading window. Floating gallery actions share a 144px width and 16px/6px inline/block padding; the token button label and Token usage heading use 60% opacity. The Token usage heading uses the meta font size. Version statistics sit on a soft, strong shadow in the page background color.
+- Saved-frame selection reserves 30% of the gallery’s top control row and uses “Select frame” as its placeholder, in the muted color while that placeholder is showing. The Iteration Visualizer title fills the header, with the date range and Select frame at content width on the right. Version statistics sit directly under the See token usage button. The tracked file menu sits at the left of the bottom row, with gallery zoom and reset to its right. Downward carets in both reading panels use `--selector-caret-size`, the tracked-interface caret. The gallery info tip uses commas between actions, the sidebar background, regular text color, and sits 8px below its button.
+- Version stream center and endpoint controls occupy the top row beside the panel title. The center control keeps a single divider, and its icon uses the same color as the endpoint arrows. Endpoint arrows use the zoom-icon size. Each arrow button is square, with its width equal to the row height, and the dividers beside the endpoint label run the full row height. The title keeps “Version stream” whenever that label fits, with a min-width equal to the full label, and its heading fills the header. The branch menu sits at the left of the bottom row and opens upward. Grid sits immediately left of zoom out, with zoom and fit to their right. That footer row has no padding of its own. Stream fit uses the same reset control as the gallery. Zoom out and zoom in glyphs use the smaller zoom-icon size inside their buttons.
 - Ordinary active gallery block outlines use 0.75px strokes at 30% opacity in gallery and token views; preserve the existing hover emphasis and inactive dimming.
-- The stream endpoint field expands to consume remaining footer space between its navigation arrows.
+- The stream title heading consumes remaining top-row space. The endpoint field stays with its navigation arrows at the right of that row.
 
 
 ## Prototype landing and full-interface captures — 2026-09-29
@@ -618,7 +621,7 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Apply the version panels’ neutral surfaces, text hierarchy, compact controls, fine borders and card hover treatment to the imported navigation, conversations, directories, forms and Todos board. Preserve existing icons, layout behavior and semantic project/status colors.
 - Both interfaces consume shared control, row-padding, card-padding, radius and typography tokens in `src/control-tokens.css`. The imported interface bridges its surface variables to the panel foundations through `workbench-system.css`; retain theme-aware contrast for dark mode. Selection and primary actions use the panel’s neutral accent rather than a separate blue interface style.
-- `c to-dos` (or `c todos`) captures the full prototype shell on the Todos board with its reading window closed.
+- `c to-dos` (or `c todos`, or `c todo`) captures the full prototype shell on the Todos board with its reading window closed.
 
 ## Incoming collaborator branches — 2026-09-29
 
@@ -643,16 +646,201 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Sidebar and workspace bar — 2026-09-29
 
-- New chat and every conversation row in the sidebar share one button: ink text, the same padding, height, radius and gap. Their type size is the sidebar section size. Conversation icons match the project folder, smaller than the New chat icon.
-- The project block (Projects, the project name, and its conversation titles) uses one size, halfway between the former 12px project title and the former 11px conversation title (`--sidebar-section-size`).
+- New chat, the other navigation items, and each project row share one button: ink text, the same padding, height, radius and icon-to-text gap. Their type size is the sidebar section size, and their icons use `--sidebar-nav-icon-size`, slightly smaller than the former 18px navigation icons. Sidebar conversation rows use that button with no icon; the title’s left padding lines it up with the project name.
+- The project name and its conversation titles use one size, halfway between the former 12px project title and the former 11px conversation title (`--sidebar-section-size`). The Projects heading is the smaller meta size.
 - The workspace bar’s inline padding is the same row padding as the reading-panel title.
-- The sidebar surface is a lighter gray than the panel fill (`--sidebar`). The MitWerk wordmark is bold. The sidebar user mark uses a light line-colored disc.
+- The sidebar surface is a lighter gray than the panel fill (`--sidebar`). The sidebar brand is the MitWerk logo image. The main sidebar group is a column of the header, the navigation, and the project list, separated by the header row’s former bottom margin (`--sidebar-group-gap`). The sidebar shell keeps its top padding and gives its former inline padding to the main group and the user row. The user row has no extra top space. Project navigation is a column of the Projects header and each project group, and each project group is its own column. The sidebar user mark uses a light line-colored disc.
 
 
 ## Theater return and sidebar navigation — 2026-09-29
 
 - Place the Gallery return action as a bordered, clickable chip inside the theater’s content toolbar, below the Iteration Visualizer header. Reuse shared surface, control-size and padding tokens. Its padded toolbar area remains excluded from drag-to-exit, and clicking preserves the existing reverse transition.
-- The Projects heading is one row: clicking the label or its upward-right arrow opens the project directory. The arrow has no extra control padding. Each project row leads with a Phosphor folder icon and still expands and collapses its conversations. Conversation icons match that folder size. Conversation lists have no left border or row gap. Their left margin is the project name’s offset minus each conversation button’s left padding, so the conversation icon starts where the name starts.
-- The sidebar’s top padding is the shared row padding. The user row has no top border. The user mark is a light disc and shows the name only.
-- A conversation’s message column has a maximum width of 80 characters, a larger top margin, and a shorter message line height (`--message-line-height`). `w/ page scrolled to top` captures that conversation at the start of its messages.
-- New chat, Mits, Todos and Library are one navigation group and share the New chat button: ink text, the section type size, and no filled resting background. The current page still uses the active treatment.
+- The Projects heading is one row: clicking the label or its upward-right arrow opens the project directory. The arrow has no extra control padding. The heading uses the meta type size and keeps a margin of two row-size units below it. Each project row leads with a Phosphor folder icon, matches the sidebar nav buttons, and still expands and collapses its conversations. Sidebar conversation rows have no icon. Each project group and its conversation list are columns with a 2px gap (`--sidebar-list-gap`). Each conversation button’s left padding equals the nav padding plus the shared icon and its gap, so the title starts where the project name starts. Conversation lists have no left border.
+- The sidebar’s top padding is the shared row padding minus one row-size unit. The user row has no top border. The user mark is a light disc and shows the name only.
+- A conversation’s message column has a maximum width of 80 characters, a larger top margin, and a shorter message line height (`--message-line-height`). A message you send has no avatar or name, sits on the right, and is at most 70% of that column; its time is right-aligned under the text. Mit messages stay on the left and keep the avatar, name, and Mit label. The time for every message is its own row under the text. `w/ page scrolled to top` captures that conversation at the start of its messages.
+- New chat, Mits, Todos and Library are one navigation group with a 2px stack gap (`--sidebar-nav-stack-gap`) and share one icon-and-text button with the project rows. The current page still uses the active treatment.
+
+## Unified Phosphor icons and subdued block outlines — 2026-09-30
+
+- Use the installed Phosphor icon family for every interface icon, superseding the instruction to preserve imported icons. Use regular outline icons by default, with filled transport/stop icons where a solid silhouette communicates playback. Keep accessible names on controls; decorative icons stay hidden from assistive technology. Centralize semantic mappings and sizing in reusable icon components. Diagram geometry, status indicators and avatars are not interface icons.
+- Sidebar navigation and project icons share `--sidebar-nav-icon-size`. Hovering the Projects heading changes only its up-right arrow color; the label and row background remain unchanged.
+- Gallery version-block outlines use 18% opacity in both gallery and token views. Preserve hover emphasis, disabled scaling and existing geometry.
+
+## Frame annotations and to-do handoff — 2026-09-30
+
+- Annotations belong to stable saved-frame IDs, retain frame metadata, and persist locally separately from Git and screenshot history. New frames support the same behavior; sample content is isolated from rendering logic.
+- A branch-colored bookmark (dark gray on main) slides out above the frame after the shared Enter prototype delay. Empty bookmarks show a muted New annotation placeholder; populated bookmarks show the annotation count. Pause playback and pin the presented frame when opening annotations.
+- Annotation dialogs are confined to the Iteration Visualizer panel and blur only that panel, show the referenced frame, and support creating, listing, editing and deleting notes. Theater and close actions dismiss only the annotation dialog; they never return to Gallery. Use panel-scoped focus containment, Escape dismissal, focus restoration and reduced-motion support. Save requires nonblank text; delete is a red text action beside Save.
+- Mark as to-do publishes the same persisted annotation to Todos. Editing, unmarking and deleting reflect there immediately. First activation offers Start new chat or Continue recent chat. Preserve existing drafts and append the note with its source frame once; remember that destination for later visits.
+- Sending annotation context runs an explicitly labeled local sample flow and moves its to-do through In progress to Ready for review. It does not call a live agent or modify source files. Other unsupported sends retain their existing behavior.
+- Capture cues may name a prompt frame (`frame 240`) and request its annotation overlay, overriding the ordinary theater reference frame.
+
+## Panel-scoped annotations and prompt transport — 2026-09-30
+
+- Annotation overlays cover only the Visualizer bounds; the navigation and Version stream stay clear and usable. Returning from annotations opens the referenced frame in Theater.
+- Bookmark backgrounds use the frame branch’s shared route color, with a tokenized dark gray for main. An empty tab uses the plain Phosphor speech icon; populated tabs use the dotted speech icon and count. Annotated frames carry the same colored, clickable bookmarks above their image plane in the 3D album.
+- When the frame action buttons wrap, Enter prototype becomes the first action. Detect the actual available action width, preserving the bookmark at the frame edge.
+- Playback’s previous/next arrows move to the adjacent prompt in the selected time range, skipping push captures. Push frames remain accessible through timeline push blocks.
+
+## Compact annotation bookmarks and frame picker — 2026-09-30
+
+- 3D annotation bookmarks use shared compact width/height tokens. Show a centered count when a frame has more than one annotation; retain the branch background and readable contrasting text. Dispose count textures with their bookmarks.
+- Select frame lists saved frames newest to oldest by timestamp. Annotated entries have a filled Phosphor bookmark aligned at the right edge, independent of label length. The rich listbox supports keyboard navigation, selection, Escape and outside dismissal.
+
+## Workspace view tabs and subdued bookmarks — 2026-09-30
+
+- Every opened chat has Chat and Version control tabs beneath the breadcrumb. The row shares its height, inline padding and typography tokens with the breadcrumb. The selected tab uses a browser-tab treatment; one fullscreen toggle sits at the far right, and the former header close action is removed.
+- Chats open full-width by default. Exit fullscreen shows Chat on the left and Version control on the right. In split view, selecting a tab chooses which pane the fullscreen action will expand. Switching tabs while full-width displays the chosen pane. Preserve chat drafts and the current chat when opening its version control.
+- 3D bookmarks rise with their hovered frame and gain a small additional animated lift. Theater and gallery use the shared subdued branch accent; main uses a light gray accent lighter than the Enter prototype action. Count text remains dark for contrast.
+- Push captures do not support annotations: hide the annotation tab and omit their gallery bookmarks and picker indicators. Prompt annotations remain unchanged.
+- `c chat & version side-by-side` is equivalent to `c chat and version side by side`.
+
+## Annotation overlay refinement and compact workspace tabs — 2026-09-30
+
+- Annotation overlay content is vertically centered inside the Visualizer’s available body area, with a separate Theater return action. Use shared surface, border, radius, typography and spacing tokens for previews, lists and input fields, and the same primary button class as other workspace actions for Save. The sketches define functionality rather than literal styling.
+- Overlay entrance first fades in the panel-local blur, then reveals the frame, then quickly reveals the surrounding controls. Keep timings in gallery annotation tokens, defer focus until the controls appear, and skip motion under reduced-motion preferences.
+- After saving an annotation as a to-do, confirm that it is saved and offer Stay here or View all tasks. The latter opens the existing Todos dashboard; saving alone does not navigate away.
+- Workspace tabs have reduced vertical padding from shared row tokens, no leading space before Chat, and the sidebar background. Version control uses the regular Phosphor Circuitry icon.
+
+## Chat context panels, task origin and resource tabs — 2026-09-30
+
+- Chat context panels have a plain title row outside the bordered body, without leading icons. Task details contains status and Attach to-do context only; no creator/date rows, overflow menu or collapse caret. Omit empty Output panels.
+- A conversation's origin is independent from its agent. Regular chats (including sidebar-created chats and the 3D blocks sample) have no task details, completion controls or Over to you section. To-do chats retain these controls. Review sections use shared inline padding.
+- Attach to-do context adds a removable, one-line icon chip above the composer text, labeled “To-do: …”, with ellipsis overflow. The composer grows to contain the chip; sending includes its full context, not the shortened display. Preserve the unsent message. Annotation to-do handoff uses the same chip.
+- Each expanded project has a muted New chat... row that opens a blank project conversation, without the global New chat welcome page. These are ordinary chats, not to-dos.
+- Input and Output resources open independent, closable browser-style workspace tabs beside the persistent Chat and Version control tabs. Keep open resource tabs scoped to their conversation, deduplicate repeated opens, and keep drafts when switching or closing tabs.
+- Agent output timestamps use the shared message-time-gap token for increased separation; the following agent output also gets additional separation using message-output-gap. Context titles, chips and tabs reuse shared spacing, surface, type and icon tokens.
+
+- Capture shorthand `c / chat` is equivalent to `c chat`.
+
+## Sidebar resizing and chat-panel refinement — 2026-09-30
+
+- The first breadcrumb reads Projects and opens the project directory.
+- The sidebar has a draggable boundary, with keyboard resizing, bounded width and locally remembered sizing. It remains independent of the version-panel splitter and respects available viewport space.
+- Only task-origin conversations have a right-aligned status dot in the sidebar. Reuse the existing to-do, in-progress, review and complete colors. Regular chats have no status dot.
+- The review section title is Ready for review. Floating chat context panels now enclose their title row within the panel border, retaining plain text titles and the simplified task-details body.
+- Todos has no Version control header action. Its main page-title row starts at the same vertical offset as New chat in the sidebar, derived from shared sidebar/header spacing tokens. Column inline padding is slightly larger via a shared token.
+- New chat opens a temporary conversation without inserting a persisted conversation or sidebar row. Remove the project-level New chat... starter rows and unused blank New chat records created by the previous iteration. Preserve conversations with messages, files, to-do origin or unsent drafts.
+
+## Annotation message presentation — 2026-09-30
+
+- Use the shared, slightly darker light-gray main-branch bookmark accent for theater tabs and 3D bookmarks; other branches retain their subdued accents.
+- Center annotation overlay content 10vh above the previous body center, allowing scrolling when the panel is too short. Create, edit and list headings share the Version stream header size; their speech and close icons follow that size.
+- The annotation field has no visible label above it (retain its accessible name), with slightly reduced vertical padding. Save and the to-do checkbox label use the same body text size.
+- Existing annotations use right-aligned, wrapping message surfaces with status and time metadata. Reveal each message in sequence using shared motion timings, with a taller scroll container. Honor reduced-motion preferences and keep editing available by mouse and keyboard.
+
+## Chat composer and role labels — 2026-09-30
+
+- Input and Task details share a compact header and body height; file lists scroll within that body. Context panel headers have no dividing line. The Input plus action has no padding or hover background; only its icon dims.
+- Resource tabs have equal outside inline padding matching Chat, including their close control. The tabs row uses the breadcrumb background.
+- Remove Share a file text and the mention hint from all composers, retaining file attachment and typed mentions. Task chats show Attach to-do only while no context is attached. Its keyboard-accessible dropdown combines unfinished tasks and annotation to-dos, newest first, without duplicating annotation-backed chats. Remove the task-details attachment action.
+- Opening a Todos card automatically attaches that task's context in its destination composer, including repeat visits to annotation-linked chats. Preserve unsent draft text. Context chips remain removable.
+- Agent message bylines have no avatar and always read Mit, followed by a colored role tag derived from that message's author. Shared palette colors distinguish roles, including deterministic colors for additional roles. Align output and timestamps with the avatar-free byline.
+
+## Context headers, retained task details and unified tag color — 2026-09-30
+
+- Only floating-panel header rows share a height. Task details, Input and Output bodies size to their content; file lists have a shared maximum scroll height. Empty Input shows its header alone. Increase title-to-count spacing with the shared count-gap token.
+- Task details shows the task name below its header. Attaching a different to-do updates the displayed name and live status, keeping a separate persisted source link. Removing or sending the composer context leaves that link intact. Status changes apply to the displayed source task.
+- Attach to-do uses the regular Phosphor check-square at the same shared size as Attach file. Text-action hover uses a background change instead of an underline.
+- Sidebar top padding equals the breadcrumb row height. Sidebar bottom padding derives from the composer bottom spacing and border, matching the Attach file control's bottom clearance.
+- Mit role tags share one palette hue and consistent text color, using different light accent strengths for roles and a lighter shared border.
+
+## Theater context and compact version control — 2026-09-30
+
+- Main-branch annotation bookmarks use a light gray accent shared by theater and the 3D gallery. Their bottom padding extends beneath the frame action row, keeping content aligned with Go to commit.
+- Gallery and theater share the same header, including the saved-frame selector. Selecting a frame in theater updates its selected frame and playhead without leaving theater.
+- Add frame to chat attaches a removable thumbnail context chip to the current chat, preserves its draft, and immediately shows Chat and Version control side by side. Keep attachments per conversation, deduplicate by frame identity, and retain frame references in sent messages.
+- Below the shared compact-reader breakpoint, show only the Visualizer by default instead of stacking panels. A regular Phosphor arrows-left-right button beside the title switches to Version stream and back with a brief transition; retain each panel's state and respect reduced motion.
+- Annotation text fields use a subtle inset focus treatment, without an external black outline. Text fields fit their sheet width, constrain vertical resizing, and remain inside the scrolling overlay body.
+
+## Composer density, context rows and tab surfaces — 2026-09-30
+
+- Reduce composer corner radius and top padding through shared tokens. Give Attach to-do a padded hit area while balancing the composer bottom space and its inline offset to retain its position. Use the regular Phosphor check-square-offset icon, sized like Attach file.
+- Frame context does not suppress Attach to-do: any chat holding a frame can add a to-do, in addition to ordinary task chats. Frame and to-do chips stack above the message field and grow the composer naturally. Suppress the picker only when to-do context is already present.
+- Completed task chats use a regular Phosphor check-circle in the sidebar instead of a status dot; preserve their completion color.
+- Floating context headers and input/output file rows share one height token. Bring counts slightly closer to their titles. Input plus and the resource-row arrow share an icon-size token. Task details has no top body padding, with the task title below its status dropdown and the same font size as file names.
+- Open workspace tabs have white surfaces against the sidebar-colored tab row. Add a 2px top inset and small top corner radii, retaining the row's existing height. Tabs fill the remaining height with no vertical padding.
+
+## Active tabs and version-panel alignment — 2026-09-30
+
+- Attach to-do text and icon share the muted Attach file color. Increase workspace tabs' top inset to 4px without changing the row height.
+- Place the single fullscreen toggle inside whichever workspace tab is selected, including resource tabs. Active tabs have slightly stronger left, top and right borders. Chat surfaces use a soft downward shadow from a shared token.
+- Compact version-panel switching sits immediately beside the title, with a small shared gap and no intervening divider. Header/footer control icons use one muted color across Visualizer and Stream. Saved-frame and date-range carets share the selector size token.
+- Gallery version/range counts sit just below the Visualizer header, aligned with its title's left padding. Keep the count derived from the selected range, and remove its former position beneath token usage.
+
+## Expandable task summary and quiet tabs — 2026-09-30
+
+- Task details places a subdued task summary above Status with a divider below the text. Collapse long summaries to two lines with an ellipsis. Clicking the panel's non-control area or its keyboard-accessible heading expands the full text in place; clicking again collapses it. Keep status controls independent and reset disclosure when the displayed task changes.
+- Ready for review has no inline margin. Its gray subtitle is a separate line directly below the heading.
+- Sidebar completion icons and status dots share a fixed, centered indicator slot and row alignment. Input plus and resource arrows use the same slightly smaller action-icon token.
+- Workspace tabs have no borders, including the active tab. Retain their inset, white surface and corner treatment; increase the text-to-fullscreen gap using a shared token.
+
+## Quieter workspace chrome and spacing — 2026-09-30
+
+- Agent bylines use shared smaller gaps below the header and between Mit and its role. Add 4px above only the topmost composer context chip, and slightly increase composer bottom clearance.
+- Only the selected workspace tab has a white surface and a left/top/right border. Inactive tabs are transparent; tabs and the chat panel have no shadow. Breadcrumb and tab rows have no bottom border. Fullscreen hover keeps its background unchanged and only dims its icon.
+- Sidebar brand-row center aligns with the breadcrumb's bottom edge using half of the header-height token as top padding. Archive the unused Workspace onboarding sample project from the active project list.
+- Version-panel heading groups use space-between. Move the range statistics further below the header with a shared offset, retaining their header-aligned left inset.
+
+## Task status overlays and completion feedback — 2026-09-30
+
+- Restore the bottom divider on the workspace tabs row. The breadcrumb remains borderless.
+- Task status choices open in a top-layer overlay anchored to the trigger, without expanding or being clipped by the floating context panel. Position within the viewport; support outside dismissal, Escape and keyboard navigation.
+- Task summaries have shared vertical padding above their divider.
+- Completed tasks reuse the Ready for review section layout, with “Marked as complete” and an “Undo” action. Omit the revisit helper sentence; Undo restores In progress.
+
+## Default split chats and flush tabs — 2026-09-30
+
+- Opening any chat, including default launch, sidebar chats, new chats and to-do handoffs, shows Chat and Version control side by side, with Chat selected. Keep fullscreen switching available and preserve explicit chat-only capture requests.
+- Attach to-do and its picker entries use the regular Phosphor list-checks icon at the shared attachment size.
+- Tabs fill the row with no top inset. Draw the active tab's outline independently of its content box, with side edges outside it; the first tab shares the sidebar boundary rather than adding a second inset line.
+
+
+## Reliable tab edges, selectors and compact panels — 2026-09-30
+
+- Preserve all three selected-tab outline edges, including at the tab scroller boundaries. Layer the outside left edge above the sidebar seam. Every tab-row button keeps its background unchanged on hover and dims only its contents; resource close controls have a shared larger separation.
+- Native row selectors cover their entire visible row without overflowing it or scrolling the page when focused.
+- Version control switches to one panel when either proposed panel cannot fit its shortened header plus controls. Derive that minimum from rendered header content rather than only a viewport breakpoint; retain the panel switch and both panels' state.
+- The sample Iteration Visualizer resource (inline card and Output entry) opens prompt frame 240's image in a separate browser window/tab. Resolve the image from the capture catalog using sample asset metadata. The Version control tab remains the entry to the live visualizer.
+
+
+## Todos hierarchy and compact panel inset — 2026-09-30
+
+- In one-panel version control, title groups use equal outside left and right padding from the header inset token, including the panel-switch control.
+- Todos has a short explanatory subtitle and a larger shared gap before its columns. Columns have slightly rounder corners; their count badges have a larger circle and smaller numeral.
+- All task cards show the project name above the task text. Associated frames appear below the text, using the same icon size, type size and spacing as project labels. Omit chat-continuation helper lines.
+- Render task text at Neurial Grotesk Medium (500) using the supplied local font face, with shared typography tokens.
+- Demo annotations on prompt frames 225 and 252 add two notes per frame, one of each pair marked as a to-do. Keep sample content and project metadata separate from rendering logic, seed once, and respect edited or deleted notes.
+
+
+## Todos copy, completion and clean chat context — 2026-09-30
+
+- Todos uses the explanatory copy “Your to-dos from annotating projects. Click on a to-do to execute with agent.” Task text is slightly smaller through the shared size token, retaining Medium weight. Completed task text is muted and struck through.
+- Annotation source labels read “Prompt #N (vN)”. Keep project and source labels otherwise consistent.
+- Submitted annotation prompts show the user's note as prose and the associated frame as a chip. Preserve full reference metadata separately, without including the reference filename or URL in the message text. Older annotation envelopes receive the same clean presentation without deleting stored context.
+- Workspace tabs use a shared icon-to-label gap one pixel larger than the base row unit.
+
+
+## Task-card spacing and primary type — 2026-09-30
+
+- Task cards within each Todos column share a slightly tighter 8px gap, including annotation-backed cards. Add a subtle divider below each project label with shared row-unit padding.
+- Increase primary-button text by 1px through a shared token, retaining existing button heights and padding. Apply the increase to workspace actions, annotation primary actions and the Version stream's primary card action; preserve the larger starting size of annotation Save.
+
+
+## To-do card actions and density — 2026-09-30
+
+- Remove project-label dividers and slightly reduce vertical card padding through a shared token. Keep the existing inline padding and card gaps.
+- Every to-do card exposes a Phosphor three-dot menu at its upper right on hover or keyboard focus (always available on touch). Edit and Delete open independently of card navigation; menus escape column clipping and support keyboard dismissal/navigation.
+- Edits update the backing task or frame annotation. Deleting a to-do removes its task designation while preserving existing conversations and the original frame note; confirm that scope in the delete dialog.
+
+
+## Compact to-do navigation dialog and action typography — 2026-09-30
+
+- The to-do chat destination dialog contains only its header and two full-width, vertically stacked buttons. Omit button icons and explanatory/body text. Use a half-width (270px maximum) dialog and the shared card-title size for its smaller heading.
+- Primary and secondary action buttons both receive the same 1px text-size increase through a shared action token. Keep their existing control heights, and keep paired navigation actions identical in type size.
+
+
+## Single-line project labels and centered card actions — 2026-09-30
+
+- Project labels in to-do cards stay on one line and truncate with an ellipsis, keeping the folder icon and reserved action space intact. Retain the full project name in the label tooltip.
+- Three-dot card triggers have zero inner padding and center the icon in both directions within their shared square size.

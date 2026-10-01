@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Plus, Settings, Workflow } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Plus, Settings, Workflow } from '../../components/PhosphorIcon';
 import { reviewOptions, skillOptions, toolOptions, uid } from './model';
 import type { Mit, Project } from './model';
 

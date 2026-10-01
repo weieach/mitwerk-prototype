@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { migrateState, seedTasks, tasksForProject, saveMit, archiveProject, mentionedMits, joinTaskMits } from '../src/features/workbench/model.ts';
+import { migrateState, seedTasks, tasksForProject, saveMit, archiveProject, mentionedMits, joinTaskMits, isTodoChat, todoContext } from '../src/features/workbench/model.ts';
 
 test('legacy workspace migration preserves task messages, drafts and renamed project',()=>{
  const tasks=seedTasks();
@@ -84,8 +84,8 @@ test('legacy subtasks become peers without losing saved task content or drafts',
 
 test('migration removes only unused New chat placeholders and remains idempotent',()=>{
  const blank={...seedTasks()[0],id:'empty',title:'New chat',project:false,projectId:undefined,input:[],output:[],messages:[]};
- const state=migrateState({tasks:[blank,{...blank,id:'draft'},{...blank,id:'file',input:['brief']},{...blank,id:'named',title:'Planned task'},{...blank,id:'project',project:true,projectId:'mobile'}],drafts:{draft:'Keep my draft'}});
- assert.deepEqual(state.tasks.map(t=>t.id),['draft','file','named','project']);
+ const state=migrateState({tasks:[blank,{...blank,id:'draft'},{...blank,id:'file',input:['brief']},{...blank,id:'named',title:'Planned task'},{...blank,id:'project',project:true,projectId:'mobile'},{...blank,id:'todo',origin:'todo'},{...blank,id:'context'}],todoAttachments:{context:{text:'Preserve attached context'}},drafts:{draft:'Keep my draft'}});
+ assert.deepEqual(state.tasks.map(t=>t.id),['draft','file','named','todo','context']);
  assert.equal(state.drafts.draft,'Keep my draft');
  assert.deepEqual(migrateState(state).tasks,state.tasks);
  const empty=migrateState({tasks:[blank]});
@@ -115,4 +115,20 @@ test('product sample migration updates old examples once while retaining added w
  assert.equal(task.messages.some(m=>m.text==='Old profile example'),false);
  const edited={...migrated,tasks:migrated.tasks.map(t=>t.id==='panel'?{...t,title:'My revised task',messages:t.messages.slice(1)}:t)};
  assert.deepEqual(migrateState(edited),edited);
+});
+
+
+test('conversation origin survives migration independently of agent and status',()=>{
+ const state=migrateState(null);
+ assert.equal(isTodoChat(state.tasks.find(t=>t.id==='panel')!),false);
+ assert.equal(isTodoChat(state.tasks.find(t=>t.id==='access')!),true);
+ const regular={...state.tasks[0],id:'sidebar-chat',origin:'chat' as const,status:'Ready for review' as const};
+ const fromTodo={...regular,id:'annotation-chat',origin:'todo' as const,annotationSourceId:'note-id',todoPrompt:'Keep the full prompt as context'};
+ const restored=migrateState({...state,tasks:[regular,fromTodo],drafts:{'sidebar-chat':'Unsent draft'},todoAttachments:{'sidebar-chat':{text:'Attached without changing chat origin'}}});
+ assert.equal(isTodoChat(restored.tasks[0]),false);
+ assert.equal(isTodoChat(restored.tasks[1]),true);
+ assert.equal(todoContext(restored.tasks[1]),'Keep the full prompt as context');
+ assert.equal(restored.drafts['sidebar-chat'],'Unsent draft');
+ assert.equal(restored.todoAttachments?.['sidebar-chat'].text,'Attached without changing chat origin');
+ assert.deepEqual(migrateState(restored),restored);
 });

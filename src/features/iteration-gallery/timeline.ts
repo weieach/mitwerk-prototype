@@ -81,3 +81,11 @@ export function adjacentPushIndex(frames: Pick<GalleryFrame, 'kind'>[], index: n
   }
   return null;
 }
+
+/** Transport arrows move between prompts; push gutters remain independently selectable. */
+export function adjacentPromptIndex(frames: Pick<GalleryFrame, 'kind'>[], index: number, direction: -1 | 1) {
+  for (let next = index + direction; next >= 0 && next < frames.length; next += direction) {
+    if (frames[next].kind === 'prompt') return next;
+  }
+  return null;
+}

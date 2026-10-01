@@ -1,2 +1,2 @@
 .info-tooltip { position: relative; display: inline-flex; flex-shrink: 0; }
-.info-tooltip-content { position: absolute; top: 100%; right: 0; z-index: 5; width: max-content; max-width: min(280px, 80vw); padding: 8px 10px; color: var(--muted); background: var(--fill); border: 1px solid var(--line); font-size: 11px; line-height: 1.4; }
+.info-tooltip-content { position: absolute; top: calc(100% + 8px); right: 0; z-index: 5; width: max-content; max-width: min(280px, 80vw); padding: 8px 10px; color: var(--ink); background: var(--sidebar); border: 1px solid var(--line); font-size: 11px; line-height: 1.4; }

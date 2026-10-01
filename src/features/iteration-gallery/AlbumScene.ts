@@ -1,3 +1,4 @@
+import { annotationBookmarkColor } from '../annotations/appearance';
 import { interpolateOrbit } from './camera-motion';
 import { tokenUsageArea } from './token-usage';
 import * as THREE from 'three';
@@ -18,7 +19,7 @@ import type { AxisAnchor, AxisLabel } from './axis-label-layout';
 
 type Album = ReturnType<typeof buildAlbum>;
 type FrameObject = { plane: FramePlane; group: THREE.Group; image: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>; outline: THREE.LineBasicMaterial };
-type Callbacks = { tokenView: (active: boolean) => void; motion: (progress: number) => void; hover: (id: string | null) => void; open: (id: string) => void; zoom: (value: number) => void; error: (message: string) => void; labels: (labels: AxisLabel[]) => void };
+type Callbacks = { annotate: (id: string) => void; tokenView: (active: boolean) => void; motion: (progress: number) => void; hover: (id: string | null) => void; open: (id: string) => void; zoom: (value: number) => void; error: (message: string) => void; labels: (labels: AxisLabel[]) => void };
 
 /** Owns GPU resources and controls; React owns the data, filters and theater selection. */
 export class AlbumScene {
@@ -35,6 +36,9 @@ export class AlbumScene {
   private axisAnchors: AxisAnchor[] = [];
   private featuredAnchors: AxisAnchor[] = [];
   private featuredGuides = new THREE.Group();
+  private bookmarks: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>[] = [];
+  private annotationCounts: ReadonlyMap<string, number> = new Map();
+  private pickedBookmark = false;
   private frames = new Map<string, FrameObject>();
   private blockEdges = new Map<string, { block: Album['blocks'][number]; material: LineMaterial; edges: LineSegments2 }>();
   private pickTargets: THREE.Mesh[] = [];
@@ -136,6 +140,11 @@ export class AlbumScene {
       const target = id === this.hovered ? t.hoverLift : 0;
       frame.group.position.y += (target - frame.group.position.y) * blend;
       if (Math.abs(target - frame.group.position.y) < .05) frame.group.position.y = target; else moving = true;
+    }
+    for (const bookmark of this.bookmarks) {
+      const target = bookmark.userData.restY + (bookmark.userData.frameId === this.hovered ? t.annotations.hoverLift : 0);
+      bookmark.position.y += (target - bookmark.position.y) * (this.reducedMotion ? 1 : blend);
+      if (Math.abs(target - bookmark.position.y) < .05) bookmark.position.y = target; else moving = true;
     }
     if (this.syncTopView(dt)) moving = true;
     if (this.syncTokenUsage(dt)) moving = true;
@@ -348,7 +357,7 @@ export class AlbumScene {
   private click = (event: MouseEvent) => {
     if (!this.dragged) {
       const id = this.pick(event);
-      if (id) this.callbacks.open(id);
+      if (id) { if (this.pickedBookmark) this.callbacks.annotate(id); else this.callbacks.open(id); }
     }
   };
   private pointerCancel = () => { this.down = null; this.dragged = false; this.buttons = 0; this.pointer = null; this.edgeVelocity = 0; this.edgeHoldMs = 0; this.inspect(null); };
@@ -359,7 +368,9 @@ export class AlbumScene {
     const hits = this.raycaster.intersectObjects(this.pickTargets, false);
     // Stable slice targets prevent a newly lifted image from stealing the next hover.
     // Outside the block, the exposed image remains directly clickable.
-    const hit = hits.find(item => item.object.userData.version !== undefined) ?? hits[0];
+    const bookmark = hits.find(item => item.object.userData.annotation && this.frames.get(item.object.userData.frameId)?.plane.active);
+    this.pickedBookmark = !!bookmark;
+    const hit = bookmark ?? hits.find(item => item.object.userData.version !== undefined) ?? hits[0];
     this.overBlock = !!hit;
     if (!hit) return null;
     const direct = hit.object.userData.frameId as string | undefined;
@@ -369,6 +380,46 @@ export class AlbumScene {
     const frame = [...this.frames.values()].filter(item => item.plane.frame.version === version)
       .find(item => depth >= item.plane.hitStart && depth <= item.plane.hitEnd);
     return frame?.plane.active ? frame.plane.frame.id : null;
+  }
+
+  setAnnotations(counts: ReadonlyMap<string, number>) {
+    this.annotationCounts = counts;
+    this.syncBookmarks();
+  }
+
+  private syncBookmarks() {
+    for (const mesh of this.bookmarks) {
+      mesh.removeFromParent(); mesh.geometry.dispose(); mesh.material.map?.dispose(); mesh.material.dispose();
+      this.pickTargets = this.pickTargets.filter(target => target !== mesh);
+    }
+    this.bookmarks = [];
+    const branches = [...new Set([...this.frames.values()].map(item => item.plane.frame.branch).filter((branch): branch is string => !!branch))];
+    for (const [id, count] of this.annotationCounts) {
+      const frame = this.frames.get(id);
+      if (!frame || frame.plane.frame.kind === 'push') continue;
+      const { plane, group } = frame;
+      const color = annotationBookmarkColor(plane.frame.branch, branches);
+      let map: THREE.CanvasTexture | null = null;
+      if (count > 1) {
+        const canvas = document.createElement('canvas');
+        canvas.width = t.annotations.bookmarkTextureSize;
+        canvas.height = Math.round(canvas.width * t.annotations.bookmarkHeight / t.annotations.bookmarkWidth);
+        const context = canvas.getContext('2d')!;
+        context.fillStyle = color; context.fillRect(0, 0, canvas.width, canvas.height);
+        context.fillStyle = this.colors.ink;
+        context.font = `600 ${canvas.height * .6}px sans-serif`;
+        context.textAlign = 'center'; context.textBaseline = 'middle';
+        context.fillText(String(count), canvas.width / 2, canvas.height / 2, canvas.width * .85);
+        map = new THREE.CanvasTexture(canvas); map.colorSpace = THREE.SRGBColorSpace;
+      }
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(t.annotations.bookmarkWidth, t.annotations.bookmarkHeight),
+        new THREE.MeshBasicMaterial({ color: map ? '#fff' : color, map, side: THREE.DoubleSide, transparent:true, opacity:plane.active ? 1 : t.disabledOpacity }));
+      mesh.position.set(plane.x + t.annotations.bookmarkInset + t.annotations.bookmarkWidth / 2,
+        -plane.y + t.annotations.bookmarkHeight / 2, -plane.depth);
+      mesh.userData.frameId = id; mesh.userData.annotation = true; mesh.userData.restY = mesh.position.y;
+      group.add(mesh); this.bookmarks.push(mesh); this.pickTargets.push(mesh);
+    }
+    this.invalidate();
   }
 
   inspect(id: string | null) {
@@ -767,6 +818,7 @@ export class AlbumScene {
       this.content.add(group);
       this.frames.set(plane.frame.id, { plane, group, image, outline });
     }
+    this.syncBookmarks();
     this.syncBlockStrokes();
     this.updateImages();
     if (!this.initialized) {
@@ -908,7 +960,7 @@ export class AlbumScene {
     });
     this.axisAnchors = [];
     this.featuredAnchors = [];
-    this.content.clear(); this.frames.clear(); this.blockEdges.clear(); this.pickTargets = []; this.fades.clear(); this.caption = null;
+    this.content.clear(); this.bookmarks = []; this.frames.clear(); this.blockEdges.clear(); this.pickTargets = []; this.fades.clear(); this.caption = null;
     this.featuredGuides = new THREE.Group();
   }
   dispose() {
