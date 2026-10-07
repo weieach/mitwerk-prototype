@@ -844,3 +844,9 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Project labels in to-do cards stay on one line and truncate with an ellipsis, keeping the folder icon and reserved action space intact. Retain the full project name in the label tooltip.
 - Three-dot card triggers have zero inner padding and center the icon in both directions within their shared square size.
+
+
+## Narrow-screen navigation layering and motion — 2026-10-01
+
+- Below the sidebar overlay breakpoint, the tabs row belongs to the main interface's stacking context, beneath the navigation scrim and sidebar. Preserve desktop tab-border layering.
+- The sidebar slides horizontally from the left using a shared 220ms motion token, in both opening and closing directions. Keep its contents mounted through the transition, make collapsed navigation inert, and disable motion for reduced-motion preferences.

@@ -341,3 +341,13 @@
 
 .mw-app .kanban-task .kanban-project > span { flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; overflow-wrap:normal; }
 .todo-card-more > .ui-icon { margin:0; line-height:1; }
+
+/* On narrow screens, all workspace chrome stays beneath the navigation drawer. */
+@media(max-width:850px) {
+ .mw-app > .mw-main { isolation:isolate; z-index:0; }
+ .mw-app .mw-sidebar { display:flex; transform:translateX(0); visibility:visible; transition:transform var(--sidebar-slide-duration) var(--sidebar-slide-easing), visibility 0s; }
+ .mw-app.nav-collapsed .mw-sidebar { display:flex; transform:translateX(-100%); visibility:hidden; pointer-events:none; transition:transform var(--sidebar-slide-duration) var(--sidebar-slide-easing), visibility 0s var(--sidebar-slide-duration); }
+}
+@media(max-width:850px) and (prefers-reduced-motion:reduce) {
+ .mw-app .mw-sidebar, .mw-app.nav-collapsed .mw-sidebar { transition:none; }
+}

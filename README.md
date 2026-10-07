@@ -104,7 +104,21 @@ The cache also only helps within a running server; each `npm run spike` is a fre
 Research board (FigJam): [Capstone research](https://www.figma.com/board/im0O0k4DLrdOmlk5NJjMaq/Capstone-research?node-id=0-1)
 
 
-### Archived prototypes
+### Vercel deployment
+
+Live prototype: https://mitwerk-prototype.vercel.app
+
+Deploy the current working copy without committing or pushing:
+
+```sh
+npx vercel link --project mitwerk-prototype
+npm run build:vercel
+npx vercel deploy --prebuilt --prod
+```
+
+The Vercel build runs locally because capture images, Git history and saved codebases are local inputs. It packages the current UI, gallery assets and every available archived prototype into ignored `.vercel/output/`, with a small read-only API for **Enter prototype**. Only compiled output is uploaded; source archives and local credentials are not deployed. Rebuild before each deployment. Missing historical archives remain unavailable, as they do locally. Notes, to-dos and test graphs remain browser-local; this deployment does not add shared storage or a live agent backend.
+
+### Archived prototype behavior
 
 On a theater push frame, **Enter prototype** builds that push's source from `[ver capture] codebase/` and embeds it in the frame. Push targets occupy timeline separators, including an extra target beyond the latest block. Targets without a push in the chosen date range are unavailable.
 

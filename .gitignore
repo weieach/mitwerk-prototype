@@ -28,3 +28,7 @@ dist/
 
 # Rebuildable archived prototype bundles
 .mitwerk-prototypes/
+
+# Local Vercel project link and deployment output
+.vercel/
+.env*

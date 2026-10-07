@@ -10,6 +10,7 @@
     "screenshot": "node scripts/screenshot-progress.mjs",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "build": "tsc --noEmit && vite build",
+    "build:vercel": "node scripts/build-vercel.mjs",
     "spike": "node archive/review-comment-spike/scripts/spike.mjs",
     "start": "node server/standalone.mjs",
     "bench": "node archive/review-comment-spike/scripts/bench-lookup.mjs",
