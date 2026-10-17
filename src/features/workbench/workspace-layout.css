@@ -514,10 +514,10 @@
 /* To-do drawer: drag feedback and inline entry. The heading follows the pointer lightly while dragging; release past the threshold opens or closes. */
 /* Dragging stretches or squeezes only the to-do section; the message box never moves.
    Up (negative) grows the section's top edge; down (positive) slides the heading and list toward the message box. */
-.composer-drawer { transition:padding-top var(--motion-base) var(--ease-enter), background-color var(--drawer-hover-duration) ease; }
-.composer-drawer.is-dragging { padding-top:max(0px, calc(var(--drawer-drag) * -1)); transition:background-color var(--drawer-hover-duration) ease; }
-.composer-drawer > :is(.composer-drawer-heading, .composer-drawer-reveal) { transition:translate var(--motion-base) var(--ease-enter); }
-.composer-drawer.is-dragging > :is(.composer-drawer-heading, .composer-drawer-reveal) { translate:0 max(0px, var(--drawer-drag)); transition:none; }
+/* The frame's top edge and the heading move together: space is added or removed between the list and the message box,
+   so the bottom-anchored section grows upward when dragged up and shrinks downward when dragged down. */
+.composer-drawer > .composer-drawer-reveal { transition:margin-bottom var(--motion-base) var(--ease-enter); }
+.composer-drawer.is-dragging > .composer-drawer-reveal { margin-bottom:calc(var(--drawer-drag) * -1); transition:none; }
 .composer-drawer > .mw-composer { position:relative; z-index:1; }
 .composer-drawer-heading { touch-action:none; cursor:grab; }
 .composer-drawer.is-dragging .composer-drawer-heading { cursor:grabbing; }
@@ -639,3 +639,36 @@
 
 /* Every chip, option capsule and add-new capsule shares one height and one font size, wherever it appears. */
 .mw-app :is(.capture-setting-chip, .capture-bucket-option, .capture-bucket-new) { height:var(--capture-chip-height); font-size:var(--capture-chip-font-size); }
+
+/* Capsule options stay close to the chip's white; only the add-new capsule recedes a little more. */
+:root { --capture-option-surface:color-mix(in srgb, var(--capture-chip-surface) 92%, var(--paper)); --capture-new-surface:color-mix(in srgb, var(--capture-chip-surface) 80%, var(--paper)); }
+
+/* Chat follows the panel's own insets at every width: all text (title, messages, capture line, to-do heading and list, message box text)
+   starts at --panel-title-inset from the panel edge; the message box frame sits at --composer-inset. No centered max-width column. */
+:root { --chat-text-inset:var(--panel-title-inset); --composer-padding-inline:calc(var(--chat-text-inset) - var(--composer-inset) - 1px); }
+.mw-app .conversation-inner { max-width:none; padding-inline:var(--chat-text-inset); }
+.mw-app .composer-area { width:100%; max-width:none; margin:0; }
+.mw-app .capture-settings { padding-inline:calc(var(--chat-text-inset) - var(--composer-inset)); }
+.mw-app .composer-drawer-heading { padding-inline:calc(var(--chat-text-inset) - var(--composer-inset)); }
+.composer-drawer-content { padding-inline:calc(var(--chat-text-inset) - var(--composer-inset)); }
+.mw-app .composer-drawer .mw-composer { padding-inline:var(--composer-padding-inline); }
+.mw-app .composer-drawer .mw-composer .composer-tools { margin-inline:calc(var(--composer-tool-inset) - var(--composer-padding-inline)); }
+
+/* Editing a to-do keeps the row's height (it grows only when the text wraps) and shows the same faint underline as the capture detail, never a frame or focus stroke. */
+.mw-app .composer-drawer .composer-todo-edit { min-height:0; height:auto; field-sizing:content; resize:none; overflow:hidden; padding:0; border:0; border-radius:0; outline:none; line-height:inherit; box-shadow:inset 0 -0.5px 0 var(--inline-field-line-hover); }
+.mw-app .composer-drawer .composer-todo-edit:focus-visible { outline:none; }
+
+/* Chat keeps a fixed width beside other panels, never more than 30% of the screen; the other panels share the rest.
+   With a fixed chat width there is nothing to drag, so the reader resize handle is hidden. Chat alone still fills the body. */
+:root { --chat-panel-width:min(440px, 30vw); }
+@media (min-width:851px) {
+  .mw-app .mw-body:is(.mw-split-view, .has-extra-panels) > .mw-surface:not([hidden]) { flex:0 0 var(--chat-panel-width); width:var(--chat-panel-width); }
+  .mw-app .mw-body:is(.mw-split-view, .has-extra-panels) > .mw-reader { flex:1 1 0; }
+  .mw-app .mw-body > .reader-divider { display:none; }
+}
+
+/* Calm drawer motion: a gentle settle instead of an expo snap. On release the drag offset hands off to the open/close transition
+   with the same duration and curve, so the edge travels once instead of springing back and then moving again. */
+:root { --drawer-open-duration:520ms; --drawer-close-duration:380ms; --drawer-open-ease:cubic-bezier(.33, .7, .2, 1); --drawer-close-ease:cubic-bezier(.4, 0, .25, 1); }
+.composer-drawer:not(.is-dragging) > .composer-drawer-reveal { transition:grid-template-rows var(--drawer-close-duration) var(--drawer-close-ease), opacity var(--drawer-close-duration) var(--drawer-close-ease), margin-bottom var(--drawer-close-duration) var(--drawer-close-ease); }
+.composer-drawer.is-expanded:not(.is-dragging) > .composer-drawer-reveal { transition:grid-template-rows var(--drawer-open-duration) var(--drawer-open-ease), opacity var(--drawer-open-duration) var(--drawer-open-ease), margin-bottom var(--drawer-open-duration) var(--drawer-open-ease); }

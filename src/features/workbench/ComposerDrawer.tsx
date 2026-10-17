@@ -34,6 +34,8 @@ export function ComposerModeSwitch({ mode, onChange }: { mode: ComposerMode; onC
 
 /** Drag distance that turns a press on the drawer heading into an open (up) or close (down) gesture instead of a click. */
 const drawerDragThreshold = 24;
+/** How closely the section follows the pointer while dragging (1 = exactly). */
+const drawerDragFollow = .55;
 
 /** Inline to-do entry inside the drawer: an optional page chip, then a frameless field. Enter adds the to-do and keeps the page for the next one. */
 function TodoComposerRow({ onAdd }: { onAdd: (text: string, page: string) => void }) {
@@ -67,7 +69,7 @@ export function ComposerDrawer({ state, onToggle, onComplete, onUseTodo, onEdit,
       const current = drag.current; if (!current) return;
       const dy = event.clientY - current.y;
       if (Math.abs(dy) > 4) current.moved = true;
-      if (current.moved) setDragOffset((state.open ? Math.max(0, dy) : Math.min(0, dy)) * .35);
+      if (current.moved) setDragOffset((state.open ? Math.max(0, dy) : Math.min(0, dy)) * drawerDragFollow);
     },
     onPointerUp: (event: React.PointerEvent<HTMLButtonElement>) => {
       const current = drag.current; drag.current = null; setDragOffset(0);

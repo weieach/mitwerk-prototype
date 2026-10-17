@@ -30,9 +30,9 @@ The `design-system` branch defines the **canonical MitWerk design system**. When
 4. **Frames move, content doesn't.** Panels stretch, squeeze and sweep from their shared edge; nothing inside scales, cross-fades or ghosts.
 5. **One reveal, both ways.** Anything that appears also leaves: fade + drop in over `--motion-base` with `--ease-enter`; reverse out over the shorter `--motion-exit` with `--ease-exit`, then unmount. Lists stagger by `--motion-stagger` (top first in, bottom first out).
 6. **Chips only for categories.** Buckets and pages are chips; free text is a frameless field with a thin underline. Every chip and capsule is 22px with one font size.
-7. **Concentric corners, equal insets.** An inset element's radius is the parent radius minus the inset; insets are equal on every side.
+7. **Concentric corners, equal insets.** An inset element's radius is the parent radius minus the inset; insets are equal on every side. Text inside a panel starts at the title inset (20px) at every width.
 8. **Edges reach edges.** Hover fills run to panel edges; narrow panels wrap or stack instead of clipping.
-9. **Panels in reading order.** Top-bar view icons follow the panels left to right.
+9. **Panels in reading order.** Top-bar view icons follow the panels left to right. Chat keeps a fixed width (≤ 30% of the screen) beside other panels.
 
 ## Merging into a feature branch
 
