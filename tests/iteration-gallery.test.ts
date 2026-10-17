@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildVersions, formatFrameDate, formatFrameLabel, galleryBranchPaint, hoverCaptionLines, wrapTextToWidth, dateTicks, edgePanArmed, edgePanStrength, promptShare, representativeFrames, inRange, parseCaptureName, playbackStep, rangeCounts, rangeStart, ratioLabel } from '../src/features/iteration-gallery/model.ts';
+import { defaultVersionRange, buildVersions, formatFrameDate, formatFrameLabel, galleryBranchPaint, hoverCaptionLines, wrapTextToWidth, dateTicks, edgePanArmed, edgePanStrength, promptShare, representativeFrames, inRange, parseCaptureName, playbackStep, rangeCounts, rangeStart, ratioLabel } from '../src/features/iteration-gallery/model.ts';
 import type { Capture } from '../src/features/iteration-gallery/model.ts';
 import { albumBlockBounds, albumEnvelope, albumFloorY, boxCorners, buildAlbum, containingBlock, coverRadius, dateLabelPose, featuredFrameAxis, frameFocus, hoverCaptionHeight, imageSize, resetCameraDestination, resetLook, versionLabelPose } from '../src/features/iteration-gallery/geometry.ts';
 import { galleryTokens as t } from '../src/features/iteration-gallery/tokens.ts';
@@ -93,7 +93,7 @@ test('date filtering splits blocks without changing frame depth or version ident
   const today = buildAlbum(versions, 'today', date(22));
   assert.deepEqual(today.blocks.map(b => b.active), [false, true]);
   assert.deepEqual(today.planes.map(p => p.depth), all.planes.map(p => p.depth));
-  assert.equal(today.blocks[0].end, today.blocks[1].start);
+  assert.equal(today.blocks[0].start, today.blocks[1].end);
   assert.equal(today.planes[0].active, false);
   assert.ok(today.planes.slice(1).every(p => p.active));
 });
@@ -101,7 +101,7 @@ test('date filtering splits blocks without changing frame depth or version ident
 test('version depth stays equal for unequal frame counts; day ticks follow first capture', () => {
   const versions = buildVersions([capture('a', 17), capture('b', 17), capture('p1', 18, 'push', 1), capture('p2', 22, 'push', 2)]);
   const album = buildAlbum(versions, 'all', date(23));
-  assert.equal(album.blocks[1].start - album.blocks[0].start, t.versionDepth);
+  assert.equal(album.blocks[0].start - album.blocks[1].start, t.versionDepth);
   assert.equal(album.blocks[0].end - album.blocks[0].start, album.blocks[1].end - album.blocks[1].start);
   const ticks = dateTicks(versions.flatMap(v => v.frames));
   assert.deepEqual(ticks.map(tick => tick.id), ['a', 'p1', 'p2']);
@@ -152,6 +152,7 @@ test('representative frames sample versions evenly and stay on gallery frames', 
   assert.equal(representativeFrames(versions, 'today', date(22, 23)).at(-1)?.id, 'prompt-11');
   assert.deepEqual(representativeFrames(versions, 'today', date(23)), []);
   assert.equal(representativeFrames(versions.slice(0, 2), 'all', date(22, 23)).length, 1);
+  assert.equal(representativeFrames(versions.slice(0, 2), 'all', date(22, 23))[0].id, 'push-1');
   versions[0].frames[1].timestamp = date(23);
   assert.equal(representativeFrames(versions, 'today', date(22, 23))[0].id, 'prompt-0');
 });
@@ -173,8 +174,8 @@ test('reset look stays on the block volume even when guides extend farther out',
   assert.ok(t.webgl.hoverEdgeWidth > t.webgl.edgeWidth);
   const fitPoints = [
     ...boxCorners(bounds),
-    { x: bounds.max.x + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, y: bounds.min.y, z: bounds.center.z },
-    { x: bounds.min.x, y: bounds.max.y + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, z: bounds.center.z },
+    { x: bounds.min.x - t.rulerTickLength - t.rulerLabelGap - t.axisTitle.valueGap, y: bounds.min.y, z: bounds.center.z },
+    { x: bounds.max.x, y: bounds.max.y + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, z: bounds.center.z },
   ];
   assert.equal(look.span, coverRadius(bounds.center, fitPoints) * 2 * t.overviewPadding / t.overviewFitScale);
   const far = { x: bounds.center.x + 800, y: bounds.center.y + 800, z: bounds.center.z };
@@ -188,20 +189,20 @@ test('reset look stays on the block volume even when guides extend farther out',
   const versionPose = versionLabelPose(album, 0);
   assert.equal(versionPose.face, 'ground');
   assert.equal(versionPose.y, albumFloorY(album));
-  assert.ok(versionPose.x > album.width);
-  const datePose = dateLabelPose(20);
+  assert.ok(versionPose.x < 0);
+  const datePose = dateLabelPose(20, album);
   assert.equal(datePose.face, 'wall');
-  assert.equal(datePose.x, 0);
+  assert.equal(datePose.x, album.width);
   assert.ok(datePose.y > 0);
   assert.equal(datePose.z, -20);
   const featured = featuredFrameAxis(album, plane);
   assert.equal(featured.date.face, 'wall');
   assert.equal(featured.date.z, -plane.depth);
   assert.equal(featured.date.text, 'Sep 17, 12:00');
-  assert.ok(featured.date.y < dateLabelPose(plane.depth).y);
+  assert.ok(featured.date.y < dateLabelPose(plane.depth, album).y);
   assert.equal(featured.version.face, 'ground');
   assert.equal(featured.version.z, -plane.depth);
-  assert.ok(featured.version.x < versionPose.x);
+  assert.ok(featured.version.x > versionPose.x);
   assert.equal(featured.version.text, `v${plane.frame.version}`);
 });
 
@@ -248,4 +249,35 @@ test('push previews reuse only their version’s final prompt image while retain
   for (const key of ['id', 'filename', 'kind', 'number', 'summary', 'timestamp'] as const) assert.equal(preview[key], push[key]);
   assert.equal(versions[1].frames[0].url, emptyPush.url);
   assert.equal(push.url, 'push.png');
+});
+
+
+test('newest frames face forward while physical hit regions and version rulers follow the reversed blocks', () => {
+  const versions = buildVersions([capture('old', 17), capture('mid', 18), capture('push', 19, 'push', 1), capture('latest', 22)]);
+  const album = buildAlbum(versions, 'all', date(23));
+  const ordered = [...album.planes].sort((a, b) => a.frame.timestamp - b.frame.timestamp);
+  assert.ok(ordered.slice(1).every((plane, i) => plane.depth < ordered[i].depth));
+  for (const plane of album.planes) {
+    assert.ok(plane.hitStart < plane.depth && plane.depth < plane.hitEnd);
+    const block = containingBlock(album, plane)!;
+    assert.ok(block.start <= plane.hitStart && block.end >= plane.hitEnd);
+  }
+  assert.ok(versionLabelPose(album, 0).z < versionLabelPose(album, versions.length - 1).z);
+  assert.ok(versionLabelPose(album, 0).x < 0);
+  const pose = resetCameraDestination(album);
+  assert.ok(pose.position.x < pose.center.x && pose.position.z > pose.center.z);
+});
+
+
+test('default date range chooses the narrowest window containing ten distinct visible versions', () => {
+  const versions = buildVersions(Array.from({ length: 10 }, (_, i) => capture(`push${i}`, i < 9 ? 29 : 25, 'push', i + 1)));
+  assert.equal(defaultVersionRange(versions, date(30)), '7');
+  assert.equal(defaultVersionRange(versions.slice(0, 9), date(30)), 'all');
+  assert.equal(defaultVersionRange([], date(30)), 'all');
+  const today = buildVersions(Array.from({ length: 10 }, (_, i) => capture(`push${i}`, 30, 'push', i + 1)));
+  assert.equal(defaultVersionRange(today, date(30)), 'today');
+  assert.equal(defaultVersionRange(today, new Date(2027, 0, 1).getTime()), 'all');
+  assert.equal(defaultVersionRange(today, date(29)), 'all', 'future frames do not count');
+  const busy = buildVersions(Array.from({ length: 100 }, (_, i) => capture(`prompt${i}`, 30)));
+  assert.equal(defaultVersionRange(busy, date(30)), 'all', 'many captures in one version are still one version');
 });

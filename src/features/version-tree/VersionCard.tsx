@@ -11,6 +11,7 @@ function fileChipIcon(file: Pick<VersionFile, 'name' | 'kind'>): IconName {
 }
 
 type Props = {
+  hideStation?: boolean;
   node: VersionNode;
   selected: boolean;
   hasDescendants: boolean;
@@ -36,7 +37,7 @@ type Props = {
 };
 
 export function VersionCard({
-  node, selected, hasDescendants, isEndpoint, onActivePath, isCurrentBranch, canDeleteCurrent, canDeleteFuture, color, reverted, merged = false,
+  hideStation = false, node, selected, hasDescendants, isEndpoint, onActivePath, isCurrentBranch, canDeleteCurrent, canDeleteFuture, color, reverted, merged = false,
   onSelect, onBranch, onCommit, onRevert, onRestore, onSwitchBranch, onDeleteCurrent, onDeleteFuture, forceMenuOpen = false, readOnly = false, onDisconnected,
 }: Props) {
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -78,9 +79,9 @@ export function VersionCard({
   }, [menuOpen, forceMenuOpen]);
 
   return <article className={`version-card ${selected ? 'is-selected' : ''} ${onActivePath ? 'is-active-branch' : ''} ${compact ? 'is-compact' : ''} ${reverted ? 'is-reverted' : ''}`} style={{ '--route-color': color } as CSSProperties} data-node-id={node.id} data-active-branch={onActivePath} data-compact={compact || undefined} data-reverted={reverted || undefined} onClick={event => { if (!(event.target as HTMLElement).closest('button, a, input, select, summary')) onSelect(); }}>
-    <button className={`station ${hasDescendants ? 'has-descendants' : 'is-terminal'} ${merged ? 'is-merged' : ''}`} aria-label={`Select ${node.label}`} aria-pressed={selected} onClick={onSelect}>
+    {!hideStation && <button className={`station ${hasDescendants ? 'has-descendants' : 'is-terminal'} ${merged ? 'is-merged' : ''}`} aria-label={`Select ${node.label}`} aria-pressed={selected} onClick={onSelect}>
       <span />
-    </button>
+    </button>}
     {!compact && <div ref={menu} className="card-menu">
       <button className="card-menu-trigger" aria-haspopup="menu" aria-expanded={menuOpen}
         aria-label={`Actions for ${node.label}`} onClick={() => setMenuOpen(open => !open)}>

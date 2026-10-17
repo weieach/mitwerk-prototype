@@ -30,3 +30,10 @@ export function todoTimestamp(created: string, today = new Date()): string {
   const day = date.toDateString() === today.toDateString() ? 'Today' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   return `${day} ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
 }
+
+/** Reuse text without completing/removing the to-do or losing an existing draft. */
+export function useTodoAsPrompt(state: ChatComposerState, draft: string, id: string) {
+  const todo = state.todos.find(item => item.id === id);
+  if (!todo) return { composer: state, draft };
+  return { composer: { ...state, mode: 'prompt' as const }, draft: draft + (draft && !draft.endsWith('\n') ? '\n' : '') + todo.text };
+}

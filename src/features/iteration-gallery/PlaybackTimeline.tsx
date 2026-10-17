@@ -1,6 +1,7 @@
+import { bindTimelineScrolling } from './timeline-scroll';
 import { usePlayheadMotion } from './usePlayheadMotion';
 import { formatVersion, inRange } from './model';
-import { useLayoutEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent, RefObject } from 'react';
 import type { GalleryFrame, RangeKey } from './model';
 import { buildTimeline, fitTimeline, timelinePointerIndex } from './timeline';
@@ -9,6 +10,13 @@ import { galleryTokens as t } from './tokens';
 export function PlaybackTimeline({ navigationKey, frames, catalog, range, now, index, selectedId, previewIndex, onPreview, onSelect, onSelectPush, viewportRef }: { navigationKey: number; viewportRef: RefObject<HTMLDivElement | null>; catalog: GalleryFrame[]; range: RangeKey; now: number; previewIndex: number; onPreview: (index: number | null) => void; frames: GalleryFrame[]; index: number; selectedId: string; onSelect: (index: number) => void; onSelectPush: (id: string) => void }) {
   const [pushTip, setPushTip] = useState<number | null>(null);
   const containerRef = viewportRef;
+  const preview = useRef(onPreview);
+  useLayoutEffect(() => { preview.current = onPreview; }, [onPreview]);
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+    return bindTimelineScrolling(element, () => { preview.current(null); setPushTip(null); });
+  }, [containerRef]);
   const [availableWidth, setAvailableWidth] = useState(0);
   useLayoutEffect(() => {
     const container = containerRef.current;

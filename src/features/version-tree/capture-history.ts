@@ -19,7 +19,7 @@ export function buildCaptureHistory(captures: Capture[], references: VisualRefer
       branchId: 'capture-history', parentId: index ? `capture-version-${versions[index - 1].number}` : null,
       relation: index ? 'commit' : 'root',
       summary: push ? `Push #${push.number} · ${latest.summary}` : `Work in progress · ${latest.summary}`,
-      prompts: version.frames.filter(frame => frame.kind === 'prompt').map(frame => ({ id: frame.id, text: frame.summary })),
+      prompts: version.frames.filter(frame => frame.kind === 'prompt').map(frame => ({ id: frame.id, text: frame.fullPrompt ?? frame.summary })),
       files: [...version.frames.map(frame => ({ name: frame.filename, kind: 'reference' as const, added: 0, removed: 0, url: frame.url })),
         ...promptReferenceFiles(references, version.frames.flatMap(frame => frame.kind === 'prompt' && frame.number !== null ? [frame.number] : []))],
       capture: { version: version.number, pushed: !!push, branches: [...new Set(version.frames.map(frame => frame.branch ?? 'main'))], added: latest.added, removed: latest.removed },

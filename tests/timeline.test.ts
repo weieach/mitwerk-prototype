@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { galleryTokens as t } from '../src/features/iteration-gallery/tokens.ts';
-import { adjacentPushIndex, buildTimeline, fitTimeline, nearestTimelineFrame, timelineBranch, timelinePointerIndex, timelineRangeLabelAt } from '../src/features/iteration-gallery/timeline.ts';
+import { timelineWheelDelta, adjacentPushIndex, buildTimeline, fitTimeline, nearestTimelineFrame, timelineBranch, timelinePointerIndex, timelineRangeLabelAt } from '../src/features/iteration-gallery/timeline.ts';
 
 test('unequal commit counts preserve equal version spacing and exact frame lookup', () => {
   const timeline = buildTimeline([{ id: 'a', version: 4 }, { id: 'b', version: 5 }, { id: 'c', version: 5 }, { id: 'd', version: 5 }]);
@@ -129,4 +129,12 @@ test('at most twenty equal version slots fit before horizontal scrolling starts'
   assert.equal(fitTimeline(40, width).contentScale, 2);
   const twenty = fitTimeline(20, width), forty = fitTimeline(40, width);
   assert.equal(twenty.gapDepth, forty.gapDepth);
+});
+
+
+test('timeline wheel input maps vertical mouse scrolling and horizontal trackpads without doubling diagonal motion', () => {
+  assert.equal(timelineWheelDelta(0, 120, 0, 600), 120);
+  assert.equal(timelineWheelDelta(-80, 3, 0, 600), -80);
+  assert.equal(timelineWheelDelta(2, -3, 1, 600), -48);
+  assert.equal(timelineWheelDelta(0, 1, 2, 600), 600);
 });

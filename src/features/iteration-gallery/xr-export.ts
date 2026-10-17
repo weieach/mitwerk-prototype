@@ -29,26 +29,26 @@ export function createXRManifest(captures: Capture[], range: RangeKey = 'all', n
   const floor = versions.length ? albumFloorY(album) : -envelope.height;
   const labels: { id: string; text: string; position: number[]; rotation: number[]; height: number }[] = [];
   const guides: { id: string; axis: string; points: number[][] }[] = [];
-  const label = (id: string, text: string, x: number, y: number, z: number, face: 'ground' | 'wall') => labels.push({ id, text, position: point(x, y, z), rotation: face === 'ground' ? [-Math.PI / 2, 0, 0] : [0, Math.PI / 2, 0], height: xrTokens.labelHeightMeters });
-  label('date-title', 'Date', 0, t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, -album.depth / 2, 'wall');
-  label('version-title', 'Version', album.width + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, floor, -album.depth / 2, 'ground');
+  const label = (id: string, text: string, x: number, y: number, z: number, face: 'ground' | 'wall') => labels.push({ id, text, position: point(x, y, z), rotation: face === 'ground' ? [-Math.PI / 2, 0, 0] : [0, -Math.PI / 2, 0], height: xrTokens.labelHeightMeters });
+  label('date-title', 'Date', album.width, t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, -album.depth / 2, 'wall');
+  label('version-title', 'Version', -t.rulerTickLength - t.rulerLabelGap - t.axisTitle.valueGap, floor, -album.depth / 2, 'ground');
   for (const tick of dateTicks(album.planes.map(plane => plane.frame))) {
     const plane = album.planes.find(item => item.frame.id === tick.id);
     if (!plane) continue;
-    const pose = dateLabelPose(plane.depth);
+    const pose = dateLabelPose(plane.depth, album);
     const id = `date-${tick.timestamp}`;
-    guides.push({ id, axis: 'date', points: [point(0, 0, -plane.depth), point(0, t.rulerTickLength, -plane.depth)] });
+    guides.push({ id, axis: 'date', points: [point(album.width, 0, -plane.depth), point(album.width, t.rulerTickLength, -plane.depth)] });
     label(id, formatDate(tick.timestamp), pose.x, pose.y, pose.z, 'wall');
   }
   for (const version of versions) {
     const pose = versionLabelPose(album, version.index);
     const id = `version-${version.number}`;
-    guides.push({ id, axis: 'version', points: [point(album.width, floor, pose.z), point(album.width + t.rulerTickLength, floor, pose.z)] });
+    guides.push({ id, axis: 'version', points: [point(0, floor, pose.z), point(-t.rulerTickLength, floor, pose.z)] });
     label(id, formatVersion(version.number), pose.x, pose.y, pose.z, 'ground');
   }
   return {
     schemaVersion: 1, generatedAt: new Date(now).toISOString(), range,
-    coordinates: { units: 'meters', handedness: 'right', up: '+Y', timeDirection: '-Z', rotationUnits: 'radians', eulerOrder: 'XYZ', sourceUnitMeters: scale },
+    coordinates: { units: 'meters', handedness: 'right', up: '+Y', timeDirection: '+Z', rotationUnits: 'radians', eulerOrder: 'XYZ', sourceUnitMeters: scale },
     placement: { position: [...xrTokens.placement], rotation: [0, 0, 0], scale: [1, 1, 1] },
     bounds: { min: point(0, floor, -album.depth), max: point(album.width, 0, 0) },
     style: { ...xrTokens, blockOpacity: t.webgl.blockOpacity, edgeOpacity: t.webgl.edgeOpacity, frameOutlineOpacity: t.webgl.frameOutlineOpacity,

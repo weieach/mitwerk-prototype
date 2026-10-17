@@ -1,4 +1,4 @@
-import { Maximize2, Minimize2, MessageSquare, PhosphorIcon, FileText, Image, LayoutGrid, X } from '../../components/PhosphorIcon';
+import { FullscreenIcon, MessageSquare, PhosphorIcon, FileText, Image, LayoutGrid, X } from '../../components/PhosphorIcon';
 import type { Asset } from './model';
 export type WorkspacePane = 'chat' | 'version' | `asset:${string}`;
 const Circuitry = ({size}:{size:number}) => <PhosphorIcon name="circuitry" size={size}/>;
@@ -21,7 +21,7 @@ export function WorkspaceTabs({ selected, fullscreen, onSelect, onToggle, assets
       onSelect(tabs[next].id); document.getElementById(`workspace-tab-${tabs[next].id}`)?.focus();
      }}><Icon size={15}/><span>{label}</span></button>
     {selected===id&&<button type="button" className="mw-icon workspace-fullscreen" aria-label={fullscreen?'Exit fullscreen':'Go to fullscreen'} title={fullscreen?'Exit fullscreen · Show chat and version control':'Go to fullscreen · Expand selected tab'} onClick={onToggle}>
-   {fullscreen?<Minimize2 size={16}/>:<Maximize2 size={16}/>}
+   <FullscreenIcon expanded={fullscreen} size={16}/>
   </button>}
     {assetId&&<button className="workspace-tab-close" type="button" aria-label={`Close ${label}`} title={`Close ${label}`} onClick={()=>onClose(assetId)}><X size={13}/></button>}
    </div>)}

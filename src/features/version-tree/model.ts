@@ -204,6 +204,7 @@ export function screenshotQueryFlags(search: string) {
     treeCenter: capture ? params.get('treeCenter') : null,
     treeLift: capture && Number.isFinite(lift) && lift > 0 ? lift : 0,
     treeFit: capture && params.get('treeFit') === '1',
+    treeMilestone: capture && params.get('treeMilestone') === 'latest',
   };
 }
 

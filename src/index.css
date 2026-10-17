@@ -100,6 +100,25 @@ button .ui-icon { flex: 0 0 auto; }
 .branch-count:focus-visible .branch-count-hint,
 html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .version-position { position: absolute; width: var(--node-card-width); }
+.idea-card { position: relative; width: var(--node-card-width); color: var(--ink); }
+.idea-card .station { cursor: pointer; }
+.idea-card .station.is-milestone { border:0; border-radius:0; color:var(--route-color); background:var(--canvas-bg); box-shadow:none; }
+.idea-milestone { position: relative; padding: 12px 30px 12px 14px; border-radius: var(--surface-radius); background: var(--paper); border: 1px solid var(--line); }
+.idea-milestone p { margin: 0; max-height: 126px; overflow: auto; font-size: 17px; line-height: 1.35; white-space: pre-wrap; overflow-wrap: anywhere; }
+.idea-edit { position: absolute; top: 10px; right: 8px; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 3px; }
+.idea-add { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: var(--surface-radius); padding: 8px 12px; background: var(--paper); color: var(--ink); cursor: pointer; }
+.idea-command { margin-top: 10px; }
+.idea-command .node-details { max-height: 180px; overflow: auto; }
+.idea-editor { padding: 12px; background: var(--paper); border: 1px solid var(--line-strong); border-radius: var(--surface-radius); }
+.idea-editor label { display: block; margin-bottom: 8px; font-size: 12px; }
+.idea-editor textarea { box-sizing: border-box; width: 100%; resize: vertical; min-height: 70px; max-height: 150px; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); padding: 8px; }
+.idea-editor > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.idea-editor button { border: 1px solid var(--line); border-radius: 4px; background: var(--paper); color: var(--ink); padding: 5px 8px; cursor: pointer; }
+.idea-editor button[type=submit] { background: var(--ink); color: var(--paper); }
+.idea-fold { position: absolute; width: var(--idea-fold-count-size); height: var(--idea-fold-count-size); transform: translate(-50%, -50%); padding: 0; border: 0; background: none; color: var(--ink); cursor: pointer; z-index: 4; }
+.idea-fold-count { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; place-items: center; width: var(--idea-fold-count-size); height: var(--idea-fold-count-size); background: var(--paper); border: 2px solid var(--ink); border-radius: 50%; font: 20px var(--sans); }
+.idea-fold-label { position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%); font: 16px var(--sans); }
+.idea-fold:focus-visible { outline: 2px solid var(--ink); outline-offset: 6px; border-radius: 20px; }
 .version-card { --card-border-color: var(--line); box-shadow: inset 0 0 0 0 var(--card-border-color); transition: border-color var(--card-hover-transition) ease, box-shadow var(--card-hover-transition) ease; position: relative; width: var(--node-card-width); padding: var(--card-padding); border: 1px solid var(--card-border-color); border-radius: var(--surface-radius); background: var(--paper); cursor: default; }
 .version-card.is-compact { cursor: pointer; }
 .version-card.is-selected { background: var(--paper); --card-border-color: var(--line-strong); }

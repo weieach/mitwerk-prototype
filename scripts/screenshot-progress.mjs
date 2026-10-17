@@ -473,7 +473,7 @@ function wantsResetCapture(prompt = '') {
 }
 
 function wantsIdeaStreamCapture(prompt = '') {
-  return /\bc idea stream\b/i.test(prompt);
+  return hasFlag('idea-stream') || /\bc chat (?:and|&) idea stream\b/i.test(prompt) || /\bc idea stream\b/i.test(prompt) || /\bc (?:home|homescreen)\s+w\/?\s+[^.\n]*\bidea stream\b/i.test(prompt);
 }
 
 function wantsHomeCapture(prompt = '') {
@@ -536,11 +536,14 @@ function wantsGalleryHover(prompt = '') {
 function screenshotUrl(prompt = '') {
   const target = new URL(url);
   target.searchParams.set('screenshot', '1');
+  if (/\bc (?:home|homescreen)\b[^.\n]*milestone[^.\n]*zoomed in/i.test(prompt)) { target.searchParams.set('treeMilestone', 'latest'); target.searchParams.set('treeZoom', '1'); }
+  if (hasFlag('tree-fit') || /fit all view/i.test(prompt)) target.searchParams.set('treeFit', '1');
+  if (/\bc (?:home|homescreen)\b[\s\S]*\btodo drawer\b/i.test(prompt)) target.searchParams.set('todoDrawer', 'open');
   if (wantsDarkCapture(prompt)) target.searchParams.set('theme', 'dark');
   // Capture the complete prototype shell, retaining gallery state parameters.
   target.searchParams.delete('view');
   target.searchParams.set('treeMode', argValue('tree-mode', 'history'));
-  if (wantsIdeaStreamCapture(prompt)) { target.searchParams.set('ideaStream', '1'); target.searchParams.delete('galleryView'); return target.href; }
+  if (wantsIdeaStreamCapture(prompt)) { target.searchParams.set('ideaStream', '1'); target.searchParams.delete('galleryView'); if (wantsHomeCapture(prompt) || /\bc chat (?:and|&) idea stream\b/i.test(prompt)) target.searchParams.set('layout', 'side-by-side'); return target.href; }
   if (wantsTodosCapture(prompt)) {
     target.searchParams.set('page', 'todos');
     if (/todo navigation dialog/i.test(prompt)) target.searchParams.set('todoDialog', 'navigation');
@@ -688,9 +691,24 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
       returnByValue: true,
     });
     if (result.result?.value === true) {
+      const images = await cdp('Runtime.evaluate', { expression: `(() => {
+        const gallery = document.querySelector('.iteration-gallery');
+        if (gallery?.dataset.galleryPhase === 'album' && gallery.querySelector('.album-3d-viewport')?.dataset.imagesReady !== 'true') return false;
+        return [...document.images].filter(image => image.getClientRects().length && getComputedStyle(image).visibility !== 'hidden').every(image => image.complete && image.naturalWidth > 0);
+      })()`, returnByValue: true });
+      if (images.result?.value !== true) { await delay(100); continue; }
       if (wantsDarkCapture(prompt)) {
         const themed = await cdp('Runtime.evaluate', { expression: 'document.documentElement.dataset.theme === "dark" && document.querySelector(".mw-app")?.dataset.theme === "dark"', returnByValue: true });
         if (themed.result?.value !== true) { await delay(100); continue; }
+      }
+      if (/\bc (?:home|homescreen)\b[\s\S]*\btodo drawer\b/i.test(prompt)) {
+        const drawer = await cdp('Runtime.evaluate', { expression: 'document.querySelector(".composer-drawer-heading")?.getAttribute("aria-expanded") === "true"', returnByValue: true });
+        if (drawer.result?.value !== true) { await delay(100); continue; }
+      }
+      if (/time range dropdown/i.test(prompt)) {
+        await cdp('Runtime.evaluate', { expression: `(() => { if (!document.querySelector('[role="listbox"][aria-label="Date range"]')) document.querySelector('button[aria-label="Date range"]')?.click(); })()` });
+        const menu = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('[role="listbox"][aria-label="Date range"]')`, returnByValue: true });
+        if (!menu.result?.value) { await delay(100); continue; }
       }
       if (wantsChatCapture(prompt)||wantsTodosCapture(prompt)||wantsHomeCapture(prompt)) return;
       const shell = await cdp('Runtime.evaluate', { expression: '!!document.querySelector(".mw-reader .workspace") && !!document.querySelector("#main-navigation")', returnByValue: true });
@@ -1189,7 +1207,7 @@ async function takeScreenshot({ tag, label, sha, base }) {
   await assertServer();
   mkdirSync(screenshotsDir, { recursive: true });
   const message = sanitizeMessage(label, tag === 'prompt' ? 'prompt' : 'commit');
-  const overwrite = tag === 'prompt' && /recapture last prompt/i.test(label) && /overwrite/i.test(label);
+  const overwrite = tag === 'prompt' && (hasFlag('recapture-last') || /recapture last prompt/i.test(label) && /overwrite/i.test(label));
   if (overwrite) {
     const number = name => Number(/^\[prompt #(\d+)\]/i.exec(name)?.[1] ?? 0);
     const prompts = readdirSync(screenshotsDir).filter(name => /^\[prompt #\d+\]/i.test(name)).sort((a, b) => number(a) - number(b));
@@ -1323,7 +1341,7 @@ async function main() {
       }
       return;
     }
-    if (tag === 'prompt' && promptAlreadyCaptured(label)) {
+    if (tag === 'prompt' && !hasFlag('recapture-last') && promptAlreadyCaptured(label)) {
       captureLog('prompt skip: already captured this prompt');
       if (hookMode) emitHook({});
       return;

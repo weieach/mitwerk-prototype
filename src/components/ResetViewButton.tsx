@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { controlTokens } from '../control-tokens';
-import '@phosphor-icons/web/regular/style.css';
+import { FullscreenIcon } from './PhosphorIcon';
 
 /** Share reset/center semantics without firing reset before a double-click. */
 export function ResetViewButton({ onReset, onCenter, label = 'Reset view', centerLabel = 'center' }: {
@@ -26,6 +26,6 @@ export function ResetViewButton({ onReset, onCenter, label = 'Reset view', cente
         onReset();
       }, controlTokens.doubleClickMs);
     }} onDoubleClick={() => { cancel(); onCenter(); }}>
-    <i className="ph ph-corners-out" aria-hidden="true"/>
+    <FullscreenIcon size={16}/>
   </button>;
 }

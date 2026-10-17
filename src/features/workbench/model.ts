@@ -1,9 +1,10 @@
+import { buildVersions, type Capture } from '../iteration-gallery/model.ts';
 import type { ChatComposerState } from './composer-state.ts';
 import type { FrameContext } from './frame-context.ts';
 import { userName } from './user-profile.ts';
 export type TaskStatus = 'To do' | 'In progress' | 'Ready for review' | 'Complete';
 export type View = 'Home' | 'Projects' | 'Todos' | 'Inbox' | 'Mits' | 'Library' | 'Settings' | 'dialog' | 'project' | 'Co-workers';
-export type Message = { versionOutput?: {version:number;prompt:number;imageUrl:string}; annotationContext?: string; frames?:FrameContext[]; id: string; role: 'user' | 'mit' | 'colleague'; name: string; text: string; assetId?: string; assetIds?: string[]; time: string };
+export type Message = { sourcePrompt?: number; versionOutput?: {version?:number;prompt:number;imageUrl?:string;frameId?:string}; annotationContext?: string; frames?:FrameContext[]; id: string; role: 'user' | 'mit' | 'colleague'; name: string; text: string; assetId?: string; assetIds?: string[]; time: string };
 export type Task = { origin?: 'chat' | 'todo'; todoPrompt?: string; annotationSourceId?: string; id: string; title: string; status: TaskStatus; creator: string; mit: string; mitId?: string; participantMitIds?:string[]; project: boolean; projectId?: string; kind: 'mit' | 'colleague'; unread: boolean; updated: string; created?: string; messages: Message[]; input: string[]; output: string[] };
 export type Asset = { id: string; title: string; kind: 'document' | 'image' | 'prototype'; detail: string; url?: string; content?: string; local?: boolean; previewPrompt?: number; previewUrl?: string };
 export const statuses: TaskStatus[] = ['To do', 'In progress', 'Ready for review', 'Complete'];
@@ -59,8 +60,8 @@ These are sample exchanges describing the MitWerk prototype, not transcripts of 
 export function seedTasks(): Task[] {
   return [
     { id: 'panel', origin: 'chat', title: 'Building an iteration gallery', status: 'Ready for review', creator: userName, mit: 'Design Mit', project: true, kind: 'mit', unread: true, updated: '10:42', input: ['brief','ia'], output: ['prototype','notes'], messages: [
-      { id:'m1', role:'user', name:userName, time:'10:24', text:'Build an iteration gallery from the screenshots saved during this project. Each version should become a translucent, wireframed 3D block, with its frames arranged along the time axis. Keep the screenshots’ proportions and leave some padding inside the blocks.' },
-      { id:'m2', versionOutput:{version:40,prompt:5,imageUrl:'examples/iteration-preview.png'}, role:'mit', name:'Design Mit', time:'10:25', text:'I’ll parse the capture filenames into frames and versions, then render the blocks with WebGL. Versions will be evenly spaced, with a separate date ruler showing when the frames were saved. The block geometry and spacing will come from shared tokens.\n\nDragging will orbit the gallery. Hovering a frame will lift it slightly and show its summary without opening it.' },
+      { id:'m1', sourcePrompt:276, role:'user', name:userName, time:'08:56', text:'When i scroll in the gallery, the view jitters a lot (rapidly zooming up and down at a small scale). investigate why & fix' },
+      { id:'m2', versionOutput:{prompt:276}, role:'mit', name:'Design Mit', time:'08:56', text:'The jitter came from a feedback loop: scrolling updated the camera zoom, then a delayed React update reapplied an older value.\n\nThe gallery camera now owns zoom directly. The percentage is a readout, and zoom buttons send commands to the live camera. Resizing also redraws directly, keeping scrolling smooth without changing the gallery’s orbit or playback transitions.' },
     ] },
     { id:'research', title:'Mapping commits, branches and frames', status:'Complete', creator:userName, mit:'Research Mit', project:true, kind:'mit', unread:false, updated:'Yesterday', input:['brief'], output:['ia'], messages:[
       {id:'r1',role:'user',name:userName,time:'09:10',text:'How should the version stream relate to the gallery? A saved screenshot is not always a Git commit, and I need branches and merges to remain understandable.'},
@@ -76,6 +77,10 @@ export function seedTasks(): Task[] {
     { id:'nicole', title:'Nicole Wei', status:'In progress', creator:'Nicole Wei', mit:'Nicole Wei', project:false, kind:'colleague', unread:true, updated:'11:08', input:[],output:[], messages:[{id:'n1',role:'colleague',name:'Nicole Wei',time:'11:08',text:'I’ve been looking at the reading window. Can we keep the chat visible when opening an output? It would help us discuss the design while looking at it.'}] },
   ];
 }
+const originalGalleryExchange: Message[] = [
+      { id:'m1', role:'user', name:userName, time:'10:24', text:'Build an iteration gallery from the screenshots saved during this project. Each version should become a translucent, wireframed 3D block, with its frames arranged along the time axis. Keep the screenshots’ proportions and leave some padding inside the blocks.' },
+      { id:'m2', versionOutput:{version:40,prompt:5,imageUrl:'examples/iteration-preview.png'}, role:'mit', name:'Design Mit', time:'10:25', text:'I’ll parse the capture filenames into frames and versions, then render the blocks with WebGL. Versions will be evenly spaced, with a separate date ruler showing when the frames were saved. The block geometry and spacing will come from shared tokens.\n\nDragging will orbit the gallery. Hovering a frame will lift it slightly and show its summary without opening it.' },
+];
 const previousGalleryMessages: Message[] = [
       { id:'m3', role:'user', name:userName, time:'10:28', text:'Keep out-of-range versions visible but dimmed. Clicking a frame should rotate it into theater view, where I can play the sequence like a timelapse. Show the frame first, then the timeline, then the other controls.' },
       { id:'m4', role:'mit', name:'Design Mit', time:'10:42', text:'The sample direction is ready to review. The gallery groups frames by version and supports date-range filtering, orbiting and hover inspection. Theater uses a segmented version timeline, and its preview stays visible while the next image loads.\n\nOpen the Iteration Visualizer to explore the blocks. The review notes cover the camera transition, timeline behavior and checks for the next iteration.', assetId:'prototype' },
@@ -145,6 +150,13 @@ export function migrateState(raw:Partial<SavedState>|null): SavedState {
    }),
   }:task)};
  }
+ if (raw && (raw.sampleContentVersion ?? 0) < 3) {
+  const sample = seedTasks().find(task => task.id === 'panel')!;
+  raw = {...raw, tasks: raw.tasks?.map(task => task.id === 'panel' ? {...task,
+   messages: task.messages.map(message => originalGalleryExchange.some(old => old.id === message.id && old.text === message.text)
+    ? {...sample.messages.find(next => next.id === message.id)!, name: message.name} : message),
+  } : task)};
+ }
  const projectName=typeof raw?.projectName==='string'?raw.projectName:'MitWerk product prototype';
  const instructions=typeof raw?.instructions==='string'?raw.instructions:defaultInstructions;
  const projects=Array.isArray(raw?.projects)&&raw.projects.length?raw.projects:[
@@ -153,7 +165,7 @@ export function migrateState(raw:Partial<SavedState>|null): SavedState {
  ];
  const tasks=(Array.isArray(raw?.tasks)?raw.tasks:seedTasks()).filter(t=>!(t.kind==='mit'&&t.title==='New chat'&&t.origin!=='todo'&&!t.annotationSourceId&&((!t.project&&!t.projectId)||t.origin==='chat')&&!t.messages.length&&!t.input.length&&!t.output.length&&!raw?.drafts?.[t.id]?.trim()&&!raw?.todoAttachments?.[t.id]&&!raw?.chatComposers?.[t.id]?.todos.length));
  const mits=Array.isArray(raw?.mits)&&raw.mits.length?raw.mits:seedMits();
- return {chatComposers:raw?.chatComposers||{},sampleContentVersion:2,projects:projects.map(p=>({...p,archived:p.archived ?? p.id==='onboarding',mitIds:[...new Set([...(p.mitIds||[]),...tasks.filter(t=>t.projectId===p.id||(t.project&&!t.projectId&&p.id==='mobile')).map(t=>t.mitId||mits.find(m=>m.name===t.mit)?.id).filter((id):id is string=>!!id)])]})),mits,projectName,instructions,tasks:tasks.map(legacy=>{const {parentId: _parentId,...t}=legacy as Task & {parentId?:string};return {...t,origin:t.origin ?? (t.annotationSourceId ? 'todo' : seedTasks().find(sample=>sample.id===t.id)?.origin ?? 'todo'),mitId:t.kind==='mit'?(t.mitId||mits.find(m=>m.name===t.mit)?.id):undefined,projectId:t.projectId||(t.project?'mobile':undefined)};}),drafts:raw?.drafts||{},frameAttachments:raw?.frameAttachments||{},todoAttachments:raw?.todoAttachments||{},taskDetailsLinks:raw?.taskDetailsLinks||{}};
+ return {chatComposers:raw?.chatComposers||{},sampleContentVersion:3,projects:projects.map(p=>({...p,archived:p.archived ?? p.id==='onboarding',mitIds:[...new Set([...(p.mitIds||[]),...tasks.filter(t=>t.projectId===p.id||(t.project&&!t.projectId&&p.id==='mobile')).map(t=>t.mitId||mits.find(m=>m.name===t.mit)?.id).filter((id):id is string=>!!id)])]})),mits,projectName,instructions,tasks:tasks.map(legacy=>{const {parentId: _parentId,...t}=legacy as Task & {parentId?:string};return {...t,origin:t.origin ?? (t.annotationSourceId ? 'todo' : seedTasks().find(sample=>sample.id===t.id)?.origin ?? 'todo'),mitId:t.kind==='mit'?(t.mitId||mits.find(m=>m.name===t.mit)?.id):undefined,projectId:t.projectId||(t.project?'mobile':undefined)};}),drafts:raw?.drafts||{},frameAttachments:raw?.frameAttachments||{},todoAttachments:raw?.todoAttachments||{},taskDetailsLinks:raw?.taskDetailsLinks||{}};
 }
 export function loadState(): SavedState {
  try {
@@ -191,3 +203,17 @@ export function workbenchEntry(state: SavedState) {
 /** Task state is independent of who participates in a conversation. */
 export function isTodoChat(task: Task) { return task.kind === 'mit' && task.origin !== 'chat'; }
 export function todoContext(task: Task) { return task.todoPrompt || task.messages.find(message => message.role === 'user')?.text || task.title; }
+
+/** Resolve saved-frame links through the same version grouping used by playback. */
+export function hydratePromptMessages(tasks: Task[], captures: Capture[]): Task[] {
+ const frames = buildVersions(captures).flatMap(version => version.frames);
+ return tasks.map(task => ({...task, messages: task.messages.map(message => {
+  const prompt = message.sourcePrompt ?? message.versionOutput?.prompt;
+  const frame = frames.find(frame => frame.kind === 'prompt' && frame.number === prompt);
+  if (!frame) return message;
+  return {...message,
+   ...(message.sourcePrompt ? {text: frame.fullPrompt ?? message.text} : {}),
+   ...(message.versionOutput ? {versionOutput: {prompt: frame.number!, version: frame.version, imageUrl: frame.url, frameId: frame.id}} : {}),
+  };
+ })}));
+}

@@ -8,7 +8,7 @@ import { tokenUsageArea } from '../src/features/iteration-gallery/token-usage.ts
 import type { FramePlane } from '../src/features/iteration-gallery/geometry.ts';
 
 function plane(total: number, depth: number, active = true): FramePlane {
-  return { frame: { id: String(depth), tokenUsage: { input: total, output: 0, total, simulated: true } } as FramePlane['frame'],
+  return { frame: { id: String(depth), timestamp: depth, tokenUsage: { input: total, output: 0, total, simulated: true } } as FramePlane['frame'],
     x: 10, y: 10, width: 300, height: 200, depth, hitStart: depth - 5, hitEnd: depth + 5, active };
 }
 test('sample usage is saved once, preserves prior frames and initializes new captures', () => {
@@ -26,7 +26,7 @@ test('selected range accumulates tokens to 100 percent of its total', () => {
   const chart = tokenUsageArea([plane(1000, 0, false), plane(20, 10), plane(80, 20)]);
   assert.equal(chart.total, 100);
   assert.deepEqual(chart.samples.map(bar => bar.ratio), [.2, 1]);
-  assert.deepEqual(chart.outline, [{ x: 310, depth: 10 }, { x: 250, depth: 10 }, { x: 10, depth: 20 }, { x: 310, depth: 20 }]);
+  assert.deepEqual(chart.outline, [{ x: 10, depth: 10 }, { x: 70, depth: 10 }, { x: 310, depth: 20 }, { x: 10, depth: 20 }]);
 });
 test('empty and zero usage ranges have no invalid geometry', () => {
   assert.deepEqual(tokenUsageArea([]), { total: 0, baseline: 0, height: 0, samples: [], outline: [], segments: [], bars: [] });
@@ -39,9 +39,9 @@ test('uneven frame spacing keeps a shared bottom baseline and monotonic cumulati
   const chart = tokenUsageArea(frames.reverse());
   assert.deepEqual(chart.samples.map(bar => bar.ratio), [.1, .1, .4, 1]);
   assert.deepEqual(chart.samples.map(bar => bar.cumulative), [10, 10, 40, 100]);
-  assert.equal(chart.baseline, 310);
+  assert.equal(chart.baseline, 10);
   assert.equal(chart.outline[0].x, chart.outline.at(-1)!.x);
-  assert.ok(chart.outline.every(point => point.x >= chart.baseline - chart.height && point.x <= chart.baseline));
+  assert.ok(chart.outline.every(point => point.x >= chart.baseline && point.x <= chart.baseline + chart.height));
 });
 
 
@@ -72,4 +72,14 @@ test('a single-frame branch retains its own area run between surrounding branche
   const filtered = tokenUsageArea(frames);
   assert.equal(filtered.total, 50);
   assert.deepEqual(filtered.segments.map(segment => segment.branch), ['gallery']);
+});
+
+
+test('reversed spatial depth still accumulates oldest to newest and keeps positive bar spacing', () => {
+  const old = plane(20, 40), latest = plane(80, 10);
+  old.frame.timestamp = 1; latest.frame.timestamp = 2;
+  const chart = tokenUsageArea([latest, old]);
+  assert.deepEqual(chart.samples.map(sample => sample.plane.depth), [40, 10]);
+  assert.deepEqual(chart.samples.map(sample => sample.cumulative), [20, 100]);
+  assert.ok(chart.bars.every(bar => bar.width > 0 && bar.width < 30));
 });

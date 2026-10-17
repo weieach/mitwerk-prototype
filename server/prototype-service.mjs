@@ -21,8 +21,10 @@ export function findArchive(root, number) {
 }
 
 /** A sandboxed archive gets ephemeral storage and access only to its frozen, read-only assets. */
-export function prototypeBootstrap(base) {
-  return `<script>(()=>{const base=${JSON.stringify(base)};const memory=()=>{const data=new Map();return {getItem:k=>data.get(String(k))??null,setItem:(k,v)=>data.set(String(k),String(v)),removeItem:k=>data.delete(String(k)),clear:()=>data.clear(),key:i=>[...data.keys()][i]??null,get length(){return data.size}}};for(const key of ['localStorage','sessionStorage'])Object.defineProperty(window,key,{value:memory()});const request=window.fetch.bind(window);window.fetch=(input,init)=>{let url=new URL(typeof input==='string'?input:input instanceof URL?input.href:input.url,location.href);if(url.pathname.startsWith('/__mitwerk/graph'))return Promise.resolve(new Response('null',{headers:{'Content-Type':'application/json'}}));if(url.pathname.startsWith('/gallery/'))url=new URL(base+url.pathname.slice(1),location.origin);if(url.origin!==location.origin||!url.pathname.startsWith(base))return Promise.reject(new Error('This archived prototype only accesses its saved assets.'));return request(url,{...init,credentials:'omit'});};})();</script>`;
+export function prototypeBootstrap(base, timestamp) {
+  // Historical date filters should see the snapshot date, not the deployment/viewing date.
+  const clock = Number.isFinite(timestamp) ? `const NativeDate=Date;const snapshotTime=${JSON.stringify(timestamp)};function SnapshotDate(...args){if(!new.target)return new NativeDate(snapshotTime).toString();return Reflect.construct(NativeDate,args.length?args:[snapshotTime],new.target)}Object.setPrototypeOf(SnapshotDate,NativeDate);SnapshotDate.prototype=NativeDate.prototype;SnapshotDate.now=()=>snapshotTime;window.Date=SnapshotDate;` : '';
+  return `<script>(()=>{${clock}const base=${JSON.stringify(base)};const memory=()=>{const data=new Map();return {getItem:k=>data.get(String(k))??null,setItem:(k,v)=>data.set(String(k),String(v)),removeItem:k=>data.delete(String(k)),clear:()=>data.clear(),key:i=>[...data.keys()][i]??null,get length(){return data.size}}};for(const key of ['localStorage','sessionStorage'])Object.defineProperty(window,key,{value:memory()});const request=window.fetch.bind(window);window.fetch=(input,init)=>{let url=new URL(typeof input==='string'?input:input instanceof URL?input.href:input.url,location.href);if(url.pathname.startsWith('/__mitwerk/graph'))return Promise.resolve(new Response('null',{headers:{'Content-Type':'application/json'}}));if(url.pathname.startsWith('/gallery/'))url=new URL(base+url.pathname.slice(1),location.origin);if(url.origin!==location.origin||!url.pathname.startsWith(base))return Promise.reject(new Error('This archived prototype only accesses its saved assets.'));return request(url,{...init,credentials:'omit'});};})();</script>`;
 }
 
 export function snapshotCatalog(catalog, push) {
@@ -60,7 +62,7 @@ export function createPrototypeService(root, { catalog, history }) {
       // Build source with our configuration. Never execute archived Vite configs, scripts, hooks or servers.
       await build({ root: sourceDir, configFile: false, envFile: false, publicDir: false, base, logLevel: 'error',
         plugins: [react(), { name: 'archived-prototype-data',
-          transformIndexHtml: { order: 'post', handler: html => html.replace('<head>', `<head>${prototypeBootstrap(base)}`) },
+          transformIndexHtml: { order: 'post', handler: html => html.replace('<head>', `<head>${prototypeBootstrap(base, push.timestamp)}`) },
           generateBundle() {
             this.emitFile({ type: 'asset', fileName: 'gallery/manifest.json', source: JSON.stringify(frozen) });
             this.emitFile({ type: 'asset', fileName: 'gallery/git-history.json', source: JSON.stringify(frozenHistory) });

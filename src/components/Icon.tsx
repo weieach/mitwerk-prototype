@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { PhosphorIcon } from './PhosphorIcon';
+import { PhosphorIcon, FullscreenIcon } from './PhosphorIcon';
 
 const names = {
   info: 'info',
@@ -32,6 +32,7 @@ const names = {
 export type IconName = keyof typeof names;
 
 export function Icon({ name, size = 16, style, weight: requestedWeight }: { name: IconName; size?: number; style?: CSSProperties; weight?: 'regular' | 'fill' }) {
+  if (name === 'expand') return <FullscreenIcon size={size} style={style} weight={requestedWeight}/>;
   const weight = requestedWeight ?? (['play', 'pause', 'previous', 'next'].includes(name) ? 'fill' : 'regular');
   return <PhosphorIcon name={names[name]} size={size} weight={weight} style={style}/>;
 }

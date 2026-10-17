@@ -8,7 +8,7 @@ import { IterationGallery } from './features/iteration-gallery/IterationGallery'
 
 import { buildGitCaptureHistory } from './features/version-tree/capture-history';
 import type { GitHistory } from './features/version-tree/git-history';
-import type { Capture } from './features/iteration-gallery/model';
+import type { Capture, FrameRequest } from './features/iteration-gallery/model';
 import { galleryTokens } from './features/iteration-gallery/tokens';
 
 import { versionPanelLayout } from './components/VersionPanelSwitch';
@@ -21,11 +21,12 @@ function clampLeftWidth(width: number, total: number) {
   return Math.max(MIN_PANEL, Math.min(total - MIN_PANEL, width));
 }
 
-export default function ReadingWorkspace({ initialMode, galleryOnly = false, streamOnly = false, ideaOpen = false, externalPush, onOpenPush, onToggle, expanded }: {initialMode?: 'history' | 'test'; galleryOnly?: boolean; streamOnly?: boolean; ideaOpen?: boolean; externalPush?: {version:number} | null; onOpenPush?: (version:number)=>void; onToggle?: () => void; expanded?: boolean}) {
+export default function ReadingWorkspace({ initialMode, galleryOnly = false, streamOnly = false, ideaOpen = false, externalPush, onOpenPush, onToggle, expanded }: {initialMode?: 'history' | 'test'; galleryOnly?: boolean; streamOnly?: boolean; ideaOpen?: boolean; externalPush?: FrameRequest | null; onOpenPush?: (version:number)=>void; onToggle?: () => void; expanded?: boolean}) {
   const [panels, dispatchPanel] = useReducer(panelReducer, undefined, () => { const saved = loadTreePanels(loadGraphState(), panelBrowserStorage()); return initialMode ? {...saved, mode:initialMode} : saved; });
   const captureMode = captureTreeMode(location.search);
   const mode = captureMode ?? panels.mode;
-  const [pushRequest, setPushRequest] = useState<{ version: number } | null>(null);
+  const [pushRequest, setPushRequest] = useState<FrameRequest | null>(externalPush ?? null);
+  useEffect(() => { if (externalPush) setPushRequest(externalPush); }, [externalPush]);
   const [historyReady, setHistoryReady] = useState(false);
   const [modeSwitchVisible, setModeSwitchVisible] = useState(false);
   useEffect(() => {
@@ -64,6 +65,15 @@ export default function ReadingWorkspace({ initialMode, galleryOnly = false, str
     return () => { abort.abort(); clearInterval(timer); };
   }, []);
   const workspace = useRef<HTMLElement>(null);
+  const [headerTarget, setHeaderTarget] = useState<HTMLDivElement | null>(null);
+  const [ideaHeaderTarget, setIdeaHeaderTarget] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!headerTarget) return;
+    const update = () => workspace.current?.style.setProperty('--reader-header-height', `${headerTarget.offsetHeight}px`);
+    const observer = new ResizeObserver(update);
+    observer.observe(headerTarget); update();
+    return () => observer.disconnect();
+  }, [headerTarget]);
   const divider = useRef<HTMLDivElement>(null);
   const [leftWidth, setLeftWidth] = useState<number | null>(null);
   const [workspaceWidth, setWorkspaceWidth] = useState(0);
@@ -179,9 +189,10 @@ export default function ReadingWorkspace({ initialMode, galleryOnly = false, str
     data-active-panel={activePanel}
     style={{ '--reading-column-min': `${MIN_PANEL}px`, '--panel-switch-ms': `${versionPanelLayout.transitionMs}ms`, '--split': leftWidth === null ? '50%' : `${leftWidth}px` } as CSSProperties}
   >
+    {ideaOpen && <div className="shared-reader-header" ref={setHeaderTarget}/>}
     <div className="workspace-split" style={{ gridTemplateColumns: galleryOnly || streamOnly ? 'minmax(0, 1fr)' : leftWidth === null ? 'minmax(0, 1fr) minmax(0, 1fr)' : `${leftWidth}px minmax(0, 1fr)` }}>
-      {!streamOnly && <IterationGallery playbackOnly={ideaOpen} pushRequest={externalPush ?? pushRequest} onToggle={onToggle} expanded={expanded} onSwitchPanel={!ideaOpen && !galleryOnly && compact ? () => setActivePanel('stream') : undefined}/>}
-      {!galleryOnly && <VersionTreePanel id={ideaOpen ? "workspace-pane-ideas" : undefined} title={ideaOpen || streamOnly ? 'Idea stream' : undefined} onSwitchPanel={!ideaOpen && !streamOnly && compact ? () => setActivePanel('visualizer') : undefined} key={`${mode}-${mode === 'history' && historyReady}`} graph={panels[mode]}
+      {!streamOnly && <IterationGallery headerTarget={ideaOpen ? headerTarget : null} headerActions={ideaOpen ? <div className="idea-header-slot" ref={setIdeaHeaderTarget}/> : undefined} playbackOnly={ideaOpen} pushRequest={pushRequest} onToggle={onToggle} expanded={expanded} onSwitchPanel={!ideaOpen && !galleryOnly && compact ? () => setActivePanel('stream') : undefined}/>}
+      {!galleryOnly && <VersionTreePanel embedded={ideaOpen} headerTarget={ideaHeaderTarget} id={ideaOpen ? "workspace-pane-ideas" : undefined} title={ideaOpen || streamOnly ? 'Idea stream' : undefined} onSwitchPanel={!ideaOpen && !streamOnly && compact ? () => setActivePanel('visualizer') : undefined} key={`${mode}-${mode === 'history' && historyReady}`} graph={panels[mode]}
         status={mode === 'history' ? historyError || (!historyReady ? 'Reading capture history…' : !panels.history.nodes.length ? 'No saved captures found.' : '') : ''}
         onOpenPush={version => { onOpenPush?.(version); setPushRequest({ version }); setActivePanel('visualizer'); }} mode={mode} modeSwitchVisible={modeSwitchVisible} onModeChange={mode => dispatchPanel({ type: 'switch', mode })}
         dispatch={action => dispatchPanel({ type: 'graph', mode, action })} />}

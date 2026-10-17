@@ -37,10 +37,10 @@ export const Layers = icon('stack');
 export const LayoutGrid = icon('squares-four');
 export const ListTodo = icon('list-checks');
 export const LoaderCircle = icon('circle-notch');
-export const Maximize2 = icon('arrows-out');
+export const Maximize2: InterfaceIcon = FullscreenIcon;
 export const MessageSquare = icon('chat');
 export const MoreHorizontal = icon('dots-three');
-export const Minimize2 = icon('arrows-in');
+export const Minimize2: InterfaceIcon = props => <FullscreenIcon {...props} expanded/>;
 export const Moon = icon('moon');
 export const PanelLeftOpen = icon('sidebar-simple');
 export const Paperclip = icon('paperclip');
@@ -56,3 +56,8 @@ export const X = icon('x');
 export const Archive = icon('archive');
 export const RotateCcw = icon('arrow-counter-clockwise');
 export const Users = icon('users');
+
+/** Shared fullscreen glyph for panel headers, workspace controls and frame previews. */
+export function FullscreenIcon({ expanded = false, style, ...props }: PhosphorIconProps & { expanded?: boolean }) {
+  return <PhosphorIcon name={expanded ? 'corners-in' : 'corners-out'} {...props} weight="regular" style={{ ...style, width: 'var(--fullscreen-icon-size)', height: 'var(--fullscreen-icon-size)', fontSize: 'var(--fullscreen-icon-size)' }}/>;
+}

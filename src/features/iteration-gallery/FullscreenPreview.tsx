@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Icon } from '../../components/Icon';
+import { FullscreenIcon } from '../../components/PhosphorIcon';
 import { galleryTokens as t } from './tokens';
 
 export function FullscreenPreview({ label, ratio, onClose, children, footer }: {
@@ -22,7 +22,7 @@ export function FullscreenPreview({ label, ratio, onClose, children, footer }: {
     onCancel={event => { event.preventDefault(); onClose(); }}
     onPointerDown={event => event.stopPropagation()}
     onClick={event => { event.stopPropagation(); if (event.target === event.currentTarget) onClose(); }}>
-    <button type="button" className="theater-fullscreen-close" aria-label="Close full screen" onClick={onClose}><Icon name="close"/></button>
+    <button type="button" className="theater-fullscreen-close" aria-label="Close full screen" onClick={onClose}><FullscreenIcon expanded/></button>
     <div className="theater-fullscreen-content">{children}</div>
     <div className="theater-fullscreen-footer">{footer}</div>
   </dialog>, document.body);

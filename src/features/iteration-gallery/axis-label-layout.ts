@@ -23,12 +23,12 @@ export function axisTopBlend(camera: THREE.Camera) {
 export function axisLabelRotation(face: AxisAnchor['face'], frontBlend: number, topBlend = 0) {
   const turn = Math.PI / 2 * (1 - frontBlend);
   return face === 'ground' ? new THREE.Euler(-Math.PI / 2 * topBlend, 0, 0)
-    : face === 'wall' ? new THREE.Euler(0, turn, 0) : new THREE.Euler();
+    : face === 'wall' ? new THREE.Euler(0, -turn, 0) : new THREE.Euler();
 }
 
-/** Fold the date wall outward onto the left floor, retaining depth and ruler length. */
+/** Fold the date wall outward onto the right floor, retaining depth and ruler length. */
 export function overheadDatePosition(point: THREE.Vector3, floor: number) {
-  return new THREE.Vector3(-point.y, floor, point.z);
+  return new THREE.Vector3(point.x + point.y, floor, point.z);
 }
 
 export function withOverheadDates(anchors: AxisAnchor[], floor: number, endDepth?: number): AxisAnchor[] {
@@ -38,7 +38,7 @@ export function withOverheadDates(anchors: AxisAnchor[], floor: number, endDepth
     valueOrigin: anchor.valueOrigin ? overheadDatePosition(anchor.valueOrigin, floor) : undefined,
   }]).map(anchor => {
     if (endDepth === undefined || !anchor.valueOrigin || (!anchor.overheadDate && anchor.face !== 'ground')) return anchor;
-    return { ...anchor, topPosition: new THREE.Vector3(anchor.valueOrigin.x, floor, -endDepth - t.topView.titleEndGap) };
+    return { ...anchor, topPosition: new THREE.Vector3(anchor.valueOrigin.x, floor, -endDepth + t.topView.titleEndGap) };
   });
 }
 

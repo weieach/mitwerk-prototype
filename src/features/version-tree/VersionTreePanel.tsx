@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom';
+import { ZoomScaleButton } from '../../components/ZoomScaleButton';
 import { VersionPanelSwitch } from '../../components/VersionPanelSwitch';
 import { RowSelect } from '../../components/RowSelect';
 import { AdaptivePanelTitle } from '../../components/AdaptivePanelTitle';
@@ -9,26 +11,44 @@ import { Icon } from '../../components/Icon';
 import { branchTip, branchPathIds, canDeleteCurrent, canDeleteFuture, isBranchEndpoint, isReverted, isRevertedRoute, screenshotFocusId, screenshotQueryFlags, type GraphAction, type GraphState } from './model';
 import { fitAllFrame, frameScreenshotTargets, frameVersionLevel, geometry, layoutBranchView, layoutGraph, screenshotNodeTargets } from './layout';
 import { galleryTokens } from '../iteration-gallery/tokens';
-import { activeRouteColor, levelColorLookup, palerAccent, stationLabelOffset, treeTheme, versionLabelZoomScale } from './tokens';
+import { activeRouteColor, ideaTheme, levelColorLookup, palerAccent, stationLabelOffset, treeTheme, versionLabelZoomScale } from './tokens';
 import { commitBranchGap, layoutGitHistory, mergedStemDots } from './git-layout';
 import { IsometricGrid } from './IsometricGrid';
 import { VersionCard } from './VersionCard';
 import { branchName, isBranchDivergence, mergedBranchIds, presentTree } from './presentation';
 import { canEditTree, treeModes, type TreeMode } from './panel-state';
+import { IdeaCard } from './IdeaCard';
+import { milestoneStorageKey, milestoneNavigationIndex, parseMilestones, firstBranchLabels, projectIdeaStream, seedMilestones } from './idea-stream';
 
-type Props = { id?:string; title?:string; onSwitchPanel?:()=>void; onOpenPush?: (version: number) => void; status?: string; graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; modeSwitchVisible: boolean; onModeChange: (mode: TreeMode) => void };
+type Props = { embedded?:boolean; headerTarget?:HTMLElement|null; id?:string; title?:string; onSwitchPanel?:()=>void; onOpenPush?: (version: number) => void; status?: string; graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; modeSwitchVisible: boolean; onModeChange: (mode: TreeMode) => void };
 
-function graphBounds(nodes: { x: number; y: number; title: string }[]) {
+function graphBounds(nodes: { x: number; y: number; title: string; labelWidth?:number }[], labelScale = 1) {
   const label = stationLabelOffset();
   let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
   for (const node of nodes) {
     const cardTop = node.y + geometry.cardOffsetY;
-    left = Math.min(left, node.x + label.x - 360);
+    left = Math.min(left, node.x + label.x - (node.labelWidth ?? 360) * labelScale);
     right = Math.max(right, node.x + geometry.cardOffsetX + geometry.cardWidth);
     top = Math.min(top, cardTop);
     bottom = Math.max(bottom, cardTop + Math.min(commitBranchGap(node.title), geometry.cardHeight));
   }
   return { left, top, right, bottom };
+}
+
+/** Fit compensated labels as well as graph geometry at the resulting zoom. */
+function fitGraphFrame(source: {id:string; x:number; y:number; title:string}[], element:HTMLElement, width:number, height:number, minZoom:number) {
+  const labels = new Map(Array.from(element.querySelectorAll<HTMLElement>('[data-graph-label]'), label => [label.dataset.graphLabel!, label.offsetWidth]));
+  const nodes = source.map(node => ({...node, labelWidth: labels.get(node.id) ?? 36}));
+  let scale = 1;
+  for (let i = 0; i < 8; i++) {
+    const bounds = graphBounds(nodes, versionLabelZoomScale(scale));
+    scale = fitAllFrame(bounds, width, height, minZoom).zoom;
+  }
+  const bounds = graphBounds(nodes, versionLabelZoomScale(scale));
+  const shift = Math.max(0, -bounds.left + 48);
+  const frame = fitAllFrame({...bounds, left: bounds.left + shift, right: bounds.right + shift}, width, height, minZoom);
+  const baseShift = Math.max(0, -graphBounds(source).left + 48);
+  return {...frame, inset: frame.inset + shift - baseShift};
 }
 
 const screenshotFlags = typeof window !== 'undefined'
@@ -37,9 +57,29 @@ const screenshotFlags = typeof window !== 'undefined'
 const screenshotCapture = screenshotFlags.capture;
 if (screenshotFlags.countHover) document.documentElement.dataset.screenshotCountHover = '1';
 
-export function VersionTreePanel({ id, title = 'Version stream', graph, dispatch, onSwitchPanel, onOpenPush, mode, modeSwitchVisible, onModeChange, status = '' }: Props) {
+export function VersionTreePanel({ embedded = false, headerTarget, id, title = 'Idea stream', graph, dispatch, onSwitchPanel, onOpenPush, mode, modeSwitchVisible, onModeChange, status = '' }: Props) {
+  const ideaMode = mode === 'history';
+  const [savedMilestones, setSavedMilestones] = useState(() => {
+    try { return parseMilestones(localStorage.getItem(milestoneStorageKey)); } catch { return {}; }
+  });
+  const milestones = useMemo(() => seedMilestones(graph.nodes, savedMilestones), [graph.nodes, savedMilestones]);
+  const [expandedRuns, setExpandedRuns] = useState<Set<string>>(() => new Set());
+  const [openCommand, setOpenCommand] = useState<string | null>(null);
+  const [pendingFocus, setPendingFocus] = useState<string | null>(null);
+  const ideas = useMemo(() => projectIdeaStream(graph.nodes, milestones, expandedRuns), [graph.nodes, milestones, expandedRuns]);
+  useEffect(() => {
+    if (!ideaMode || status || !graph.nodes.length) return;
+    try { localStorage.setItem(milestoneStorageKey, JSON.stringify(milestones)); } catch { /* Session editing remains available. */ }
+  }, [ideaMode, milestones, graph.nodes.length, status]);
+  useEffect(() => {
+    function sync(event: StorageEvent) { if (event.key === milestoneStorageKey) setSavedMilestones(parseMilestones(event.newValue)); }
+    window.addEventListener('storage', sync);
+    return () => window.removeEventListener('storage', sync);
+  }, []);
+  const selectedDisplayId = ideaMode && graph.selectedId ? ideas.representative.get(graph.selectedId) ?? null : graph.selectedId;
   const activePath = useMemo(() => branchPathIds(graph.nodes, graph.activeBranchId), [graph.nodes, graph.activeBranchId]);
-  const layout = useMemo(() => mode === 'history' && graph.nodes.some(node => node.git) ? layoutGitHistory(graph.nodes) : layoutBranchView(layoutGraph(graph.nodes), graph.selectedId, activePath), [graph.nodes, graph.selectedId, activePath, mode]);
+  const layout = useMemo(() => ideaMode ? layoutGitHistory(ideas.nodes, node => openCommand === node.id ? ideaTheme.openGap : ideas.folded.has(node.id) ? ideaTheme.foldedGap : milestones[node.id] ? ideaTheme.milestoneGap : ideaTheme.nodeGap, {compactLanes:true, showIncomingOrigins:false}) : layoutBranchView(layoutGraph(graph.nodes), graph.selectedId, activePath), [graph.nodes, graph.selectedId, activePath, ideaMode, ideas, milestones, openCommand]);
+  const branchLabels = useMemo(() => firstBranchLabels(graph.nodes, ideas.representative), [graph.nodes, ideas]);
   const boundsNodes = useMemo(() => [...layout.nodes, ...(layout.mergeOrigins ?? []).map(origin => ({ ...origin, title: '' }))], [layout]);
   const levelColor = useMemo(() => levelColorLookup([...layout.nodes, ...(layout.mergeOrigins ?? []).map(origin => ({ branchId: origin.branchId, row: 0 }))]), [layout]);
   const mergedBranches = useMemo(() => mergedBranchIds(graph.nodes), [graph.nodes]);
@@ -66,13 +106,16 @@ export function VersionTreePanel({ id, title = 'Version stream', graph, dispatch
   const previousCount = useRef(graph.nodes.length);
   const focusId = screenshotFocusId(graph);
   const drag = useRef<{ x: number; y: number; left: number; top: number; moved: boolean } | null>(null);
-  const selected = layout.nodes.find(node => node.id === graph.selectedId);
-  const presentation = useMemo(() => presentTree(layout, graph.selectedId, collapsedLevels, graph.activeBranchId),
-    [layout, graph.selectedId, collapsedLevels, graph.activeBranchId]);
+  const selected = layout.nodes.find(node => node.id === selectedDisplayId);
+  const presentation = useMemo(() => presentTree(layout, selectedDisplayId, collapsedLevels, graph.activeBranchId),
+    [layout, selectedDisplayId, collapsedLevels, graph.activeBranchId]);
   const endpoints = presentation.endpoints;
   const jumperEndpointId = endpoints.find(node => node.branchId === presentation.selectedBranchId)?.id ?? endpoints[0]?.id;
-  const jumperIndex = Math.max(0, endpoints.findIndex(node => node.id === jumperEndpointId));
-  const jumperEndpoint = endpoints[jumperIndex];
+  const navigationNodes = ideaMode ? layout.nodes.filter(node => milestones[node.id]?.trim()) : endpoints;
+  const jumperIndex = ideaMode ? milestoneNavigationIndex(graph.nodes, milestones, graph.selectedId)
+    : Math.max(0, endpoints.findIndex(node => node.id === jumperEndpointId));
+  const jumperEndpoint = navigationNodes[jumperIndex];
+  const navigationLabel = ideaMode ? 'Milestone' : 'Endpoint';
   const branches = graph.nodes.some(node => node.git) ? [...new Set(graph.nodes.flatMap(node => node.git?.refs ?? []))].map(name => ({ branchId: name, name, endpoint: layout.nodes.find(node => node.git?.refs.includes(name))! })) : endpoints.map(endpoint => ({ branchId: endpoint.branchId, name: branchName(endpoint.branchId, graph.nodes), endpoint }));
   const activeBranchName = branchName(graph.activeBranchId, graph.nodes);
 
@@ -122,9 +165,15 @@ export function VersionTreePanel({ id, title = 'Version stream', graph, dispatch
       if (!initialFit.current && width > 0) {
         initialFit.current = true;
         if (screenshotCapture) {
+          if (ideaMode && screenshotFlags.treeMilestone && navigationNodes.length) {
+            const milestone = navigationNodes.at(-1)!;
+            dispatch({ type: 'select', id: milestone.id });
+            focusAtZoom(milestone, screenshotFlags.treeZoom ?? 1, 'instant');
+            requestAnimationFrame(() => requestAnimationFrame(markScreenshotReady));
+            return;
+          }
           if (screenshotFlags.treeFit) {
-            const raw = graphBounds(boundsNodes);
-            const frame = fitAllFrame({ ...raw, left: raw.left + Math.max(0, -raw.left + 48) }, width, height, treeTheme.minZoom);
+            const frame = fitGraphFrame(boundsNodes, element, width, height, ideaMode ? ideaTheme.fitMinZoom : treeTheme.minZoom);
             setFitInset(frame.inset);
             zoomRef.current = frame.zoom;
             setZoom(frame.zoom);
@@ -148,7 +197,9 @@ export function VersionTreePanel({ id, title = 'Version stream', graph, dispatch
           const centered = screenshotFlags.treeCenter
             ? layout.nodes.filter(node => node.label.toLowerCase() === `v${screenshotFlags.treeCenter}`.toLowerCase())
             : [];
+          const latestMilestone = ideaMode ? layout.nodes.filter(node => milestones[node.id]).at(-1) : undefined;
           const captureLayout = centered.length ? { ...layout, nodes: centered }
+            : latestMilestone ? { ...layout, nodes: [latestMilestone] }
             : mode === 'history' ? { ...layout, nodes: layout.nodes.slice(-treeTheme.historyCaptureVersions) } : layout;
           const targets = screenshotNodeTargets(captureLayout, presentation.hiddenNodeIds, activePath, graph.selectedId);
           if (targets.length) {
@@ -188,7 +239,7 @@ export function VersionTreePanel({ id, title = 'Version stream', graph, dispatch
     const bounds = element.getBoundingClientRect();
     const x = clientX === undefined ? element.clientWidth / 2 : clientX - bounds.left;
     const y = clientY === undefined ? element.clientHeight / 2 : clientY - bounds.top;
-    const worldX = (element.scrollLeft + x) / zoomRef.current;
+    const worldX = (element.scrollLeft + x) / zoomRef.current - fitInset;
     const worldY = (element.scrollTop + y) / zoomRef.current;
     zoomRef.current = clamped;
     setZoom(clamped);
@@ -238,7 +289,7 @@ export function VersionTreePanel({ id, title = 'Version stream', graph, dispatch
   function fitAll() {
     const element = viewport.current;
     if (!element) return;
-    const frame = fitAllFrame({ ...graphBounds(boundsNodes), left: graphBounds(boundsNodes).left + worldShift }, element.clientWidth, element.clientHeight, treeTheme.minZoom);
+    const frame = fitGraphFrame(boundsNodes, element, element.clientWidth, element.clientHeight, ideaMode ? ideaTheme.fitMinZoom : treeTheme.minZoom);
     setFitInset(frame.inset);
     zoomRef.current = frame.zoom;
     setZoom(frame.zoom);
@@ -253,8 +304,10 @@ export function VersionTreePanel({ id, title = 'Version stream', graph, dispatch
     zoomRef.current = clamped;
     setZoom(clamped);
     requestAnimationFrame(() => {
+      const inset = ideaMode ? Math.max(40, Math.min(element.clientWidth / 3,
+        element.clientWidth - (geometry.cardWidth + geometry.cardOffsetX + 20) * clamped)) : element.clientWidth / 3;
       element.scrollTo({
-        left: Math.max(0, node.x * clamped - element.clientWidth / 3),
+        left: Math.max(0, (node.x + (ideaMode ? worldShift : 0)) * clamped - inset),
         top: Math.max(0, node.y * clamped - element.clientHeight / 3),
         behavior,
       });
@@ -269,18 +322,27 @@ export function VersionTreePanel({ id, title = 'Version stream', graph, dispatch
   useEffect(() => {
     function onGoToCommit(event: Event) {
       const version = (event as CustomEvent<{ version: number }>).detail?.version;
-      const node = layout.nodes.find(item => item.label.toLowerCase() === `v${version}`);
+      const node = graph.nodes.find(item => item.label.toLowerCase() === `v${version}`);
       if (!node) return;
       dispatch({ type: 'select', id: node.id });
-      focusAtZoom(node, 1);
+      const run = ideas.runs.find(run => run.nodeIds.includes(node.id));
+      if (ideaMode && run) setExpandedRuns(current => new Set([...current, run.id]));
+      setPendingFocus(node.id);
     }
     window.addEventListener('mitwerk-go-to-commit', onGoToCommit);
     return () => window.removeEventListener('mitwerk-go-to-commit', onGoToCommit);
-  }, [layout.nodes, dispatch]);
+  }, [graph.nodes, ideas.runs, ideaMode, dispatch]);
+
+  useEffect(() => {
+    const node = pendingFocus ? layout.nodes.find(node => node.id === pendingFocus) : undefined;
+    if (!node) return;
+    focusAtZoom(node, 1);
+    setPendingFocus(null);
+  }, [pendingFocus, layout]);
 
   function focusCurrentBranchEndpoint() {
     const tip = branchTip(graph.nodes, graph.activeBranchId);
-    const endpoint = layout.nodes.find(node => node.id === tip?.id);
+    const endpoint = layout.nodes.find(node => node.id === (ideaMode && tip ? ideas.representative.get(tip.id) : tip?.id));
     if (!endpoint) return;
     setCollapsedLevels(new Set());
     goToEndpoint(endpoint);
@@ -289,25 +351,27 @@ export function VersionTreePanel({ id, title = 'Version stream', graph, dispatch
   function goToEndpoint(node: typeof jumperEndpoint) {
     if (!node) return;
     dispatch({ type: 'select', id: node.id });
+    if (ideaMode) setOpenCommand(null);
     focusAtZoom(node, 1);
   }
 
   useEffect(() => {
     if (screenshotCapture || !overviewReady || introEndpointZoom.current) return;
-    const endpoint = endpoints.find(node => node.branchId === graph.activeBranchId)
+    const endpoint = (ideaMode ? layout.nodes.filter(node => milestones[node.id]).at(-1) : undefined) ?? endpoints.find(node => node.branchId === graph.activeBranchId)
       ?? layout.nodes.find(node => node.branchId === graph.activeBranchId && isBranchEndpoint(graph.nodes, node.id));
     if (!endpoint) return;
     const timer = window.setTimeout(() => {
       if (introEndpointZoom.current) return;
       introEndpointZoom.current = true;
-      focusAtZoom(endpoint, 1);
+      if (ideaMode) dispatch({ type: 'select', id: endpoint.id });
+      focusAtZoom(endpoint, ideaMode ? Math.min(1, (viewport.current?.clientWidth ?? 400) / (geometry.cardWidth + geometry.stationLabelReserve + geometry.cardOffsetX + 40)) : 1);
     }, 160);
     return () => window.clearTimeout(timer);
   }, [overviewReady, screenshotCapture, graph.activeBranchId, layout.nodes]);
 
   function stepEndpoint(delta: number) {
-    if (endpoints.length < 2) return;
-    goToEndpoint(endpoints[(jumperIndex + delta + endpoints.length) % endpoints.length]);
+    if (navigationNodes.length < 2) return;
+    goToEndpoint(navigationNodes[(jumperIndex + delta + navigationNodes.length) % navigationNodes.length]);
   }
 
   function startPan(event: ReactPointerEvent<HTMLDivElement>) {
@@ -340,7 +404,30 @@ export function VersionTreePanel({ id, title = 'Version stream', graph, dispatch
   const worldWidth = Math.max(layout.width + 240, viewportSize.width / zoom) + worldShift + fitInset;
   const worldHeight = Math.max(layout.height + 240, viewportSize.height / zoom);
 
+  const treeActions = <div className="panel-header-actions">
+      <div className="zoom-controls">
+        <button onClick={focusSelected} disabled={!selected} aria-label="Center selected version" title="Center selected version"><Icon name="locate" size={15}/></button>
+      </div>
+      <div className="zoom-controls endpoint-controls">
+        <button onClick={() => stepEndpoint(-1)} disabled={navigationNodes.length < 2} aria-label={`Previous ${navigationLabel.toLowerCase()}`} title={`Previous ${navigationLabel.toLowerCase()}`}>
+          <Icon name="arrow" style={{ transform: 'scaleX(-1)' }}/>
+        </button>
+        <button className="endpoint-jump" onClick={() => goToEndpoint(jumperEndpoint)} disabled={!jumperEndpoint}
+          aria-label={`Jump to ${navigationLabel.toLowerCase()} ${jumperEndpoint ? jumperIndex + 1 : 0} of ${navigationNodes.length}`}
+          title={`Jump to current ${navigationLabel.toLowerCase()}`}>
+          {`${navigationLabel} ${jumperEndpoint ? jumperIndex + 1 : 0}/${navigationNodes.length}`}
+        </button>
+        <button onClick={() => stepEndpoint(1)} disabled={navigationNodes.length < 2} aria-label={`Next ${navigationLabel.toLowerCase()}`} title={`Next ${navigationLabel.toLowerCase()}`}>
+          <Icon name="arrow"/>
+        </button>
+      </div>
+    </div>;
+  const treeHeader = <div className="panel-header tree-header"><div className="panel-heading"><AdaptivePanelTitle id="tree-title" full={title} short="Stream"/><VersionPanelSwitch onClick={onSwitchPanel} target="Version blocks"/>
+      {modeSwitchVisible && <RowSelect label="Version stream panel" value={mode}
+        options={treeModes.map(item => ({ value: item.id, label: item.label }))} onChange={value => onModeChange(value as TreeMode)}/>}
+    </div>{treeActions}</div>;
   return <section id={id} className="tree-panel" data-tree-mode={mode} aria-labelledby="tree-title" data-selected-branch={presentation.selectedBranchId || undefined} data-active-branch={graph.activeBranchId} style={{
+    '--idea-fold-count-size': `${ideaTheme.foldCountSize}px`,
     '--card-hover-inset': `${treeTheme.cardHoverBorderInset}px`,
     '--card-hover-transition': `${treeTheme.cardHoverTransitionMs}ms`,
     '--node-card-width': `${geometry.cardWidth}px`,
@@ -373,27 +460,7 @@ export function VersionTreePanel({ id, title = 'Version stream', graph, dispatch
     '--reverted-route-color': treeTheme.revertedRouteColor,
     '--merged-branch-opacity': treeTheme.mergedBranchOpacity,
   } as CSSProperties}>
-    <div className="panel-header tree-header"><div className="panel-heading"><AdaptivePanelTitle id="tree-title" full={title} short="Stream"/><VersionPanelSwitch onClick={onSwitchPanel} target="Version blocks"/>
-      {modeSwitchVisible && <RowSelect label="Version stream panel" value={mode}
-        options={treeModes.map(item => ({ value: item.id, label: item.label }))} onChange={value => onModeChange(value as TreeMode)}/>}
-    </div><div className="panel-header-actions">
-      <div className="zoom-controls">
-        <button onClick={focusSelected} disabled={!selected} aria-label="Center selected version" title="Center selected version"><Icon name="locate" size={15}/></button>
-      </div>
-      <div className="zoom-controls endpoint-controls">
-        <button onClick={() => stepEndpoint(-1)} disabled={endpoints.length < 2} aria-label="Previous endpoint" title="Previous endpoint">
-          <Icon name="arrow" style={{ transform: 'scaleX(-1)' }}/>
-        </button>
-        <button className="endpoint-jump" onClick={() => goToEndpoint(jumperEndpoint)} disabled={!jumperEndpoint}
-          aria-label={jumperEndpoint ? `Jump to endpoint ${jumperIndex + 1} of ${endpoints.length}` : 'Jump to current endpoint'}
-          title="Jump to current endpoint">
-          {jumperEndpoint ? `Endpoint ${jumperIndex + 1}/${endpoints.length}` : 'Jump to current endpoint'}
-        </button>
-        <button onClick={() => stepEndpoint(1)} disabled={endpoints.length < 2} aria-label="Next endpoint" title="Next endpoint">
-          <Icon name="arrow"/>
-        </button>
-      </div>
-    </div></div>
+    {embedded ? <><h2 id="tree-title" className="sr-only">{title}</h2>{headerTarget && createPortal(<div className="idea-header-controls" role="group" aria-label="Idea stream navigation">{modeSwitchVisible && <RowSelect label="Version stream panel" value={mode} options={treeModes.map(item => ({value:item.id,label:item.label}))} onChange={value => onModeChange(value as TreeMode)}/>} {treeActions}</div>, headerTarget)}</> : treeHeader}
     {status ? <p className="tree-history-message" role="status">{status}</p> : <><div className="canvas-shell">
       <div ref={viewport} className={`tree-viewport ${isPanning ? 'is-panning' : ''}`} tabIndex={0} aria-label="Version tree canvas. Scroll in any direction to pan. Control plus scroll to zoom. Click empty canvas to deselect." onPointerDown={startPan} onPointerMove={pan} onPointerUp={endPan} onPointerCancel={endPan} onLostPointerCapture={endPan}>
         <div className="canvas-size" style={{ width: (worldWidth + worldShift + fitInset) * zoom, height: worldHeight * zoom }}>
@@ -450,7 +517,7 @@ export function VersionTreePanel({ id, title = 'Version stream', graph, dispatch
               const color = levelColor(origin.branchId, 0);
               return <div key={origin.id} className="merge-origin" style={{ left: origin.x, top: origin.y, '--route-color': color } as CSSProperties}>
                 <div className="station has-descendants origin-station" role="img" aria-label={`Incoming branch ${origin.branchId}`}><span /></div>
-                <div className="merge-origin-tag"><BranchTag name={origin.branchId} color={color}/></div>
+                {(!ideaMode || branchLabels.get(origin.branchId) === origin.id) && <div className="merge-origin-tag" data-graph-label={origin.id}><BranchTag name={origin.branchId} color={color}/></div>}
               </div>;
             })}
             {layout.nodes.filter(node => !presentation.hiddenNodeIds.has(node.id)).map(node => {
@@ -460,24 +527,20 @@ export function VersionTreePanel({ id, title = 'Version stream', graph, dispatch
               const merged = mergedBranches.has(node.branchId);
               const color = merged ? palerAccent(levelColor(node.branchId, node.row)) : activeRouteColor(levelColor(node.branchId, node.row), onSpine);
               const label = stationLabelOffset();
-              return <div className="version-position" key={node.id} style={{
-                left: node.x + geometry.cardOffsetX, top: node.y + cardOffsetY,
-                '--station-offset-y': `${-cardOffsetY - treeTheme.stationRadius - 1}px`,
-                '--route-color': color,
-                zIndex: node.id === graph.selectedId ? 3 : 2,
-              } as CSSProperties}>
-                <span className="station-label" style={{
-                  left: -geometry.cardOffsetX + label.x,
-                  top: -cardOffsetY + label.y,
-                }}>{isBranchDivergence(node, graph.nodes) && <BranchTag name={node.branchId} color={color}/>}<span className="version-header">{node.label.toLowerCase()}</span></span>
-                <VersionCard node={node} selected={node.id === graph.selectedId}
+              const folded = ideaMode ? ideas.folded.get(node.id) : undefined;
+              if (folded) return <button key={node.id} className="idea-fold" style={{ left: node.x, top: node.y }}
+                aria-label={`Expand ${folded.nodeIds.length} versions, ${folded.firstLabel} through ${folded.lastLabel}`} aria-expanded={false}
+                onClick={() => setExpandedRuns(current => new Set([...current, folded.id]))}>
+                {branchLabels.get(node.branchId) === node.id && <span className="station-label" data-graph-label={node.id} style={{left: ideaTheme.foldCountSize / 2 + label.x, top: ideaTheme.foldCountSize / 2 + label.y}}><BranchTag name={node.branchId} color={color}/></span>}<span className="idea-fold-count">{folded.nodeIds.length}</span><span className="idea-fold-label">versions</span>
+              </button>;
+              const commitCard = <VersionCard hideStation={ideaMode} node={node} selected={ideaMode || node.id === graph.selectedId}
                   hasDescendants={presentation.nodesWithChildren.has(node.id)}
                   isEndpoint={isBranchEndpoint(graph.nodes, node.id)} onActivePath={onSpine}
                   isCurrentBranch={node.branchId === graph.activeBranchId}
                   canDeleteCurrent={canDeleteCurrent(graph.nodes, node.id)}
                   canDeleteFuture={canDeleteFuture(graph.nodes, node.id)}
                   color={color} reverted={reverted} merged={merged} readOnly={!canEditTree(mode)}
-                  onSelect={() => { dispatch({ type: 'select', id: node.id }); if (mode === 'history' && node.capture?.pushed) onOpenPush?.(node.capture.version); }}
+                  onSelect={() => dispatch({ type: 'select', id: node.id })}
                   onBranch={() => dispatch({ type: 'add-branch', sourceId: node.id })}
                   onCommit={() => dispatch({ type: 'add-commit', sourceId: node.id })}
                   onRevert={() => dispatch({ type: 'revert', sourceId: node.id })}
@@ -486,15 +549,30 @@ export function VersionTreePanel({ id, title = 'Version stream', graph, dispatch
                   onDeleteCurrent={() => dispatch({ type: 'delete-current', sourceId: node.id })}
                   onDeleteFuture={() => dispatch({ type: 'delete-future', sourceId: node.id })}
                   forceMenuOpen={screenshotFlags.menuOpen && node.id === focusId}
-                  onDisconnected={() => setToast("Project isn't connected")}/>
+                  onDisconnected={() => setToast("Project isn't connected")}/>;
+              return <div className="version-position" key={node.id} style={{
+                left: node.x + geometry.cardOffsetX, top: node.y + cardOffsetY,
+                '--station-offset-y': `${-cardOffsetY - treeTheme.stationRadius - 1}px`,
+                '--route-color': color,
+                zIndex: node.id === graph.selectedId ? 3 : 2,
+              } as CSSProperties}>
+                <span className="station-label" data-graph-label={node.id} style={{
+                  left: -geometry.cardOffsetX + label.x,
+                  top: -cardOffsetY + label.y,
+                }}>{(ideaMode ? branchLabels.get(node.branchId) === node.id : isBranchDivergence(node, graph.nodes)) && <BranchTag name={node.branchId} color={color}/>}<span className="version-header">{node.label.toLowerCase()}</span></span>
+                {ideaMode ? <IdeaCard node={node} milestone={milestones[node.id] ?? ''} open={openCommand === node.id} color={color}
+                  hasDescendants={presentation.nodesWithChildren.has(node.id)}
+                  onSelect={() => { setOpenCommand(current => current === node.id ? null : node.id); dispatch({ type: 'select', id: node.id }); if (node.capture?.pushed) onOpenPush?.(node.capture.version); }}
+                  onSave={text => setSavedMilestones({ ...milestones, [node.id]: text })}>{commitCard}</IdeaCard>
+                : commitCard}
               </div>;
             })}
           </div>
         </div>
       </div>
     </div>
-      <footer className="canvas-controls" aria-label="Version stream view controls">
-        <div ref={branchMenu} className="branch-controls header-branch-controls" data-header-fill>
+      <footer className="canvas-controls" aria-label="Idea stream view controls">
+        {!ideaMode && <div ref={branchMenu} className="branch-controls header-branch-controls" data-header-fill>
           <button className="branch-current" data-header-fill-content onClick={() => setBranchMenuOpen(open => !open)}
             aria-haspopup="menu" aria-expanded={branchMenuOpen} aria-label={`Active branch ${activeBranchName}. Switch branch`}
             title="Switch branch">
@@ -512,15 +590,16 @@ export function VersionTreePanel({ id, title = 'Version stream', graph, dispatch
               </button>
             </li>)}
           </ul>}
-        </div>
+        </div>}
         <div className="panel-header-actions">
+          {ideaMode && expandedRuns.size > 0 && <button className="icon-button" onClick={() => { setExpandedRuns(new Set()); setOpenCommand(null); }} title="Fold versions without milestones">Fold</button>}
           <button className="icon-button tree-grid-toggle" onClick={() => setGrid(!grid)} aria-label="Grid" aria-pressed={grid} title={grid ? 'Hide grid' : 'Show grid'}>
             <i className={grid ? 'ph ph-eye-closed' : 'ph ph-eye'} aria-hidden="true"/>Grid
           </button>
           <button className="icon-button" onClick={() => changeZoom(zoom - treeTheme.zoomStep)} disabled={zoom <= treeTheme.minZoom} aria-label="Zoom out"><Icon name="minus"/></button>
-          <button className="icon-button" onClick={() => changeZoom(1)} aria-label="Reset zoom to 100 percent">{Math.round(zoom * 100)}%</button>
+          <ZoomScaleButton zoom={zoom} label="Reset Idea stream zoom" onResetZoom={() => changeZoom(1)} onResetView={fitAll}/>
           <button className="icon-button" onClick={() => changeZoom(zoom + treeTheme.zoomStep)} disabled={zoom >= treeTheme.maxZoom} aria-label="Zoom in"><Icon name="plus"/></button>
-          <div className="album-camera-actions"><ResetViewButton label="Fit all versions" centerLabel="center current branch endpoint" onReset={fitAll} onCenter={focusCurrentBranchEndpoint}/></div>
+          {!ideaMode && <div className="album-camera-actions"><ResetViewButton label="Fit all versions" centerLabel="center current branch endpoint" onReset={fitAll} onCenter={focusCurrentBranchEndpoint}/></div>}
         </div>
       </footer>
     </>

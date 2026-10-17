@@ -21,7 +21,7 @@ test('both axis sets are world geometry and perpendicular to chronological depth
   assert.ok(result.axes.guides.some(guide => guide.axis === 'date'));
   assert.ok(result.axes.guides.some(guide => guide.axis === 'version'));
   for (const guide of result.axes.guides) assert.equal(guide.points[0][2], guide.points[1][2]);
-  assert.equal(result.axes.labels.find(label => label.id === 'date-title')?.rotation[1], Math.PI / 2);
+  assert.equal(result.axes.labels.find(label => label.id === 'date-title')?.rotation[1], -Math.PI / 2);
   assert.equal(result.axes.labels.find(label => label.id === 'version-title')?.rotation[0], -Math.PI / 2);
 });
 test('range export retains disabled history and marks only in-range representative frames', () => {

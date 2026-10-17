@@ -76,3 +76,17 @@ test('archived fetch accepts URL objects as well as string paths', async () => {
   await window.fetch(new URL('http://localhost:5173/gallery/manifest.json'));
   assert.equal(calls[0], 'http://localhost:5173/__mitwerk/prototype-assets/7/gallery/manifest.json');
 });
+
+
+test('archived date filters use the push timestamp while explicit dates and date parsing remain intact', () => {
+  const timestamp = Date.parse('2026-09-24T12:00:00Z');
+  const window: Record<string, any> = { fetch: async () => new Response('{}') };
+  runInNewContext(prototypeBootstrap('/__mitwerk/prototype-assets/18/', timestamp).replace(/^<script>|<\/script>$/g, ''),
+    { window, URL, Response, location: new URL('https://example.com/__mitwerk/prototype-assets/18/index.html') });
+  assert.equal(window.Date.now(), timestamp);
+  assert.equal(new window.Date().getTime(), timestamp);
+  assert.equal(new window.Date(0).getTime(), 0);
+  assert.equal(window.Date.parse('2026-09-24T12:00:00Z'), timestamp);
+  assert.equal(window.Date.UTC(1970, 0, 1), 0);
+  assert.equal(typeof window.Date(), 'string');
+});

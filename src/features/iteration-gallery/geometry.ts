@@ -17,6 +17,9 @@ export function albumEnvelope(versions: GalleryVersion[]) {
   };
 }
 
+/** Chronological depth mapped to the newest-first gallery's physical depth. */
+export function galleryDepth(depth: number, total: number) { return total - t.blockGap - depth; }
+
 export function buildAlbum(versions: GalleryVersion[], range: RangeKey, now: number) {
   const blocks: AlbumBlock[] = [], planes: FramePlane[] = [];
   const { width, height } = albumEnvelope(versions);
@@ -43,7 +46,14 @@ export function buildAlbum(versions: GalleryVersion[], range: RangeKey, now: num
     });
     blocks.push({ key: `${version.number}:${chunkIndex}`, version: version.number, width, height, start: chunkStart, end, active: chunkActive });
   }
-  return { blocks, planes, width, depth: versions.length * t.versionDepth };
+  const depth = versions.length * t.versionDepth;
+  // Preserve chronological array order; reflect only spatial coordinates so the latest frame is nearest +Z.
+  for (const block of blocks) [block.start, block.end] = [galleryDepth(block.end, depth), galleryDepth(block.start, depth)];
+  for (const plane of planes) {
+    plane.depth = galleryDepth(plane.depth, depth);
+    [plane.hitStart, plane.hitEnd] = [galleryDepth(plane.hitEnd, depth), galleryDepth(plane.hitStart, depth)];
+  }
+  return { blocks, planes, width, depth };
 }
 
 export type Vec3 = { x: number; y: number; z: number };
@@ -91,15 +101,15 @@ export function albumFloorY(album: Pick<ReturnType<typeof buildAlbum>, 'blocks'>
 }
 
 export function versionLabelPoseAtDepth(album: Pick<ReturnType<typeof buildAlbum>, 'width' | 'blocks'>, depth: number) {
-  return { x: album.width + t.rulerTickLength + t.rulerLabelGap, y: albumFloorY(album), z: -depth, face: 'ground' as const };
+  return { x: -t.rulerTickLength - t.rulerLabelGap, y: albumFloorY(album), z: -depth, face: 'ground' as const };
 }
 
-export function versionLabelPose(album: Pick<ReturnType<typeof buildAlbum>, 'width' | 'blocks'>, index: number) {
-  return versionLabelPoseAtDepth(album, (index + .5) * t.versionDepth);
+export function versionLabelPose(album: Pick<ReturnType<typeof buildAlbum>, 'width' | 'blocks' | 'depth'>, index: number) {
+  return versionLabelPoseAtDepth(album, galleryDepth((index + .5) * t.versionDepth, album.depth));
 }
 
-export function dateLabelPose(depth: number) {
-  return { x: 0, y: t.rulerTickLength + t.rulerLabelGap, z: -depth, face: 'wall' as const };
+export function dateLabelPose(depth: number, album: { width: number }) {
+  return { x: album.width, y: t.rulerTickLength + t.rulerLabelGap, z: -depth, face: 'wall' as const };
 }
 
 export function featuredTickLength() {
@@ -107,17 +117,17 @@ export function featuredTickLength() {
 }
 
 export function featuredVersionPose(album: Pick<ReturnType<typeof buildAlbum>, 'width' | 'blocks'>, depth: number) {
-  return { x: album.width + featuredTickLength() + t.rulerLabelGap, y: albumFloorY(album), z: -depth, face: 'ground' as const };
+  return { x: -featuredTickLength() - t.rulerLabelGap, y: albumFloorY(album), z: -depth, face: 'ground' as const };
 }
 
-export function featuredDatePose(depth: number) {
-  return { x: 0, y: featuredTickLength() + t.rulerLabelGap, z: -depth, face: 'wall' as const };
+export function featuredDatePose(depth: number, album: { width: number }) {
+  return { x: album.width, y: featuredTickLength() + t.rulerLabelGap, z: -depth, face: 'wall' as const };
 }
 
 /** Date on the wall and version on the ground, both at the selected frame's depth. */
 export function featuredFrameAxis(album: Pick<ReturnType<typeof buildAlbum>, 'width' | 'blocks'>, plane: Pick<FramePlane, 'depth' | 'frame'>) {
   return {
-    date: { ...featuredDatePose(plane.depth), text: formatFrameDate(plane.frame.timestamp) },
+    date: { ...featuredDatePose(plane.depth, album), text: formatFrameDate(plane.frame.timestamp) },
     version: { ...featuredVersionPose(album, plane.depth), text: formatVersion(plane.frame.version) },
   };
 }
@@ -138,8 +148,8 @@ export function resetLook(album: ReturnType<typeof buildAlbum>) {
   const bounds = albumBlockBounds(album);
   const points = [
     ...boxCorners(bounds),
-    { x: bounds.max.x + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, y: bounds.min.y, z: bounds.center.z },
-    { x: bounds.min.x, y: bounds.max.y + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, z: bounds.center.z },
+    { x: bounds.min.x - t.rulerTickLength - t.rulerLabelGap - t.axisTitle.valueGap, y: bounds.min.y, z: bounds.center.z },
+    { x: bounds.max.x, y: bounds.max.y + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, z: bounds.center.z },
   ];
   const span = coverRadius(bounds.center, points) * 2 * t.overviewPadding / t.overviewFitScale;
   return { center: bounds.center, span };

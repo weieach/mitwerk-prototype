@@ -89,3 +89,8 @@ export function adjacentPromptIndex(frames: Pick<GalleryFrame, 'kind'>[], index:
   }
   return null;
 }
+
+/** Normalize mouse-wheel lines/pages and keep trackpad horizontal gestures horizontal. */
+export function timelineWheelDelta(deltaX: number, deltaY: number, mode: number, width: number) {
+  return (Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY) * (mode === 1 ? 16 : mode === 2 ? width : 1);
+}

@@ -1,7 +1,22 @@
+import { SelectMenu, useSelectMenu } from '../../components/SelectMenu';
 import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { PhosphorIcon } from '../../components/PhosphorIcon';
 import { todoTimestamp, type ChatComposerState, type ComposerMode } from './composer-state';
+
+/** The configured prototype model, using the same accessible selector as the reader. */
+export function ComposerModelSelect() {
+  const id = useId();
+  const options = [{value:'astra-6', label:'GPT Astra-6'}];
+  const [model, setModel] = useState(options[0].value);
+  const menu = useSelectMenu<HTMLButtonElement>(setModel);
+  return <>
+    <button type="button" {...menu.triggerProps} className="composer-model" aria-label="Model" aria-controls={menu.open ? id : undefined}>
+      {options.find(option => option.value === model)?.label}<PhosphorIcon name="caret-down" size={10}/>
+    </button>
+    {menu.open && <SelectMenu id={id} label="Model" anchor={menu.trigger} options={options} value={model} minWidth={160} onChoose={menu.choose} onDismiss={menu.dismiss}/>}
+  </>;
+}
 
 export function ComposerModeSwitch({ mode, onChange }: { mode: ComposerMode; onChange: (mode: ComposerMode) => void }) {
   const name = useId();
@@ -10,8 +25,8 @@ export function ComposerModeSwitch({ mode, onChange }: { mode: ComposerMode; onC
   )}</fieldset>;
 }
 
-export function ComposerDrawer({ state, onToggle, onComplete, onCapture, children }: {
-  state: ChatComposerState; onToggle: () => void; onComplete: (id: string) => void;
+export function ComposerDrawer({ state, onToggle, onComplete, onUseTodo, onCapture, children }: {
+  state: ChatComposerState; onToggle: () => void; onComplete: (id: string) => void; onUseTodo: (id: string) => void;
   onCapture: (key: 'screen' | 'overlay', value: string) => void; children: ReactNode;
 }) {
   const id = useId();
@@ -29,8 +44,8 @@ export function ComposerDrawer({ state, onToggle, onComplete, onCapture, childre
     <div className="composer-drawer">
       <button type="button" className="composer-drawer-heading" aria-expanded={state.open} aria-controls={id} onClick={onToggle}>To-do drawer</button>
       <div id={id} className="composer-drawer-content" hidden={!state.open} role="region" aria-label="Chat to-dos">
-        {state.todos.length ? <ul>{state.todos.map(todo => <li key={todo.id}>
-          <label className={todo.complete ? 'is-complete' : ''}><input type="checkbox" checked={todo.complete} onChange={() => onComplete(todo.id)}/><span>{todo.text}</span></label>
+        {state.todos.length ? <ul>{state.todos.map(todo => <li key={todo.id} className={todo.complete ? 'is-complete' : ''}>
+          <input type="checkbox" aria-label={`Complete to-do: ${todo.text}`} checked={todo.complete} onChange={() => onComplete(todo.id)}/><button type="button" className="composer-todo-text" aria-label={`Use to-do as prompt: ${todo.text}`} onClick={() => onUseTodo(todo.id)}>{todo.text}</button>
           <time dateTime={todo.created}>{todoTimestamp(todo.created)}</time>
         </li>)}</ul> : <p className="composer-drawer-empty">Switch to To-do and send a message to save it here.</p>}
       </div>

@@ -88,6 +88,11 @@ export function inRange(frame: Capture, range: RangeKey, now = Date.now()) {
   return frame.timestamp >= rangeStart(range, now) && frame.timestamp <= now;
 }
 
+/** Count versions, not screenshots; busy versions must not bias the default window. */
+export function defaultVersionRange(versions: GalleryVersion[], now = Date.now(), minimum = 10): RangeKey {
+  return ranges.find(option => rangeCounts(versions, option.value, now).versions >= minimum)?.value ?? 'all';
+}
+
 export function ratioLabel(visible: number, total: number, singular: string, plural: string) {
   const unit = total === 1 ? singular : plural;
   return visible === total ? `${total} ${unit}` : `${visible}/${total} ${unit}`;
@@ -129,7 +134,7 @@ export function representativeFrames(versions: GalleryVersion[], range: RangeKey
   const eligible = versions.map(version => version.frames.filter(frame => inRange(frame, range, now))).filter(frames => frames.length);
   const count = Math.ceil(eligible.length / t.representativeVersionStride);
   return Array.from({ length: count }, (_, i) => {
-    const frames = eligible[count === 1 ? 0 : Math.floor(i * (eligible.length - 1) / (count - 1))];
+    const frames = eligible[count === 1 ? eligible.length - 1 : Math.floor(i * (eligible.length - 1) / (count - 1))];
     const gallery = versionKeepsPush(frames) ? frames : frames.filter(frame => frame.kind !== 'push');
     return gallery.filter(frame => frame.kind === 'push').at(-1) ?? gallery.at(-1)!;
   });
@@ -203,4 +208,10 @@ export function wrapTextToWidth(text: string, maxWidth: number, measure: (value:
   }
   if (current) lines.push(current);
   return lines;
+}
+
+export type FrameRequest = {version: number} | {frameId: string};
+export function resolveFrameRequest(versions: GalleryVersion[], request: FrameRequest) {
+  return versions.flatMap(version => version.frames).find(frame => 'frameId' in request
+    ? frame.id === request.frameId : frame.kind === 'push' && frame.version === request.version);
 }

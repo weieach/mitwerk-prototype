@@ -36,30 +36,60 @@ function alignLatestBranch(nodes: { id: string; branchId: string; x: number; git
   for (const node of nodes) if (node.branchId === latest) node.x = x;
 }
 
+/** Reuse the nearest free lane after a branch merges; concurrent and nested branches stay distinct. */
+export function compactBranchLanes(nodes: VersionNode[]) {
+  const first = new Map<string, number>(), last = new Map<string, number>();
+  const byId = new Map(nodes.map(node => [node.id, node]));
+  nodes.forEach((node, index) => { if (!first.has(node.branchId)) first.set(node.branchId, index); last.set(node.branchId, index); });
+  const merged = mergedBranchIds(nodes);
+  nodes.forEach((node, index) => {
+    if (first.get(node.branchId) === index && (node.git?.parents.length ?? 1) <= 1) return;
+    for (const id of node.git?.parents ?? (node.parentId ? [node.parentId] : [])) {
+      const branch = byId.get(id)?.branchId;
+      if (branch && branch !== node.branchId) last.set(branch, Math.max(last.get(branch)!, index));
+    }
+  });
+  const lanes = new Map<string, number>();
+  const occupiedUntil: number[] = [];
+  for (const [branch, start] of first) {
+    const root = nodes[start];
+    const parent = byId.get(root.parentId ?? root.git?.parents[0] ?? '');
+    let lane = parent ? (lanes.get(parent.branchId) ?? 0) + 1 : 0;
+    while ((occupiedUntil[lane] ?? -1) >= start) lane++;
+    lanes.set(branch, lane);
+    occupiedUntil[lane] = merged.has(branch) ? last.get(branch)! : Infinity;
+  }
+  return lanes;
+}
+
 /** Git lanes preserve branch ownership and every recorded parent, including merge parents. */
-export function layoutGitHistory(source: VersionNode[]) {
+export function layoutGitHistory(source: VersionNode[], spacing?: (node: VersionNode) => number, options: {compactLanes?: boolean; showIncomingOrigins?: boolean} = {}) {
   const base = layoutGraph(source);
   const rows = new Map<string, number>();
   const placed = new Map<string, number>();
-  const titleOf = new Map(source.map(node => [node.id, node.title]));
+  const bySourceId = new Map(source.map(node => [node.id, node]));
+  const gap = (id: string) => { const node = bySourceId.get(id); return node && spacing ? spacing(node) : commitBranchGap(node?.title ?? ''); };
   const nodes = base.nodes.map(node => {
     const parents = [...(node.git?.parents ?? (node.parentId ? [node.parentId] : [])), ...(node.chronologyParentId ? [node.chronologyParentId] : [])];
     const row = parents.length ? Math.max(...parents.map(id => rows.get(id) ?? -1)) + 1 : 0;
     const y = parents.length
-      ? Math.max(...parents.map(id => (placed.get(id) ?? geometry.originY) + (id === node.chronologyParentId ? Math.max(commitBranchGap(titleOf.get(id) ?? ''), geometry.cardHeight + treeTheme.chronologyClearance * 2) : commitBranchGap(titleOf.get(id) ?? ''))))
+      ? Math.max(...parents.map(id => (placed.get(id) ?? geometry.originY) + (id === node.chronologyParentId ? Math.max(gap(id), geometry.cardHeight + treeTheme.chronologyClearance * 2) : gap(id))))
       : geometry.originY;
     rows.set(node.id, row);
     placed.set(node.id, y);
     return { ...node, label: source.find(item => item.id === node.id)!.label, row, y };
   });
-  alignLatestBranch(nodes);
+  if (options.compactLanes) {
+    const lanes = compactBranchLanes(source);
+    for (const node of nodes) { node.column = lanes.get(node.branchId)!; node.x = geometry.originX + node.column * geometry.columnGap; }
+  } else alignLatestBranch(nodes);
   const byId = new Map(nodes.map(node => [node.id, node]));
   // An imported merge follows its preceding displayed milestone in the same lane.
   for (const node of nodes) {
     const previous = node.chronologyParentId ? byId.get(node.chronologyParentId) : undefined;
     if (previous && node.incomingBranches?.length) node.x = previous.x;
   }
-  const mergeOrigins: MergeOrigin[] = nodes.flatMap(target => (target.incomingBranches ?? []).map((source, index) => {
+  const mergeOrigins: MergeOrigin[] = options.showIncomingOrigins === false ? [] : nodes.flatMap(target => (target.incomingBranches ?? []).map((source, index) => {
     const preceding = byId.get(target.chronologyParentId ?? target.parentId ?? '');
     return { id: `origin:merge:${target.id}:${source.sha}`, sha: source.sha, branchId: source.name, targetId: target.id,
       x: Math.max(target.x, ...nodes.filter(node => node.y === preceding?.y).map(node => node.x)) + geometry.columnGap * (index + 1),

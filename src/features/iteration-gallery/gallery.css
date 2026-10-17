@@ -122,6 +122,7 @@
 .gallery-play:hover { background: var(--fill-hover); }
 .gallery-timeline-scroll { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; width: 100%; min-width: 0; height: var(--timeline-playhead-height); flex-shrink: 0; padding: 0 var(--timeline-edge-padding); margin: 0; }
 .gallery-timeline-scroll::-webkit-scrollbar { display: none; }
+.gallery-timeline-scroll.is-panning, .gallery-timeline-scroll.is-panning * { cursor: grabbing; user-select: none; }
 .gallery-timeline-width { width: var(--timeline-content-span, 100%); }
 .gallery-timeline { position: relative; height: var(--timeline-height); margin: calc((var(--timeline-playhead-height) - var(--timeline-height)) / 2) 0 0; flex-shrink: 0; cursor: pointer; touch-action: pan-x; overflow: visible; width: var(--timeline-span, 100%); }
 .gallery-timeline-tip { bottom: calc(100% + 8px); }
@@ -175,7 +176,8 @@
 
 .theater-screen .theater-preview-image { position: absolute; inset: 0; background: var(--fill); }
 
-.theater-summary { font-style: normal; }
+.theater-summary { font-style: normal; min-height:1.5em; overflow:auto; flex:0 1 auto; }
+.theater-version, .theater-branch-row { flex-shrink:0; }
 .theater-summary strong { font-weight: 700; }
 .theater-lines .is-added { color: var(--line-added); }
 .theater-lines .is-removed { color: var(--line-removed); }

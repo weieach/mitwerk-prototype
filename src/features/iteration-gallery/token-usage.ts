@@ -5,9 +5,9 @@ type Point = { x: number; depth: number };
 
 /** Cumulative values share one scale; branch runs partition that area without restarting it. */
 export function tokenUsageArea(planes: FramePlane[]) {
-  const active = planes.filter(plane => plane.active).sort((a, b) => a.depth - b.depth);
+  const active = planes.filter(plane => plane.active).sort((a, b) => a.frame.timestamp - b.frame.timestamp);
   const total = active.reduce((sum, plane) => sum + (plane.frame.tokenUsage?.total ?? 0), 0);
-  const baseline = active.length ? Math.max(...active.map(plane => plane.x + plane.width)) : 0;
+  const baseline = active.length ? Math.min(...active.map(plane => plane.x)) : 0;
   const height = active.length ? Math.max(...active.map(plane => plane.width)) : 0;
   let cumulative = 0;
   const samples = active.map(plane => {
@@ -17,7 +17,7 @@ export function tokenUsageArea(planes: FramePlane[]) {
   const first = active[0], last = active.at(-1);
   // The end frames, not the block edges or hit regions, define the area footprint.
   const start = first?.depth ?? 0, end = last?.depth ?? start;
-  const top: Point[] = samples.map(sample => ({ x: baseline - height * sample.ratio, depth: sample.plane.depth }));
+  const top: Point[] = samples.map(sample => ({ x: baseline + height * sample.ratio, depth: sample.plane.depth }));
   const outline = first && last && total > 0 ? [
     { x: baseline, depth: start }, ...top, { x: baseline, depth: end },
   ] : [];
@@ -35,7 +35,7 @@ export function tokenUsageArea(planes: FramePlane[]) {
       runStart = i + 1;
     }
   }
-  const spacing = active.slice(1).map((plane, i) => plane.depth - active[i].depth).filter(value => value > 0);
+  const spacing = active.slice(1).map((plane, i) => Math.abs(plane.depth - active[i].depth)).filter(value => value > 0);
   const barWidth = Math.min(t.tokenUsage.barWidth, ...spacing.map(value => value * t.tokenUsage.barSpacingRatio));
   const bars = total > 0 ? samples.map(sample => ({ ...sample,
     width: barWidth, height: height * sample.ratio,

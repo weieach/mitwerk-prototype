@@ -2,6 +2,7 @@
    Diagram nodes, timeline geometry and resize handles retain spatial sizing. */
 :root {
   --sidebar-item-icon-size: 14px;
+  --fullscreen-icon-size: 16px;
   --sidebar-slide-duration: 220ms;
   --sidebar-slide-easing: cubic-bezier(.22, .61, .36, 1);
   --surface-radius: 6px;
@@ -15,6 +16,10 @@
   --message-time-gap: calc(var(--row-size-unit) * 3);
   --context-list-max-height: 180px;
   --context-count-gap: calc(var(--row-size-unit) * 2);
+  --composer-control-font-size: 11px;
+  --capture-pill-radius: 999px;
+  --message-preview-width: 96px;
+  --message-preview-height: 60px;
   --composer-attach-icon-size: 17px;
   --composer-bottom-space: 17px;
   --composer-chip-top-gap: 4px;
@@ -112,7 +117,7 @@
   --row-divider: 1px solid var(--line);
 }
 
-:is(.workspace, .theater-fullscreen) button:not(.station, .branch-count, .version-heading, .gallery-timeline-push, .theater-resize),
+:is(.workspace, .theater-fullscreen) button:not(.station, .branch-count, .idea-fold, .version-heading, .gallery-timeline-push, .theater-resize),
 :is(.workspace, .theater-fullscreen) select,
 :is(.workspace, .theater-fullscreen) input[type=number] {
   height: var(--control-height);

@@ -391,7 +391,10 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
           <time dateTime={new Date(frame.timestamp).toISOString()}>{formatTime(frame.timestamp)}</time>
         </div>
         <p className="theater-summary"><span data-orbit-blocked data-orbit-inline>{theaterCaption(frame)}</span></p>
-        {frame.branch && <span className="theater-branch"><Icon name="branch" size={12}/>{frame.branch}</span>}
+        <div className="theater-branch-row">
+          {frame.branch && <span className="theater-branch"><Icon name="branch" size={12}/>{frame.branch}</span>}
+          {(frame.added !== null || frame.removed !== null) && <span className="gallery-small theater-lines"><span className="is-added">+{frame.added ?? '0'}</span> <span className="is-removed">−{frame.removed ?? '0'}</span> lines</span>}
+        </div>
         <ReferenceFiles files={frameReferences(frame, catalog, references)}/>
       </div>
       </div>

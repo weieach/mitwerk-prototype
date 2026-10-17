@@ -138,7 +138,7 @@ export class AlbumScene {
       this.edgeHoldMs = strength > 0 ? this.edgeHoldMs + dt : 0;
       const armed = edgePanArmed(this.edgeHoldMs);
       this.edgeVelocity += ((armed ? strength : 0) * t.edgePan.speed - this.edgeVelocity) * (1 - Math.exp(-dt / t.edgePan.accelerationMs));
-      const end = this.album.planes.at(-1)?.depth ?? 0;
+      const end = Math.max(...this.album.planes.map(plane => plane.depth), 0);
       const travel = Math.min(Math.max(0, end + this.controls.target.z), this.edgeVelocity * dt / 1000);
       if (travel > .001) {
         this.controls.target.z -= travel;
@@ -169,8 +169,9 @@ export class AlbumScene {
     if (this.syncTopView(dt)) moving = true;
     if (this.syncTokenUsage(dt)) moving = true;
     this.renderer.render(this.scene, this.camera);
+    this.host.dataset.imagesReady = String([...this.frames.values()].filter(frame => frame.image.visible).every(frame => !!frame.image.material.map));
     this.callbacks.labels([
-      ...projectAxisLabels(withOverheadDates(mergeAxisAnchors(this.axisAnchors, this.featuredAnchors), this.album ? albumFloorY(this.album) : 0, this.album ? -albumBlockBounds(this.album).min.z : undefined), this.camera, this.host.clientWidth, this.host.clientHeight, this.overheadBlend, this.tokenBlend),
+      ...projectAxisLabels(withOverheadDates(mergeAxisAnchors(this.axisAnchors, this.featuredAnchors), this.album ? albumFloorY(this.album) : 0, this.album ? -albumBlockBounds(this.album).max.z : undefined), this.camera, this.host.clientWidth, this.host.clientHeight, this.overheadBlend, this.tokenBlend),
       ...projectAxisLabels(this.tokenAnchors, this.camera, this.host.clientWidth, this.host.clientHeight).map(label => ({ ...label, opacity: this.tokenBlend, hidden: label.hidden || this.tokenBlend < .01 })),
     ]);
     const hovered = this.hovered ? this.frames.get(this.hovered) : undefined;
@@ -509,8 +510,8 @@ export class AlbumScene {
     ];
     const floor = albumFloorY(this.album);
     const tick = featuredTickLength();
-    this.line([new THREE.Vector3(0, 0, pair.date.z), new THREE.Vector3(0, tick, pair.date.z)], 'wall', this.featuredGuides);
-    this.line([new THREE.Vector3(this.album.width, floor, pair.version.z), new THREE.Vector3(this.album.width + tick, floor, pair.version.z)], 'ground', this.featuredGuides);
+    this.line([new THREE.Vector3(this.album.width, 0, pair.date.z), new THREE.Vector3(this.album.width, tick, pair.date.z)], 'wall', this.featuredGuides);
+    this.line([new THREE.Vector3(0, floor, pair.version.z), new THREE.Vector3(-tick, floor, pair.version.z)], 'ground', this.featuredGuides);
   }
   private clearFeaturedGuides() {
     this.featuredGuides.traverse(object => {
@@ -555,7 +556,7 @@ export class AlbumScene {
     this.span = span;
     this.controls.target.copy(center);
     const distance = Math.max(span, this.album?.depth ?? 0) * 2;
-    // Orbit the camera oppositely to give the album a counterclockwise ground-plane turn.
+    // Use the shared right-facing oblique orientation for Center and Reset.
     const direction = new THREE.Vector3(...t.webgl.initialDirection)
       .applyAxisAngle(new THREE.Vector3(0, 1, 0), -THREE.MathUtils.degToRad(t.webgl.groundRotationDegrees));
     this.camera.position.copy(center).add(direction.normalize().multiplyScalar(distance));
@@ -567,9 +568,9 @@ export class AlbumScene {
   center() {
     if (this.tokenBlend > .99) { this.top(); return; }
     this.topMotion = null; this.controls.enabled = true;
-    const first = this.album?.planes.find(plane => plane.active) ?? this.album?.planes[0];
-    if (!first || !this.album) return;
-    this.frameView(this.lookAt(frameFocus(first)),
+    const latest = this.album?.planes.filter(plane => plane.active).at(-1) ?? this.album?.planes.at(-1);
+    if (!latest || !this.album) return;
+    this.frameView(this.lookAt(frameFocus(latest)),
       Math.max(this.album.blocks[0].width, this.album.blocks[0].height) * t.webgl.frontViewPadding, 'center');
   }
   /** Pan through the blocks before starting the existing frame-to-playback rotation. */
@@ -887,19 +888,19 @@ export class AlbumScene {
     if (!this.album) return;
     const album = this.album;
     const floor = albumFloorY(album);
-    this.axisLabel('Date', 0, t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, -album.depth / 2, 'wall', new THREE.Vector3(0, t.rulerTickLength + t.rulerLabelGap, -album.depth / 2));
-    this.axisLabel('Version', album.width + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, floor, -album.depth / 2, 'ground', new THREE.Vector3(album.width + t.rulerTickLength + t.rulerLabelGap, floor, -album.depth / 2));
+    this.axisLabel('Date', album.width, t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, -album.depth / 2, 'wall', new THREE.Vector3(album.width, t.rulerTickLength + t.rulerLabelGap, -album.depth / 2));
+    this.axisLabel('Version', -t.rulerTickLength - t.rulerLabelGap - t.axisTitle.valueGap, floor, -album.depth / 2, 'ground', new THREE.Vector3(-t.rulerTickLength - t.rulerLabelGap, floor, -album.depth / 2));
     const shown = versions.flatMap(version => versionKeepsPush(version.frames) ? version.frames : version.frames.filter(frame => frame.kind !== 'push'));
     for (const tick of dateTicks(shown)) {
       const depth = this.frames.get(tick.id)?.plane.depth;
       if (depth === undefined) continue;
-      this.line([new THREE.Vector3(0, 0, -depth), new THREE.Vector3(0, t.rulerTickLength, -depth)], 'wall');
-      const pose = dateLabelPose(depth);
+      this.line([new THREE.Vector3(album.width, 0, -depth), new THREE.Vector3(album.width, t.rulerTickLength, -depth)], 'wall');
+      const pose = dateLabelPose(depth, album);
       this.axisLabel(formatDate(tick.timestamp), pose.x, pose.y, pose.z, pose.face, undefined, tick.timestamp);
     }
     for (const version of versions) {
       const pose = versionLabelPose(album, version.index);
-      this.line([new THREE.Vector3(album.width, floor, pose.z), new THREE.Vector3(album.width + t.rulerTickLength, floor, pose.z)], 'ground');
+      this.line([new THREE.Vector3(0, floor, pose.z), new THREE.Vector3(-t.rulerTickLength, floor, pose.z)], 'ground');
       this.axisLabel(formatVersion(version.number), pose.x, pose.y, pose.z, pose.face, undefined, Math.max(...version.frames.map(frame => frame.timestamp)));
     }
   }
@@ -927,14 +928,14 @@ export class AlbumScene {
     }
     for (const bar of chart.bars) {
       const left = bar.plane.depth - bar.width / 2, right = bar.plane.depth + bar.width / 2;
-      addShape([{ x: chart.baseline, depth: left }, { x: chart.baseline - bar.height, depth: left },
-        { x: chart.baseline - bar.height, depth: right }, { x: chart.baseline, depth: right }],
+      addShape([{ x: chart.baseline, depth: left }, { x: chart.baseline + bar.height, depth: left },
+        { x: chart.baseline + bar.height, depth: right }, { x: chart.baseline, depth: right }],
       new THREE.Color(resolveColor(galleryBranchPaint(bar.branch, branches))), t.tokenUsage.barOpacity, 1);
     }
     const last = chart.samples.at(-1)?.plane;
     if (last) for (const fraction of t.tokenUsage.scaleTicks) {
       this.tokenAnchors.push({ id: `tokens:${fraction}`, text: `${fraction * 100}%`, face: 'ground',
-        position: new THREE.Vector3(chart.baseline - chart.height * fraction, t.tokenUsage.surfaceLift, -last.depth - t.tokenUsage.labelGap) });
+        position: new THREE.Vector3(chart.baseline + chart.height * fraction, t.tokenUsage.surfaceLift, -last.depth + t.tokenUsage.labelGap) });
     }
   }
 

@@ -147,7 +147,7 @@ test('overhead date ruler mirrors wall lengths on the left floor and crossfades 
   const both = withOverheadDates([wall, ground], -260);
   assert.equal(both.length, 3);
   const date = both.find(anchor => anchor.overheadDate)!;
-  assert.deepEqual(date.position.toArray(), [-96, -260, -400]);
+  assert.deepEqual(date.position.toArray(), [96, -260, -400]);
   assert.equal(date.text, wall.text);
   assert.equal(date.featured, true);
   assert.deepEqual(wall.position.toArray(), [0, 96, -400]);
@@ -171,19 +171,19 @@ test('top titles move beyond the actual sequence end and align to their numeric 
   ];
   const view = camera();
   view.position.set(0, 3000, .001); view.lookAt(0, 0, 0); view.updateMatrixWorld();
-  for (const end of [1398, 2102]) {
+  for (const end of [0, 50]) {
     const all = withOverheadDates(originals, -260, end);
     const date = all.find(anchor => anchor.id === 'date-title:overhead')!;
     const version = all.find(anchor => anchor.id === 'version-title')!;
-    assert.deepEqual(date.topPosition!.toArray(), [-168, -260, -end - t.topView.titleEndGap]);
-    assert.deepEqual(version.topPosition!.toArray(), [528, -260, -end - t.topView.titleEndGap]);
+    assert.deepEqual(date.topPosition!.toArray(), [168, -260, -end + t.topView.titleEndGap]);
+    assert.deepEqual(version.topPosition!.toArray(), [528, -260, -end + t.topView.titleEndGap]);
     const labels = projectAxisLabels(all, view, 800, 640);
     for (const [titleId, valueId, align] of [['date-title:overhead', 'date-value:overhead', 0], ['version-title', 'version-value', 1]] as const) {
       const title = labels.find(label => label.id === titleId)!;
       const value = labels.find(label => label.id === valueId)!;
       assert.equal(title.align, align); assert.equal(value.align, align);
       assert.ok(Math.abs(matrix(title.transform)[12] - matrix(value.transform)[12]) < 1e-8);
-      assert.ok(matrix(title.transform)[13] < matrix(value.transform)[13]);
+      assert.ok(matrix(title.transform)[13] > matrix(value.transform)[13]);
     }
   }
   assert.equal(originals[0].position.z, -700);

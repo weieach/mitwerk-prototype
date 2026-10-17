@@ -1,5 +1,14 @@
 import { geometry } from './layout.ts';
 
+export const ideaTheme = {
+  fitMinZoom: 0.05,
+  nodeGap: 140,
+  milestoneGap: 190,
+  openGap: 390,
+  foldedGap: 160,
+  foldCountSize: 36,
+};
+
 /** Shared system tokens. Connector width is one isometric grid-triangle side. */
 const stationDiameter = 28;
 const stationBorderWidth = 5;

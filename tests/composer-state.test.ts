@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { addComposerTodo, defaultComposer, toggleComposerTodo, todoTimestamp } from '../src/features/workbench/composer-state.ts';
+import { addComposerTodo, defaultComposer, toggleComposerTodo, useTodoAsPrompt, todoTimestamp } from '../src/features/workbench/composer-state.ts';
 import { migrateState } from '../src/features/workbench/model.ts';
 
 test('to-do submission trims text, opens the drawer and leaves messages and other chats alone',()=>{
@@ -41,8 +41,22 @@ test('gallery sample refresh preserves edited messages, custom titles and append
  const task=updated.tasks.find(task=>task.id==='panel')!;
  assert.equal(task.title,'My gallery');
  assert.deepEqual(task.messages.map(message=>message.id),['m1','m2','m4','added']);
- assert.equal(task.messages[1].versionOutput?.version,40);
+ assert.equal(task.messages[1].versionOutput?.prompt,276);
  assert.equal(task.messages[2].text,'My edited response');
  assert.equal(updated.drafts.panel,'Keep this draft');
  assert.deepEqual(migrateState(updated),updated);
+});
+
+
+test('reusing a drawer item preserves its completion, context and draft while switching to Prompt',()=>{
+ const state=addComposerTodo({...defaultComposer(),mode:'todo'},'Check keyboard flow','one','2026-10-17T17:05:00',{assetIds:['file']});
+ const completed=toggleComposerTodo(state,'one');
+ const result=useTodoAsPrompt(completed,'Keep my draft','one');
+ assert.equal(result.draft,'Keep my draft\nCheck keyboard flow');
+ assert.equal(result.composer.mode,'prompt');
+ assert.equal(result.composer.todos,completed.todos);
+ assert.equal(completed.mode,'todo');
+ assert.equal(useTodoAsPrompt(state,'','one').draft,'Check keyboard flow');
+ assert.equal(useTodoAsPrompt(state,'Draft\n','one').draft,'Draft\nCheck keyboard flow');
+ assert.deepEqual(useTodoAsPrompt(state,'Keep','missing'),{composer:state,draft:'Keep'});
 });
