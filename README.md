@@ -122,7 +122,9 @@ Use `npm run deploy:vercel` for code releases. It builds the UI, publishes and v
 
 The connected public `mitwerk-frames` store holds immutable image objects and a shared JSON catalog. Public addresses are recorded in `data/blob-storage.json`; write credentials stay in ignored `.env.local`, never in Git or browser code. Local originals stay in `[frame capture] screenshots/` and `visual_ref/`.
 
-Publish newly saved frames without deploying the app:
+Every successful prompt/push capture (including recaptures) now queues Blob publication automatically, after its completed-prompt counter is recorded. A detached worker coalesces captures and retries failed uploads with backoff, without blocking or discarding the local screenshot. New/changed images are verified; unchanged immutable objects reuse their previously verified catalog entries. Queue files and worker logs live in ignored `.vercel/gallery-publish-queue/` and `.vercel/gallery-publish.log`. Interrupted queues resume on the next successful capture. Failed or skipped captures do not enqueue anything.
+
+The manual full-audit publisher remains available; it is no longer needed after each capture:
 
 ```sh
 npm run publish:gallery

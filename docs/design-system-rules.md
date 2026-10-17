@@ -1255,3 +1255,7 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Git-triggered Vercel builds — 2026-10-17
 
 - Vercel cloud builds read the published Blob catalog and route images to immutable Blob objects. They must not require local screenshot folders or upload images during a build. Use the same deployment packager for cloud and local releases, preserving the live catalog reader, legacy image links and available archived prototypes. Local releases continue to publish new captures before packaging. Fail explicitly if the published catalog is unavailable or invalid.
+
+## Automatic capture publication — 2026-10-17
+
+- Queue Blob publication after each successful prompt/push capture and recapture, after recording prompt completion. Skip failed/excluded captures. Publish in a separate worker with a durable queue, coalesce overlapping requests, and retry failed uploads with bounded backoff without delaying or losing local captures. Retain requests arriving during an upload for the next batch. Reuse verified immutable objects during automatic publishing; retain the manual full verification workflow.

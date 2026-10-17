@@ -1,4 +1,5 @@
 import { appendPromptEntry } from '../src/shared/prompt-log.mjs';
+import { enqueueCapturePublication } from './capture-publication.mjs';
 import { captureSummaryMaxLength } from '../src/shared/capture-format.mjs';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { appendFileSync, closeSync, constants, existsSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -928,6 +929,17 @@ function captureLog(message) {
   appendFileSync(captureLogFile, `${new Date().toISOString()} ${message}\n`);
 }
 
+function publishSavedCapture(outFile) {
+  try {
+    enqueueCapturePublication(root, outFile);
+    captureLog(`Blob publication queued: ${basename(outFile)}`);
+  } catch (error) {
+    const message = `Capture saved, but Blob publication could not be queued: ${error.message}`;
+    captureLog(message);
+    console.error(message);
+  }
+}
+
 function readPushMarker() {
   return existsSync(pushMarkerFile) ? readFileSync(pushMarkerFile, 'utf8').trim() : '';
 }
@@ -1140,6 +1152,7 @@ async function reconcilePush({ commitAndPush }) {
     if (commitAndPush) {
       captureLog(`reconcile saved local screenshot ${outFile}`);
     }
+    publishSavedCapture(outFile);
     return outFile;
   } finally {
     releaseCaptureLock();
@@ -1310,6 +1323,7 @@ async function main() {
       stampPrompt(label);
       writePromptCounter(outFile);
     }
+    publishSavedCapture(outFile);
     if (hookMode) {
       console.error(`Saved ${outFile}`);
       emitHook({});

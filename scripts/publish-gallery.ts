@@ -13,6 +13,9 @@ const local = readCaptureCatalog(root);
 if (!local.frames.length || local.ignored) throw new Error(`Refusing publication: ${local.frames.length} frames, ${local.ignored} unreadable captures.`);
 const previous = await get('gallery/manifest.json', { access: 'public', useCache: false, abortSignal: AbortSignal.timeout(60_000) });
 const oldCatalog = previous?.stream ? await new Response(previous.stream).json() : null;
+const incremental = process.argv.includes('--incremental');
+const verifiedObjects = new Set([...(oldCatalog?.frames ?? []), ...(oldCatalog?.references ?? [])]
+  .filter(row => row.sha256 && row.url && row.blobUrl).map(row => `${row.url}:${row.sha256}:${row.blobUrl}`));
 const existing = new Map<string, string>();
 let cursor: string | undefined;
 do {
@@ -43,9 +46,13 @@ await Promise.all(Array.from({ length: 6 }, async () => {
         url = blob.url;
         uploaded++;
       }
-      const response = await fetch(url, { signal: AbortSignal.timeout(60_000) });
-      if (!response.ok || sha256(Buffer.from(await response.arrayBuffer())) !== sha256(bytes)) {
-        throw new Error(`Blob verification failed: ${pathname}`);
+      // Automatic captures verify new/changed bytes, reusing immutable objects
+      // already verified in the published catalog and still present in the store.
+      if (!incremental || !verifiedObjects.has(`${pathname}:${sha256(bytes)}:${url}`)) {
+        const response = await fetch(url, { signal: AbortSignal.timeout(60_000) });
+        if (!response.ok || sha256(Buffer.from(await response.arrayBuffer())) !== sha256(bytes)) {
+          throw new Error(`Blob verification failed: ${pathname}`);
+        }
       }
       return url;
     })());
