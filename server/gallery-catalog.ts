@@ -2,7 +2,8 @@ import { visualReferencePrompt } from '../src/shared/visual-reference-path.mjs';
 import { parsePromptLog } from '../src/shared/prompt-log.mjs';
 import { readTokenUsage } from './token-usage.ts';
 import { readGitHistory } from './git-history.ts';
-import { closeSync, createReadStream, existsSync, openSync, readFileSync, readdirSync, readSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { captureImageInfo } from './capture-image.mjs';
 import { join } from 'node:path';
 import type { Plugin } from 'vite';
 import { parseCaptureName } from '../src/features/iteration-gallery/model.ts';
@@ -32,14 +33,8 @@ export function readCaptureCatalog(root: string) {
     if (metadata.kind === 'prompt' && completedPrompt !== undefined && metadata.number !== null
       && metadata.number > Number(completedPrompt)) return [];
     try {
-      const file = openSync(join(directory, filename), 'r');
-      const bytes = Buffer.alloc(24);
-      let read = 0;
-      try { read = readSync(file, bytes, 0, bytes.length, 0); } finally { closeSync(file); }
-      if (read < 24 || bytes.readUInt32BE(0) !== 0x89504e47 || bytes.readUInt32BE(4) !== 0x0d0a1a0a || bytes.toString('ascii', 12, 16) !== 'IHDR') throw new Error('Invalid PNG');
-      const width = bytes.readUInt32BE(16), height = bytes.readUInt32BE(20);
-      if (!width || !height) throw new Error('Empty image');
-      return [{ ...metadata, fullPrompt: metadata.kind === 'prompt' ? prompts.get(metadata.number) : undefined, id: filename, filename, width, height, url: `gallery/images/${encodeURIComponent(filename)}` }];
+      const image = captureImageInfo(join(directory, filename));
+      return [{ ...metadata, fullPrompt: metadata.kind === 'prompt' ? prompts.get(metadata.number) : undefined, id: filename, filename, ...image, url: `gallery/images/${encodeURIComponent(filename)}` }];
     } catch { ignored++; return []; }
   });
   const usage = readTokenUsage(root, frames.map(frame => frame.id));
@@ -97,7 +92,8 @@ export function iterationGalleryCatalog(): Plugin {
           }
           const path = join(directory, filename);
           if (!existsSync(path)) { res.statusCode = 404; res.end(); return; }
-          res.setHeader('Content-Type', 'image/png');
+          try { res.setHeader('Content-Type', captureImageInfo(path).mimeType); }
+          catch { res.statusCode = 404; res.end(); return; }
           res.setHeader('Cache-Control', 'public, max-age=60');
           res.setHeader('Content-Length', statSync(path).size);
           const stream = createReadStream(path);
@@ -122,8 +118,9 @@ export function iterationGalleryCatalog(): Plugin {
       });
     },
     generateBundle() {
-      this.emitFile({ type: 'asset', fileName: 'gallery/git-history.json', source: JSON.stringify(readGitHistory(root)) });
       const catalog = readCaptureCatalog(root);
+      if (!catalog.frames.length) this.error('No saved frames found. Capture images are Git-ignored: build on the machine containing [frame capture] screenshots, then deploy with npm run deploy:vercel.');
+      this.emitFile({ type: 'asset', fileName: 'gallery/git-history.json', source: JSON.stringify(readGitHistory(root)) });
       this.emitFile({ type: 'asset', fileName: 'gallery/manifest.json', source: JSON.stringify(catalog) });
       for (const frame of catalog.frames) this.emitFile({ type: 'asset', fileName: `gallery/images/${frame.filename}`,
         source: readFileSync(join(root, captureDirectory, frame.filename)) });

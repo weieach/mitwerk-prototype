@@ -379,12 +379,18 @@
 .workspace .shared-reader-header .workspace-panel-header > .panel-heading { justify-content:flex-start; gap:var(--reader-title-gap); }
 
 .message-version-output.is-milestone-jumping > .idea-add { animation:milestone-button-bump var(--milestone-bump-duration) cubic-bezier(.3,0,.2,1); }
-.mw-app .message-version-output.is-milestone-ready .message-version-card { background:var(--milestone-invite-gradient); background-size:300% 300%; color:var(--milestone-invite-ink); animation:milestone-gradient-flow var(--milestone-invite-flow) ease-in-out infinite alternate; }
+.mw-app .message-version-output.is-milestone-ready .message-version-card { background:var(--paper); color:var(--milestone-invite-ink); }
 @keyframes milestone-button-bump { 0%,100% { transform:translateY(0); } 37% { transform:translateY(-14px); } 62% { transform:translateY(2px); } 80% { transform:translateY(-3px); } }
-@keyframes milestone-gradient-flow { from { background-position:0% 50%; } to { background-position:100% 50%; } }
+/* Breathing branch-color field inspired by 21st.dev's Animated Gradient Background. */
+.mw-app .message-version-output.is-milestone-ready .message-version-card::after { content:''; position:absolute; inset:-35%; z-index:-2; pointer-events:none; background:var(--milestone-invite-gradient); animation:milestone-gradient-flow var(--milestone-invite-flow) ease-in-out infinite alternate; }
+@keyframes milestone-gradient-flow {
+  0% { transform:translate(-6%, -8%) scale(1); }
+  50% { transform:translate(5%, 4%) scale(1.12); }
+  100% { transform:translate(8%, -3%) scale(1.04); }
+}
 @media (prefers-reduced-motion:reduce) {
   .message-version-output.is-milestone-jumping > .idea-add,
-  .mw-app .message-version-output.is-milestone-ready .message-version-card { animation:none; }
+  .mw-app .message-version-output.is-milestone-ready .message-version-card::after { animation:none; }
 }
 
 .chat-milestone-dialog .milestone-editor-footer { align-items:center; justify-content:space-between; gap:12px; }
@@ -419,3 +425,7 @@
 
 .mw-app .message-version-output > :is(.idea-add, .milestone-not-yet) { border:1px solid var(--line); border-radius:var(--control-radius); }
 .workspace .tree-panel[data-tree-mode=history] .canvas-controls :is(button, .zoom-controls) { border:0; }
+
+/* Shared time-range sizing in both Gallery and Playback chrome. */
+.workspace :is(.workspace-panel-header, .gallery-footer) .gallery-range { flex:0 0 auto; width:auto; min-width:var(--time-range-min-width); }
+.workspace :is(.workspace-panel-header, .gallery-footer) .gallery-range > .row-select { flex:1; min-width:var(--time-range-min-width); }

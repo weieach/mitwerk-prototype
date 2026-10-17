@@ -2,16 +2,16 @@
    Diagram nodes, timeline geometry and resize handles retain spatial sizing. */
 :root {
   --milestone-grain-opacity:.18;
-  --milestone-grain:url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23fff' filter='url(%23n)' d='M0 0h160v160H0z'/%3E%3C/svg%3E");
+  --milestone-grain:url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Cpath fill='%23fff' filter='url(%23n)' d='M0 0h160v160H0z'/%3E%3C/svg%3E");
   --focus-ring-width:1px;
   --focus-ring-offset:-1px;
   --focus-ring-color:currentColor;
   --font-code:"SF Mono", SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
   --playback-end-gap:10px;
   --reader-title-gap:10px;
-  --milestone-invite-gradient:linear-gradient(110deg, #7654b5, #ac3877, #226a81, #7654b5);
+  --milestone-invite-color-strength:64%;
   --milestone-invite-ink:#fff;
-  --milestone-invite-flow:8s;
+  --milestone-invite-flow:10s;
   --composer-controls-gap:4px;
   --sidebar-item-icon-size: 14px;
   --fullscreen-icon-size: 16px;
@@ -45,6 +45,7 @@
   --annotation-pill-icon-size: 13px;
   --playback-frame-action-font-size: 11px;
   --reader-selector-width: 171px;
+  --time-range-min-width: 200px;
   --idea-action-fade: 180ms;
   --playback-action-row-gap: 0.4rem;
   --drawer-heading-opacity: .65;

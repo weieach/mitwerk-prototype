@@ -116,6 +116,21 @@ npm run build:vercel
 npx vercel deploy --prebuilt --prod
 ```
 
+Prefer `npm run deploy:vercel` for subsequent releases: it builds locally, checks every frame and reference against its original SHA-256 hash, deploys the prebuilt output, then checks every live image. Run `npm run verify:gallery -- https://mitwerk-prototype.vercel.app` independently to audit production. Production builds fail if the capture catalog is empty, preventing a Git-only checkout from silently replacing the gallery with zero frames. New captures still require a rebuild and deployment.
+
+Frame storage choices:
+
+| Approach | What changes | Tradeoff |
+| --- | --- | --- |
+| Local prebuilt deployment (current) | Upload the compiled gallery with each release | Simplest immediate solution; depends on this machine and redeployment |
+| Images in Git | Remove the capture-directory ignore rule and commit all frames | Fresh checkouts can build; growing binary history increases clone size; each frame needs a commit/deploy |
+| Vercel Blob + JSON manifest (recommended next) | Upload immutable images, publish the manifest after upload verification, load it from the shared gallery | Independent of code releases; storage/transfer charges; requires a configured store and authenticated uploader |
+| Supabase Storage + Postgres | Store image bytes in Storage and frame metadata in a table | Useful for querying, permissions and future shared data; more integration work |
+
+Keep image bytes in object storage when using a database; store stable frame IDs, object keys, hashes, dimensions, prompt/push numbers, branch and timestamps in the database. Preserve current capture IDs so annotations and history links survive migration. External image delivery must allow cross-origin texture loading for the 3D gallery. Archived prototypes must retain frozen catalogs while sharing immutable image objects. Publish catalogs only after all referenced objects are verified, and keep originals backed up independently. Do not put storage write credentials in the browser.
+
+Provider references: [Vercel Blob](https://vercel.com/docs/vercel-blob), [Supabase Storage](https://supabase.com/docs/guides/storage), [GitHub large-file guidance](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github). Storage migration is a proposal; the current deployment still bundles images.
+
 The Vercel build runs locally because capture images, Git history and saved codebases are local inputs. It packages the current UI, gallery assets and every available archived prototype into ignored `.vercel/output/`, with a small read-only API for **Enter prototype**. Only compiled output is uploaded; source archives and local credentials are not deployed. Rebuild before each deployment. Missing historical archives remain unavailable, as they do locally. Notes, to-dos and test graphs remain browser-local; this deployment does not add shared storage or a live agent backend.
 
 ### Archived prototype behavior

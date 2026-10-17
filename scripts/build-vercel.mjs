@@ -45,6 +45,9 @@ routes.push({ handle: 'filesystem' });
 routes.push({ src: '/__mitwerk/(.*)', status: 404 });
 routes.push({ src: '/((?:gallery|assets)/.*)', status: 404 });
 routes.push({ src: '/.*', dest: '/index.html' });
-await writeFile(join(output, 'config.json'), JSON.stringify({ version: 3, routes }, null, 2));
 const catalog = JSON.parse(await readFile(join(staticDir, 'gallery/manifest.json'), 'utf8'));
+const overrides = Object.fromEntries(catalog.frames.filter(frame => frame.mimeType === 'image/jpeg')
+  .map(frame => [`gallery/images/${frame.filename}`, { contentType: frame.mimeType }]));
+await writeFile(join(output, 'config.json'), JSON.stringify({ version: 3, routes, overrides }, null, 2));
+execFileSync(process.execPath, ['--experimental-strip-types', 'scripts/verify-gallery.ts'], { cwd: root, stdio: 'inherit' });
 console.log(`Vercel output ready: ${catalog.frames.length} frames, ${Object.keys(prototypes).length} archived prototypes.`);

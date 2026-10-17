@@ -11,6 +11,8 @@
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "build": "tsc --noEmit && vite build",
     "build:vercel": "node scripts/build-vercel.mjs",
+    "verify:gallery": "node --experimental-strip-types scripts/verify-gallery.ts",
+    "deploy:vercel": "npm run build:vercel && npx vercel deploy --prebuilt --prod && npm run verify:gallery -- https://mitwerk-prototype.vercel.app",
     "spike": "node archive/review-comment-spike/scripts/spike.mjs",
     "start": "node server/standalone.mjs",
     "bench": "node archive/review-comment-spike/scripts/bench-lookup.mjs",

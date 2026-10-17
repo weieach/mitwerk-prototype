@@ -1238,3 +1238,22 @@ remove border on these btns, and increase min width of the icon btns once more
 ## My request:
 for the prompt label shown upon frame hover in gallery, move it upward a bit more. The not yet btn shouldnt have fill, its corner radius and border should match the "add milestone" chip
 ```
+
+## Prompt #317
+
+```text
+check if 21st dev have any dynamic gradient effect to apply to milestone version card - change to have only two colors
+```
+
+## Prompt #318
+
+```text
+the timerange dropdown should have longer min width. instead of just using 2 colors, apply various colors from the branch color system. 
+```
+
+## Prompt #319
+
+```text
+make sure the vercel version have access to all the saved frames; help me explore options to store those in a database or as part of the repo
+
+```

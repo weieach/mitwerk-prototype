@@ -728,6 +728,10 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
         const draft = await cdp('Runtime.evaluate', { expression: '!!document.querySelector("textarea[aria-label=Message]")?.value', returnByValue: true });
         if (!draft.result?.value) { await delay(100); continue; }
       }
+      if (hasFlag('milestone-invite')) {
+        const invitation = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.message-version-output.is-milestone-ready:not(.is-milestone-jumping) .milestone-not-yet')`, returnByValue: true });
+        if (!invitation.result?.value) { await delay(100); continue; }
+      }
       if (hasFlag('brand-menu')) {
         await cdp('Runtime.evaluate', { expression: `(() => { const trigger = document.querySelector('button[aria-label="MitWerk menu"]'); if (trigger?.getAttribute('aria-expanded') !== 'true') trigger?.click(); })()` });
         const menu = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.brand-dropdown:popover-open')`, returnByValue: true });

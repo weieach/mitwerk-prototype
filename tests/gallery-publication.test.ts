@@ -3,8 +3,21 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { readCaptureCatalog, captureDirectory } from '../server/gallery-catalog.ts';
+import { readCaptureCatalog, captureDirectory, iterationGalleryCatalog } from '../server/gallery-catalog.ts';
 import { buildVersions, resolveFrameRequest } from '../src/features/iteration-gallery/model.ts';
+
+test('production refuses a checkout with no saved frames instead of publishing an empty gallery', () => {
+  const root = mkdtempSync(join(tmpdir(), 'mitwerk-empty-gallery-'));
+  try {
+    const plugin = iterationGalleryCatalog();
+    (plugin.configResolved as Function)({ root });
+    assert.throws(() => (plugin.generateBundle as Function).call({
+      error(message: string) { throw new Error(message); },
+      emitFile() { assert.fail('Empty production catalogs must not emit gallery assets'); },
+    }), /No saved frames found/);
+    assert.deepEqual(readCaptureCatalog(root).frames, [], 'development still supports empty state');
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
 
 test('running prompts remain unpublished until completion, including already-written PNGs', () => {
   const root = mkdtempSync(join(tmpdir(), 'mitwerk-publication-'));

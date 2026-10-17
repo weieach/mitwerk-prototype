@@ -1209,3 +1209,19 @@ This file is reserved for project-wide design-system rules requested by the user
 - Idea stream footer controls and their groups have no decorative borders or separators, with a 52px minimum width for icon buttons. Zoom percentage buttons retain their wider 64px minimum. Keep keyboard focus outlines.
 - Gallery hover prompt previews sit at 20% of the viewport height (previously 25%), retaining their horizontal centering and screen-space rendering.
 - Not yet uses a transparent background, including on hover, and shares Add milestone's 1px line-color border and 4px corner radius. Preserve their matching dimensions and card spacing.
+
+
+## Two-color milestone invitation motion — 2026-10-17
+
+- Milestone invitation cards use exactly two gradient hues: purple `#7654b5` and teal `#226a81`, held in shared color tokens. Replace the multi-hue sliding gradient with a slowly drifting, breathing radial field inspired by [21st.dev Animated Gradient Background](https://21st.dev/@hammamikhairi/components/animated-gradient-background). Implement locally with a transformed CSS pseudo-element and a shared 10s alternate cycle; no animation library is required.
+- Retain static grain, desaturated so it adds texture without extra hues, and existing text contrast, invitation timing and click behavior. Reduced motion keeps the two-color gradient still.
+
+
+## Branch-palette invitations and time-range width — 2026-10-17
+
+- Milestone invitation gradients now derive every color stop directly from the shared version-stream route palette, superseding the two-color restriction. Keep the slow breathing motion, neutral grain and reduced-motion behavior. Mix palette colors at a shared 64% strength over black to preserve white-label contrast. Do not duplicate branch hex values in invitation styling.
+- Time-range selectors use a shared 200px minimum width in both Gallery footer and Playback header, including combined reader layouts. Their dropdown menu remains at least as wide as the trigger; other selectors retain their existing widths.
+
+## Complete deployed frame catalog — 2026-10-17
+
+- Vercel releases include every completed saved frame and its original image bytes, preserving capture IDs, screen buckets and archived-prototype snapshots. Determine image dimensions and format from bytes, including historical JPEG images saved with PNG filenames. Never use frame-number exceptions. Reject empty production catalogs and verify all frame/reference assets before deployment and against the live release. Git-ignored captures require local prebuilt deployment until a shared storage source is adopted.
