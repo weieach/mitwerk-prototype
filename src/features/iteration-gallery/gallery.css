@@ -65,7 +65,7 @@
 .theater-stage > .theater-metadata { margin-top: var(--theater-metadata-gap); }
 .theater-frame-bed { align-self: stretch; width: 100%; height: var(--theater-bed-height); display: flex; align-items: center; justify-content: center; background: var(--theater-frame-bed, var(--fill)); flex-shrink: 0; }
 .theater-screen { position: relative; flex-shrink: 0; background: var(--fill); border: 1px solid var(--line-strong); display: grid; place-items: center; overflow: hidden; overscroll-behavior: none; box-shadow: var(--theater-frame-shadow); }
-.theater-screen.is-push { border-color: var(--ink); border-width: 2px; }
+.theater-screen.is-push { border-color: var(--stroke-strong); border-width: 2px; }
 .theater-screen img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; }
 .theater-resize { position: absolute; top: 0; bottom: 0; width: 10px; z-index: 4; border: 0; padding: 0; background: transparent; cursor: ew-resize; }
 .theater-resize.is-left { left: 0; }

@@ -1,25 +1,19 @@
-import { PhosphorIcon } from '../../components/PhosphorIcon';
-import { useId, useState } from 'react';
-import type { ReactNode, Ref } from 'react';
+import { useState } from 'react';
+import type { Ref } from 'react';
+import { InlineTextField } from '../../components/InlineTextField';
 
 export function MilestoneButton({ onClick, editing = false, disabled = false, buttonRef }: { onClick: () => void; editing?: boolean; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement> }) {
   return <button ref={buttonRef} type="button" className="idea-add" disabled={disabled} onClick={onClick}><i className="ph ph-plus" aria-hidden="true"/>{editing ? 'Edit milestone' : 'Add milestone'}</button>;
 }
 
-export function MilestoneEditor({ value, onSave, onCancel, children, compactFooter = false }: { value: string; onSave: (text: string) => void; onCancel: () => void; children?: ReactNode; compactFooter?: boolean }) {
-  const id = useId();
-  const [draft, setDraft] = useState(value);
+/** Inline milestone entry. Committing blank text removes the milestone. */
+export function MilestoneEditor({ value, onSave, onCancel, autoFocus = true, fieldRef }: { value: string; onSave: (text: string) => void; onCancel?: () => void; autoFocus?: boolean; fieldRef?: Ref<HTMLTextAreaElement> }) {
   const [error, setError] = useState('');
   function save(text: string) {
-    try { onSave(text); } catch { setError('Could not save the milestone. Please try again.'); }
+    try { onSave(text); setError(''); } catch { setError('Could not save the milestone. Try again.'); }
   }
-  return <form className="idea-editor" onSubmit={event => { event.preventDefault(); if (draft.trim()) save(draft.trim()); }}>
-    <label htmlFor={id} className="visually-hidden">Milestone</label>
-    <textarea id={id} autoFocus rows={3} value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); onCancel(); } }}/>
-    <div className={compactFooter ? 'milestone-editor-footer' : undefined}>
-      {children}
-      <div className="milestone-editor-actions">{value && <button type="button" className="milestone-remove" aria-label="Remove milestone" title="Remove milestone" onClick={() => save('')}><PhosphorIcon name="trash"/></button>}<button type="button" onClick={onCancel}>Cancel</button><button type="submit" disabled={!draft.trim()}>Save milestone</button></div>
-    </div>
+  return <div className="idea-editor">
+    <InlineTextField fieldRef={fieldRef} value={value} autoFocus={autoFocus} label="Milestone" placeholder="Add a milestone" onCommit={save} onCancel={onCancel}/>
     {error && <p role="alert">{error}</p>}
-  </form>;
+  </div>;
 }

@@ -28,6 +28,7 @@
   --sidebar: #fafafa;
   --fill-hover: #ececec;
   --contrast: #000;
+  --stroke-strong: var(--ink);
   --on-pale: #111;
   --token-area: #e5e5e5;
   --timeline-push-hover: #c4c4c4;
@@ -39,19 +40,22 @@
 /* MitWerk dark palette. Every surface derives from these root tokens. */
 :root[data-theme=dark] {
   color-scheme: dark;
-  background: #191a1b;
+  background: #161615;
   --ink: #fafafa;
   --muted: #a3a3a8;
   --faint: #737378;
   --line: #36373b;
   --line-strong: #4f5056;
   --accent: #fafafa;
-  --canvas-bg: #191a1b;
-  --paper: #191a1b;
+  /* Panels: a touch deeper and warmer than Workshop Text, still read as neutral gray. */
+  --canvas-bg: #161615;
+  --paper: #161615;
   --fill: #27272a;
   --sidebar: #202123;
   --fill-hover: #39393e;
-  --contrast: #fff;
+  /* Main-branch route, stations and card edges: a soft light gray, never solid white. */
+  --contrast: #c7c6c3;
+  --stroke-strong: color-mix(in srgb, var(--ink) 42%, transparent);
   --token-area: #3a3a3f;
   --timeline-push-hover: #65676c;
   --grid-line: #65676c;
@@ -64,7 +68,7 @@ svg { display: block; }
 h1, h2, h3, p { margin: 0; }
 body { margin: 0; }
 button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; transition: color .15s, background .15s, border-color .15s; }
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
 button:disabled { cursor: default; opacity: .35; }
 button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline:var(--focus-ring-width) solid var(--focus-ring-color); outline-offset:var(--focus-ring-offset); }
 button .ui-icon { flex: 0 0 auto; }
@@ -109,15 +113,15 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 @media (prefers-reduced-motion:reduce) { .idea-add { animation:none; } }
 .idea-command { margin-top: 10px; }
 .idea-command .node-details { max-height: 180px; overflow: auto; }
-.idea-editor { padding: 12px; background: var(--paper); border: 1px solid var(--line-strong); border-radius: var(--surface-radius); }
-.idea-card > .idea-editor { border-color:var(--route-color); }
-.idea-editor label { display: block; margin-bottom: 8px; font-size: 12px; }
-.idea-editor textarea { box-sizing: border-box; width: 100%; resize: vertical; min-height: 70px; max-height: 150px; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); padding: 8px; }
-.idea-editor > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.idea-editor button { border: 1px solid var(--line); border-radius: 4px; background: var(--paper); color: var(--ink); padding: 5px 8px; cursor: pointer; }
-.idea-editor button[type=submit] { background: var(--ink); color: var(--paper); }
+.idea-editor { display:block; }
+.idea-editor p[role=alert] { margin-top:4px; font-size:12px; color:var(--annotation-danger); }
+.inline-text-field { display:block; width:100%; min-height:0; margin:0; padding:0 0 var(--inline-field-gap); field-sizing:content; resize:none; overflow:hidden; font:inherit; color:var(--ink); caret-color:var(--ink); background:transparent; border:0; border-bottom:1px solid var(--inline-field-line); border-radius:0; outline:none; transition:border-color var(--inline-field-fade); }
+.inline-text-field::placeholder { color:var(--inline-field-placeholder); opacity:1; }
+.inline-text-field:hover { border-bottom-color:var(--inline-field-line-hover); }
+.inline-text-field:focus { border-bottom-color:var(--inline-field-line-focus); }
+.idea-card .idea-editor .inline-text-field { font:var(--milestone-font-size)/1.35 var(--sans); }
 .idea-fold { position: absolute; width: var(--idea-fold-count-size); height: var(--idea-fold-count-size); transform: translate(-50%, -50%); padding: 0; border: 0; background: none; color: var(--ink); cursor: pointer; z-index: 4; }
-.idea-fold-count { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; place-items: center; width: var(--idea-fold-count-size); height: var(--idea-fold-count-size); background: var(--paper); border: 2px solid var(--ink); border-radius: 50%; font: var(--version-label-weight, 700) var(--version-label-size)/1 var(--sans); }
+.idea-fold-count { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; place-items: center; width: var(--idea-fold-count-size); height: var(--idea-fold-count-size); background: var(--paper); border: 2px solid var(--stroke-strong); border-radius: 50%; font: var(--version-label-weight, 700) var(--version-label-size)/1 var(--sans); }
 .idea-fold-count > span { display:block; transform:scale(var(--version-label-zoom, 1)); transform-origin:center; }
 .idea-fold-label { position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%) scale(var(--version-label-zoom, 1)); transform-origin:left center; font: 400 var(--branch-label-size, 10px)/1.25 var(--sans); }
 .idea-fold:focus-visible { outline:var(--focus-ring-width) solid var(--focus-ring-color); outline-offset:var(--focus-ring-offset); border-radius: 20px; }
@@ -230,11 +234,9 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .idea-todos li { display:flex; align-items:flex-start; gap:8px; }
 .idea-todos .ui-icon { flex:none; margin-top:3px; }
 .idea-todo-text { white-space:pre-wrap; overflow-wrap:anywhere; min-width:0; }
+.idea-todos button.idea-todo-text { padding:0; text-align:left; font:inherit; color:inherit; cursor:text; }
 .idea-todos .is-complete .idea-todo-text { text-decoration:line-through; color:var(--muted); }
 
-.idea-editor > div, .idea-editor .milestone-editor-actions { width:100%; }
-.idea-editor .milestone-editor-actions { display:flex; align-items:center; gap:8px; justify-content:flex-end; }
-.idea-editor .milestone-remove { margin-right:auto; color:var(--annotation-danger); border-color:transparent; padding:5px; display:inline-flex; }
 .idea-todo-toggle { display:inline-flex; flex:none; padding:0; background:transparent; color:inherit; cursor:pointer; }
 
 .idea-todo-copy { display:flex; flex-direction:column; min-width:0; gap:var(--idea-todo-time-gap); overflow-wrap:anywhere; }

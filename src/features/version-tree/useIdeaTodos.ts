@@ -1,4 +1,5 @@
-import { defaultComposer, toggleComposerTodo } from '../workbench/composer-state';
+import { defaultComposer, editComposerTodo, toggleComposerTodo } from '../workbench/composer-state';
+import type { ChatComposerState } from '../workbench/composer-state';
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { DrawerTodosContext } from '../workbench/DrawerTodosContext';
 import { workbenchStorageKey } from '../workbench/composer-events';
@@ -24,14 +25,19 @@ export function useIdeaTodos(nodes: VersionNode[]) {
   }, [drawer]);
   const todos = drawer?.todos ?? savedDrawer;
   const todosByNode = useMemo(() => ideaTodosByNode(nodes, todos), [nodes, todos]);
-  function toggleTodo(id: string) {
-    if (drawer) { drawer.toggle(id); return; }
+  function updateStandalone(change: (composer: ChatComposerState) => ChatComposerState) {
     const state = loadState();
     const task = workbenchEntry(state).task;
     if (!task) return;
-    const composer = toggleComposerTodo(state.chatComposers?.[task.id] ?? defaultComposer(), id);
+    const composer = change(state.chatComposers?.[task.id] ?? defaultComposer());
     saveState({ ...state, chatComposers: { ...state.chatComposers, [task.id]: composer } });
     setSavedDrawer(composer.todos);
   }
-  return { todosByNode, toggleTodo };
+  function toggleTodo(id: string) {
+    if (drawer) drawer.toggle(id); else updateStandalone(composer => toggleComposerTodo(composer, id));
+  }
+  function editTodo(id: string, text: string) {
+    if (drawer) drawer.edit(id, text); else updateStandalone(composer => editComposerTodo(composer, id, text));
+  }
+  return { todosByNode, toggleTodo, editTodo };
 }

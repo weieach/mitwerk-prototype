@@ -421,3 +421,12 @@
 :root { --brand-padding-inline:10px; --zoom-scale-min-width:64px; }
 
 :root { --workspace-brand-gap:4px; }
+
+/* Boxless inline text entry (milestones and to-dos in the idea stream). */
+:root { --inline-field-gap:3px; --inline-field-fade:.15s; --inline-field-line:color-mix(in srgb, var(--ink) 12%, transparent); --inline-field-line-hover:color-mix(in srgb, var(--ink) 28%, transparent); --inline-field-line-focus:color-mix(in srgb, var(--ink) 60%, transparent); --inline-field-placeholder:color-mix(in srgb, var(--ink) 32%, transparent); }
+
+/* Workspace view tag: light parallelogram behind the active view label. Top and bottom stay horizontal; the sides lean slightly, echoing the logo. */
+:root { --view-tag-slant:4px; --view-tag-fade:.15s; --view-tag-bg:rgb(0 0 0 / 8%); --view-tag-ink:var(--ink); }
+:root[data-theme=dark] { --view-tag-bg:rgb(255 255 255 / 14%); --view-tag-ink:var(--ink); }
+
+.mw-app .inline-text-field:focus-visible { outline:none; }

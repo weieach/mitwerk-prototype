@@ -7,12 +7,13 @@ import type { CSSProperties, ReactNode } from 'react';
 import type { VersionNode } from './model';
 import { isFinishedIdeaVersion, withinNodeHoverRadius } from './idea-stream';
 import { ideaTheme } from './tokens';
-import { MilestoneButton, MilestoneEditor } from './MilestoneControls';
+import { MilestoneEditor } from './MilestoneControls';
+import { InlineTextField } from '../../components/InlineTextField';
 
-type Props = { onTodoHeight: (id: string, height: number) => void; onToggleTodo: (id: string) => void; todos: IdeaTodo[]; children: ReactNode; node: VersionNode; milestone: string; open: boolean; currentWip: boolean; color: string; hasDescendants: boolean;
+type Props = { onTodoHeight: (id: string, height: number) => void; onToggleTodo: (id: string) => void; onEditTodo: (id: string, text: string) => void; todos: IdeaTodo[]; children: ReactNode; node: VersionNode; milestone: string; open: boolean; currentWip: boolean; color: string; hasDescendants: boolean;
   onSelect: () => void; onSave: (text: string) => void };
 
-export function IdeaCard({ onTodoHeight, onToggleTodo, todos, node, milestone, open, currentWip, color, hasDescendants, onSelect, onSave, children }: Props) {
+export function IdeaCard({ onTodoHeight, onToggleTodo, onEditTodo, todos, node, milestone, open, currentWip, color, hasDescendants, onSelect, onSave, children }: Props) {
   const clock = useMinuteClock(todos.length > 0);
   const todoList = useRef<HTMLUListElement>(null);
   useLayoutEffect(() => {
@@ -28,7 +29,8 @@ export function IdeaCard({ onTodoHeight, onToggleTodo, todos, node, milestone, o
   const finished = isFinishedIdeaVersion(node);
   const [editing, setEditing] = useState(false);
   const station = useRef<HTMLButtonElement>(null);
-  const add = useRef<HTMLButtonElement>(null);
+  const add = useRef<HTMLTextAreaElement>(null);
+  const [editingTodo, setEditingTodo] = useState<string | null>(null);
   const [near, setNear] = useState(false);
   const [focused, setFocused] = useState(false);
   useEffect(() => {
@@ -50,10 +52,10 @@ export function IdeaCard({ onTodoHeight, onToggleTodo, todos, node, milestone, o
   return <article className={`idea-card ${open ? 'is-open' : ''}`} data-node-id={node.id} style={{ '--route-color': color } as CSSProperties}
     onFocus={() => setFocused(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
     <button ref={station} onPointerEnter={() => setNear(true)} className={`station ${todos.length ? 'is-todo' : milestone ? 'is-milestone' : hasDescendants ? 'has-descendants' : 'is-terminal'}`} aria-label={`Select ${node.label}${todos.length ? ` · ${todos.filter(todo => todo.complete).length}/${todos.length} to-dos complete` : ''}`} aria-expanded={open} onClick={onSelect}>{todos.length ? <PhosphorIcon name={todos.every(todo => todo.complete) ? 'check-square' : 'square'} size="var(--milestone-size)"/> : milestone ? <PhosphorIcon name="trophy" weight="fill" size="var(--station-size)"/> : <span/>}</button>
-    {todos.length > 0 && <ul ref={todoList} className="idea-todos" aria-label={`To-dos for ${node.label}`}>{todos.map(todo => <li key={todo.id} className={todo.complete ? 'is-complete' : ''}><button type="button" className="idea-todo-toggle" role="checkbox" aria-checked={todo.complete} aria-label={`Complete to-do: ${todo.text}`} onClick={() => onToggleTodo(todo.id)}><PhosphorIcon name={todo.complete ? 'check-square' : 'square'} size="var(--milestone-font-size)"/></button><span className="sr-only">{todo.complete ? 'Complete: ' : 'Incomplete: '}</span><span className="idea-todo-copy"><span className="idea-todo-text">{todo.text}</span><time dateTime={todo.created}>{todoTimestamp(todo.created, clock)}{` (v${todo.version})`}</time></span></li>)}</ul>}
+    {todos.length > 0 && <ul ref={todoList} className="idea-todos" aria-label={`To-dos for ${node.label}`}>{todos.map(todo => <li key={todo.id} className={todo.complete ? 'is-complete' : ''}><button type="button" className="idea-todo-toggle" role="checkbox" aria-checked={todo.complete} aria-label={`Complete to-do: ${todo.text}`} onClick={() => onToggleTodo(todo.id)}><PhosphorIcon name={todo.complete ? 'check-square' : 'square'} size="var(--milestone-font-size)"/></button><span className="sr-only">{todo.complete ? 'Complete: ' : 'Incomplete: '}</span><span className="idea-todo-copy">{editingTodo === todo.id ? <InlineTextField autoFocus className="idea-todo-text" value={todo.text} label={`Edit to-do: ${todo.text}`} placeholder="Add a to-do" onCommit={text => { onEditTodo(todo.id, text); setEditingTodo(null); }} onCancel={() => setEditingTodo(null)}/> : <button type="button" className="idea-todo-text" aria-label={`Edit to-do: ${todo.text}`} onClick={() => setEditingTodo(todo.id)}>{todo.text}</button>}<time dateTime={todo.created}>{todoTimestamp(todo.created, clock)}{` (v${todo.version})`}</time></span></li>)}</ul>}
     {milestone && !editing && <button className="idea-milestone" aria-label={`Edit milestone for ${node.label}`} onClick={edit}>{milestone}</button>}
     {editing ? <MilestoneEditor value={milestone} onSave={text => { onSave(text); setEditing(false); }} onCancel={() => setEditing(false)}/>
-      : (currentWip || near || focused) && !milestone && <MilestoneButton buttonRef={add} onClick={edit}/>}
+      : (currentWip || near || focused) && !milestone && <MilestoneEditor fieldRef={add} autoFocus={false} value="" onSave={onSave}/>}
     {currentWip && <div className="version-stats idea-wip-prompts"><span>{node.prompts.length} {node.prompts.length === 1 ? 'prompt' : 'prompts'}</span></div>}
     {open && finished && <div className="idea-command" aria-label={`Command details for ${node.label}`}>{children}</div>}
   </article>;

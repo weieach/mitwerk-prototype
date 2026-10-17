@@ -1,7 +1,8 @@
 /* Shared panel presentation from hifi temp and hifi temp – playback. */
 :root {
   --workspace-background: var(--line);
-  --workspace-gutter: 6px;
+  --workspace-gutter: 4px;
+  --workspace-edge: 10px;
   --user-message-fill:var(--line);
   --landing-brand-size:32px;
   --workspace-radius: 16px;
@@ -14,9 +15,9 @@
   --playback-annotation-fill: var(--line-strong);
   --playback-annotation-ink: var(--ink);
 }
-:root[data-theme=dark] { --workspace-background: #000; }
+:root[data-theme=dark] { --workspace-background: #000; --user-message-fill: #252423; }
 .mw-app { background: var(--workspace-background); }
-.mw-app .mw-topbar { height:var(--workspace-bar-height); min-height:var(--workspace-bar-height); padding:0 14px 0 10px; background:var(--workspace-background); gap:16px; }
+.mw-app .mw-topbar { height:var(--workspace-bar-height); min-height:var(--workspace-bar-height); padding:0 var(--workspace-edge); background:var(--workspace-background); gap:16px; }
 .mw-topbar .workspace-brand { display:flex; align-items:center; gap:var(--workspace-brand-gap); flex-shrink:0; }
 .mw-topbar .workspace-brand .workspace-logo { width:25px; height:25px; object-fit:contain; }
 .mw-topbar .workspace-brand strong { font-size:14px; font-weight:700; }
@@ -27,7 +28,8 @@
 .workspace-count { padding:0 8px; border-radius:20px; background:var(--ink); color:var(--paper); font-size:10px; font-weight:700; }
 .workspace-resource { gap:4px; max-width:180px; }
 .workspace-resource button:first-child { overflow:hidden; text-overflow:ellipsis; }
-.mw-app .mw-body { gap:var(--workspace-gutter); padding:0 var(--workspace-gutter) var(--workspace-gutter); }
+/* Panels sit closer to each other (--workspace-gutter) than to the screen edge (--workspace-edge). */
+.mw-app .mw-body { gap:var(--workspace-gutter); padding:0 var(--workspace-edge) var(--workspace-edge); }
 .mw-app .mw-surface, .mw-app .mw-reader { border-radius:var(--workspace-radius); background:var(--paper); overflow:hidden; }
 .mw-app .reader-divider { width:0; background:transparent; }
 .mw-app .reader-divider::before { inset:0 calc(var(--workspace-gutter) * -1); }
@@ -123,14 +125,21 @@
   --composer-placeholder: var(--muted);
   --composer-radius: 10px;
   --composer-drawer-radius: 12px;
+  --composer-drawer-surface: var(--line);
+  --composer-drawer-hover: #dcdcdc;
+  --composer-border: var(--line-strong);
   --capture-chip-surface: #fff;
   --capture-chip-ink: #36373b;
   --message-gap: 40px;
 }
+/* Dark composer reads as the highest elevation step: panel < drawer < composer, never a mid-gray wash. */
 :root[data-theme=dark] {
-  --composer-surface: var(--faint);
-  --composer-selected: #7e7e7e;
-  --composer-placeholder: #c4c4c7;
+  --composer-surface: #2b2a29;
+  --composer-drawer-surface: #21201f;
+  --composer-drawer-hover: #292827;
+  --composer-border: rgb(255 255 255 / 16%);
+  --composer-selected: #454442;
+  --composer-placeholder: #8b8d93;
 }
 .mw-app .conversation-inner { width:100%; max-width:686px; margin:0 auto; padding:20px 23px; }
 .mw-app .mw-message { margin-bottom:var(--message-gap); }
@@ -153,9 +162,11 @@
 .mw-app .capture-setting-chip { display:inline-flex; align-items:center; gap:5px; min-width:0; max-width:100%; padding:1px var(--capture-chip-padding-inline); border-radius:var(--capture-pill-radius); background:var(--capture-chip-surface); color:var(--capture-chip-ink); font-size:var(--capture-chip-font-size); }
 .capture-setting-chip span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .capture-setting-input { max-width:140px; min-width:0; border:1px solid var(--line-strong); border-radius:var(--capture-pill-radius); padding:2px 8px; background:var(--paper); color:var(--ink); font:inherit; }
-.composer-drawer { border-radius:var(--composer-drawer-radius); background:var(--line); }
+.composer-drawer { border-radius:var(--composer-drawer-radius); background:var(--composer-drawer-surface); }
 .mw-app .composer-drawer-heading { overflow:hidden; display:flex; align-items:center; gap:8px; width:100%; padding:6px 12px; text-align:left; font-size:12px; font-weight:700; transition:background-color var(--drawer-hover-duration) ease; border-radius:var(--composer-drawer-radius) var(--composer-drawer-radius) 0 0; }
-.mw-app .composer-drawer-heading:is(:hover,:focus-visible) { background:var(--fill-hover); }
+/* Hovering the heading lights the whole drawer frame, including behind the composer, as one surface. */
+.composer-drawer { transition:background-color var(--drawer-hover-duration) ease; }
+.composer-drawer:has(.composer-drawer-heading:is(:hover,:focus-visible)) { background:var(--composer-drawer-hover); }
 .composer-drawer-heading > span { opacity:var(--drawer-heading-opacity); transition:opacity var(--drawer-hover-duration) ease; }
 .composer-drawer-heading:is(:hover,:focus-visible) > span { opacity:1; transition-delay:0s; }
 .composer-drawer-content { max-height: min(30vh,260px); overflow:auto; padding:4px 12px 12px; }
@@ -171,13 +182,13 @@
 .composer-drawer-content li { display:flex; align-items:flex-start; gap:12px; font-size:12px; line-height:1.4; }
 .composer-drawer-content label { flex:1; min-width:0; display:flex; align-items:flex-start; gap:8px; cursor:pointer; }
 .composer-drawer-content label span { white-space:pre-wrap; overflow-wrap:anywhere; }
-.composer-drawer-content input { appearance:none; width:13px; height:13px; flex:none; margin:2px 0 0; border:1px solid var(--ink); border-radius:2px; background:transparent; display:grid; place-content:center; }
-.composer-drawer-content input:checked::after { content:'✓'; font-size:11px; color:var(--ink); line-height:1; }
+.composer-drawer-content input[type=checkbox] { appearance:none; width:13px; height:13px; flex:none; margin:2px 0 0; border:1px solid var(--stroke-strong); border-radius:2px; background:transparent; display:grid; place-content:center; }
+.composer-drawer-content input[type=checkbox]:checked::after { content:'✓'; font-size:11px; color:var(--ink); line-height:1; }
 .composer-drawer-content .is-complete span { text-decoration:line-through; color:var(--muted); }
 .composer-drawer-content time { white-space:nowrap; flex:none; opacity:var(--drawer-time-opacity); }
 .composer-drawer-empty { margin:2px 0; font-size:12px; color:var(--muted); }
-.mw-app .composer-drawer .mw-composer { background:var(--composer-surface); border:1px solid var(--line-strong); border-radius:var(--composer-radius); padding:12px 12px 8px; }
-.mw-app .composer-drawer .mw-composer:focus-within { border-color:var(--ink); }
+.mw-app .composer-drawer .mw-composer { background:var(--composer-surface); border:1px solid var(--composer-border); border-radius:var(--composer-radius); padding:12px 12px 8px; }
+.mw-app .composer-drawer .mw-composer:focus-within { border-color:var(--stroke-strong); }
 .mw-app .composer-drawer textarea { padding:0; min-height:34px; font-size:12px; line-height:1.5; }
 .mw-app .composer-drawer textarea::placeholder { color:var(--composer-placeholder); }
 .composer-drawer .composer-tools { gap:8px; margin-top:12px; }
@@ -199,10 +210,12 @@
   .composer-drawer-content time { font-size:10px; }
 }
 
-/* Workspace links expose panel visibility; decoration never reaches icons. */
-.workspace-links > button, .workspace-links > button:not(:first-child) { text-decoration:none; }
-.workspace-links > button[aria-pressed=true] .workspace-link-label { text-decoration:underline; text-underline-offset:2px; }
-.workspace-links > button[aria-pressed=true] { color:var(--ink); }
+/* Workspace links expose panel visibility. On = dark label over a light parallelogram tag (horizontal top and bottom, sides leaning slightly like the logo); off = plain muted label, never underlined. */
+.workspace-links > button, .workspace-links > button:not(:first-child) { position:relative; isolation:isolate; text-decoration:none; }
+.workspace-links > button::before { content:''; position:absolute; inset:0; z-index:-1; background:var(--view-tag-bg); clip-path:polygon(var(--view-tag-slant) 0, 100% 0, calc(100% - var(--view-tag-slant)) 100%, 0 100%); opacity:0; transition:opacity var(--view-tag-fade); }
+.workspace-links > button[aria-pressed=true] { color:var(--view-tag-ink); }
+.workspace-links > button[aria-pressed=true]::before { opacity:1; }
+.workspace-links > button[aria-pressed=true]:hover { color:var(--view-tag-ink); }
 .workspace .workspace-panel-header .panel-title-pill { padding-inline:14px; }
 .theater-summary { white-space:pre-wrap; }
 .mw-app .mw-body > [hidden] { display:none!important; }
@@ -309,7 +322,7 @@
 .reference-thumbnails { display:flex; flex-wrap:wrap; gap:8px; }
 .reference-thumbnail { width:var(--reference-thumbnail-size); height:var(--reference-thumbnail-size); flex:none; padding:0; overflow:hidden; border:1px solid var(--line); border-radius:var(--control-radius); }
 .reference-thumbnail img { display:block; width:100%; height:100%; object-fit:cover; }
-.reference-thumbnail:hover { border-color:var(--ink); }
+.reference-thumbnail:hover { border-color:var(--stroke-strong); }
 .workspace .version-card .reference-thumbnail { height:var(--reference-thumbnail-size); min-height:var(--reference-thumbnail-size); width:var(--reference-thumbnail-size); aspect-ratio:1; padding:0; }
 .reference-thumbnails { max-height:calc(var(--reference-thumbnail-size) * 2 + 8px); overflow-y:auto; }
 
@@ -429,3 +442,90 @@
 /* Shared time-range sizing in both Gallery and Playback chrome. */
 .workspace :is(.workspace-panel-header, .gallery-footer) .gallery-range { flex:0 0 auto; width:auto; min-width:var(--time-range-min-width); }
 .workspace :is(.workspace-panel-header, .gallery-footer) .gallery-range > .row-select { flex:1; min-width:var(--time-range-min-width); }
+
+/* With no panel open, the view links sit directly under the empty-state instruction instead of the top bar. */
+.workspace-panel-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; }
+.workspace-panel-empty > .workspace-links { overflow:visible; }
+
+/* Capture chips (bucket and overlay share one style): light pill, dark text, no stroke, one fixed height in rest and edit states.
+   Editing keeps the pill's exact size; the bucket menu unrolls beneath it as one continuous light shape. */
+:root { --capture-chip-height:22px; --capture-chip-radius:calc(var(--capture-chip-height) / 2); --capture-edit-surface:#f1f1f1; --capture-edit-highlight:#e3e3e4; --capture-edit-placeholder:#8b8d93; }
+.mw-app .capture-setting-chip { height:var(--capture-chip-height); padding:0 var(--capture-chip-padding-inline); border:0; }
+.capture-bucket-control.is-open .capture-setting-input { box-sizing:border-box; width:var(--capture-edit-width); height:var(--capture-chip-height); min-width:0; max-width:none; margin:0; padding:0 var(--capture-chip-padding-inline); border:0; outline:none; box-shadow:none; border-radius:var(--capture-chip-radius); background:var(--capture-edit-surface); color:var(--capture-chip-ink); caret-color:var(--capture-chip-ink); font-size:var(--capture-chip-font-size); line-height:var(--capture-chip-height); }
+.capture-bucket-control.is-open.has-menu .capture-setting-input { border-radius:var(--capture-chip-radius) var(--capture-chip-radius) 0 0; }
+.capture-bucket-control.is-open .capture-setting-input::placeholder { color:var(--capture-edit-placeholder); opacity:1; }
+.select-menu.capture-bucket-menu { width:var(--capture-edit-width); border:0; box-shadow:none; border-radius:0 0 var(--capture-chip-radius) var(--capture-chip-radius); background:var(--capture-edit-surface); color:var(--capture-chip-ink); }
+.capture-bucket-menu [role=option] { color:var(--capture-chip-ink); }
+.capture-bucket-menu [role=option].is-highlighted { background:var(--capture-edit-highlight); }
+
+/* Panel titles share one format: icon at --panel-title-inset from the panel edge, --panel-title-gap, 13px/500 title.
+   A title pill sits --panel-pill-inset inside the panel corner; the panel radius is pill radius + inset, and its icon lands on the same inset as other panels. */
+/* The pill stays a full capsule; the panel radius grows to wrap it concentrically (pill radius + inset). */
+:root { --panel-title-inset:20px; --panel-title-gap:8px; --panel-pill-inset:6px; --panel-pill-height:calc(var(--panel-heading-height) - var(--panel-pill-inset) * 2); --panel-pill-radius:calc(var(--panel-pill-height) / 2); --workspace-radius:calc(var(--panel-pill-radius) + var(--panel-pill-inset)); }
+.mw-app .workspace-panel-header .panel-heading, .mw-app .workspace .workspace-panel-header .panel-heading, .mw-app .mw-dialog > .workspace-panel-header .panel-heading { padding-left:var(--panel-title-inset); gap:var(--panel-title-gap); }
+.mw-app .workspace .workspace-panel-header .panel-heading:has(> .panel-title-pill:first-child) { padding-left:var(--panel-pill-inset); }
+.mw-app .workspace .workspace-panel-header .panel-heading > .panel-title-pill:first-child { display:inline-flex; align-items:center; gap:var(--panel-title-gap); height:var(--panel-pill-height); padding:0 14px 0 calc(var(--panel-title-inset) - var(--panel-pill-inset) - 1px); border-radius:var(--panel-pill-radius); }
+
+/* Top-bar view links are icon-only; each open panel already names itself. The empty state keeps labels. */
+#workspace-bar .workspace-links .workspace-link-label { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+#workspace-bar .workspace-links > button { padding-inline:10px; }
+
+/* Narrow reader panels: the gallery footer wraps into two rows instead of clipping its actions.
+   The playback/frame picker takes the first row; time range and zoom share the second, with the range shrinking first. */
+.workspace .iteration-gallery { container-type:inline-size; }
+@container (max-width: 620px) {
+  .workspace .gallery-footer { flex-wrap:wrap; flex:0 0 auto; height:auto; min-height:var(--panel-footer-height); row-gap:0; }
+  .workspace .gallery-footer > .tracked-interface { flex:1 1 100%; max-width:none; min-height:var(--panel-footer-height); }
+  .workspace .gallery-footer > .panel-header-actions { flex:1 1 100%; min-width:0; min-height:var(--panel-footer-height); justify-content:flex-end; border-top:1px solid var(--workspace-background); }
+  .workspace .gallery-footer .gallery-range, .workspace .gallery-footer .gallery-range > .row-select { flex:1 1 auto; width:auto; min-width:0; }
+}
+
+/* A reader too narrow for Playback and Idea stream side by side stacks them instead of scrolling sideways. */
+.mw-app .history-content:has(> .workspace-idea-split) { container-type:inline-size; }
+@container (max-width: 559px) {
+  .workspace-idea-split { min-width:0; }
+  .workspace-idea-split > .workspace-split { grid-template-columns:minmax(0, 1fr) !important; grid-template-rows:minmax(0, 1fr) minmax(0, 1fr); }
+  .workspace-idea-split > .workspace-split > .tree-panel { border-left:0; border-top:1px solid var(--workspace-background); }
+}
+
+/* Chip icons recede so the name reads first. */
+.mw-app .capture-setting-chip .ui-icon { opacity:var(--capture-chip-icon-opacity); }
+:root { --capture-chip-icon-opacity:.4; }
+
+/* Capture detail: free text, not a category. A frameless field sized to its text with a translucent placeholder and a hairline that appears on hover and focus. */
+:root { --capture-detail-min-width:7ch; --capture-detail-placeholder:color-mix(in srgb, var(--ink) 38%, transparent); }
+.mw-app .capture-detail-field { field-sizing:content; min-width:var(--capture-detail-min-width); max-width:100%; height:var(--capture-chip-height); padding:0; border:0; border-bottom:1px solid transparent; border-radius:0; outline:none; background:transparent; color:var(--ink); caret-color:var(--ink); font:inherit; transition:border-color var(--motion-fast) var(--ease-standard); }
+.mw-app .capture-detail-field::placeholder { color:var(--capture-detail-placeholder); opacity:1; }
+.mw-app .capture-detail-field:hover { border-bottom-color:var(--inline-field-line); }
+.mw-app .capture-detail-field:focus, .mw-app .capture-detail-field:focus-visible { border-bottom-color:var(--inline-field-line-focus); outline:none; }
+
+/* Idea stream stations stay circular; the shared button radius must not square them on hover or focus. */
+.mw-app .tree-panel .station:not(.is-todo) { border-radius:50%; }
+/* Idea cards have no border, so their stations center on the route directly instead of using the bordered version-card offset. */
+.mw-app .tree-panel .idea-card .station:not(.is-todo):not(.is-milestone) { left:calc(var(--station-center-x) - var(--station-size) / 2); top:calc(var(--station-center-y) - var(--station-size) / 2); }
+.mw-app .tree-panel .idea-card .station.is-milestone { left:calc(var(--station-center-x) - var(--milestone-size) / 2); top:calc(var(--station-center-y) - var(--milestone-size) / 2); }
+
+/* Brand menu trigger sits inside the top bar with breathing room; its highlight never touches the screen edge. */
+:root { --brand-trigger-height:calc(var(--workspace-bar-height) - 10px); }
+.mw-topbar .workspace-brand-menu .workspace-brand { height:var(--brand-trigger-height); padding-block:0; }
+
+/* To-do drawer: drag feedback and inline entry. The heading follows the pointer lightly while dragging; release past the threshold opens or closes. */
+.composer-drawer.is-dragging { translate:0 var(--drawer-drag); transition:none; }
+.composer-drawer:not(.is-dragging) { transition:translate var(--motion-base) var(--ease-enter), background-color var(--drawer-hover-duration) ease; }
+.composer-drawer-heading { touch-action:none; cursor:grab; }
+.composer-drawer.is-dragging .composer-drawer-heading { cursor:grabbing; }
+.composer-drawer-content li.composer-todo-new { align-items:center; }
+.composer-todo-input { flex:1; min-width:0; height:var(--capture-chip-compact-height); padding:0; border:0; outline:none; background:transparent; color:var(--ink); caret-color:var(--ink); font:inherit; }
+.composer-todo-input::placeholder { color:var(--capture-detail-placeholder); opacity:1; }
+.mw-app .composer-drawer .composer-todo-input:focus-visible { outline:none; }
+/* Compact page chips inside to-do rows; an empty one is a quiet ghost until a page is picked. */
+:root { --capture-chip-compact-height:18px; }
+.capture-bucket-control.is-compact { --capture-chip-height:var(--capture-chip-compact-height); flex:none; }
+.mw-app .capture-bucket-control.is-compact .capture-setting-chip { height:var(--capture-chip-compact-height); }
+.mw-app .capture-setting-chip.is-empty { background:transparent; color:var(--capture-detail-placeholder); box-shadow:inset 0 0 0 1px var(--inline-field-line); }
+.mw-app .capture-setting-chip.is-empty:hover { color:var(--ink); box-shadow:inset 0 0 0 1px var(--inline-field-line-hover); }
+
+/* Footer controls fill their whole row, so hover fills reach the panel's bottom and side edges. */
+.workspace .gallery-footer > .panel-header-actions { align-items:stretch; align-self:stretch; }
+.workspace .gallery-footer > .panel-header-actions > :is(button, .gallery-range) { height:auto; min-height:0; align-self:stretch; }
+.workspace .gallery-footer > .tracked-interface { align-self:stretch; }

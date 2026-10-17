@@ -1225,3 +1225,67 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Complete deployed frame catalog — 2026-10-17
 
 - Vercel releases include every completed saved frame and its original image bytes, preserving capture IDs, screen buckets and archived-prototype snapshots. Determine image dimensions and format from bytes, including historical JPEG images saved with PNG filenames. Never use frame-number exceptions. Reject empty production catalogs and verify all frame/reference assets before deployment and against the live release. Git-ignored captures require local prebuilt deployment until a shared storage source is adopted.
+
+## Three-layer tokens and system showcase — 2026-10-17
+
+- Design tokens live in `src/design-system/tokens.css` in three layers: primitives `--p-*` (raw gray/blue/status/bucket-hue ramps, space, radius, type sizes, motion), semantic `--s-*` (roles such as `--s-bg-surface`, `--s-text-tertiary`, `--s-accent`, set per theme) and component `--c-*` (to-do, bucket, composer tabs). Components read only `--s-*` or `--c-*`; never reference `--p-*` from a component. Themes swap only the semantic layer. Dark is the default and primary theme; light is an option.
+- Accent is Werk Blue, lifted to `--p-blue-400` in dark mode for contrast and `--p-blue-600` in light mode. Blue means milestone or focus only. Bucket hues (`--p-hue-*`) tag buckets with a dot; they never fill surfaces.
+- Data uses the mono face (`--s-font-data`) with tabular numbers: hashes, versions, counts, indexes, times and uppercase labels (`--s-text-label`, `--s-label-tracking`).
+- To-dos are rows, not cards: square 14px check, mono index, text, then bucket chip and owner on the right. Done rows fade to tertiary ink with a strikethrough.
+- Capture buckets are pills with a hue dot derived from a hash of the bucket name, so a user-created bucket keeps a stable color. Active buckets invert to a solid fill. Buckets read inline in sentences (“Capturing [bucket] with [detail]”).
+- `?view=system` renders the design-system showcase (`src/design-system/SystemPage.tsx`) with tokens, type and every component state in the current theme. The milestone card is removed from the showcase pending a new design. Existing app surfaces still use the older root tokens in `src/index.css`; migrate them to `--s-*` incrementally rather than adding parallel dark colors.
+
+## Boxless inline entry, view tags and composer elevation — 2026-10-17
+
+- Idea stream text entry is boxless (`src/components/InlineTextField.tsx`): no field border, fill or focus outline, only a hairline underline (`--inline-field-line`, stronger on hover and focus) and a faint placeholder (`--inline-field-placeholder`). Click and type; Enter or blur commits, Shift+Enter adds a line, Escape cancels. There are no Save or Cancel buttons.
+- Milestones: an empty card shows the “Add a milestone” field in place of the old Add milestone button (same visibility: current WIP, hover or focus). Clicking an existing milestone reopens the same field; committing blank text removes the milestone. To-do text in idea stream cards edits the same way and writes through the shared drawer state; blank text deletes the to-do.
+- Workspace view links: on = a quiet translucent parallelogram tag (`--view-tag-bg`: 14% white in dark, 8% black in light) behind the icon (`--view-tag-ink`). Top and bottom edges stay horizontal; the sides lean by `--view-tag-slant` (4px), echoing the logo. Off = plain muted label. View links are never underlined.
+- With no panel open, the view links move out of the top bar and sit under the “Choose a panel to open.” instruction.
+- Dark composer uses elevation, not a mid-gray wash: panel < drawer (`--composer-drawer-surface`) < composer (`--composer-surface`), with `--composer-border` and a placeholder of at least 4.5:1 contrast.
+
+## Capture bucket dropdown as one shape — 2026-10-17
+
+- Editing a capture bucket keeps the pill's exact measured width and height; the field never grows while typing. The field and its option menu form one continuous shape: rounded top corners on the field, rounded bottom corners on the menu, no gap, same width and same left text inset.
+- No stroke, outline or shadow on the field or menu. Both use `--capture-edit-surface` (15% ink over the panel); the highlighted option uses `--capture-edit-highlight`. The field shows the current bucket as a muted placeholder to signal it is typable.
+
+## Panel titles, icon-only view bar and panel spacing — 2026-10-17
+
+- Every panel title uses one format: 15px icon at `--panel-title-inset` (20px) from the panel edge, `--panel-title-gap` (8px), then a 13px/500 title. A titled pill (Version blocks) carries its own icon inside and sits `--panel-pill-inset` (6px) from the panel's top and left edges, and stays a full capsule (`--panel-pill-radius` = half its height, 16px). The panel radius grows to wrap it concentrically: `--workspace-radius` = pill radius + inset (22px). Its icon still lands on the 20px inset.
+- Top-bar view links are icon-only with a tooltip and an accessible name; open panels already name themselves. The no-panel empty state keeps the text labels.
+- Panels sit closer to each other (`--workspace-gutter`, 4px) than to the screen edge (`--workspace-edge`, 10px). The top bar uses the same edge inset.
+- Dark panel surface (`--paper`, `--canvas-bg`) is #161615: slightly deeper than Workshop Text and a hair warm, still reading as neutral gray. Dark composer surfaces follow the same warm-neutral family.
+
+## To-do drawer hover — 2026-10-17
+
+- The To-do drawer is one frame: hovering or focusing its heading changes the whole drawer surface to `--composer-drawer-hover`, including the band behind the composer. The heading itself never paints a separate hover fill.
+
+## Motion system — 2026-10-17
+
+- All motion reads `src/motion.css` tokens: `--motion-instant` (90ms, press), `--motion-fast` (150ms, color/fill/border/shadow feedback for hover and unhover), `--motion-base` (220ms, menus, field reveals, cross-fades), `--motion-layout` (420ms, panel size and position); easings `--ease-standard`, `--ease-enter`, `--ease-exit`. Do not hardcode durations or curves in components.
+- Buttons, links, options and tabs share one zero-specificity transition (color, background, border, shadow, opacity, scale). Pressing an enabled button scales it to `--press-scale` (.97) via the `scale` property, so it composes with existing transforms.
+- Menus (`.select-menu`) fade in and drop from `--menu-enter-shift`; the capture bucket menu unrolls downward from its pill with a clip reveal.
+- The message composer grows from `--composer-rest-height` to `--composer-focus-height` and gains `--composer-focus-ring` on focus. Inline fields fade their underline.
+- Panel open, close, expand and pane switches run through `animateLayout` (`src/shared/motion.ts`, View Transitions). Only the panel frame stretches or squeezes: no cross-fade, no opacity ghost and no scaling of content. Old snapshots are hidden, new snapshots draw at true size from the top-left and are clipped by the moving frame (`panel-*` groups carry the panel radius and surface). Pseudo-element selectors cannot be wrapped in `:is()`; list each `panel-*` name. Without support, with reduced motion or while the page is hidden, the layout updates instantly.
+- `prefers-reduced-motion: reduce` zeroes every duration and disables press scaling.
+
+## Capture chips and narrow panels — 2026-10-17
+
+- Only the bucket in “Capturing [bucket] with [detail]” is a chip, because only it is a category. The detail is free text: a frameless field sized to its text (`.capture-detail-field`) with a translucent “details” placeholder and a hairline underline only on hover and focus; Enter or blur commits, Escape reverts. The bucket chip uses: light pill (`--capture-chip-surface`), dark text, no stroke, fixed `--capture-chip-height` (22px) in rest and edit states. Editing keeps the exact pill size on a slightly dimmer light surface (`--capture-edit-surface`) with a gray placeholder. Its menu continues the same light shape beneath the pill. Chip icons recede to `--capture-chip-icon-opacity` (.4).
+- Narrow panels never clip their controls: the gallery footer wraps into two rows below 620px of panel width, and a reader narrower than two columns stacks Playback above Idea stream instead of scrolling sideways.
+- Top-bar view icons follow the panels' left-to-right order: Chat, Version blocks, Idea stream, Live server.
+
+## Idea stream strokes and stations — 2026-10-17
+
+- Supersedes the rule that a connector is one grid-triangle wide: connectors use `treeTheme.routeWidth` (12px), slimmer than a station (28px), so stations read as beads on the line.
+- Stations stay circular in every state; the shared `.mw-app button` radius must not square them.
+- No stroke is solid white. In dark mode the main-branch color `--contrast` is a soft light gray (#c7c6c3), and emphasized borders (focused composer, checkboxes, hovered references, push frames) use `--stroke-strong` (42% ink). Light mode keeps ink.
+- The Live server panel has the shared expand toggle; expanding it hides the other panels, and choosing any other view exits it.
+
+## Drawer entry, gestures and polish — 2026-10-17
+
+- Idea cards have no border, so their stations center on the route from `--station-center-x/y`; never reuse the bordered version-card `- 1` offset.
+- Own chat messages use a quiet dark fill (`--user-message-fill` #252423 in dark). The brand menu trigger is `--brand-trigger-height` tall inside the top bar, so its highlight never touches the screen edge.
+- Footer controls fill their whole row, so hover fills reach the panel's bottom and side edges.
+- The To-do drawer heading is both a click toggle and a drag handle: drag up past 24px to open, down to close; while dragging the drawer follows the pointer lightly. A press without movement stays a click.
+- To-dos can be typed straight into the drawer (“Add a to-do”), no mode switch needed; the Prompt / To-do switch still works. Each to-do can carry a page tag (`ComposerTodo.page`), picked from the capture buckets or created inline through a compact page chip; an empty page chip is a quiet outlined ghost. The add row keeps the chosen page for the next entry.
+- `?demo=milestone` appends one sample Mit reply with a version output (never persisted) to preview the milestone invitation without captures or a live server.

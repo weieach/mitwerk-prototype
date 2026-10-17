@@ -59,7 +59,7 @@ if (screenshotFlags.countHover) document.documentElement.dataset.screenshotCount
 
 export function VersionTreePanel({ embedded = false, id, title = 'Idea stream', graph, dispatch, onSwitchPanel, onOpenPush, mode, modeSwitchVisible, onModeChange, status = '' }: Props) {
   const ideaMode = mode === 'history';
-  const { todosByNode, toggleTodo } = useIdeaTodos(graph.nodes);
+  const { todosByNode, toggleTodo, editTodo } = useIdeaTodos(graph.nodes);
   const [todoHeights, setTodoHeights] = useState<Record<string, number>>({});
   const onTodoHeight = useCallback((id: string, height: number) => {
     setTodoHeights(current => current[id] === height ? current : {...current, [id]:height});
@@ -606,7 +606,7 @@ export function VersionTreePanel({ embedded = false, id, title = 'Idea stream', 
                   left: -geometry.cardOffsetX + label.x,
                   top: -cardOffsetY + label.y,
                 }}>{(ideaMode ? branchLabels.get(node.branchId) === node.id : isBranchDivergence(node, graph.nodes)) && <BranchTag name={node.branchId} color={color}/>}<span className="version-header">{node.label.toLowerCase()}</span></span>
-                {ideaMode ? <IdeaCard onTodoHeight={onTodoHeight} onToggleTodo={toggleTodo} todos={todosByNode.get(node.id) ?? []} currentWip={node.id === currentWipId} node={node} milestone={milestones[node.id] ?? ''} open={openCommand === node.id} color={color}
+                {ideaMode ? <IdeaCard onTodoHeight={onTodoHeight} onToggleTodo={toggleTodo} onEditTodo={editTodo} todos={todosByNode.get(node.id) ?? []} currentWip={node.id === currentWipId} node={node} milestone={milestones[node.id] ?? ''} open={openCommand === node.id} color={color}
                   hasDescendants={presentation.nodesWithChildren.has(node.id)}
                   onSelect={() => { setOpenCommand(current => current === node.id ? null : node.id); dispatch({ type: 'select', id: node.id }); if (node.capture?.pushed) onOpenPush?.(node.capture.version); }}
                   onSave={text => setSavedMilestones(saveMilestone(milestones, node, text))}>{commitCard}</IdeaCard>

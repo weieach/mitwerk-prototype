@@ -156,7 +156,7 @@ export function IterationGallery({ headerTarget, headerActions, playbackOnly = f
 
   useEffect(() => { try { seedAnnotations(versions.flatMap(version => version.frames)); } catch { /* Demo seeds can be retried after storage is available. */ } }, [versions]);
 
-  const header = <PanelHeader title="Version blocks" mode={view === 'album' || view === 'focusing' || view === 'returning' ? 'Gallery' : 'Playback'} onModeChange={switchView} modeDisabled={!visibleFrames.length || !['album','theater'].includes(view)} onTitleClick={view === 'theater' ? exit : undefined} onToggle={onToggle} expanded={expanded} actions={<>
+  const header = <PanelHeader title="Version blocks" icon="circuitry" mode={view === 'album' || view === 'focusing' || view === 'returning' ? 'Gallery' : 'Playback'} onModeChange={switchView} modeDisabled={!visibleFrames.length || !['album','theater'].includes(view)} onTitleClick={view === 'theater' ? exit : undefined} onToggle={onToggle} expanded={expanded} actions={<>
       <VersionPanelSwitch onClick={onSwitchPanel} target="Version stream"/>
       {view !== 'album' && view !== 'focusing' && <div className="gallery-range"><RowSelect label="Date range" value={range} onChange={value => { setRange(value as RangeKey); setNow(Date.now()); }} options={ranges}/></div>}
       <div className="gallery-frame-picker-slot" ref={setFramePickerSlot}/>

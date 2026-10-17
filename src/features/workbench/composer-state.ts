@@ -1,7 +1,8 @@
 import type { FrameContext } from './frame-context.ts';
 
 export type ComposerMode = 'prompt' | 'todo';
-export type ComposerTodo = { id: string; text: string; created: string; complete: boolean; version?: number; frames?: FrameContext[]; assetIds?: string[] };
+/** `page` tags the to-do with the capture bucket (page) it is meant for, usually not the one currently running. */
+export type ComposerTodo = { id: string; text: string; created: string; complete: boolean; version?: number; page?: string; frames?: FrameContext[]; assetIds?: string[] };
 export type CaptureSettings = { screen: string; overlay: string };
 export type ChatComposerState = {
   sampleTodosSeeded?: boolean;
@@ -17,7 +18,7 @@ export function defaultComposer(): ChatComposerState {
 }
 
 /** Saving a to-do never mutates conversation messages or starts an agent run. */
-export function addComposerTodo(state: ChatComposerState, text: string, id: string, created: string, context: Pick<ComposerTodo, 'frames' | 'assetIds' | 'version'> = {}): ChatComposerState {
+export function addComposerTodo(state: ChatComposerState, text: string, id: string, created: string, context: Pick<ComposerTodo, 'frames' | 'assetIds' | 'version' | 'page'> = {}): ChatComposerState {
   if (!text.trim()) return state;
   return { ...state, open: true, todos: [...state.todos, { ...context, id, text: text.trim(), created, complete: false }] };
 }
@@ -82,4 +83,10 @@ export function orderedComposerTodos(todos: ComposerTodo[]) {
 export function editComposerTodo(state: ChatComposerState, id: string, text: string): ChatComposerState {
   const value = text.trim();
   return { ...state, todos: value ? state.todos.map(todo => todo.id === id ? { ...todo, text: value } : todo) : state.todos.filter(todo => todo.id !== id) };
+}
+
+/** Tags a to-do with a page bucket; blank removes the tag. */
+export function setComposerTodoPage(state: ChatComposerState, id: string, page: string): ChatComposerState {
+  const value = page.trim();
+  return { ...state, todos: state.todos.map(todo => todo.id === id ? { ...todo, page: value || undefined } : todo) };
 }
