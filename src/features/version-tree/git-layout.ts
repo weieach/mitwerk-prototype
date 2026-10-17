@@ -1,8 +1,29 @@
 import { geometry, layoutGraph } from './layout.ts';
 import { treeTheme } from './tokens.ts';
-import type { GraphEdge, MergeOrigin } from './layout.ts';
+import type { GraphEdge, GraphLayout, MergeOrigin } from './layout.ts';
 import type { VersionNode } from './model.ts';
 import { mergedBranchIds } from './presentation.ts';
+
+/** Chronological display only. Git ancestry remains intact for the retained divergent layout. */
+export function layoutIdeaTimeline(source: VersionNode[], spacing: (node: VersionNode) => number): GraphLayout {
+  let y = geometry.originY;
+  const nodes = source.map((node, row) => {
+    if (row) y += spacing(source[row - 1]);
+    return { ...node, row, column: 0, x: geometry.originX, y };
+  });
+  // Color changes halfway between stations so every station sits on its own branch color.
+  const edges: GraphEdge[] = nodes.slice(1).flatMap((target, index) => {
+    const from = nodes[index], middle = (from.y + target.y) / 2;
+    const edge = { sourceId: from.id, targetId: target.id, dashed: false };
+    return [
+      { ...edge, id: `timeline:out:${from.id}:${target.id}`, branchId: from.branchId, path: `M ${from.x} ${from.y} L ${from.x} ${middle}` },
+      { ...edge, id: `timeline:in:${from.id}:${target.id}`, branchId: target.branchId, path: `M ${target.x} ${middle} L ${target.x} ${target.y}` },
+    ];
+  });
+  return { nodes, edges, origins: [], mergeOrigins: [], levels: [], forks: [],
+    width: geometry.originX + geometry.cardOffsetX + geometry.cardWidth + geometry.padding,
+    height: y + geometry.cardHeight + geometry.padding };
+}
 
 /** Shorter than the shared row pitch. Extra rows keep an expanded commit message clear of the next card. */
 export function commitBranchGap(title: string) {

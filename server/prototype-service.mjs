@@ -1,23 +1,79 @@
+import { visualReferencePrompt } from '../src/shared/visual-reference-path.mjs';
 import { build } from 'vite';
 import react from '@vitejs/plugin-react';
-import { createReadStream, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
-import { cp, rm } from 'node:fs/promises';
-import { extname, join, relative, resolve, sep } from 'node:path';
+import { execFile, spawn } from 'node:child_process';
+import { createReadStream, existsSync, mkdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
+import { extname, join, resolve, sep } from 'node:path';
+import { Readable } from 'node:stream';
+import { promisify } from 'node:util';
 
-export const archiveDirectory = '[ver capture] codebase';
+export const pushShaFile = join('data', 'push-shas.json');
 export const prototypeApi = '/__mitwerk/prototypes';
 const assetsPrefix = '/__mitwerk/prototype-assets/';
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.otf': 'font/otf' };
+// Top-level paths a historical prototype never needs at runtime.
+const excludedPaths = new Set(['.cursor', '.githooks', 'node_modules', 'dist', 'archive', 'docs', 'tests', 'scripts', 'server', 'visual_ref']);
+const execFileAsync = promisify(execFile);
 
-/** Push numbers are stable across screenshot/archive timestamp differences. Never guess by version order. */
-export function findArchive(root, number) {
-  const directory = join(root, archiveDirectory);
-  if (!Number.isSafeInteger(number) || number < 1 || !existsSync(directory)) return null;
-  const matches = readdirSync(directory, { withFileTypes: true }).filter(entry =>
-    entry.isDirectory() && /^\[push #(\d+)\]/.exec(entry.name)?.[1] === String(number));
-  if (matches.length !== 1) return null;
-  const path = join(directory, matches[0].name);
-  return existsSync(join(path, 'index.html')) && existsSync(join(path, 'package.json')) ? path : null;
+/** Push numbers resolve to the exact commit recorded at push time. Never guess by version order. */
+export function findPushSha(root, number) {
+  if (!Number.isSafeInteger(number) || number < 1) return null;
+  try {
+    const sha = JSON.parse(readFileSync(join(root, pushShaFile), 'utf8'))[number];
+    return typeof sha === 'string' && /^[0-9a-f]{40}$/.test(sha) ? sha : null;
+  } catch { return null; }
+}
+
+function extractTar(source, dest, args = []) {
+  return new Promise((done, fail) => {
+    const tar = spawn('tar', ['-x', ...args, '-C', dest], { stdio: ['pipe', 'ignore', 'pipe'] });
+    let stderr = '';
+    tar.stderr.on('data', chunk => { stderr += chunk; });
+    tar.on('error', fail); source.on('error', fail);
+    tar.on('close', code => code === 0 ? done() : fail(new Error(stderr.trim() || `tar exited with ${code}`)));
+    source.pipe(tar.stdin);
+  });
+}
+
+async function stageFromGit(root, sha, dest) {
+  const { stdout } = await execFileAsync('git', ['ls-tree', '--name-only', sha], { cwd: root });
+  const paths = stdout.split('\n').filter(name => name && !excludedPaths.has(name));
+  const git = spawn('git', ['archive', '--format=tar', sha, '--', ...paths], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
+  let stderr = '';
+  git.stderr.on('data', chunk => { stderr += chunk; });
+  const exited = new Promise((done, fail) => { git.on('error', fail); git.on('close', code => code === 0 ? done() : fail(new Error(stderr.trim() || `git archive failed for ${sha}`))); });
+  await Promise.all([extractTar(git.stdout, dest), exited]);
+}
+
+/** Commits missing from the local clone come from GitHub; the repository is private, so a token is required. */
+async function stageFromGithub(root, sha, dest) {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) throw new Error('This push is not in the local repository. Set GITHUB_TOKEN to load it from GitHub.');
+  const { stdout } = await execFileAsync('git', ['remote', 'get-url', 'origin'], { cwd: root });
+  const repo = /github\.com[:/]([^/]+\/[^/]+?)(?:\.git)?$/i.exec(stdout.trim())?.[1];
+  if (!repo) throw new Error('The origin remote is not a GitHub repository.');
+  const response = await fetch(`https://api.github.com/repos/${repo}/tarball/${sha}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(60000) });
+  if (!response.ok || !response.body) throw new Error(`GitHub returned ${response.status} for this push.`);
+  await extractTar(Readable.fromWeb(response.body), dest, ['-z', '--strip-components=1']);
+  await Promise.all([...excludedPaths].map(name => rm(join(dest, name), { recursive: true, force: true })));
+}
+
+const hasLocalCommit = (root, sha) => execFileAsync('git', ['cat-file', '-e', `${sha}^{commit}`], { cwd: root }).then(() => true, () => false);
+
+/** A push can be entered when its commit is local, or reachable on GitHub with a token. */
+export async function pushAvailable(root, number) {
+  const sha = findPushSha(root, number);
+  return !!sha && (!!process.env.GITHUB_TOKEN || await hasLocalCommit(root, sha));
+}
+
+/** Materialize a pushed tree on demand: local Git objects first, GitHub second. */
+export async function stagePushSource(root, sha, dest) {
+  await rm(dest, { recursive: true, force: true });
+  mkdirSync(dest, { recursive: true });
+  await (await hasLocalCommit(root, sha) ? stageFromGit(root, sha, dest) : stageFromGithub(root, sha, dest));
+  if (!existsSync(join(dest, 'index.html')) || !existsSync(join(dest, 'package.json'))) throw new Error('This push has no buildable prototype.');
 }
 
 /** A sandboxed archive gets ephemeral storage and access only to its frozen, read-only assets. */
@@ -35,9 +91,9 @@ export function createPrototypeService(root, { catalog, history }) {
   const builds = new Map();
   const ready = new Map();
   async function prepare(number) {
-    const archive = findArchive(root, number);
+    const sha = findPushSha(root, number);
     const push = catalog().frames.find(frame => frame.kind === 'push' && frame.number === number);
-    if (!archive || !push) throw new Error('No saved codebase is available for this push.');
+    if (!sha || !push) throw new Error('No saved codebase is available for this push.');
     if (builds.has(number)) return builds.get(number);
     const pending = (async () => {
       const base = `${assetsPrefix}${number}/`;
@@ -45,14 +101,8 @@ export function createPrototypeService(root, { catalog, history }) {
       const sourceDir = join(cache, `source-${number}`);
       const outDir = join(cache, `push-${number}`);
       mkdirSync(cache, { recursive: true });
-      await rm(sourceDir, { recursive: true, force: true });
-      // Archive names contain #, which Vite interprets as a URL fragment in CSS assets.
-      // Stage a disposable copy under a URL-safe path, leaving the archive untouched.
-      // Stage runtime source/assets without blocking the dev server on historical docs/captures.
-      const excluded = new Set(['.git', '.cursor', '.githooks', 'node_modules', 'dist', 'archive', 'docs', 'tests', 'scripts', 'server', 'visual_ref', archiveDirectory, '[frame capture] screenshots']);
-      await cp(archive, sourceDir, { recursive: true,
-        filter: path => !excluded.has(relative(archive, path).split(sep)[0]),
-      });
+      // Stage under a URL-safe, disposable path; the pushed commit itself is never modified.
+      await stagePushSource(root, sha, sourceDir);
       const frozen = snapshotCatalog(catalog(), push);
       const git = history();
       const commits = (git.commits ?? []).filter(commit => commit.timestamp <= push.timestamp);
@@ -84,7 +134,7 @@ export function createPrototypeService(root, { catalog, history }) {
       res.setHeader('Cache-Control', 'no-store');
       const number = Number(route[1]);
       if (req.method === 'GET') {
-        res.end(JSON.stringify({ available: !!findArchive(root, number) })); return;
+        res.end(JSON.stringify({ available: await pushAvailable(root, number) })); return;
       }
       if (req.method !== 'POST') { res.statusCode = 405; res.end('{}'); return; }
       try { res.end(JSON.stringify(await prepare(number))); }
@@ -107,7 +157,7 @@ export function createPrototypeService(root, { catalog, history }) {
         path = join(root, '[frame capture] screenshots', name);
       } else if (relative.startsWith('gallery/references/')) {
         const name = relative.slice('gallery/references/'.length);
-        if (!built.references.has(name) || name.includes('/') || name.includes('\\')) throw new Error('Unknown reference');
+        if (!built.references.has(name) || (name.includes('\\') || (name.includes('/') && visualReferencePrompt(name) === null))) throw new Error('Unknown reference');
         path = join(root, 'visual_ref', name);
       } else {
         path = resolve(built.outDir, relative);

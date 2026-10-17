@@ -2,9 +2,9 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
-import { builtPrototypeData, createPrototypeService, findArchive } from '../server/prototype-service.mjs';
+import { builtPrototypeData, createPrototypeService, pushAvailable } from '../server/prototype-service.mjs';
 
-// Build locally: captures, Git history and archives are intentionally not in Git.
+// Build locally: captures and Git history are not in Git; push sources come from data/push-shas.json.
 // Upload only this output via `vercel deploy --prebuilt --prod`.
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 execFileSync('npm', ['run', 'build'], { cwd: root, stdio: 'inherit' });
@@ -18,7 +18,7 @@ const prototypes = {};
 const routes = [];
 const numbers = [...new Set(data.catalog().frames.filter(f => f.kind === 'push').map(f => f.number))];
 for (const number of numbers) {
-  if (!findArchive(root, number)) continue;
+  if (!await pushAvailable(root, number)) continue;
   console.log(`Preparing archived prototype ${number}…`);
   prototypes[number] = await service.prepare(number);
   const base = `/__mitwerk/prototype-assets/${number}`;

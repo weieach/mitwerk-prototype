@@ -10,12 +10,11 @@ import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { GalleryVersion } from './model';
-import { galleryBranchPaint, dateTicks, edgePanArmed, edgePanStrength, formatDate, formatVersion, hoverCaptionLines, versionKeepsPush, wrapTextToWidth } from './model';
+import { galleryBranchPaint, dateTicks, edgePanArmed, edgePanStrength, formatDate, formatVersion, versionKeepsPush } from './model';
 import type { buildAlbum, FramePlane, LabelFace } from './geometry';
-import { albumBlockBounds, albumFloorY, containingBlock, dateLabelPose, featuredFrameAxis, featuredTickLength, frameFocus, hoverCaptionHeight, resetCameraDestination, versionLabelPose } from './geometry';
+import { albumBlockBounds, albumFloorY, containingBlock, dateLabelPose, featuredFrameAxis, featuredTickLength, frameFocus, resetCameraDestination, versionLabelPose } from './geometry';
 import { galleryTokens as t } from './tokens';
 import { axisTopBlend, mergeAxisAnchors, overheadDatePosition, projectAxisLabels, withOverheadDates } from './axis-label-layout';
-import { hoverCaptionPose } from './caption-layout';
 import { observeTheme, resolveColor } from '../../shared/theme';
 import type { AxisAnchor, AxisLabel } from './axis-label-layout';
 
@@ -24,6 +23,9 @@ type FrameObject = { plane: FramePlane; group: THREE.Group; image: THREE.Mesh<TH
 type Callbacks = { annotate: (id: string) => void; tokenView: (active: boolean) => void; motion: (progress: number) => void; hover: (id: string | null) => void; open: (id: string) => void; zoom: (value: number) => void; error: (message: string) => void; labels: (labels: AxisLabel[]) => void };
 
 /** Owns GPU resources and controls; React owns the data, filters and theater selection. */
+/** Decoded captures survive gallery remounts; filenames are immutable, so URLs key them safely. */
+const prefetchedCaptures = new Map<string, HTMLImageElement>();
+
 export class AlbumScene {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -32,6 +34,7 @@ export class AlbumScene {
   private content = new THREE.Group();
   private tokenGroup = new THREE.Group();
   private tokenAnchors: AxisAnchor[] = [];
+  private axisMeasure = document.createElement('canvas').getContext('2d')!;
   private tokenBlend = 0;
   private tokenActive = false;
   private topMotion: ((time: number) => boolean) | null = null;
@@ -46,6 +49,8 @@ export class AlbumScene {
   private pickTargets: THREE.Mesh[] = [];
   private textures = new Map<string, THREE.Texture>();
   private pending = new Set<string>();
+  private prefetchQueue: { id: string; url: string }[] = [];
+  private prefetching = 0;
   private fades = new Map<THREE.Material, { opacity: number; target: number }>();
   private observer: ResizeObserver;
   private raycaster = new THREE.Raycaster();
@@ -69,7 +74,6 @@ export class AlbumScene {
   private restoreAlbum: (() => void) | null = null;
   private theaterTurn: ((time: number) => void) | null = null;
   private overheadBlend = 0;
-  private caption: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | null = null;
   private failedTextures = new Set<string>();
   private reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   private colors!: { paper: string; ink: string; muted: string; line: string; onPale: string };
@@ -82,6 +86,7 @@ export class AlbumScene {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     this.renderer.setPixelRatio(galleryRenderRatio(host.clientWidth, host.clientHeight, devicePixelRatio, this.renderer.capabilities.maxTextureSize));
     this.readColors();
+    void document.fonts.ready.then(() => this.invalidate());
     this.stopThemeObserver = observeTheme(this.themeChange);
     const canvas = this.renderer.domElement;
     canvas.tabIndex = 0;
@@ -170,8 +175,13 @@ export class AlbumScene {
     if (this.syncTokenUsage(dt)) moving = true;
     this.renderer.render(this.scene, this.camera);
     this.host.dataset.imagesReady = String([...this.frames.values()].filter(frame => frame.image.visible).every(frame => !!frame.image.material.map));
+    const axisFamily = getComputedStyle(this.host).fontFamily;
+    const measureAxisText = (text: string, size: number) => {
+      this.axisMeasure.font = `${size}px ${axisFamily}`;
+      return this.axisMeasure.measureText(text).width;
+    };
     this.callbacks.labels([
-      ...projectAxisLabels(withOverheadDates(mergeAxisAnchors(this.axisAnchors, this.featuredAnchors), this.album ? albumFloorY(this.album) : 0, this.album ? -albumBlockBounds(this.album).max.z : undefined), this.camera, this.host.clientWidth, this.host.clientHeight, this.overheadBlend, this.tokenBlend),
+      ...projectAxisLabels(withOverheadDates(mergeAxisAnchors(this.axisAnchors, this.featuredAnchors), this.album ? albumFloorY(this.album) : 0, this.album ? -albumBlockBounds(this.album).max.z : undefined), this.camera, this.host.clientWidth, this.host.clientHeight, this.overheadBlend, this.tokenBlend, measureAxisText),
       ...projectAxisLabels(this.tokenAnchors, this.camera, this.host.clientWidth, this.host.clientHeight).map(label => ({ ...label, opacity: this.tokenBlend, hidden: label.hidden || this.tokenBlend < .01 })),
     ]);
     const hovered = this.hovered ? this.frames.get(this.hovered) : undefined;
@@ -190,7 +200,6 @@ export class AlbumScene {
     this.topMotion = null;
     this.pointer = null; this.down = null; this.edgeVelocity = 0; this.controls.enabled = false;
     this.inspect(id);
-    this.caption && (this.caption.visible = false);
     this.featuredGuides.visible = false;
     this.callbacks.labels([]);
     const rect = this.host.getBoundingClientRect();
@@ -255,7 +264,7 @@ export class AlbumScene {
       if (finished && ready) {
         if (reverse) {
           restore(); this.restoreAlbum = null; this.theaterTurn = null;
-          this.reset(true); this.controls.enabled = true; this.placeCaption();
+          this.reset(true); this.controls.enabled = true;
           delete this.host.dataset.transitionProgress;
           this.invalidate();
         } else this.theaterTurn = () => {};
@@ -274,7 +283,6 @@ export class AlbumScene {
     this.pointer = null; this.down = null; this.edgeVelocity = 0;
     this.controls.enabled = false;
     this.inspect(id);
-    this.caption && (this.caption.visible = false);
     this.featuredGuides.visible = false;
     this.callbacks.labels([]);
     const rect = this.host.getBoundingClientRect();
@@ -322,7 +330,6 @@ export class AlbumScene {
     if (this.camera.zoom !== this.reportedZoom) {
       this.reportedZoom = this.camera.zoom;
       this.callbacks.zoom(this.camera.zoom);
-      if (this.hovered) this.placeCaption();
     }
     this.invalidate();
   };
@@ -341,7 +348,6 @@ export class AlbumScene {
     if (this.renderer.domElement.width !== Math.floor(width * ratio) || this.renderer.domElement.height !== Math.floor(height * ratio)) this.renderer.setSize(width, height);
     this.host.dataset.renderRatio = String(ratio);
     this.syncEdgeResolution();
-    if (this.hovered) this.placeCaption();
     // setSize clears the drawing buffer. Draw now, before the browser paints, so a resize never shows an empty frame.
     this.renderer.render(this.scene, this.camera);
     this.invalidate();
@@ -462,7 +468,6 @@ export class AlbumScene {
     if (id === this.hovered) return;
     this.hovered = id;
     this.callbacks.hover(id);
-    this.placeCaption();
     this.syncFeaturedLabels();
     this.syncBlockStrokes();
     this.updateImages();
@@ -658,7 +663,7 @@ export class AlbumScene {
   private animateToReset(complete: () => void) {
     const dest = this.resetDestination();
     if (!dest) {
-      this.theaterTurn = null; this.controls.enabled = true; this.resize(); this.placeCaption(); complete();
+      this.theaterTurn = null; this.controls.enabled = true; this.resize(); complete();
       return;
     }
     this.inspect(null);
@@ -688,7 +693,7 @@ export class AlbumScene {
       this.renderer.render(this.scene, this.camera);
       this.host.dataset.transitionProgress = String(eased);
       if (finished) {
-        this.theaterTurn = null; this.reset(true); this.controls.enabled = true; this.placeCaption();
+        this.theaterTurn = null; this.reset(true); this.controls.enabled = true;
         delete this.host.dataset.transitionProgress;
         complete();
         return;
@@ -710,99 +715,11 @@ export class AlbumScene {
     this.axisAnchors.push({ id: `${face}:${text}:${z}`, text, position: new THREE.Vector3(x, y, z), face, valueOrigin, timestamp });
   }
 
-  private makePlate(text: string, ink: string, worldLineH: number, maxWorldW?: number) {
-    const { texture, width, height } = this.paintPlate(text, ink, worldLineH, maxWorldW);
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshBasicMaterial({
-      map: texture, transparent: true, depthWrite: false, side: THREE.DoubleSide,
-    }));
-    mesh.userData.plate = { width, height };
-    return mesh;
-  }
-  private paintPlate(text: string, ink: string, worldLineH: number, maxWorldW?: number) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d')!;
-    const viewH = Math.max(1e-6, (this.camera.top - this.camera.bottom) / this.camera.zoom);
-    const hostH = this.host.clientHeight || 1;
-    const dpr = Math.min(devicePixelRatio, t.webgl.pixelRatioMax);
-    const family = getComputedStyle(this.host).fontFamily || 'sans-serif';
-    const line = t.labelFontSize * 1.25;
-    const pad = t.captionShadow.pad;
-    const font = `${t.labelFontSize}px ${family}`;
-    const measure = (item: string) => { ctx.font = font; return ctx.measureText(item).width; };
-    const maxCss = maxWorldW ? Math.max(line, maxWorldW * line / worldLineH - pad * 2) : Infinity;
-    const lines = text.split('\n').flatMap(item => {
-      ctx.font = font;
-      return maxWorldW ? wrapTextToWidth(item, maxCss, value => { ctx.font = font; return ctx.measureText(value).width; }) : [item];
-    });
-    const cssW = Math.min(maxCss === Infinity ? Number.POSITIVE_INFINITY : maxCss + pad * 2,
-      Math.max(0, ...lines.map(measure)) + pad * 2);
-    const cssH = line * Math.max(1, lines.length) + pad * 2;
-    const worldH = cssH * worldLineH / line;
-    const targetPx = Math.min(t.labelTextureMax, Math.max(t.labelTextureMin, worldH / viewH * hostH * dpr));
-    const scale = targetPx / cssH;
-    canvas.width = Math.ceil(cssW * scale);
-    canvas.height = Math.ceil(cssH * scale);
-    ctx.setTransform(scale, 0, 0, scale, 0, 0);
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    // Transparent texture: a page-colored halo follows only the glyphs, never a label rectangle.
-    ctx.strokeStyle = resolveColor(t.captionShadow.color);
-    ctx.lineWidth = t.captionShadow.stroke;
-    ctx.lineJoin = 'round';
-    ctx.shadowColor = resolveColor(t.captionShadow.color);
-    ctx.shadowBlur = t.captionShadow.blur * scale;
-    const draw = (fill: boolean) => lines.forEach((item, index) => {
-      ctx.font = font;
-      if (fill) ctx.fillText(item, pad, pad + line * (index + .5));
-      else ctx.strokeText(item, pad, pad + line * (index + .5));
-    });
-    for (let pass = 0; pass < t.captionShadow.passes; pass++) draw(false);
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = ink;
-    draw(true);
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = Math.min(t.webgl.anisotropyMax, this.renderer.capabilities.getMaxAnisotropy());
-    texture.generateMipmaps = true;
-    texture.minFilter = THREE.LinearMipmapLinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-    return { texture, width: Math.min(maxWorldW ?? Number.POSITIVE_INFINITY, cssW * worldLineH / line), height: worldH };
-  }
-  private placeCaption() {
-    this.caption?.removeFromParent();
-    const frame = this.hovered ? this.frames.get(this.hovered) : undefined;
-    if (!frame) { if (this.caption) this.caption.visible = false; return; }
-    const text = hoverCaptionLines(frame.plane.frame).join('\n');
-    if (!text.replaceAll('"', '').trim()) { if (this.caption) this.caption.visible = false; return; }
-    if (this.caption) {
-      this.caption.geometry.dispose();
-      this.caption.material.map?.dispose();
-      this.caption.material.dispose();
-    }
-    const viewH = Math.max(1e-6, (this.camera.top - this.camera.bottom) / this.camera.zoom);
-    this.caption = this.makePlate(text, this.colors.ink, hoverCaptionHeight(frame.plane.height, viewH), frame.plane.width);
-    const { plane } = frame;
-    const size = this.caption.userData.plate as { width: number; height: number };
-    this.caption.position.set(plane.x + size.width / 2, -plane.y + t.hoverCaptionGap + size.height / 2, -plane.depth);
-    frame.group.add(this.caption);
-    this.caption.visible = true;
-    this.caption.material.depthTest = false;
-    this.caption.renderOrder = 10;
-    this.syncCaptionPose();
-  }
-  private syncCaptionPose() {
-    const frame = this.hovered ? this.frames.get(this.hovered) : undefined;
-    if (!frame || !this.caption) return;
-    const pose = hoverCaptionPose(frame.plane, this.caption.userData.plate, this.camera, axisTopBlend(this.camera));
-    this.caption.position.copy(pose.position);
-    this.caption.quaternion.copy(pose.rotation);
-  }
   private syncTopView(dt: number) {
     const target = axisTopBlend(this.camera);
     this.overheadBlend += (target - this.overheadBlend) * (this.reducedMotion ? 1 : 1 - Math.exp(-dt / (t.topView.dateFadeMs / 3)));
     const moving = Math.abs(target - this.overheadBlend) > .002;
     if (!moving) this.overheadBlend = target;
-    this.syncCaptionPose();
     this.content.traverse(object => {
       if (object instanceof THREE.Line && object.material instanceof THREE.LineBasicMaterial) {
         const face = object.material.userData.axisFace;
@@ -834,6 +751,12 @@ export class AlbumScene {
     this.hovered = null;
     this.callbacks.hover(null);
     this.representatives = new Set(representatives);
+    // After the sampled frames, warm every other in-range capture newest-first so hover never waits on a fetch.
+    this.prefetchQueue = album.planes
+      .filter(plane => plane.active && !this.representatives.has(plane.frame.id))
+      .sort((a, b) => b.frame.timestamp - a.frame.timestamp)
+      .map(plane => ({ id: plane.frame.id, url: `${import.meta.env.BASE_URL}${plane.frame.url}` }))
+      .filter(item => !prefetchedCaptures.has(item.url));
     for (const block of album.blocks) {
       const geometry = new THREE.BoxGeometry(block.width, block.height, block.end - block.start);
       const material = new THREE.MeshBasicMaterial({ color: this.colors.line, side: THREE.DoubleSide });
@@ -978,27 +901,56 @@ export class AlbumScene {
       this.pickTargets.push(frame.image);
       const cached = this.textures.get(id);
       // A mapped capture is never tinted: the material color multiplies the texture, and a dark page would dim it.
-      if (cached) { frame.image.material.map = cached; frame.image.material.color.set(0xffffff); frame.image.material.needsUpdate = true; }
+      const url = `${import.meta.env.BASE_URL}${frame.plane.frame.url}`;
+      const warmed = prefetchedCaptures.get(url);
+      if (!cached && warmed) {
+        const texture = new THREE.Texture(warmed);
+        texture.needsUpdate = true;
+        this.textures.set(id, this.prepareCapture(texture));
+      }
+      const ready = this.textures.get(id);
+      if (ready) { frame.image.material.map = ready; frame.image.material.color.set(0xffffff); frame.image.material.needsUpdate = true; }
       else if (!this.pending.has(id) && !this.failedTextures.has(id)) {
         this.pending.add(id);
-        new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}${frame.plane.frame.url}`, texture => {
+        new THREE.TextureLoader().load(url, texture => {
           this.pending.delete(id);
           if (this.dead || !this.frames.has(id)) { texture.dispose(); return; }
-          texture.colorSpace = THREE.SRGBColorSpace;
-          // Keep original capture pixels; mipmaps and anisotropic filtering resolve the tilted planes.
-          texture.generateMipmaps = true;
-          texture.minFilter = THREE.LinearMipmapLinearFilter;
-          texture.magFilter = THREE.LinearFilter;
-          texture.anisotropy = Math.min(t.webgl.anisotropyMax, this.renderer.capabilities.getMaxAnisotropy());
-          this.textures.set(id, texture);
+          this.textures.set(id, this.prepareCapture(texture));
           this.updateImages();
           this.invalidate();
-        }, undefined, () => { this.pending.delete(id); this.failedTextures.add(id); });
+        }, undefined, () => { this.pending.delete(id); this.failedTextures.add(id); this.pumpPrefetch(); });
       }
     }
     for (const [id, texture] of this.textures) {
       if (this.textures.size <= t.webgl.textureCacheSize) break;
       if (!visible.has(id)) { texture.dispose(); this.textures.delete(id); }
+    }
+    this.pumpPrefetch();
+  }
+
+  private prepareCapture(texture: THREE.Texture) {
+    texture.colorSpace = THREE.SRGBColorSpace;
+    // Keep original capture pixels; mipmaps and anisotropic filtering resolve the tilted planes.
+    texture.generateMipmaps = true;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.anisotropy = Math.min(t.webgl.anisotropyMax, this.renderer.capabilities.getMaxAnisotropy());
+    return texture;
+  }
+
+  /** Decodes queued captures only once every sampled frame has settled, so the resting album loads first. */
+  private pumpPrefetch() {
+    if (this.dead || [...this.representatives].some(id => this.frames.has(id) && !this.textures.has(id) && !this.failedTextures.has(id))) return;
+    while (this.prefetching < t.webgl.prefetchConcurrency && this.prefetchQueue.length) {
+      const { url } = this.prefetchQueue.shift()!;
+      if (prefetchedCaptures.has(url)) continue;
+      this.prefetching++;
+      const image = new Image();
+      image.src = url;
+      image.decode()
+        .then(() => { prefetchedCaptures.set(url, image); })
+        .catch(() => {})
+        .finally(() => { this.prefetching--; this.pumpPrefetch(); });
     }
   }
 
@@ -1015,7 +967,7 @@ export class AlbumScene {
     });
     this.axisAnchors = [];
     this.featuredAnchors = [];
-    this.content.clear(); this.bookmarks = []; this.frames.clear(); this.blockEdges.clear(); this.pickTargets = []; this.fades.clear(); this.caption = null;
+    this.content.clear(); this.bookmarks = []; this.frames.clear(); this.blockEdges.clear(); this.pickTargets = []; this.fades.clear();
     this.featuredGuides = new THREE.Group();
   }
   dispose() {
@@ -1039,12 +991,7 @@ export class AlbumScene {
     this.textures.forEach(texture => texture.dispose());
     this.textures.clear();
     this.renderer.dispose();
-    if (this.caption) {
-      this.caption.geometry.dispose();
-      this.caption.material.map?.dispose();
-      this.caption.material.dispose();
-      this.caption = null;
-    }
+
     canvas.remove();
   }
 }

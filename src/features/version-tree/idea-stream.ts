@@ -25,16 +25,58 @@ export function seedMilestones(nodes: VersionNode[], saved: Milestones): Milesto
   const next = { ...saved };
   for (const node of nodes) {
     // An empty saved value is an intentional deletion, not an invitation to reseed.
-    if (initialMilestones[node.label] && !Object.hasOwn(next, node.id)) next[node.id] = initialMilestones[node.label];
+    const key = milestoneIdentity(node);
+    const value = saved[key] ?? saved[node.id] ?? initialMilestones[node.label];
+    if (value !== undefined) { next[node.id] = value; next[key] = value; }
   }
   return next;
+}
+
+/** Capture identity survives the WIP node being joined to its eventual Git SHA. */
+function milestoneIdentity(node: VersionNode) {
+  return node.capture ? `capture-version-${node.capture.version}` : node.id;
+}
+
+export function saveMilestone(saved: Milestones, node: VersionNode, text: string): Milestones {
+  return { ...saved, [node.id]: text, [milestoneIdentity(node)]: text };
+}
+
+export function isFinishedIdeaVersion(node: VersionNode) {
+  return Boolean((node.git || node.capture?.pushed) && node.capture?.pushed !== false
+    && !/\b(?:wip|work[ -]in[ -]progress)\b/i.test(node.title));
+}
+
+/** Historical commits titled WIP are not the current unpushed capture. */
+export function currentIdeaWipId(nodes: VersionNode[]) {
+  const latest = nodes.at(-1);
+  return latest?.capture?.pushed === false ? latest.id : null;
+}
+
+/** Screen-space distance keeps the hover grace area independent of graph zoom. */
+export function withinNodeHoverRadius(x: number, y: number, centerX: number, centerY: number, viewportWidth: number, fraction: number) {
+  return Math.hypot(x - centerX, y - centerY) <= viewportWidth * fraction;
+}
+
+export function navigableMilestones<T extends VersionNode>(nodes: T[], milestones: Milestones): T[] {
+  return nodes.filter(node => isFinishedIdeaVersion(node) && milestones[node.id]?.trim());
+}
+
+export function ideaBranchColor(branchId: string, paletteColor: string) {
+  return branchId === 'main' ? 'var(--contrast)' : paletteColor;
+}
+
+/** Recent stations and the default disclosure are derived from chronological history. */
+export function ideaStreamDefaults(nodes: VersionNode[]) {
+  const latest = nodes.slice(-3);
+  const commit = [...nodes].reverse().find(isFinishedIdeaVersion);
+  return { latestIds: latest.map(node => node.id), commandId: commit?.id ?? null };
 }
 
 export type IdeaRun = { id: string; nodeIds: string[]; firstLabel: string; lastLabel: string };
 const parentsOf = (node: VersionNode) => node.git?.parents ?? (node.parentId ? [node.parentId] : []);
 
 /** Fold adjacent same-branch history, retaining external graph connections on the representative. */
-export function projectIdeaStream(source: VersionNode[], milestones: Milestones, expanded: ReadonlySet<string> = new Set()) {
+export function projectIdeaStream(source: VersionNode[], milestones: Milestones, expanded: ReadonlySet<string> = new Set(), visible: ReadonlySet<string> = new Set()) {
   const byId = new Map(source.map(node => [node.id, node]));
   const runs: IdeaRun[] = [];
   let group: VersionNode[] = [];
@@ -43,7 +85,7 @@ export function projectIdeaStream(source: VersionNode[], milestones: Milestones,
     group = [];
   }
   for (const node of source) {
-    if (milestones[node.id]?.trim()) { flush(); continue; }
+    if (milestones[node.id]?.trim() || visible.has(node.id)) { flush(); continue; }
     const previous = group.at(-1);
     const members = new Set([...group.map(item => item.id), node.id]);
     const chronology = new Set([...group, node].flatMap(item => item.chronologyParentId && !members.has(item.chronologyParentId) ? [item.chronologyParentId] : []));
@@ -90,7 +132,7 @@ export function firstBranchLabels(source: VersionNode[], representative: Readonl
 
 /** Use the most recent milestone at or before the selection; default to the latest. */
 export function milestoneNavigationIndex(source: VersionNode[], milestones: Milestones, selectedId: string | null) {
-  const stations = source.filter(node => milestones[node.id]?.trim());
+  const stations = navigableMilestones(source, milestones);
   if (!stations.length) return -1;
   const selectedIndex = source.findIndex(node => node.id === selectedId);
   if (selectedIndex < 0) return stations.length - 1;

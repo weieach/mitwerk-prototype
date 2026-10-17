@@ -1,7 +1,7 @@
 import { appendPromptEntry } from '../src/shared/prompt-log.mjs';
 import { captureSummaryMaxLength } from '../src/shared/capture-format.mjs';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
-import { appendFileSync, closeSync, constants, cpSync, existsSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { appendFileSync, closeSync, constants, existsSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,10 +9,8 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const url = process.env.SCREENSHOT_URL ?? 'http://localhost:5173';
 const frameCaptureDirName = '[frame capture] screenshots';
-const verCaptureDirName = '[ver capture] codebase';
-const minArchivePush = 6;
 const screenshotsDir = join(root, frameCaptureDirName);
-const archivesDir = join(root, verCaptureDirName);
+const pushShaFile = join(root, 'data', 'push-shas.json');
 const pushMarkerFile = join(screenshotsDir, '.last-push-sha');
 const captureLockFile = join(screenshotsDir, '.capture.lock');
 const captureLogFile = join(screenshotsDir, '.capture.log');
@@ -120,7 +118,6 @@ function listedPaths(output) {
 function isCountedPath(name) {
   return Boolean(name)
     && !name.startsWith(`${frameCaptureDirName}/`)
-    && !name.startsWith(`${verCaptureDirName}/`)
     && !name.startsWith('screenshots/')
     && name !== '.mitwerk-graph.json';
 }
@@ -538,7 +535,8 @@ function screenshotUrl(prompt = '') {
   target.searchParams.set('screenshot', '1');
   if (/\bc (?:home|homescreen)\b[^.\n]*milestone[^.\n]*zoomed in/i.test(prompt)) { target.searchParams.set('treeMilestone', 'latest'); target.searchParams.set('treeZoom', '1'); }
   if (hasFlag('tree-fit') || /fit all view/i.test(prompt)) target.searchParams.set('treeFit', '1');
-  if (/\bc (?:home|homescreen)\b[\s\S]*\btodo drawer\b/i.test(prompt)) target.searchParams.set('todoDrawer', 'open');
+  if (/\bc (?:home|homescreen)\b[^.\n]*todo added to chat field/i.test(prompt)) target.searchParams.set('todoDraft', '1');
+  if (hasFlag('todo-drawer') || /\bc (?:home|homescreen)\b[\s\S]*\btodo drawer\b/i.test(prompt)) target.searchParams.set('todoDrawer', 'open');
   if (wantsDarkCapture(prompt)) target.searchParams.set('theme', 'dark');
   // Capture the complete prototype shell, retaining gallery state parameters.
   target.searchParams.delete('view');
@@ -561,7 +559,12 @@ function screenshotUrl(prompt = '') {
     if (/page scrolled to top/i.test(prompt)) target.searchParams.set('scroll', 'top');
     return target.href;
   }
-  if (wantsHomeCapture(prompt)) { target.searchParams.delete('galleryView'); target.searchParams.set('layout', 'side-by-side'); return target.href; }
+  if (wantsHomeCapture(prompt)) {
+    target.searchParams.delete('galleryView');
+    target.searchParams.set('layout', 'side-by-side');
+    if (hasFlag('gallery-hover')) target.searchParams.set('galleryHover', '1');
+    return target.href;
+  }
   if (wantsTokenCapture(prompt)) { target.searchParams.set('galleryView', 'tokens'); return target.href; }
   const hover = wantsGalleryHover(prompt);
   if (wantsTransitionCapture(prompt)) { target.searchParams.set('galleryView', argValue('gallery-view') === 'timeline-transition' ? 'timeline-transition' : 'transition'); return target.href; }
@@ -701,9 +704,18 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
         const themed = await cdp('Runtime.evaluate', { expression: 'document.documentElement.dataset.theme === "dark" && document.querySelector(".mw-app")?.dataset.theme === "dark"', returnByValue: true });
         if (themed.result?.value !== true) { await delay(100); continue; }
       }
-      if (/\bc (?:home|homescreen)\b[\s\S]*\btodo drawer\b/i.test(prompt)) {
+      if (hasFlag('todo-drawer') || /\bc (?:home|homescreen)\b[\s\S]*\btodo drawer\b/i.test(prompt)) {
         const drawer = await cdp('Runtime.evaluate', { expression: 'document.querySelector(".composer-drawer-heading")?.getAttribute("aria-expanded") === "true"', returnByValue: true });
         if (drawer.result?.value !== true) { await delay(100); continue; }
+      }
+      if (/\bc (?:home|homescreen)\b[^.\n]*todo added to chat field/i.test(prompt)) {
+        const draft = await cdp('Runtime.evaluate', { expression: '!!document.querySelector("textarea[aria-label=Message]")?.value', returnByValue: true });
+        if (!draft.result?.value) { await delay(100); continue; }
+      }
+      if (hasFlag('model-menu')) {
+        await cdp('Runtime.evaluate', { expression: `(() => { const trigger = document.querySelector('button[aria-label="Model"]'); if (trigger?.getAttribute('aria-expanded') !== 'true') trigger?.click(); })()` });
+        const menu = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('[role="listbox"][aria-label="Model"]')`, returnByValue: true });
+        if (!menu.result?.value) { await delay(100); continue; }
       }
       if (/time range dropdown/i.test(prompt)) {
         await cdp('Runtime.evaluate', { expression: `(() => { if (!document.querySelector('[role="listbox"][aria-label="Date range"]')) document.querySelector('button[aria-label="Date range"]')?.click(); })()` });
@@ -905,101 +917,33 @@ function pushMessageFromFilename(name) {
   return parts.length > 1 ? parts.at(-1) : '';
 }
 
-function existingArchive(count) {
-  if (!existsSync(archivesDir)) return '';
-  const prefix = `[push #${count}]`;
-  return readdirSync(archivesDir).find((name) => name.startsWith(prefix)) ?? '';
-}
-
-function githubRepo() {
-  const remote = git(['remote', 'get-url', 'origin']);
-  const match = remote.match(/github\.com[:/]([^/]+)\/([^/.]+?)(?:\.git)?$/i);
-  if (!match) {
-    throw new Error(`Origin is not a GitHub URL: ${remote}`);
-  }
-  return { owner: match[1], repo: match[2] };
-}
-
-function gitArchiveTo(sha, dest) {
-  mkdirSync(dest, { recursive: true });
-  const archive = spawnSync('git', ['archive', sha], {
-    cwd: root,
-    encoding: 'buffer',
-    maxBuffer: 256 * 1024 * 1024,
-  });
-  if (archive.status !== 0) {
-    throw new Error(archive.stderr?.toString().trim() || `git archive failed for ${sha}`);
-  }
-  const untar = spawnSync('tar', ['-x', '-C', dest], { input: archive.stdout });
-  if (untar.status !== 0) {
-    throw new Error(untar.stderr?.toString().trim() || `tar extract failed for ${sha}`);
-  }
-}
-
-async function downloadGithubZip(sha, dest) {
-  const { owner, repo } = githubRepo();
-  const zipUrl = `https://codeload.github.com/${owner}/${repo}/zip/${sha}`;
-  const tmp = mkdtempSync(join(tmpdir(), 'mitwerk-ver-'));
+function readPushShas() {
   try {
-    const response = await fetch(zipUrl, { signal: AbortSignal.timeout(60000) });
-    if (!response.ok) {
-      throw new Error(`GitHub zip ${response.status} for ${sha}`);
-    }
-    writeFileSync(join(tmp, 'repo.zip'), Buffer.from(await response.arrayBuffer()));
-    const unzip = spawnSync('unzip', ['-q', join(tmp, 'repo.zip'), '-d', tmp]);
-    if (unzip.status !== 0) {
-      throw new Error(unzip.stderr?.toString().trim() || `unzip failed for ${sha}`);
-    }
-    const extracted = readdirSync(tmp).find((name) => name !== 'repo.zip');
-    if (!extracted) {
-      throw new Error(`GitHub zip for ${sha} was empty`);
-    }
-    mkdirSync(dest, { recursive: true });
-    cpSync(join(tmp, extracted), dest, { recursive: true });
-  } finally {
-    rmSync(tmp, { recursive: true, force: true });
+    return JSON.parse(readFileSync(pushShaFile, 'utf8'));
+  } catch {
+    return {};
   }
 }
 
-async function archivePushTree({ sha, label, count, files, added = 0, deleted = 0, date = new Date(), preferGithub = false }) {
+/** Enter prototype loads a push from Git on demand; the push only needs its exact commit recorded. */
+function recordPushSha({ sha, count }) {
+  if (!count) return '';
   const resolved = git(['rev-parse', sha]);
-  if (!count || count < minArchivePush) {
-    return '';
+  const shas = readPushShas();
+  if (shas[count] === resolved) {
+    captureLog(`push sha skip: #${count} ${resolved}`);
+    return resolved;
   }
-  const already = existingArchive(count);
-  if (already) {
-    captureLog(`archive skip: ${already}`);
-    return join(archivesDir, already);
+  if (shas[count]) {
+    captureLog(`push sha keep: #${count} already ${shas[count]}, not ${resolved}`);
+    return shas[count];
   }
-  const message = sanitizeMessage(label, 'commit');
-  const folder = `${frameStem({ tag: 'push', count, files, added, deleted, message })}-${timecode(date)}`;
-  const dest = join(archivesDir, folder);
-  mkdirSync(archivesDir, { recursive: true });
-  try {
-    if (preferGithub) {
-      await downloadGithubZip(resolved, dest);
-      captureLog(`archive github ${resolved} ${folder}`);
-    } else {
-      gitArchiveTo(resolved, dest);
-      captureLog(`archive git ${resolved} ${folder}`);
-    }
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    if (preferGithub) {
-      captureLog(`archive github failed, using git archive: ${detail}`);
-      if (existsSync(dest)) {
-        rmSync(dest, { recursive: true, force: true });
-      }
-      gitArchiveTo(resolved, dest);
-      captureLog(`archive git ${resolved} ${folder}`);
-    } else {
-      if (existsSync(dest)) {
-        rmSync(dest, { recursive: true, force: true });
-      }
-      throw error;
-    }
-  }
-  return dest;
+  shas[count] = resolved;
+  const sorted = Object.fromEntries(Object.entries(shas).sort(([a], [b]) => Number(a) - Number(b)));
+  mkdirSync(dirname(pushShaFile), { recursive: true });
+  writeFileSync(pushShaFile, `${JSON.stringify(sorted, null, 2)}\n`);
+  captureLog(`push sha #${count} ${resolved}`);
+  return resolved;
 }
 
 function findCommitBySubject(message) {
@@ -1019,42 +963,24 @@ function findCommitBySubject(message) {
   return null;
 }
 
-async function backfillArchives() {
-  mkdirSync(archivesDir, { recursive: true });
+function backfillPushShas() {
   if (!existsSync(screenshotsDir)) {
     throw new Error(`Missing ${frameCaptureDirName}`);
   }
+  const known = readPushShas();
   const entries = readdirSync(screenshotsDir)
     .map((name) => ({ name, count: pushCountFromName(name) }))
-    .filter((entry) => entry.count >= minArchivePush && entry.name.startsWith('[push'));
+    .filter((entry) => entry.count > 0 && entry.name.startsWith('[push') && !known[entry.count]);
   entries.sort((a, b) => a.count - b.count);
   const saved = [];
   for (const entry of entries) {
-    if (existingArchive(entry.count)) {
-      captureLog(`backfill skip: push #${entry.count}`);
-      continue;
-    }
     const message = pushMessageFromFilename(entry.name);
     const commit = findCommitBySubject(message);
     if (!commit) {
       captureLog(`backfill miss: push #${entry.count} ${message}`);
       continue;
     }
-    const base = parentSha(commit.sha);
-    const files = countChangedFiles('push', commit.sha, base);
-    const { added, deleted } = countLineChanges(commit.sha, base);
-    const date = new Date(git(['log', '-1', '--format=%cI', commit.sha]));
-    const dest = await archivePushTree({
-      sha: commit.sha,
-      label: commit.subject,
-      count: entry.count,
-      files,
-      added,
-      deleted,
-      date,
-      preferGithub: hasFlag('from-github'),
-    });
-    if (dest) saved.push(dest);
+    saved.push(`push #${entry.count} ${recordPushSha({ sha: commit.sha, count: entry.count })}`);
   }
   return saved;
 }
@@ -1090,22 +1016,6 @@ function relabelFrames() {
       const { added, deleted } = countLineChanges(commit.sha, base);
       const next = name.replace(/^(\[push #\d+\] \d+ files? · )(?!\+)/, `$1${lineLabel(added, deleted)} · `);
       const dest = renameIfNeeded(join(screenshotsDir, name), join(screenshotsDir, next));
-      if (dest) renamed.push(dest);
-    }
-  }
-  if (existsSync(archivesDir)) {
-    for (const name of readdirSync(archivesDir)) {
-      if (!name.startsWith('[push') || /· \+\d+ -\d+ ·/.test(name)) continue;
-      const message = pushMessageFromFilename(name);
-      const commit = findCommitBySubject(message);
-      if (!commit) {
-        captureLog(`relabel miss archive ${name}`);
-        continue;
-      }
-      const base = parentSha(commit.sha);
-      const { added, deleted } = countLineChanges(commit.sha, base);
-      const next = name.replace(/^(\[push #\d+\] \d+ files? · )(?!\+)/, `$1${lineLabel(added, deleted)} · `);
-      const dest = renameIfNeeded(join(archivesDir, name), join(archivesDir, next));
       if (dest) renamed.push(dest);
     }
   }
@@ -1175,18 +1085,10 @@ async function reconcilePush({ commitAndPush }) {
       outFile = await takeScreenshot({ tag: 'push', label: subject, sha, base });
     } else {
       captureLog(`reconcile reuse ${outFile}`);
-      const { added, deleted } = countLineChanges(sha, base);
       try {
-        await archivePushTree({
-          sha,
-          label: subject,
-          count: pushCountFromName(basename(outFile)),
-          files: countChangedFiles('push', sha, base),
-          added,
-          deleted,
-        });
+        recordPushSha({ sha, count: pushCountFromName(basename(outFile)) });
       } catch (error) {
-        captureLog(`archive failed: ${error instanceof Error ? error.message : String(error)}`);
+        captureLog(`push sha failed: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
     writePushMarker(sha);
@@ -1238,9 +1140,9 @@ async function takeScreenshot({ tag, label, sha, base }) {
   await capture(chrome, outFile, label);
   if (tag === 'push') {
     try {
-      await archivePushTree({ sha, label, count, files, ...lines });
+      recordPushSha({ sha, count });
     } catch (error) {
-      captureLog(`archive failed: ${error instanceof Error ? error.message : String(error)}`);
+      captureLog(`push sha failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   return outFile;
@@ -1249,10 +1151,10 @@ async function takeScreenshot({ tag, label, sha, base }) {
 async function main() {
   const hookMode = hasFlag('hook-mode');
   const failOpen = hookMode || hasFlag('fail-open');
-  if (hasFlag('backfill-archives')) {
-    const saved = await backfillArchives();
-    for (const dest of saved) console.log(dest);
-    if (!saved.length) console.log('No new version archives.');
+  if (hasFlag('backfill-push-shas')) {
+    const saved = backfillPushShas();
+    for (const line of saved) console.log(line);
+    if (!saved.length) console.log('No new push commits to record.');
     return;
   }
   if (hasFlag('relabel-frames')) {

@@ -1876,5 +1876,83 @@
     "output": 1229,
     "total": 5072,
     "simulated": true
+  },
+  "[push #30] idea-stream · 58 files · +1181 -220 · changed version block orientation, updating version stream to idea stream interface with milestone (with version folding-2026-10-17-102004.png": {
+    "input": 9879,
+    "output": 2471,
+    "total": 12350,
+    "simulated": true
+  },
+  "[prompt #286] idea-stream · +115-18 · For todo drawer, animate the transition between its default and expanded state, with ease timing simulating actual drawe-2026-10-17-102353.png": {
+    "input": 14830,
+    "output": 7337,
+    "total": 22167,
+    "simulated": true
+  },
+  "[prompt #287] idea-stream · +226-30 · In todo drawer, show the newest to-dos first and move completed ones to the bottom. Animate the reordering when a checkb-2026-10-17-103135.png": {
+    "input": 3723,
+    "output": 6051,
+    "total": 9774,
+    "simulated": true
+  },
+  "[prompt #288] idea-stream · +358-45 · # Browser comments- ## User Comment 1 Browser Node position- (58, 400) in 1380x1144 viewport Untrusted page evidence (fr-2026-10-17-103648.png": {
+    "input": 2706,
+    "output": 7683,
+    "total": 10389,
+    "simulated": true
+  },
+  "[prompt #289] idea-stream · +465-87 · # Browser comments- ## User Comment 1 Browser Node position- (199, 409) in 1380x1144 viewport Untrusted page evidence (f-2026-10-17-104353.png": {
+    "input": 14790,
+    "output": 5963,
+    "total": 20753,
+    "simulated": true
+  },
+  "[prompt #290] idea-stream · +613-113 · # Browser comments- ## User Comment 1 Browser Node position- (1102, 72) in 1380x1144 viewport Untrusted page evidence (f-2026-10-17-104735.png": {
+    "input": 5433,
+    "output": 130,
+    "total": 5563,
+    "simulated": true
+  },
+  "[prompt #291] idea-stream · +860-143 · # Browser comments- ## User Comment 1 Browser Node position- (1262, 710) in 1380x1144 viewport Untrusted page evidence (-2026-10-17-105707.png": {
+    "input": 12962,
+    "output": 3141,
+    "total": 16103,
+    "simulated": true
+  },
+  "[prompt #292] idea-stream · +966-150 · # Browser comments- ## User Comment 1 Browser Node position- (683, 56) in 1380x1144 viewport Untrusted page evidence (fr-2026-10-17-110331.png": {
+    "input": 6545,
+    "output": 6722,
+    "total": 13267,
+    "simulated": true
+  },
+  "[prompt #293] idea-stream · +1.1k-154 · # Browser comments- ## User Comment 1 Browser Node position- (190, 417) in 1380x1144 viewport Untrusted page evidence (f-2026-10-17-110844.png": {
+    "input": 10307,
+    "output": 3066,
+    "total": 13373,
+    "simulated": true
+  },
+  "[prompt #294] idea-stream · +1.4k-392 · For text label on frames in gallery, instead of shadow around the text, use bg fill in the same styling as the x-x versi-2026-10-17-111921.png": {
+    "input": 13796,
+    "output": 2736,
+    "total": 16532,
+    "simulated": true
+  },
+  "[prompt #295] idea-stream · +1.5k-486 · # Browser comments- ## User Comment 1 Browser Node position- (184, 1008) in 1548x1144 viewport Untrusted page evidence (-2026-10-17-112530.png": {
+    "input": 2126,
+    "output": 4628,
+    "total": 6754,
+    "simulated": true
+  },
+  "[prompt #296] idea-stream · +1.6k-505 · # Browser comments- ## User Comment 1 Browser Node position- (1283, 333) in 1548x1144 viewport Untrusted page evidence (-2026-10-17-113136.png": {
+    "input": 10052,
+    "output": 3484,
+    "total": 13536,
+    "simulated": true
+  },
+  "[prompt #297] idea-stream · +1.7k-511 · # Browser comments- ## User Comment 1 Browser Node position- (1232, 504) in 1548x1144 viewport Untrusted page evidence (-2026-10-17-113528.png": {
+    "input": 4512,
+    "output": 3228,
+    "total": 7740,
+    "simulated": true
   }
 }

@@ -10,9 +10,9 @@ const preferredHeight = 360;
  * The designed selection overlay shared by every selector. It opens in the top layer next to its trigger,
  * so it clears clipped panels and stays interactive inside modal dialogs such as fullscreen theater.
  */
-export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, onChoose, onDismiss }: {
+export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, className = '', onChoose, onDismiss }: {
   id: string; label: string; anchor: RefObject<HTMLElement | null>; options: readonly SelectMenuOption[]; value: string;
-  minWidth?: number; onChoose: (value: string) => void; onDismiss: (restoreFocus: boolean) => void;
+  className?: string; minWidth?: number; onChoose: (value: string) => void; onDismiss: (restoreFocus: boolean) => void;
 }) {
   const list = useRef<HTMLDivElement>(null);
   const [cursor, setCursor] = useState(() => Math.max(0, options.findIndex(option => option.value === value)));
@@ -42,7 +42,7 @@ export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, on
   }, [anchor, onDismiss]);
   useEffect(() => { list.current?.children[cursor]?.scrollIntoView({ block: 'nearest' }); }, [cursor]);
   return <div ref={list} id={id} popover="manual" role="listbox" aria-label={label} aria-activedescendant={`${id}-${cursor}`} tabIndex={-1}
-    className="select-menu" style={bounds}
+    className={`select-menu ${className}`} style={bounds}
     onKeyDown={event => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onDismiss(true); }
       else if (event.key === 'Tab') onDismiss(false);

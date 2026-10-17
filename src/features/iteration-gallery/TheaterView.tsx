@@ -38,10 +38,6 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
   const [playing, setPlaying] = useState(false);
   const [fullscreenId, setFullscreenId] = useState<string | null>(null);
   const [toast, setToast] = useState('');
-  const [enterReady, setEnterReady] = useState(false);
-  const [enterSettled, setEnterSettled] = useState(false);
-  const enterShape = useRef<HTMLButtonElement>(null);
-  const enterLabel = useRef<HTMLSpanElement>(null);
   useEffect(() => { setFullscreenId(null); }, [selectedId, active]);
   const [speed, setSpeed] = useState(1);
   const [mode, setMode] = useState<LoopMode>('loop');
@@ -169,9 +165,6 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
     if (prototype.error) setToast(prototype.error);
   }, [prototype.error]);
   useEffect(() => {
-    if (prototype.open) setEnterSettled(true);
-  }, [prototype.open]);
-  useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('screenshot') !== '1') return;
     if (params.get('viewport') === 'phone') setPreset('phone');
@@ -186,22 +179,6 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
     const timer = window.setTimeout(() => setToast(''), 5000);
     return () => window.clearTimeout(timer);
   }, [toast]);
-  const lingerKey = `${previewFrame?.id ?? requested?.id ?? ''}:${(previewFrame ?? requested)?.kind ?? ''}`;
-  useEffect(() => {
-    setEnterReady(false);
-    setEnterSettled(false);
-    if (!lingerKey.endsWith(':push')) return;
-    const timer = window.setTimeout(() => setEnterReady(true), t.theater.enterDelayMs);
-    return () => window.clearTimeout(timer);
-  }, [lingerKey]);
-  useEffect(() => {
-    const shape = enterShape.current;
-    const label = enterLabel.current;
-    if (!enterReady || enterSettled || !shape || !label) return;
-    const expand = shape.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: t.theater.enterExpandMs, easing: 'ease-out', fill: 'forwards' });
-    const fade = label.animate([{ opacity: 0 }, { opacity: 1 }], { duration: t.theater.enterFadeMs, delay: t.theater.enterExpandMs, easing: 'ease-out', fill: 'forwards' });
-    return () => { expand.cancel(); fade.cancel(); };
-  }, [enterReady, enterSettled]);
 
   if (!frame) return <div className="gallery-empty">No frames in this date range. Choose a wider range to play.</div>;
   const viewport = t.viewportPresets.find(option => option.value === preset)!;
@@ -282,7 +259,6 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
 
   function enterPrototype() {
     setPlaying(false); setPreviewId(null); setPreviewImage(null);
-    setEnterSettled(true);
     if (prototype.available === false) { setToast('No saved codebase for this push.'); return; }
     if (frame) setFullscreenId(frame.id);
     void prototype.enter();
@@ -361,8 +337,8 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
         <button className="theater-text-action" onClick={event => { event.stopPropagation(); window.dispatchEvent(new CustomEvent(attachFrameEvent, {detail:{id:frame.id, url:`${import.meta.env.BASE_URL}${frame.url}`, label:`${formatVersion(frame.version)} · ${frame.summary}`, filename:frame.filename}})); }}><Icon name="plus"/>Add frame to chat</button>
         {frame.kind === 'push' && (prototype.open
           ? <button className="theater-text-action" onClick={() => { setPlaying(false); setFullscreenId(frame.id); }}><Icon name="expand"/>Full screen</button>
-          : enterReady && <button ref={enterShape} className={`theater-text-action is-enter${enterSettled ? ' is-shown' : ''}`} disabled={!active || prototype.loading} onClick={enterPrototype} style={{ transformOrigin: 'right center' }}>
-            <span ref={enterLabel} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="arrow"/>Enter prototype</span>
+          : <button className="theater-text-action is-enter" disabled={!active || prototype.loading || prototype.available === null} onClick={enterPrototype}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="arrow"/>Enter prototype</span>
           </button>)}
         </div>
       </div>

@@ -17,9 +17,31 @@
   --context-list-max-height: 180px;
   --context-count-gap: calc(var(--row-size-unit) * 2);
   --composer-control-font-size: 11px;
+  --drawer-open-duration: 440ms;
+  --drawer-close-duration: 300ms;
+  --drawer-reorder-duration: 360ms;
+  --drawer-hover-duration: 180ms;
+  --drawer-hover-shift: 2px;
+  --drawer-open-ease: cubic-bezier(.16, 1, .3, 1);
+  --drawer-close-ease: cubic-bezier(.4, 0, .2, 1);
+  --drawer-count-size: 14px;
+  --drawer-count-font-size: 9px;
+  --composer-model-padding: 7px 10px;
+  --composer-mode-padding: 5px 10px;
+  --dropdown-panel-padding: 0;
+  --annotation-pill-padding: 6px 12px;
+  --annotation-pill-icon-size: 13px;
+  --playback-action-row-gap: 0.4rem;
+  --drawer-heading-opacity: .65;
+  --drawer-heading-expanded-opacity: .5;
+  --drawer-time-opacity: .5;
   --capture-pill-radius: 999px;
-  --message-preview-width: 96px;
-  --message-preview-height: 60px;
+  --reference-thumbnail-size: 84px;
+  --message-preview-width: 144px;
+  --message-preview-max-width: 45%;
+  --message-preview-height: 90px;
+  --message-version-gap: 20px;
+  --message-version-fill: color-mix(in srgb, var(--line) 90%, white);
   --composer-attach-icon-size: 17px;
   --composer-bottom-space: 17px;
   --composer-chip-top-gap: 4px;
@@ -360,7 +382,7 @@
 .workspace .tracked-interface > .row-select { height:100%; }
 
 /* Every selector opens this designed menu in the top layer, never the OS picker. */
-.select-menu { position:fixed; inset:auto; margin:0; width:max-content; overflow:auto; padding:4px 0; background:var(--paper); border:1px solid var(--line-strong); box-shadow:0 4px 16px var(--shadow-color); font:var(--control-font-size)/1.4 var(--sans); color:var(--ink); }
+.select-menu { position:fixed; inset:auto; margin:0; width:max-content; overflow:auto; padding:var(--dropdown-panel-padding); background:var(--paper); border:1px solid var(--line-strong); box-shadow:0 4px 16px var(--shadow-color); font:var(--control-font-size)/1.4 var(--sans); color:var(--ink); }
 .select-menu:not(:popover-open) { display:none; }
 .select-menu:focus { outline:none; }
 .select-menu [role=option] { display:flex; align-items:center; justify-content:space-between; gap:var(--row-padding-inline); min-height:var(--base-control-height); padding:6px var(--row-padding-inline); cursor:pointer; }

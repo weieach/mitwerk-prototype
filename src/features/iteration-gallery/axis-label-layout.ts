@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { galleryTokens as t } from './tokens.ts';
 
 export type AxisAnchor = { id: string; text: string; timestamp?: number; position: THREE.Vector3; face: 'ground' | 'wall' | 'frame'; valueOrigin?: THREE.Vector3; overheadDate?: boolean; topPosition?: THREE.Vector3; featured?: boolean };
-export type AxisLabel = { id: string; text: string; layer: number; transform: string; fontSize: number; hidden: boolean; featured?: boolean; face?: AxisAnchor['face']; rise: number; opacity: number; align: number };
+export type AxisLabel = { id: string; text: string; layer: number; transform: string; fontSize: number; hidden: boolean; featured?: boolean; face?: AxisAnchor['face']; rise: number; opacity: number; align: number; dateRail?: 'wall' | 'overhead'; row?: number };
 
 const AXIS_TITLES = new Set(['Date', 'Version']);
 
@@ -73,7 +73,7 @@ export function mergeAxisAnchors(anchors: AxisAnchor[], featured: AxisAnchor[]) 
 
 /** Project plane-aligned DOM text through the same orthographic camera as the blocks.
  * Screen-space font sizing compensates for distance without losing the plane's rotation. */
-export function projectAxisLabels(anchors: AxisAnchor[], camera: THREE.OrthographicCamera, width: number, height: number, dateBlend = axisTopBlend(camera), tokenBlend = 0): AxisLabel[] {
+export function projectAxisLabels(anchors: AxisAnchor[], camera: THREE.OrthographicCamera, width: number, height: number, dateBlend = axisTopBlend(camera), tokenBlend = 0, measureText: (text: string, size: number) => number = (text, size) => text.length * size * .65): AxisLabel[] {
   const { minPx, basePx, maxPx, referenceViewport, minProjection } = t.axisText;
   const fontSize = THREE.MathUtils.clamp(basePx * Math.min(width, height) / referenceViewport, minPx, maxPx);
   const inverseCamera = camera.quaternion.clone().invert();
@@ -81,7 +81,7 @@ export function projectAxisLabels(anchors: AxisAnchor[], camera: THREE.Orthograp
   const topBlend = axisTopBlend(camera);
   const dates = [...new Set(anchors.flatMap(anchor => anchor.timestamp === undefined ? [] : [anchor.timestamp]))].sort((a, b) => a - b);
   const layers = new Map(dates.map((date, index) => [date, index + 1]));
-  return anchors.map(anchor => {
+  const labels: AxisLabel[] = anchors.map(anchor => {
     const rotation = anchor.overheadDate ? new THREE.Euler(-Math.PI / 2, 0, 0) : axisLabelRotation(anchor.face, frontBlend, topBlend);
     const plane = new THREE.Quaternion().setFromEuler(rotation);
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(plane).applyQuaternion(inverseCamera);
@@ -114,7 +114,50 @@ export function projectAxisLabels(anchors: AxisAnchor[], camera: THREE.Orthograp
     return { id: anchor.id, text: anchor.text, layer: layers.get(anchor.timestamp!) ?? 0, transform: `matrix3d(${matrix.join(',')})`, fontSize,
       hidden: point.z < -1 || point.z > 1, featured: anchor.featured, face: anchor.face,
       rise: anchor.face === 'ground' ? 1 - topBlend : 0,
-      align,
+      align, dateRail: anchor.face === 'wall' ? (anchor.overheadDate ? 'overhead' : 'wall') : undefined,
       opacity: (anchor.overheadDate ? dateBlend : anchor.face === 'wall' ? 1 - dateBlend : 1) * railOpacity };
   });
+  return spaceDateLabels(labels, width, height, measureText);
+}
+
+/** Stagger projected dates in whole text rows, recomputing from untouched anchors
+ * each frame. Camera/zoom never receives this presentation-only adjustment. */
+export function spaceDateLabels(labels: AxisLabel[], width: number, height: number, measureText: (text: string, size: number) => number): AxisLabel[] {
+  type Box = { left: number; right: number; top: number; bottom: number };
+  const result = [...labels];
+  const gap = t.axisText.collisionGap;
+  const intersects = (a: Box, b: Box) => a.left < b.right + gap && a.right + gap > b.left && a.top < b.bottom + gap && a.bottom + gap > b.top;
+  for (const rail of ['wall', 'overhead'] as const) {
+    const entries = labels.flatMap((label, index) => {
+      if (label.dateRail !== rail || label.hidden || label.opacity < .01) return [];
+      const matrix = label.transform.slice(9, -1).split(',').map(Number);
+      const padX = label.featured ? t.labelBackdrop.paddingInline : 0;
+      const padY = label.featured ? t.labelBackdrop.paddingBlock : 0;
+      const w = measureText(label.text, label.fontSize) + padX * 2;
+      const h = label.fontSize * t.axisText.lineHeight + padY * 2;
+      const corners = [-label.align * w, (1 - label.align) * w].flatMap(x => [-h / 2, h / 2].map(y => ({x:matrix[12] + matrix[0] * x + matrix[4] * y, y:matrix[13] + matrix[1] * x + matrix[5] * y})));
+      const box = {left:Math.min(...corners.map(p => p.x)),right:Math.max(...corners.map(p => p.x)),top:Math.min(...corners.map(p => p.y)),bottom:Math.max(...corners.map(p => p.y))};
+      if (box.right < 0 || box.left > width || box.bottom < 0 || box.top > height) return [];
+      return [{label,index,matrix,box,rowHeight:h}];
+    }).sort((a,b) => Number(AXIS_TITLES.has(b.label.text)) - Number(AXIS_TITLES.has(a.label.text)) || a.label.layer - b.label.layer || a.label.id.localeCompare(b.label.id));
+    const occupied: Box[] = [];
+    for (const entry of entries) {
+      const {label,index,matrix,box,rowHeight} = entry;
+      let row = 0, placed = box;
+      if (!AXIS_TITLES.has(label.text) && occupied.some(other => intersects(box, other))) {
+        const limit = Math.ceil(entries.reduce((sum,e) => sum + e.box.bottom - e.box.top + gap, height) / rowHeight) + 1;
+        search: for (const direction of [1,-1]) {
+          for (let step = 1; step <= limit; step++) {
+            const candidate = {...box,top:box.top - direction * step * rowHeight,bottom:box.bottom - direction * step * rowHeight};
+            if (candidate.top < 0 || (candidate.bottom > height && step < limit)) continue;
+            if (!occupied.some(other => intersects(candidate,other))) {row = direction * step; placed = candidate; break search;}
+          }
+        }
+      }
+      occupied.push(placed);
+      matrix[13] -= row * rowHeight;
+      result[index] = {...label,row,transform:`matrix3d(${matrix.join(',')})`};
+    }
+  }
+  return result;
 }

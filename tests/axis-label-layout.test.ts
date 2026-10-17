@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { mergeAxisAnchors, projectAxisLabels } from '../src/features/iteration-gallery/axis-label-layout.ts';
+import { mergeAxisAnchors, projectAxisLabels, spaceDateLabels } from '../src/features/iteration-gallery/axis-label-layout.ts';
 import type { AxisAnchor } from '../src/features/iteration-gallery/axis-label-layout.ts';
 
 const anchors: AxisAnchor[] = [{ id: 'date', text: 'Sep 22', position: new THREE.Vector3(0, 100, -200), face: 'wall' }];
@@ -223,4 +223,33 @@ test('token titles keep a fixed left inset and remain on their numeric rail rows
       assert.ok(Math.abs(matrix(title.transform)[13] - matrix(value.transform)[13]) < .001);
     }
   }
+});
+
+
+test('crowded dates stagger by whole text rows, stay deterministic, and return when space opens', () => {
+  const label = (id: string, x: number, y: number) => ({id,text:'Oct 17',layer:Number(id),transform:`matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,${x},${y},0,1)`,fontSize:10,hidden:false,rise:0,opacity:1,align:.5,dateRail:'wall' as const});
+  const crowded = [label('1',100,100), label('2',104,100), label('3',108,100)];
+  const source = JSON.stringify(crowded);
+  const placed = spaceDateLabels(crowded,800,640,() => 40);
+  assert.equal(placed[0].row,0);
+  assert.ok(placed[1].row! > 0);
+  for (let i=0;i<placed.length;i++) for (let j=i+1;j<placed.length;j++) {
+    assert.ok(Math.abs(matrix(placed[i].transform)[13]-matrix(placed[j].transform)[13]) >= 14.5);
+  }
+  for (const item of placed) assert.equal((100-matrix(item.transform)[13])/12.5,item.row);
+  assert.deepEqual(spaceDateLabels([...crowded].reverse(),800,640,()=>40).reverse(),placed);
+  assert.equal(JSON.stringify(crowded),source);
+  const roomy = crowded.map((item,i)=>({...item,transform:label(item.id,100+i*100,100).transform}));
+  assert.ok(spaceDateLabels(roomy,800,640,()=>40).every(item=>item.row===0));
+});
+
+test('date staggering handles the top edge and keeps faded rails, titles and version labels independent', () => {
+  const base = {text:'Oct 17',fontSize:10,hidden:false,rise:0,opacity:1,align:.5,dateRail:'wall' as const,transform:'matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,100,8,0,1)'};
+  const input = [{...base,id:'title',text:'Date',layer:0},{...base,id:'date',layer:1},
+    {...base,id:'faded',layer:2,opacity:0},{...base,id:'version',layer:3,dateRail:undefined}];
+  const placed = spaceDateLabels(input,800,640,()=>40);
+  assert.equal(placed[0].row,0);
+  assert.ok(placed[1].row! < 0, 'move down by whole rows when the upper edge has no room');
+  assert.equal(placed[2].transform,input[2].transform);
+  assert.equal(placed[3].transform,input[3].transform);
 });

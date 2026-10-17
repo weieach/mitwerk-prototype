@@ -1,37 +1,55 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Writable } from 'node:stream';
-import { archiveDirectory, findArchive, createPrototypeService, prototypeBootstrap } from '../server/prototype-service.mjs';
+import { execFileSync } from 'node:child_process';
+import { pushShaFile, findPushSha, pushAvailable, createPrototypeService, prototypeBootstrap } from '../server/prototype-service.mjs';
 import { runInNewContext } from 'node:vm';
 
-test('archive service maps push numbers, bypasses archived hooks, freezes data, and confines assets', async () => {
+test('push service builds the recorded commit on demand, bypasses archived hooks, freezes data, and confines assets', async () => {
   const root = mkdtempSync(join(tmpdir(), 'mitwerk-prototype-test-'));
   try {
-    const archive = join(root, archiveDirectory, '[push #7] historical code-2026-09-24-120000');
-    mkdirSync(join(archive, 'src'), { recursive: true });
-    writeFileSync(join(archive, 'package.json'), '{"type":"module"}');
-    writeFileSync(join(archive, 'vite.config.js'), 'throw new Error("Archived config must never run")');
-    writeFileSync(join(archive, 'index.html'), '<html><head></head><body><button>Old prototype</button><script type="module" src="/src/main.js"></script></body></html>');
-    writeFileSync(join(archive, 'src/main.js'), 'document.querySelector("button").onclick=()=>document.body.dataset.clicked="yes";');
-    assert.equal(findArchive(root, 7), archive);
-    assert.equal(findArchive(root, 8), null);
-    assert.equal(findArchive(root, -1), null);
-    mkdirSync(join(root, 'visual_ref'));
+    const git = (...args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+    git('init', '-q'); git('config', 'user.email', 'test@example.com'); git('config', 'user.name', 'Test');
+    mkdirSync(join(root, 'src'), { recursive: true }); mkdirSync(join(root, 'docs'), { recursive: true });
+    writeFileSync(join(root, 'package.json'), '{"type":"module"}');
+    writeFileSync(join(root, 'vite.config.js'), 'throw new Error("Archived config must never run")');
+    writeFileSync(join(root, 'index.html'), '<html><head></head><body><button>Old prototype</button><script type="module" src="/src/main.js"></script></body></html>');
+    writeFileSync(join(root, 'src/main.js'), 'document.querySelector("button").onclick=()=>document.body.dataset.clicked="yes";');
+    writeFileSync(join(root, 'docs/notes.md'), 'historical docs');
+    git('add', '-A'); git('commit', '-qm', 'historical code');
+    const sha = git('rev-parse', 'HEAD');
+    // Later work must not leak into the pushed snapshot.
+    writeFileSync(join(root, 'src/main.js'), 'throw new Error("Working tree must not be built")');
+    mkdirSync(join(root, 'data'), { recursive: true });
+    writeFileSync(join(root, pushShaFile), JSON.stringify({ 7: sha, 8: 'not-a-sha', 9: 'f'.repeat(40) }));
+    assert.equal(findPushSha(root, 7), sha);
+    assert.equal(findPushSha(root, 8), null);
+    assert.equal(findPushSha(root, 10), null);
+    assert.equal(findPushSha(root, -1), null);
+    assert.equal(await pushAvailable(root, 7), true);
+    const token = process.env.GITHUB_TOKEN; delete process.env.GITHUB_TOKEN;
+    try { assert.equal(await pushAvailable(root, 9), false); } finally { if (token !== undefined) process.env.GITHUB_TOKEN = token; }
+    mkdirSync(join(root, 'visual_ref/annotation'), {recursive:true});
+    const annotationName = 'annotation/[prompt #1] [annotation] Marked.png';
+    writeFileSync(join(root, 'visual_ref', annotationName), 'annotated-image');
     writeFileSync(join(root, 'visual_ref', 'reference.png'), 'reference-image');
-    const before = readFileSync(join(archive, 'index.html'), 'utf8');
     const service = createPrototypeService(root, { catalog: () => ({ frames: [
       { id: 'old', kind: 'prompt', timestamp: 1, filename: 'old.png' },
       { id: 'push', kind: 'push', number: 7, timestamp: 2, filename: 'push.png' },
       { id: 'future', kind: 'prompt', timestamp: 3, filename: 'future.png' },
-    ], references: [{ name: 'reference.png', prompt: 1 }] }), history: () => ({ commits: [], branches: [], merges: [] }) });
+    ], references: [{ name: 'reference.png', prompt: 1 }, { name: annotationName, prompt: 1 }] }), history: () => ({ commits: [], branches: [], merges: [] }) });
     const [a, b] = await Promise.all([service.prepare(7), service.prepare(7)]);
     assert.deepEqual(a, b);
     const out = join(root, '.mitwerk-prototypes/push-7');
     assert.deepEqual(JSON.parse(readFileSync(join(out, 'gallery/manifest.json'), 'utf8')).frames.map((frame: {id: string}) => frame.id), ['old', 'push']);
-    assert.equal(readFileSync(join(archive, 'index.html'), 'utf8'), before);
+    assert.equal(readFileSync(join(root, 'src/main.js'), 'utf8'), 'throw new Error("Working tree must not be built")');
+    assert.equal(existsSync(join(root, '.mitwerk-prototypes/source-7/docs')), false);
+    const bundle = readdirSync(join(out, 'assets')).filter(name => name.endsWith('.js')).map(name => readFileSync(join(out, 'assets', name), 'utf8')).join('');
+    assert.ok(bundle.includes('clicked') && !bundle.includes('Working tree must not be built'));
+    assert.equal(git('status', '--porcelain', '--', 'index.html', 'package.json'), '');
     assert.ok(readFileSync(join(out, 'index.html'), 'utf8').includes('localStorage'));
     await assert.rejects(service.prepare(99), /No saved codebase/);
     const request = async (url: string, method = 'GET') => {
@@ -48,6 +66,7 @@ test('archive service maps push numbers, bypasses archived hooks, freezes data, 
     assert.equal((await request('/__mitwerk/prototype-assets/7/index.html', 'POST')).status, 405);
     assert.equal((await request('/__mitwerk/prototype-assets/7/gallery/references/reference.png')).body, 'reference-image');
     assert.equal((await request('/__mitwerk/prototype-assets/7/gallery/references/unknown.png')).status, 404);
+    assert.equal((await request(`/__mitwerk/prototype-assets/7/gallery/references/${encodeURIComponent(annotationName)}`)).body, 'annotated-image');
     const page = await request(a.url);
     assert.equal(page.status, 200);
     assert.ok(page.headers['Content-Security-Policy'].includes('sandbox allow-scripts'));

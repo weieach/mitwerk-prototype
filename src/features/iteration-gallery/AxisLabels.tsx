@@ -17,7 +17,7 @@ export const AxisLabels = forwardRef<AxisLabelsHandle>(function AxisLabels(_, re
       hovered === label.id && 'is-hovered',
       label.featured && 'album-axis-label-featured',
       label.featured && label.face === 'ground' && 'album-axis-label-featured-version',
-    ].filter(Boolean).join(' ')} hidden={label.hidden}
+    ].filter(Boolean).join(' ')} hidden={label.hidden} data-date-rail={label.dateRail} data-label-row={label.row ?? 0}
       style={{ transform: label.transform, fontSize: label.fontSize, opacity: label.opacity, zIndex: hovered === label.id ? frontLayer : label.layer }}><span
         onPointerEnter={() => setHovered(label.id)} onPointerLeave={() => setHovered(null)}
         style={{ pointerEvents: label.opacity > .05 ? 'auto' : 'none', transform: `translate(${-100 * label.align}%, ${-50 - 50 * label.rise}%)` }}>{label.text}</span></span>)}

@@ -3,7 +3,7 @@ import { useAnnotations } from '../annotations/store';
 import { createPortal } from 'react-dom';
 import { SavedFrameSelect } from './SavedFrameSelect';
 import { rotationCaptureProgress, timelineCaptureProgress } from './theater-transition';
-import { formatVersion } from './model';
+import { formatVersion, galleryPromptLabel } from './model';
 import type { GalleryCamera, TheaterTarget } from './theater-transition';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GalleryVersion, RangeKey } from './model';
@@ -11,6 +11,7 @@ import { formatTime, representativeFrames } from './model';
 import { buildAlbum } from './geometry';
 import { AlbumScene } from './AlbumScene';
 import { InfoTooltip } from '../../components/InfoTooltip';
+import { galleryTokens as t } from './tokens';
 import { AxisLabels } from './AxisLabels';
 import type { AxisLabelsHandle } from './AxisLabels';
 
@@ -91,6 +92,10 @@ export function AlbumView({ framePickerSlot, onSelectFrame, rangeStats, versions
       onClose={() => setAnnotationId(null)} onReturn={() => { setAnnotationId(null); onOpen(annotationFrame.id); }}/>}
     <div ref={host} className="album-3d-viewport" aria-label="Interactive 3D album">
       <AxisLabels ref={axisLabels}/>
+      {hovered && !tokenView && !turning && !returning && !hidden && <div className="album-prompt-label"
+        style={{top:`${t.promptLabel.topPercent}%`,fontSize:t.promptLabel.fontSize,maxWidth:`calc(100% - ${t.promptLabel.edgeGap * 2}px)`}}>
+        {galleryPromptLabel(hovered.frame.fullPrompt ?? hovered.frame.summary)}
+      </div>}
       {rangeStats && <span className="album-range-stats" title={rangeStats}>{rangeStats}</span>}
       <div className="album-navigation-help"><InfoTooltip label="Gallery navigation help">{tokenView ? 'Drag to pan, Scroll to zoom, Exit to rotate the gallery' : 'Drag to rotate, Scroll to zoom, Right-drag to pan, Click a frame to play'}</InfoTooltip></div>
       {framePickerSlot && createPortal(<div className="album-saved-frame" inert={turning || returning}>

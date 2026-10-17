@@ -1,6 +1,6 @@
 :root { --annotation-bookmark-bottom:var(--theater-action-gap, 8px); --annotation-color: #ffc629; --annotation-danger: #c73535; --annotation-preview-height: 42vh; --annotation-sheet-width: 720px; --annotation-content-lift: 10vh; --annotation-list-height: 40vh; --annotation-message-width: 85%; --annotation-action-font-size: var(--body-font-size); }
 .frame-annotation-bookmark { margin-right:auto; align-self:flex-end; overflow:hidden; margin-bottom:calc(-1 * var(--theater-action-gap)); padding-top:0; }
-.annotation-tag { display:flex; align-items:center; gap:8px; background:var(--annotation-color); color:var(--annotation-ink); padding:9px 16px var(--annotation-bookmark-bottom, 20px); border-radius:0!important; transform:translateY(110%); transition:transform 280ms ease; }
+.annotation-tag { display:flex; align-items:center; gap:8px; background:var(--annotation-color); color:var(--annotation-ink); padding:9px 16px var(--annotation-bookmark-bottom, 20px); border-radius:999px; transform:translateY(110%); transition:transform 280ms ease; }
 .annotation-tag.is-ready { transform:translateY(0); }
 .annotation-tag span { color:inherit; opacity:.65; }
 .annotation-tag:disabled { opacity:1; }
@@ -52,4 +52,4 @@
 .annotation-sheet textarea { box-sizing:border-box;max-width:100%;max-height:30vh; }
 .mw-app .annotation-sheet textarea:focus-visible, .annotation-sheet textarea:focus-visible { outline:none;box-shadow:inset 0 0 0 1px var(--line-strong);border-color:var(--line-strong); }
 
-.workspace .frame-annotation-bookmark .annotation-tag { height:calc(var(--control-height) + var(--annotation-bookmark-bottom)); padding-top:0; padding-bottom:var(--annotation-bookmark-bottom); }
+.workspace .frame-annotation-bookmark .annotation-tag { height:auto; padding:var(--annotation-pill-padding); }

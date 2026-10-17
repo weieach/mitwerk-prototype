@@ -184,6 +184,13 @@ export function hoverCaptionLines(frame: Pick<GalleryFrame, 'summary'>) {
   return [`"${frame.summary.trim()}"`];
 }
 
+/** Fixed-screen preview: normalize whitespace and include the ellipsis in the cap. */
+export function galleryPromptLabel(text: string) {
+  const characters = Array.from(text.trim().replace(/\s+/g, ' '));
+  const limit = t.promptLabel.maxCharacters;
+  return characters.length > limit ? characters.slice(0, limit - 3).join('') + '...' : characters.join('');
+}
+
 /** Word-wrap to a measured width, hard-breaking a token that cannot fit. */
 export function wrapTextToWidth(text: string, maxWidth: number, measure: (value: string) => number) {
   if (maxWidth <= 0) return text ? [text] : [];

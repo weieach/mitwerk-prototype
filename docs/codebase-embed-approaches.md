@@ -1,6 +1,6 @@
 # Embedding captured codebases
 
-The folders in `[ver capture] codebase/` are source snapshots (`git archive`): `src/`, `package.json`, no `node_modules`, no built `dist/`. They are the right raw material for a Figma-like clickable embed, but they are not embeddable until something installs and builds (or compiles) them.
+Each push is a commit recorded in `data/push-shas.json`; its tree is staged on demand with `git archive` (or a GitHub tarball when the commit is not local): `src/`, `package.json`, no `node_modules`, no built `dist/`. The former `[ver capture] codebase/` copies are no longer used. They are the right raw material for a Figma-like clickable embed, but they are not embeddable until something installs and builds (or compiles) them.
 
 The Iteration Gallery today is the other path: static PNGs in theater view. Resizing does not reflow the old UI. The original proposal wanted pause-and-interact in the live prototype at that moment.
 

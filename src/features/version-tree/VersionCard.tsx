@@ -1,3 +1,4 @@
+import { attachFrameEvent } from '../workbench/frame-context';
 import { ReferenceFiles } from '../../components/ReferenceFiles';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
@@ -11,6 +12,8 @@ function fileChipIcon(file: Pick<VersionFile, 'name' | 'kind'>): IconName {
 }
 
 type Props = {
+  ideaMode?: boolean;
+  onOpenPush?: (version: number) => void;
   hideStation?: boolean;
   node: VersionNode;
   selected: boolean;
@@ -37,7 +40,7 @@ type Props = {
 };
 
 export function VersionCard({
-  hideStation = false, node, selected, hasDescendants, isEndpoint, onActivePath, isCurrentBranch, canDeleteCurrent, canDeleteFuture, color, reverted, merged = false,
+  ideaMode = false, onOpenPush, hideStation = false, node, selected, hasDescendants, isEndpoint, onActivePath, isCurrentBranch, canDeleteCurrent, canDeleteFuture, color, reverted, merged = false,
   onSelect, onBranch, onCommit, onRevert, onRestore, onSwitchBranch, onDeleteCurrent, onDeleteFuture, forceMenuOpen = false, readOnly = false, onDisconnected,
 }: Props) {
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -52,7 +55,7 @@ export function VersionCard({
   const restorePrimary = isPrimaryCommitAction(commitAction);
   const blocked = (action: () => void) => readOnly ? () => onDisconnected?.() : action;
   const branchButton = <button onClick={blocked(onBranch)} aria-label={`Add branch from ${node.label}`}><Icon name="branch" size={13}/>Add branch</button>;
-  const commitButton = <button className={restorePrimary ? 'is-primary' : undefined} onClick={blocked(onCommitAction)} aria-label={`${commitActionLabel} ${node.label}`}><Icon name={commitActionIcon} size={13}/>{commitActionLabel}</button>;
+  const commitButton = <button className={ideaMode ? 'is-filled' : restorePrimary ? 'is-primary' : undefined} onClick={blocked(onCommitAction)} aria-label={`${commitActionLabel} ${node.label}`}><Icon name={commitActionIcon} size={13}/>{commitActionLabel}</button>;
   const references = node.files.filter(file => file.kind !== 'code' && !isCaptureImage(file));
   const codeFiles = node.files.filter(file => file.kind === 'code');
   const added = node.files.reduce((sum, file) => sum + file.added, 0);
@@ -82,7 +85,7 @@ export function VersionCard({
     {!hideStation && <button className={`station ${hasDescendants ? 'has-descendants' : 'is-terminal'} ${merged ? 'is-merged' : ''}`} aria-label={`Select ${node.label}`} aria-pressed={selected} onClick={onSelect}>
       <span />
     </button>}
-    {!compact && <div ref={menu} className="card-menu">
+    {!compact && !ideaMode && <div ref={menu} className="card-menu">
       <button className="card-menu-trigger" aria-haspopup="menu" aria-expanded={menuOpen}
         aria-label={`Actions for ${node.label}`} onClick={() => setMenuOpen(open => !open)}>
         <Icon name="more" size={14}/>
@@ -109,11 +112,11 @@ export function VersionCard({
       <span className="version-meta"><span className="save-label">{node.saveType === 'auto' ? <Icon name="spark" size={11}/> : <Icon name="commit" size={12}/>} {node.git ? 'Git commit' : node.capture ? node.capture.pushed ? 'Saved push' : 'Work in progress' : node.saveType === 'auto' ? 'Autosave' : 'Manual save'}</span></span>
       <span className={`version-title ${!node.title ? 'untitled' : ''} ${titleExpanded ? 'is-expanded' : ''}`} title={node.title || 'Untitled version'} onClick={event => { event.stopPropagation(); setTitleExpanded(open => !open); onSelect(); }}>{node.title || 'Untitled version'}</span>
     </button>
-    {references.length > 0 ? <ReferenceFiles files={references} limit={2}/> : node.capture && !node.capture.pushed && <div className="reference-files"><span className="empty-reference">No references yet</span></div>}
+    {references.length > 0 ? <ReferenceFiles files={references} limit={ideaMode ? Infinity : 2} thumbnails={ideaMode} onAttach={ideaMode ? file => window.dispatchEvent(new CustomEvent(attachFrameEvent, {detail:{id:`reference:${file.url}`,url:`${import.meta.env.BASE_URL}${file.url}`,label:file.name,filename:file.name}})) : undefined}/> : node.capture && !node.capture.pushed && <div className="reference-files"><span className="empty-reference">No references yet</span></div>}
     {!compact && <>
-      <div className="version-stats"><span><Icon name="code" size={13}/>{`${node.git ? node.git.filesChanged : codeFiles.length} ${(node.git ? node.git.filesChanged : codeFiles.length) === 1 ? 'file' : 'files'} changed`}</span><span className="stat-divider"/><button onClick={() => { onSelect(); if (node.capture) setDetailsOpen(true); }}>{node.prompts.length} {node.prompts.length === 1 ? 'prompt' : 'prompts'}<Icon name="arrow" size={11}/></button></div>
-      <div className="version-card-bottom"><button className="details-toggle" onClick={() => setDetailsOpen(!detailsOpen)} aria-expanded={detailsOpen}><Icon name="chevron" size={10} style={{ transform: detailsOpen ? 'rotate(90deg)' : undefined }}/>{detailsOpen ? 'Hide details' : 'Show details'}</button><span className="line-count"><span className="is-added">+{node.git ? node.git.added : node.capture ? node.capture.added ?? '—' : added}</span><span className="is-removed">−{node.git ? node.git.removed : node.capture ? node.capture.removed ?? '—' : removed}</span></span></div>
-      <div className="node-actions">{restorePrimary ? <>{commitButton}{branchButton}</> : <>{branchButton}{commitButton}</>}</div>
+      <div className="version-stats">{!ideaMode && <><span><Icon name="code" size={13}/>{`${node.git ? node.git.filesChanged : codeFiles.length} ${(node.git ? node.git.filesChanged : codeFiles.length) === 1 ? 'file' : 'files'} changed`}</span><span className="stat-divider"/></>}<button disabled={ideaMode && (!node.capture?.pushed || !onOpenPush)} onClick={() => { if (ideaMode) { if (node.capture?.pushed) onOpenPush?.(node.capture.version); } else { onSelect(); if (node.capture) setDetailsOpen(true); } }}>{node.prompts.length} {node.prompts.length === 1 ? 'prompt' : 'prompts'}{!ideaMode && <Icon name="arrow" size={11}/>}</button></div>
+      {!ideaMode && <div className="version-card-bottom"><button className="details-toggle" onClick={() => setDetailsOpen(!detailsOpen)} aria-expanded={detailsOpen}><Icon name="chevron" size={10} style={{ transform: detailsOpen ? 'rotate(90deg)' : undefined }}/>{detailsOpen ? 'Hide details' : 'Show details'}</button><span className="line-count"><span className="is-added">+{node.git ? node.git.added : node.capture ? node.capture.added ?? '—' : added}</span><span className="is-removed">−{node.git ? node.git.removed : node.capture ? node.capture.removed ?? '—' : removed}</span></span></div>}
+      <div className="node-actions">{ideaMode ? commitButton : restorePrimary ? <>{commitButton}{branchButton}</> : <>{branchButton}{commitButton}</>}</div>
       {detailsOpen && <div className="node-details"><div className="node-details-label">VERSION DETAILS<button onClick={() => setDetailsOpen(false)} aria-label={`Close details for ${node.label}`}><Icon name="close" size={13}/></button></div><p>{node.summary || 'This version is empty. Its summary and file changes will appear here.'}</p>{node.git?.merges.map(merge => <p key={merge}>{merge}</p>)}<time dateTime={node.createdAt}>{node.capture ? new Date(node.createdAt).toLocaleString() : null}</time>{node.capture && node.prompts.map(prompt => <p key={prompt.id}>{prompt.text}</p>)}<div className="detail-file-list">{node.files.map(file => <div key={file.name}><Icon name={fileChipIcon(file)} size={12}/><span>{file.url ? <a className="capture-frame-link" href={`${import.meta.env.BASE_URL}${file.url}`} target="_blank" rel="noreferrer">{file.name}</a> : file.name}</span><small>{file.kind}</small></div>)}</div></div>}
     </>}
   </article>;

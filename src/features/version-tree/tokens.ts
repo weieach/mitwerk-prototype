@@ -5,8 +5,16 @@ export const ideaTheme = {
   nodeGap: 140,
   milestoneGap: 190,
   openGap: 390,
-  foldedGap: 160,
-  foldCountSize: 36,
+  foldedGap: 80,
+  foldCountSize: 26,
+  milestoneDiameter: 36,
+  milestoneBorderWidth: 2,
+  milestoneBorderColor: '#000',
+  hoverRadiusViewport: .05,
+  actionFadeMs: 180,
+  milestoneFontSize: 17,
+  milestonePaddingBlock: 12,
+  milestonePaddingInline: 14,
 };
 
 /** Shared system tokens. Connector width is one isometric grid-triangle side. */
@@ -63,6 +71,7 @@ export const treeTheme = {
   countHintGap: 6,
   countHintFadeMs: 160,
   versionLabelFontSize: 11,
+  branchLabelFontSize: 10,
   versionLabelFontWeight: 700,
   versionLabelColor: 'var(--contrast)',
   /** How much label size ignores canvas zoom. 0 follows the board; 1 stays constant on screen. */

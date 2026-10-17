@@ -1,10 +1,11 @@
+import { visualReferencePrompt } from '../src/shared/visual-reference-path.mjs';
 import { parsePromptLog } from '../src/shared/prompt-log.mjs';
 import { readTokenUsage } from './token-usage.ts';
 import { readGitHistory } from './git-history.ts';
 import { closeSync, createReadStream, existsSync, openSync, readFileSync, readdirSync, readSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Plugin } from 'vite';
-import { parseCaptureName, visualPromptNumber } from '../src/features/iteration-gallery/model.ts';
+import { parseCaptureName } from '../src/features/iteration-gallery/model.ts';
 
 export const captureDirectory = '[frame capture] screenshots';
 export const visualReferenceDirectory = 'visual_ref';
@@ -17,11 +18,19 @@ export function readCaptureCatalog(root: string) {
   if (!existsSync(directory)) return { frames: [], ignored: 0, references: readVisualReferences(root) };
   const promptFile = join(root, 'docs/prompt-log.md');
   const prompts = parsePromptLog(existsSync(promptFile) ? readFileSync(promptFile, 'utf8') : '');
+  // A capture is published only after the capture process records its successful
+  // completion. A logged prompt or a PNG being written is not a finished frame.
+  const instructions = join(root, 'AGENTS.md');
+  const completedPrompt = existsSync(instructions)
+    ? /Progress counters[^\n]*push #\d+\s*·\s*prompt #(\d+)/.exec(readFileSync(instructions, 'utf8'))?.[1]
+    : undefined;
   let ignored = 0;
   const frames = readdirSync(directory).flatMap(filename => {
     if (!filename.toLowerCase().endsWith('.png')) return [];
     const metadata = parseCaptureName(filename);
     if (!metadata) { ignored++; return []; }
+    if (metadata.kind === 'prompt' && completedPrompt !== undefined && metadata.number !== null
+      && metadata.number > Number(completedPrompt)) return [];
     try {
       const file = openSync(join(directory, filename), 'r');
       const bytes = Buffer.alloc(24);
@@ -43,10 +52,13 @@ export type VisualReference = { name: string; url: string; prompt: number };
 export function readVisualReferences(root: string): VisualReference[] {
   const directory = join(root, visualReferenceDirectory);
   if (!existsSync(directory)) return [];
-  return readdirSync(directory).flatMap(name => {
-    const prompt = visualPromptNumber(name);
-    if (prompt === null || name.includes('/') || name.includes('\\')) return [];
-    return [{ name, prompt, url: `gallery/references/${encodeURIComponent(name)}` }];
+  const names = readdirSync(directory).filter(name => statSync(join(directory, name)).isFile());
+  const annotations = join(directory, 'annotation');
+  if (existsSync(annotations)) names.push(...readdirSync(annotations).filter(name => statSync(join(annotations, name)).isFile()).map(name => `annotation/${name}`));
+  return names.flatMap(name => {
+    const prompt = visualReferencePrompt(name);
+    if (prompt === null) return [];
+    return [{ name, prompt, url: `gallery/references/${name.split('/').map(encodeURIComponent).join('/')}` }];
   });
 }
 
@@ -60,8 +72,10 @@ export function iterationGalleryCatalog(): Plugin {
     configureServer(server) {
       const directory = join(root, captureDirectory);
       const promptFile = join(root, 'docs/prompt-log.md');
-      server.watcher.add([directory, promptFile]);
-      const invalidate = (path: string) => { if (path.startsWith(directory) || path === promptFile) cached = null; };
+      const instructions = join(root, 'AGENTS.md');
+      const referenceDirectory = join(root, visualReferenceDirectory);
+      server.watcher.add([directory, promptFile, referenceDirectory, instructions]);
+      const invalidate = (path: string) => { if (path.startsWith(directory) || path.startsWith(referenceDirectory) || path === promptFile || path === instructions) cached = null; };
       server.watcher.on('all', (_event, path) => invalidate(path));
       server.middlewares.use((req, res, next) => {
         const pathname = new URL(req.url ?? '/', 'http://localhost:5173').pathname;
@@ -93,7 +107,7 @@ export function iterationGalleryCatalog(): Plugin {
           let filename: string;
           try { filename = decodeURIComponent(pathname.slice(referencesPath.length)); }
           catch { res.statusCode = 400; res.end(); return; }
-          if (visualPromptNumber(filename) === null || filename.includes('/') || filename.includes('\\')) {
+          if (visualReferencePrompt(filename) === null) {
             res.statusCode = 404; res.end(); return;
           }
           const path = join(root, visualReferenceDirectory, filename);

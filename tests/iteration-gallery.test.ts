@@ -5,6 +5,15 @@ import type { Capture } from '../src/features/iteration-gallery/model.ts';
 import { albumBlockBounds, albumEnvelope, albumFloorY, boxCorners, buildAlbum, containingBlock, coverRadius, dateLabelPose, featuredFrameAxis, frameFocus, hoverCaptionHeight, imageSize, resetCameraDestination, resetLook, versionLabelPose } from '../src/features/iteration-gallery/geometry.ts';
 import { galleryTokens as t } from '../src/features/iteration-gallery/tokens.ts';
 import { readCaptureCatalog } from '../server/gallery-catalog.ts';
+import { galleryPromptLabel } from '../src/features/iteration-gallery/model.ts';
+
+test('gallery prompt preview normalizes whitespace and caps text including its ellipsis', () => {
+  assert.equal(galleryPromptLabel('  One\n  short\t label  '), 'One short label');
+  assert.equal(galleryPromptLabel('a'.repeat(50)), 'a'.repeat(50));
+  assert.equal(galleryPromptLabel('a'.repeat(51)), 'a'.repeat(47) + '...');
+  assert.equal(galleryPromptLabel('😀'.repeat(51)), '😀'.repeat(47) + '...');
+  assert.equal(galleryPromptLabel(' \n '), '');
+});
 
 const date = (day: number, hour = 12) => new Date(2026, 8, day, hour).getTime();
 function capture(id: string, day: number, kind: Capture['kind'] = 'prompt', number = 1): Capture {

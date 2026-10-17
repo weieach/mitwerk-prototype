@@ -1,4 +1,3 @@
-import { createPortal } from 'react-dom';
 import { ZoomScaleButton } from '../../components/ZoomScaleButton';
 import { VersionPanelSwitch } from '../../components/VersionPanelSwitch';
 import { RowSelect } from '../../components/RowSelect';
@@ -12,15 +11,15 @@ import { branchTip, branchPathIds, canDeleteCurrent, canDeleteFuture, isBranchEn
 import { fitAllFrame, frameScreenshotTargets, frameVersionLevel, geometry, layoutBranchView, layoutGraph, screenshotNodeTargets } from './layout';
 import { galleryTokens } from '../iteration-gallery/tokens';
 import { activeRouteColor, ideaTheme, levelColorLookup, palerAccent, stationLabelOffset, treeTheme, versionLabelZoomScale } from './tokens';
-import { commitBranchGap, layoutGitHistory, mergedStemDots } from './git-layout';
+import { commitBranchGap, layoutIdeaTimeline, mergedStemDots } from './git-layout';
 import { IsometricGrid } from './IsometricGrid';
 import { VersionCard } from './VersionCard';
 import { branchName, isBranchDivergence, mergedBranchIds, presentTree } from './presentation';
 import { canEditTree, treeModes, type TreeMode } from './panel-state';
 import { IdeaCard } from './IdeaCard';
-import { milestoneStorageKey, milestoneNavigationIndex, parseMilestones, firstBranchLabels, projectIdeaStream, seedMilestones } from './idea-stream';
+import { currentIdeaWipId, ideaBranchColor, isFinishedIdeaVersion, navigableMilestones, saveMilestone, ideaStreamDefaults, milestoneStorageKey, milestoneNavigationIndex, parseMilestones, firstBranchLabels, projectIdeaStream, seedMilestones } from './idea-stream';
 
-type Props = { embedded?:boolean; headerTarget?:HTMLElement|null; id?:string; title?:string; onSwitchPanel?:()=>void; onOpenPush?: (version: number) => void; status?: string; graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; modeSwitchVisible: boolean; onModeChange: (mode: TreeMode) => void };
+type Props = { embedded?:boolean; id?:string; title?:string; onSwitchPanel?:()=>void; onOpenPush?: (version: number) => void; status?: string; graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; modeSwitchVisible: boolean; onModeChange: (mode: TreeMode) => void };
 
 function graphBounds(nodes: { x: number; y: number; title: string; labelWidth?:number }[], labelScale = 1) {
   const label = stationLabelOffset();
@@ -57,16 +56,19 @@ const screenshotFlags = typeof window !== 'undefined'
 const screenshotCapture = screenshotFlags.capture;
 if (screenshotFlags.countHover) document.documentElement.dataset.screenshotCountHover = '1';
 
-export function VersionTreePanel({ embedded = false, headerTarget, id, title = 'Idea stream', graph, dispatch, onSwitchPanel, onOpenPush, mode, modeSwitchVisible, onModeChange, status = '' }: Props) {
+export function VersionTreePanel({ embedded = false, id, title = 'Idea stream', graph, dispatch, onSwitchPanel, onOpenPush, mode, modeSwitchVisible, onModeChange, status = '' }: Props) {
   const ideaMode = mode === 'history';
   const [savedMilestones, setSavedMilestones] = useState(() => {
     try { return parseMilestones(localStorage.getItem(milestoneStorageKey)); } catch { return {}; }
   });
   const milestones = useMemo(() => seedMilestones(graph.nodes, savedMilestones), [graph.nodes, savedMilestones]);
   const [expandedRuns, setExpandedRuns] = useState<Set<string>>(() => new Set());
-  const [openCommand, setOpenCommand] = useState<string | null>(null);
+  const currentWipId = currentIdeaWipId(graph.nodes);
+  const defaults = useMemo(() => ideaStreamDefaults(graph.nodes), [graph.nodes]);
+  const [openCommand, setOpenCommand] = useState<string | null>(() => ideaMode ? ideaStreamDefaults(graph.nodes).commandId : null);
+  const visibleIdeas = useMemo(() => new Set([...defaults.latestIds, ...(openCommand ? [openCommand] : [])]), [defaults, openCommand]);
   const [pendingFocus, setPendingFocus] = useState<string | null>(null);
-  const ideas = useMemo(() => projectIdeaStream(graph.nodes, milestones, expandedRuns), [graph.nodes, milestones, expandedRuns]);
+  const ideas = useMemo(() => projectIdeaStream(graph.nodes, milestones, expandedRuns, visibleIdeas), [graph.nodes, milestones, expandedRuns, visibleIdeas]);
   useEffect(() => {
     if (!ideaMode || status || !graph.nodes.length) return;
     try { localStorage.setItem(milestoneStorageKey, JSON.stringify(milestones)); } catch { /* Session editing remains available. */ }
@@ -78,7 +80,7 @@ export function VersionTreePanel({ embedded = false, headerTarget, id, title = '
   }, []);
   const selectedDisplayId = ideaMode && graph.selectedId ? ideas.representative.get(graph.selectedId) ?? null : graph.selectedId;
   const activePath = useMemo(() => branchPathIds(graph.nodes, graph.activeBranchId), [graph.nodes, graph.activeBranchId]);
-  const layout = useMemo(() => ideaMode ? layoutGitHistory(ideas.nodes, node => openCommand === node.id ? ideaTheme.openGap : ideas.folded.has(node.id) ? ideaTheme.foldedGap : milestones[node.id] ? ideaTheme.milestoneGap : ideaTheme.nodeGap, {compactLanes:true, showIncomingOrigins:false}) : layoutBranchView(layoutGraph(graph.nodes), graph.selectedId, activePath), [graph.nodes, graph.selectedId, activePath, ideaMode, ideas, milestones, openCommand]);
+  const layout = useMemo(() => ideaMode ? layoutIdeaTimeline(ideas.nodes, node => openCommand === node.id && isFinishedIdeaVersion(node) ? ideaTheme.openGap : ideas.folded.has(node.id) ? ideaTheme.foldedGap : milestones[node.id] ? ideaTheme.milestoneGap : ideaTheme.nodeGap) : layoutBranchView(layoutGraph(graph.nodes), graph.selectedId, activePath), [graph.nodes, graph.selectedId, activePath, ideaMode, ideas, milestones, openCommand]);
   const branchLabels = useMemo(() => firstBranchLabels(graph.nodes, ideas.representative), [graph.nodes, ideas]);
   const boundsNodes = useMemo(() => [...layout.nodes, ...(layout.mergeOrigins ?? []).map(origin => ({ ...origin, title: '' }))], [layout]);
   const levelColor = useMemo(() => levelColorLookup([...layout.nodes, ...(layout.mergeOrigins ?? []).map(origin => ({ branchId: origin.branchId, row: 0 }))]), [layout]);
@@ -111,7 +113,7 @@ export function VersionTreePanel({ embedded = false, headerTarget, id, title = '
     [layout, selectedDisplayId, collapsedLevels, graph.activeBranchId]);
   const endpoints = presentation.endpoints;
   const jumperEndpointId = endpoints.find(node => node.branchId === presentation.selectedBranchId)?.id ?? endpoints[0]?.id;
-  const navigationNodes = ideaMode ? layout.nodes.filter(node => milestones[node.id]?.trim()) : endpoints;
+  const navigationNodes = ideaMode ? navigableMilestones(layout.nodes, milestones) : endpoints;
   const jumperIndex = ideaMode ? milestoneNavigationIndex(graph.nodes, milestones, graph.selectedId)
     : Math.max(0, endpoints.findIndex(node => node.id === jumperEndpointId));
   const jumperEndpoint = navigationNodes[jumperIndex];
@@ -150,6 +152,15 @@ export function VersionTreePanel({ embedded = false, headerTarget, id, title = '
     });
   }
 
+  function recentIdeaFrame(width: number, height: number) {
+    const recent = layout.nodes.filter(node => defaults.latestIds.includes(node.id) || node.id === openCommand);
+    const shift = Math.max(0, -graphBounds(boundsNodes).left + 48);
+    return fitAllFrame({left:Math.min(...recent.map(n => n.x)) - geometry.stationLabelReserve + shift,
+      right:Math.max(...recent.map(n => n.x)) + geometry.cardOffsetX + geometry.cardWidth + shift,
+      top:Math.min(...recent.map(n => n.y)) - treeTheme.stationDiameter,
+      bottom:Math.max(...recent.map(n => n.y + (n.id === openCommand && isFinishedIdeaVersion(n) ? ideaTheme.openGap : !isFinishedIdeaVersion(n) ? ideaTheme.nodeGap : treeTheme.stationDiameter)))}, width, height, ideaTheme.fitMinZoom);
+  }
+
   function markScreenshotReady() {
     if (screenshotReady.current || !screenshotCapture || status) return;
     screenshotReady.current = true;
@@ -183,6 +194,13 @@ export function VersionTreePanel({ embedded = false, headerTarget, id, title = '
             });
             return;
           }
+          if (ideaMode && !screenshotFlags.treeCenter && !screenshotFlags.treeFrame && layout.nodes.length) {
+            const frame = recentIdeaFrame(width, height);
+            setFitInset(0);
+            zoomRef.current = frame.zoom; setZoom(frame.zoom);
+            requestAnimationFrame(() => { element.scrollTo({left:frame.left, top:frame.top, behavior:'instant'}); requestAnimationFrame(markScreenshotReady); });
+            return;
+          }
           const captureZoom = screenshotFlags.treeZoom ?? treeTheme.screenshotZoom;
           if (screenshotFlags.treeFrame === 'bottom') {
             zoomRef.current = captureZoom;
@@ -197,9 +215,9 @@ export function VersionTreePanel({ embedded = false, headerTarget, id, title = '
           const centered = screenshotFlags.treeCenter
             ? layout.nodes.filter(node => node.label.toLowerCase() === `v${screenshotFlags.treeCenter}`.toLowerCase())
             : [];
-          const latestMilestone = ideaMode ? layout.nodes.filter(node => milestones[node.id]).at(-1) : undefined;
+          const recentIdeas = ideaMode ? layout.nodes.filter(node => defaults.latestIds.includes(node.id) || node.id === openCommand) : [];
           const captureLayout = centered.length ? { ...layout, nodes: centered }
-            : latestMilestone ? { ...layout, nodes: [latestMilestone] }
+            : recentIdeas.length ? { ...layout, nodes: recentIdeas }
             : mode === 'history' ? { ...layout, nodes: layout.nodes.slice(-treeTheme.historyCaptureVersions) } : layout;
           const targets = screenshotNodeTargets(captureLayout, presentation.hiddenNodeIds, activePath, graph.selectedId);
           if (targets.length) {
@@ -357,14 +375,20 @@ export function VersionTreePanel({ embedded = false, headerTarget, id, title = '
 
   useEffect(() => {
     if (screenshotCapture || !overviewReady || introEndpointZoom.current) return;
-    const endpoint = (ideaMode ? layout.nodes.filter(node => milestones[node.id]).at(-1) : undefined) ?? endpoints.find(node => node.branchId === graph.activeBranchId)
+    const endpoint = (ideaMode ? layout.nodes.find(node => node.id === defaults.commandId) ?? layout.nodes.at(-1) : undefined) ?? endpoints.find(node => node.branchId === graph.activeBranchId)
       ?? layout.nodes.find(node => node.branchId === graph.activeBranchId && isBranchEndpoint(graph.nodes, node.id));
     if (!endpoint) return;
     const timer = window.setTimeout(() => {
       if (introEndpointZoom.current) return;
       introEndpointZoom.current = true;
       if (ideaMode) dispatch({ type: 'select', id: endpoint.id });
-      focusAtZoom(endpoint, ideaMode ? Math.min(1, (viewport.current?.clientWidth ?? 400) / (geometry.cardWidth + geometry.stationLabelReserve + geometry.cardOffsetX + 40)) : 1);
+      const element = viewport.current;
+      if (ideaMode && element) {
+        const frame = recentIdeaFrame(element.clientWidth, element.clientHeight);
+        setFitInset(0);
+        zoomRef.current = frame.zoom; setZoom(frame.zoom);
+        requestAnimationFrame(() => element.scrollTo({left:frame.left, top:frame.top, behavior:'instant'}));
+      } else focusAtZoom(endpoint, 1);
     }, 160);
     return () => window.clearTimeout(timer);
   }, [overviewReady, screenshotCapture, graph.activeBranchId, layout.nodes]);
@@ -425,14 +449,21 @@ export function VersionTreePanel({ embedded = false, headerTarget, id, title = '
   const treeHeader = <div className="panel-header tree-header"><div className="panel-heading"><AdaptivePanelTitle id="tree-title" full={title} short="Stream"/><VersionPanelSwitch onClick={onSwitchPanel} target="Version blocks"/>
       {modeSwitchVisible && <RowSelect label="Version stream panel" value={mode}
         options={treeModes.map(item => ({ value: item.id, label: item.label }))} onChange={value => onModeChange(value as TreeMode)}/>}
-    </div>{treeActions}</div>;
+    </div>{!ideaMode && treeActions}</div>;
   return <section id={id} className="tree-panel" data-tree-mode={mode} aria-labelledby="tree-title" data-selected-branch={presentation.selectedBranchId || undefined} data-active-branch={graph.activeBranchId} style={{
+    '--branch-label-size': `${treeTheme.branchLabelFontSize}px`,
+    '--idea-action-fade': `${ideaTheme.actionFadeMs}ms`,
+    '--milestone-font-size': `${ideaTheme.milestoneFontSize}px`,
+    '--milestone-padding': `${ideaTheme.milestonePaddingBlock}px ${ideaTheme.milestonePaddingInline}px`,
     '--idea-fold-count-size': `${ideaTheme.foldCountSize}px`,
     '--card-hover-inset': `${treeTheme.cardHoverBorderInset}px`,
     '--card-hover-transition': `${treeTheme.cardHoverTransitionMs}ms`,
     '--node-card-width': `${geometry.cardWidth}px`,
     '--merge-origin-tag-gap': `${geometry.cardOffsetX}px`,
     '--station-size': `${treeTheme.stationDiameter}px`,
+    '--milestone-size': `${ideaTheme.milestoneDiameter}px`,
+    '--milestone-border-width': `${ideaTheme.milestoneBorderWidth}px`,
+    '--milestone-border-color': ideaTheme.milestoneBorderColor,
     '--station-border-width': `${treeTheme.stationBorderWidth}px`,
     '--station-inner-size': `${treeTheme.stationInnerDiameter}px`,
     '--station-clearance': `${treeTheme.stationClearance}px`,
@@ -452,6 +483,8 @@ export function VersionTreePanel({ embedded = false, headerTarget, id, title = '
     '--version-label-weight': treeTheme.versionLabelFontWeight,
     '--version-label-color': treeTheme.versionLabelColor,
     '--version-label-zoom': versionLabelZoomScale(zoom),
+    '--station-center-x': `${-geometry.cardOffsetX}px`,
+    '--station-center-y': `${-geometry.cardOffsetY}px`,
     '--station-offset-x': `${-geometry.cardOffsetX - treeTheme.stationRadius - 1}px`,
     '--station-offset-y': `${-geometry.cardOffsetY - treeTheme.stationRadius - 1}px`,
     '--line-added': galleryTokens.theater.addedColor,
@@ -460,7 +493,7 @@ export function VersionTreePanel({ embedded = false, headerTarget, id, title = '
     '--reverted-route-color': treeTheme.revertedRouteColor,
     '--merged-branch-opacity': treeTheme.mergedBranchOpacity,
   } as CSSProperties}>
-    {embedded ? <><h2 id="tree-title" className="sr-only">{title}</h2>{headerTarget && createPortal(<div className="idea-header-controls" role="group" aria-label="Idea stream navigation">{modeSwitchVisible && <RowSelect label="Version stream panel" value={mode} options={treeModes.map(item => ({value:item.id,label:item.label}))} onChange={value => onModeChange(value as TreeMode)}/>} {treeActions}</div>, headerTarget)}</> : treeHeader}
+    {embedded ? <h2 id="tree-title" className="sr-only">{title}</h2> : treeHeader}
     {status ? <p className="tree-history-message" role="status">{status}</p> : <><div className="canvas-shell">
       <div ref={viewport} className={`tree-viewport ${isPanning ? 'is-panning' : ''}`} tabIndex={0} aria-label="Version tree canvas. Scroll in any direction to pan. Control plus scroll to zoom. Click empty canvas to deselect." onPointerDown={startPan} onPointerMove={pan} onPointerUp={endPan} onPointerCancel={endPan} onLostPointerCapture={endPan}>
         <div className="canvas-size" style={{ width: (worldWidth + worldShift + fitInset) * zoom, height: worldHeight * zoom }}>
@@ -474,7 +507,7 @@ export function VersionTreePanel({ embedded = false, headerTarget, id, title = '
                 const routeReverted = isRevertedRoute(graph.revertedIds, route.targetId);
                 const routeMerged = mergedBranches.has(route.branchId);
                 const routeRow = layout.nodes.find(node => node.id === route.targetId)?.row ?? layout.forks?.find(fork => fork.id === route.targetId)?.row ?? 0;
-                const stroke = route.kind === 'horizontal-branch' ? treeTheme.levelConnectorColor
+                const stroke = ideaMode ? ideaBranchColor(route.branchId, levelColor(route.branchId, routeRow)) : route.kind === 'horizontal-branch' ? treeTheme.levelConnectorColor
                   : routeReverted ? treeTheme.revertedRouteColor
                   : routeMerged ? palerAccent(levelColor(route.branchId, routeRow))
                   : route.spine ? 'var(--active-branch-color)'
@@ -484,7 +517,7 @@ export function VersionTreePanel({ embedded = false, headerTarget, id, title = '
                 const dots = route.dashed && from && to ? mergedStemDots(from.y, to.y) : [];
                 const dot = treeTheme.mergedStemDotSize;
                 return <g key={route.id} className="route" data-route-kind={route.kind} data-active={route.active} data-spine={route.spine || undefined} data-reverted={routeReverted || undefined} data-merged={routeMerged || undefined} data-dashed={route.dashed || undefined}
-                  opacity={route.kind === 'horizontal-branch' ? treeTheme.levelConnectorOpacity : routeReverted ? treeTheme.revertedRouteOpacity : routeMerged ? treeTheme.mergedBranchOpacity : 1}>
+                  opacity={ideaMode ? 1 : route.kind === 'horizontal-branch' ? treeTheme.levelConnectorOpacity : routeReverted ? treeTheme.revertedRouteOpacity : routeMerged ? treeTheme.mergedBranchOpacity : 1}>
                   {route.id.startsWith('chronology:') && <title>Chronological sequence · not a Git parent</title>}
                   {route.id.startsWith('chronology:') ? <path d={route.path} fill="none" stroke={stroke} strokeWidth={treeTheme.chronologyWidth} strokeDasharray={`${treeTheme.chronologyDash} ${treeTheme.chronologyDash}`} /> : route.dashed && from ? dots.map(y => <rect key={y} x={from.x - dot / 2} y={y - dot / 2} width={dot} height={dot} fill={stroke}/>) : <>
                   <path d={route.path} fill="none" stroke={stroke} strokeWidth={treeTheme.routeWidth} strokeLinejoin="round" strokeLinecap="round"/>
@@ -525,15 +558,15 @@ export function VersionTreePanel({ embedded = false, headerTarget, id, title = '
               const onSpine = activePath.has(node.id);
               const reverted = isReverted(graph.revertedIds, node.id);
               const merged = mergedBranches.has(node.branchId);
-              const color = merged ? palerAccent(levelColor(node.branchId, node.row)) : activeRouteColor(levelColor(node.branchId, node.row), onSpine);
+              const color = ideaMode ? ideaBranchColor(node.branchId, levelColor(node.branchId, node.row)) : merged ? palerAccent(levelColor(node.branchId, node.row)) : activeRouteColor(levelColor(node.branchId, node.row), onSpine);
               const label = stationLabelOffset();
               const folded = ideaMode ? ideas.folded.get(node.id) : undefined;
               if (folded) return <button key={node.id} className="idea-fold" style={{ left: node.x, top: node.y }}
                 aria-label={`Expand ${folded.nodeIds.length} versions, ${folded.firstLabel} through ${folded.lastLabel}`} aria-expanded={false}
                 onClick={() => setExpandedRuns(current => new Set([...current, folded.id]))}>
-                {branchLabels.get(node.branchId) === node.id && <span className="station-label" data-graph-label={node.id} style={{left: ideaTheme.foldCountSize / 2 + label.x, top: ideaTheme.foldCountSize / 2 + label.y}}><BranchTag name={node.branchId} color={color}/></span>}<span className="idea-fold-count">{folded.nodeIds.length}</span><span className="idea-fold-label">versions</span>
+                {branchLabels.get(node.branchId) === node.id && <span className="station-label" data-graph-label={node.id} style={{left: ideaTheme.foldCountSize / 2 + label.x, top: ideaTheme.foldCountSize / 2 + label.y}}><BranchTag name={node.branchId} color={color}/></span>}<span className="idea-fold-count"><span>{folded.nodeIds.length}</span></span><span className="idea-fold-label">versions</span>
               </button>;
-              const commitCard = <VersionCard hideStation={ideaMode} node={node} selected={ideaMode || node.id === graph.selectedId}
+              const commitCard = <VersionCard ideaMode={ideaMode} onOpenPush={onOpenPush} hideStation={ideaMode} node={node} selected={ideaMode || node.id === graph.selectedId}
                   hasDescendants={presentation.nodesWithChildren.has(node.id)}
                   isEndpoint={isBranchEndpoint(graph.nodes, node.id)} onActivePath={onSpine}
                   isCurrentBranch={node.branchId === graph.activeBranchId}
@@ -552,6 +585,7 @@ export function VersionTreePanel({ embedded = false, headerTarget, id, title = '
                   onDisconnected={() => setToast("Project isn't connected")}/>;
               return <div className="version-position" key={node.id} style={{
                 left: node.x + geometry.cardOffsetX, top: node.y + cardOffsetY,
+                '--station-center-y': `${-cardOffsetY}px`,
                 '--station-offset-y': `${-cardOffsetY - treeTheme.stationRadius - 1}px`,
                 '--route-color': color,
                 zIndex: node.id === graph.selectedId ? 3 : 2,
@@ -560,10 +594,10 @@ export function VersionTreePanel({ embedded = false, headerTarget, id, title = '
                   left: -geometry.cardOffsetX + label.x,
                   top: -cardOffsetY + label.y,
                 }}>{(ideaMode ? branchLabels.get(node.branchId) === node.id : isBranchDivergence(node, graph.nodes)) && <BranchTag name={node.branchId} color={color}/>}<span className="version-header">{node.label.toLowerCase()}</span></span>
-                {ideaMode ? <IdeaCard node={node} milestone={milestones[node.id] ?? ''} open={openCommand === node.id} color={color}
+                {ideaMode ? <IdeaCard currentWip={node.id === currentWipId} node={node} milestone={milestones[node.id] ?? ''} open={openCommand === node.id} color={color}
                   hasDescendants={presentation.nodesWithChildren.has(node.id)}
                   onSelect={() => { setOpenCommand(current => current === node.id ? null : node.id); dispatch({ type: 'select', id: node.id }); if (node.capture?.pushed) onOpenPush?.(node.capture.version); }}
-                  onSave={text => setSavedMilestones({ ...milestones, [node.id]: text })}>{commitCard}</IdeaCard>
+                  onSave={text => setSavedMilestones(saveMilestone(milestones, node, text))}>{commitCard}</IdeaCard>
                 : commitCard}
               </div>;
             })}
@@ -571,7 +605,8 @@ export function VersionTreePanel({ embedded = false, headerTarget, id, title = '
         </div>
       </div>
     </div>
-      <footer className="canvas-controls" aria-label="Idea stream view controls">
+      <footer className={`canvas-controls${ideaMode || embedded ? ' has-navigation' : ''}`} aria-label="Idea stream view controls">
+        {(ideaMode || embedded) && <div className="idea-footer-navigation" role="group" aria-label="Idea stream navigation">{embedded && modeSwitchVisible && <RowSelect label="Version stream panel" value={mode} options={treeModes.map(item => ({value:item.id,label:item.label}))} onChange={value => onModeChange(value as TreeMode)}/>} {treeActions}</div>}
         {!ideaMode && <div ref={branchMenu} className="branch-controls header-branch-controls" data-header-fill>
           <button className="branch-current" data-header-fill-content onClick={() => setBranchMenuOpen(open => !open)}
             aria-haspopup="menu" aria-expanded={branchMenuOpen} aria-label={`Active branch ${activeBranchName}. Switch branch`}

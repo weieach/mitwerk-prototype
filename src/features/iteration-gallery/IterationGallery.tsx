@@ -22,7 +22,7 @@ import './gallery.css';
 
 type Catalog = { frames: Capture[]; ignored: number; references?: VisualReference[] };
 
-export function IterationGallery({ headerTarget, headerActions, playbackOnly = false, pushRequest, onSwitchPanel, onToggle, expanded }: { headerTarget?:HTMLElement|null; headerActions?:ReactNode; playbackOnly?:boolean; onToggle?:()=>void; expanded?:boolean; onSwitchPanel?:()=>void; pushRequest: FrameRequest | null }) {
+export function IterationGallery({ headerTarget, headerActions, playbackOnly = false, onExitPlayback, pushRequest, onSwitchPanel, onToggle, expanded }: { headerTarget?:HTMLElement|null; headerActions?:ReactNode; playbackOnly?:boolean; onExitPlayback?:()=>void; onToggle?:()=>void; expanded?:boolean; onSwitchPanel?:()=>void; pushRequest: FrameRequest | null }) {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
@@ -51,7 +51,8 @@ export function IterationGallery({ headerTarget, headerActions, playbackOnly = f
   const startReturn = useCallback(() => setReturnReady(true), []);
   const finishTurn = useCallback(() => { setView(previous => previous === 'returning' ? 'album' : 'theater'); setTarget(null); }, []);
   const exit = useCallback(() => {
-    if (playbackOnly || view !== 'theater') return;
+    if (view !== 'theater') return;
+    if (playbackOnly) onExitPlayback?.();
     const shown = viewStack.current?.querySelector<HTMLElement>('.theater-view')?.dataset.frameId;
     const screen = viewStack.current?.querySelector('.theater-screen');
     if (!shown || !screen) { setView('album'); return; }
@@ -59,7 +60,7 @@ export function IterationGallery({ headerTarget, headerActions, playbackOnly = f
     const rect = image?.getBoundingClientRect() ?? screen.getBoundingClientRect();
     setSelectedId(shown); setTarget(image?.naturalWidth ? containedFrameTarget(rect, image.naturalWidth, image.naturalHeight) : rect);
     setReturnReady(false); setView('returning');
-  }, [view, playbackOnly]);
+  }, [view, playbackOnly, onExitPlayback]);
   const camera = useRef<GalleryCamera | null>(null);
 
 
@@ -148,14 +149,14 @@ export function IterationGallery({ headerTarget, headerActions, playbackOnly = f
 
   useEffect(() => { try { seedAnnotations(versions.flatMap(version => version.frames)); } catch { /* Demo seeds can be retried after storage is available. */ } }, [versions]);
 
-  const header = <PanelHeader title="Version blocks" mode={view === 'album' || view === 'focusing' ? 'Gallery' : 'Playback'} onModeChange={switchView} modeDisabled={playbackOnly || !visibleFrames.length || !['album','theater'].includes(view)} onTitleClick={!playbackOnly && view === 'theater' ? exit : undefined} onToggle={onToggle} expanded={expanded} actions={<>
+  const header = <PanelHeader title="Version blocks" mode={view === 'album' || view === 'focusing' || view === 'returning' ? 'Gallery' : 'Playback'} onModeChange={switchView} modeDisabled={!visibleFrames.length || !['album','theater'].includes(view)} onTitleClick={view === 'theater' ? exit : undefined} onToggle={onToggle} expanded={expanded} actions={<>
       <VersionPanelSwitch onClick={onSwitchPanel} target="Version stream"/>
       {view !== 'album' && view !== 'focusing' && <div className="gallery-range"><RowSelect label="Date range" value={range} onChange={value => { setRange(value as RangeKey); setNow(Date.now()); }} options={ranges}/></div>}
       <div className="gallery-frame-picker-slot" ref={setFramePickerSlot}/>
       {headerActions}
     </>}/>;
 
-  return <section ref={galleryRoot} data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-label="Version blocks" style={{ '--gallery-header-gap': `${t.controls.headerGap}px`, '--gallery-token-lift': `${t.controls.tokenLift}px`, '--gallery-floating-background': t.controls.floatingBackground, '--gallery-floating-label-opacity': t.controls.labelOpacity, '--gallery-frame-selector-share': `${t.controls.frameSelectorShare * 100}%`, '--gallery-floating-width': `${t.controls.floatingWidth}px`, '--gallery-floating-pad-inline': `${t.controls.floatingPaddingInline}px`, '--gallery-floating-pad-block': `${t.controls.floatingPaddingBlock}px`, '--gallery-file-max-width': `${t.controls.fileMaxWidth}px`, '--gallery-control-inset': `${t.controls.inset}px`, '--gallery-control-gap': `${t.controls.gap}px`, '--gallery-frame-select-max-width': `${t.controls.frameSelectMaxWidth}px`, '--theater-focus-background': t.theater.focusBackground, '--theater-frame-shadow': t.theater.frameShadow, '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px` } as CSSProperties}>
+  return <section ref={galleryRoot} data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-label="Version blocks" style={{ '--gallery-label-background': t.labelBackdrop.color, '--gallery-label-opacity': `${t.labelBackdrop.opacity * 100}%`, '--gallery-label-padding': `${t.labelBackdrop.paddingBlock}px ${t.labelBackdrop.paddingInline}px`, '--gallery-axis-line-height': t.axisText.lineHeight, '--gallery-header-gap': `${t.controls.headerGap}px`, '--gallery-token-lift': `${t.controls.tokenLift}px`, '--gallery-floating-background': t.controls.floatingBackground, '--gallery-floating-label-opacity': t.controls.labelOpacity, '--gallery-frame-selector-share': `${t.controls.frameSelectorShare * 100}%`, '--gallery-floating-width': `${t.controls.floatingWidth}px`, '--gallery-floating-pad-inline': `${t.controls.floatingPaddingInline}px`, '--gallery-floating-pad-block': `${t.controls.floatingPaddingBlock}px`, '--gallery-file-max-width': `${t.controls.fileMaxWidth}px`, '--gallery-control-inset': `${t.controls.inset}px`, '--gallery-control-gap': `${t.controls.gap}px`, '--gallery-frame-select-max-width': `${t.controls.frameSelectMaxWidth}px`, '--theater-focus-background': t.theater.focusBackground, '--theater-frame-shadow': t.theater.frameShadow, '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px` } as CSSProperties}>
     {headerTarget ? createPortal(header, headerTarget) : header}
     {error && <div className="gallery-message" role="alert">{error} <button onClick={() => setRetry(value => value + 1)}>Retry</button></div>}
     {!catalog ? <div className="gallery-empty">{error ? 'Screenshot catalog unavailable.' : 'Reading saved frames…'}</div>

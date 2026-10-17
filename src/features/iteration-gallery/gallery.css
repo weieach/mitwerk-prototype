@@ -4,15 +4,10 @@
 .album-3d-viewport canvas { display: block; position: absolute; inset: 0; touch-action: none; cursor: grab; }
 .album-3d-viewport canvas:active { cursor: grabbing; }
 .album-axis-labels { position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
-.album-axis-label { position: absolute; left: 0; top: 0; transform-origin: 0 0; white-space: nowrap; color: var(--muted); line-height: 1.25; }
+.album-axis-label { position: absolute; left: 0; top: 0; transform-origin: 0 0; white-space: nowrap; color: var(--muted); line-height: var(--gallery-axis-line-height); }
 .album-axis-label.is-hovered > span { background: var(--axis-hover-background); box-shadow: 0 0 0 var(--axis-hover-gap) var(--axis-hover-background); outline: var(--axis-hover-border) solid var(--axis-hover-color); outline-offset: var(--axis-hover-gap); }
 .album-axis-label-featured { color: var(--ink); }
-.album-axis-label-featured-version {
-  text-shadow:
-    0 0 3px var(--paper), 0 0 6px var(--paper),
-    1px 0 2px var(--paper), -1px 0 2px var(--paper), 0 1px 2px var(--paper), 0 -1px 2px var(--paper),
-    1px 1px 2px var(--paper), -1px -1px 2px var(--paper), 1px -1px 2px var(--paper), -1px 1px 2px var(--paper);
-}
+.album-axis-label-featured > span { background:color-mix(in srgb, var(--gallery-label-background) var(--gallery-label-opacity), transparent); padding:var(--gallery-label-padding); text-shadow:none; }
 .album-axis-label > span { display: block; transform: translate(-50%, -50%); }
 .gallery-toolbar.album-frame-bar { position: relative; z-index: 2; container-type: inline-size; flex-wrap: nowrap; flex-shrink: 0; padding: 8px 24px; border: none; background: none; }
 .iteration-gallery .panel-heading { gap: var(--gallery-header-gap); }
@@ -27,7 +22,7 @@
 .album-token-stack { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .album-floating-actions .album-token-stack { margin-bottom: var(--gallery-token-lift); }
 .album-range-stats { position: absolute; top:var(--gallery-stats-top-gap); left:var(--header-padding-left); z-index:3; pointer-events:none; isolation: isolate; color: var(--muted); font-size: var(--control-font-size); line-height: 1.25; white-space: nowrap; text-align: left; width: max-content; max-width: calc(100% - 2 * var(--header-padding-left) - var(--base-control-height)); overflow:hidden; text-overflow:ellipsis; }
-.album-range-stats::before { content: ""; position: absolute; z-index: -1; inset: -5px -10px; background: var(--paper); filter: blur(8px); opacity: .94; }
+.album-range-stats { background:color-mix(in srgb, var(--gallery-label-background) var(--gallery-label-opacity), transparent); padding:var(--gallery-label-padding); }
 .album-saved-frame { min-width: 0; max-width: var(--gallery-frame-select-max-width); }
 .gallery-frame-picker-slot { margin-left: auto; min-width: 0; }
 .album-saved-frame select { width: 100%; text-overflow: ellipsis; }
@@ -79,10 +74,8 @@
 .theater-text-action.is-exit { margin-right: auto; }
 .theater-text-action { display: inline-flex; align-items: center; gap: 4px; border: 0; background: transparent; padding: 0; color: var(--ink); font: inherit; cursor: pointer; }
 .theater-text-action.is-bold { font-weight: 700; }
-.theater-text-action.is-enter { background: var(--ink); color: var(--paper); font-weight: 700; padding: 5px 10px; border-radius: 4px; transform: scaleX(0); }
-.theater-text-action.is-enter > span { opacity: 0; color: var(--paper); }
-.theater-text-action.is-enter.is-shown { transform: none; }
-.theater-text-action.is-enter.is-shown > span { opacity: 1; }
+.theater-text-action.is-enter { background: var(--ink); color: var(--paper); font-weight: 700; padding: 5px 10px; border-radius: 4px; }
+.theater-text-action.is-enter > span { color: var(--paper); }
 .theater-text-action.is-enter:disabled { color: var(--paper); }
 .theater-text-action:disabled { color: var(--muted); cursor: default; }
 .theater-loading { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; background: color-mix(in srgb, var(--paper) 72%, transparent); color: var(--ink); font-size: 12px; font-weight: 500; }
@@ -229,3 +222,6 @@
 .theater-action-buttons.is-wrapped .is-enter { order:-1; }
 
 .workspace .saved-frame-trigger { height:100%; }
+
+/* Prompt previews stay in screen space, independent of the WebGL camera. */
+.album-prompt-label { position:absolute; left:50%; transform:translate(-50%,-50%); z-index:4; width:max-content; pointer-events:none; text-align:center; line-height:1.25; color:var(--ink); background:color-mix(in srgb, var(--gallery-label-background) var(--gallery-label-opacity), transparent); padding:var(--gallery-label-padding); overflow-wrap:anywhere; text-shadow:none; }

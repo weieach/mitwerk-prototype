@@ -1,8 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { milestoneNavigationIndex, parseMilestones, projectIdeaStream, seedMilestones } from '../src/features/version-tree/idea-stream.ts';
-import { layoutGitHistory } from '../src/features/version-tree/git-layout.ts';
+import { ideaBranchColor, isFinishedIdeaVersion, navigableMilestones, saveMilestone, ideaStreamDefaults, milestoneNavigationIndex, parseMilestones, projectIdeaStream, seedMilestones } from '../src/features/version-tree/idea-stream.ts';
+import { layoutGitHistory, layoutIdeaTimeline } from '../src/features/version-tree/git-layout.ts';
 import type { VersionNode } from '../src/features/version-tree/model.ts';
+import { currentIdeaWipId, withinNodeHoverRadius } from '../src/features/version-tree/idea-stream.ts';
+
+test('only the latest unpushed capture receives persistent draft controls', () => {
+  const oldWip = { ...node('old'), title:'Begin 3D view (WIP)', capture:{version:12,pushed:true,branches:['main'],added:null,removed:null} };
+  const finished = node('new', ['old']);
+  const draft = { ...node('draft', ['new']), git:undefined, capture:{version:13,pushed:false,branches:['main'],added:null,removed:null} };
+  assert.equal(currentIdeaWipId([oldWip, finished]), null);
+  assert.equal(currentIdeaWipId([oldWip, finished, draft]), 'draft');
+  assert.equal(currentIdeaWipId([draft, finished]), null);
+  assert.equal(currentIdeaWipId([]), null);
+});
+
+test('node hover retention uses a circular five-vw screen-space radius', () => {
+  assert.equal(withinNodeHoverRadius(130,140,100,100,1000,.05), true);
+  assert.equal(withinNodeHoverRadius(131,140,100,100,1000,.05), false);
+  assert.equal(withinNodeHoverRadius(160,180,100,100,2000,.05), true);
+  assert.equal(withinNodeHoverRadius(151,100,100,100,1000,.05), false);
+});
 
 function node(id: string, parents: string[] = [], branchId = 'main'): VersionNode {
   return { id, label: `V${id}`, title: `Commit ${id}`, summary: '', saveType: 'manual', createdAt: '2026-10-17T12:00:00Z',
@@ -128,4 +146,67 @@ test('folds do not cross intervening branches or discard multiple external chron
   assert.equal(projection.nodes.find(n => n.id === '6')?.chronologyParentId, '2');
   const positions = new Map(projection.nodes.map((n, index) => [n.id, index]));
   for (const node of projection.nodes) for (const parent of node.git?.parents ?? []) assert.ok(positions.get(parent)! < positions.get(node.id)!);
+});
+
+test('vertical idea timeline keeps chronology and branch colors without changing Git ancestry', () => {
+  const source = [node('1'), node('2', ['1'], 'feature'), node('3', ['1']), node('4', ['3', '2'])];
+  const original = JSON.stringify(source);
+  const layout = layoutIdeaTimeline(source, n => n.id === '2' ? 300 : 100);
+  assert.deepEqual(layout.nodes.map(n => n.id), ['1', '2', '3', '4']);
+  assert.equal(new Set(layout.nodes.map(n => n.x)).size, 1);
+  assert.deepEqual(layout.nodes.map(n => n.y - layout.nodes[0].y), [0, 100, 400, 500]);
+  assert.equal(layout.edges.length, 6);
+  assert.deepEqual(layout.edges.slice(0, 2).map(e => e.branchId), ['main', 'feature']);
+  assert.deepEqual(layout.mergeOrigins, []);
+  assert.deepEqual(layout.nodes.at(-1)?.git?.parents, ['3', '2']);
+  assert.equal(JSON.stringify(source), original);
+  assert.ok(new Set(layoutGitHistory(source).nodes.map(n => n.x)).size > 1, 'divergent routing remains available');
+  assert.ok(Number.isFinite(layoutIdeaTimeline([], () => 100).height));
+});
+
+test('recent versions stay unfolded and the latest non-WIP commit opens by default', () => {
+  const source = [node('1'), node('2', ['1']), node('3', ['2']), node('4', ['3']), node('5', ['4']), node('6', ['5'])];
+  source[4].title = 'WIP: experiment';
+  source[5].git = undefined;
+  source[5].capture = {version:6, pushed:false, branches:['main']};
+  const defaults = ideaStreamDefaults(source);
+  assert.deepEqual(defaults, {latestIds:['4','5','6'],commandId:'4'});
+  const projected = projectIdeaStream(source, {}, new Set(), new Set(defaults.latestIds));
+  assert.deepEqual(projected.nodes.map(n => n.id), ['3','4','5','6']);
+  assert.deepEqual(projected.folded.get('3')?.nodeIds, ['1','2','3']);
+  assert.deepEqual(ideaStreamDefaults([]), {latestIds:[],commandId:null});
+});
+
+
+test('draft milestones survive commit identity changes and enter navigation only when finished', () => {
+  const wip = { ...node('capture-version-42'), git: undefined, title: 'Work in progress',
+    capture: { version: 42, pushed: false, branches: ['feature'] } };
+  const draft = saveMilestone({}, wip, 'A saved design decision');
+  assert.equal(isFinishedIdeaVersion(wip), false);
+  assert.deepEqual(navigableMilestones([wip], draft), []);
+  assert.equal(milestoneNavigationIndex([wip], draft, wip.id), -1);
+  const committed = { ...wip, ...node('new-git-sha'), capture: { ...wip.capture, pushed: true } };
+  const resolved = seedMilestones([committed], parseMilestones(JSON.stringify(draft)));
+  assert.equal(resolved[committed.id], 'A saved design decision');
+  assert.deepEqual(navigableMilestones([committed], resolved).map(n => n.id), [committed.id]);
+  assert.equal(milestoneNavigationIndex([committed], resolved, committed.id), 0);
+  const deleted = saveMilestone(resolved, committed, '');
+  assert.equal(seedMilestones([committed], deleted)[committed.id], '');
+  assert.deepEqual(navigableMilestones([committed], deleted), []);
+  const nextWip = { ...wip, id: 'capture-version-43', capture: { ...wip.capture, version: 43 } };
+  assert.equal(seedMilestones([nextWip], draft)[nextWip.id], undefined);
+});
+
+test('legacy commit milestones migrate to stable capture identity without losing edits or deletions', () => {
+  const commit = { ...node('sha'), capture: {version: 42, pushed: true, branches: ['main']} };
+  const migrated = seedMilestones([commit], {sha: 'Existing note'});
+  assert.equal(migrated['capture-version-42'], 'Existing note');
+  assert.equal(seedMilestones([commit], {sha: 'Stale note', 'capture-version-42': ''}).sha, '');
+  assert.equal(isFinishedIdeaVersion({...commit, title: 'WIP: experiment'}), false);
+  assert.equal(isFinishedIdeaVersion({...commit, title: 'Work-in-progress experiment'}), false);
+});
+
+test('main uses theme contrast regardless of palette; other branches retain their assigned color', () => {
+  assert.equal(ideaBranchColor('main', '#7A9EF7'), 'var(--contrast)');
+  assert.equal(ideaBranchColor('feature', '#FFC629'), '#FFC629');
 });

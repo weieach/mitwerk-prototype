@@ -165,6 +165,7 @@ This file is reserved for project-wide design-system rules requested by the user
 - Center view focuses the first in-range frame at the larger scale (or the first historical frame when the range is empty). Reset view restores the default oblique angle, fits the blocks at `overviewFitScale` (1.2× the base full fit), and centers the block volume vertically without a camera lift. That fitted scale is the new 100% baseline; the zoom control always reads 100% after Reset view. Both use shared geometry and camera tokens.
 - Hovering a frame in the middle of the panel only inspects it. Edge travel starts after the pointer stays inside the edge band on a block for `delayMs`. Then the camera advances toward the chronological end at the shared `edgePan.speed` (32); speed grows with proximity to the edge. In Center view, follow the highlighted frame only while that travel is armed. Stop on leaving the edge or viewport, dragging, or reaching the end. Do not alter frame selection or dates.
 - Frame image outlines use `frameOutlineOpacity` so the inner borders stay readable against the block faces.
+- Once every representative image in the album has loaded or failed, queue the album's other in-range captures from latest to oldest. Decode them in the background, `webgl.prefetchConcurrency` (2) at a time, so hovering shows the capture immediately instead of fetching it. Decoded captures persist across gallery remounts and range changes; changing the range reorders only the remaining queue. The GPU texture budget (`textureCacheSize`) is unchanged; a warmed image becomes a texture only when it is shown.
 - A requested reset-view capture uses the same Reset view behavior as the button. Normal startup remains centered on the first frame.
 
 ## Highlighted gallery frames — 2026-09-22
@@ -307,7 +308,7 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Timeline separators retain the derived gap width and timeline height, and use `timeline.pushMinWidth` (2.5px) where space permits, following the fill rule below. They use a white `timeline.pushBackground` at rest and `pushHoverBackground` only while hovered or focused, with a `v# · push node` tooltip. Clicking selects that push node and parks the playhead on the rectangle. The push is not a frame inside the version block. Do not substitute a prompt when a push is missing or outside the selected range.
 - Add the same target after the final version, absolutely positioned outside the timeline's measured end; do not shrink or rescale existing blocks. Derive targets from capture kinds and version groups, not ordinal assumptions. Support keyboard activation.
-- Push-frame metadata no longer repeats Enter prototype. That action is the bold control beside Add frame to chat. Clicking it opens the archived prototype in the full-screen overlay. Exit prototype uses the same text-and-icon control as Full screen, sits on that action row, and is the only control aligned to the left. It is not part of the full-screen overlay. While the prototype builds, a loading overlay covers the frame. Resolve the codebase by push number in `[ver capture] codebase/`, build on demand, and display an interactive iframe in the existing theater frame. Exit prototype restores the screenshot. Stop playback while entering; changing frames closes the prototype. Missing archives and build failures must be explicit.
+- Push-frame metadata no longer repeats Enter prototype. That action is the bold control beside Add frame to chat. Clicking it opens the archived prototype in the full-screen overlay. Exit prototype uses the same text-and-icon control as Full screen, sits on that action row, and is the only control aligned to the left. It is not part of the full-screen overlay. While the prototype builds, a loading overlay covers the frame. Resolve the push number to its commit in `data/push-shas.json`, stage that tree from Git, build on demand, and display an interactive iframe in the existing theater frame. Exit prototype restores the screenshot. Stop playback while entering; changing frames closes the prototype. Missing archives and build failures must be explicit.
 - Build immutable archived source with the host's available tooling, bypassing archived configs, package scripts and hooks. Snapshot the gallery catalog at that push's time. Run the result in a sandbox with ephemeral storage and read-only archived assets; never write to current project data or the source archive. Cache rebuildable output outside version archives.
 
 - Push nodes are the gutter rectangles between version blocks. They stay white and take `timeline.pushHoverBackground` only while hovered. Selecting one places the playhead on that rectangle in theater and the gallery. A push capture is not a gallery frame and does not add a mark inside its version block. Progress captures that mention a push node select `capturePushVersion` (v16). The action to the right of Add frame to chat is a bold Enter prototype until that prototype is open, then it becomes Full screen. Enter prototype opens the full-screen overlay. Exit prototype is the left-aligned control on that same row. Building a prototype covers the frame with a loading overlay. The playhead paints above the push rectangles. The caption gap under the version row uses `theater.summaryGapScale` (1.75).
@@ -984,7 +985,7 @@ This file is reserved for project-wide design-system rules requested by the user
 - Idea stream station clicks disclose the original shared VersionCard, including commit heading, references, file/prompt statistics, line changes, details and actions. Keep milestones always visible and command cards hidden until selected; preserve read-only Git history behavior and use the same component as Test visual rather than a separate simplified message box.
 - Playback shows added and removed lines on the branch-name row in the original `+… −… lines` format, retaining the shared addition/removal colors and compact counts from capture metadata. Long prompt text scrolls within the summary so the version and branch/change rows stay visible.
 - Chat version output is one content-height card with its preview inside the left side, label in the middle and navigation arrow on the right. Preserve image aspect ratio and exact-frame navigation; use one button rather than nested interactive controls.
-- The model selector and Prompt / To-do switch use the same shared text-size token. The model opens the shared keyboard-accessible dropdown, with a filled background while expanded; list the configured prototype model without implying additional connected providers.
+- The model selector and Prompt / To-do switch use the same shared text-size token. The model opens the shared keyboard-accessible dropdown, with a filled background while expanded; list the verified cross-provider catalog while keeping selection separate from actual provider connectivity.
 - Capture-context pills are fully rounded through a shared radius token, including their editing inputs. `c chat and idea stream` captures Chat beside the combined Playback/Idea stream reader.
 
 ## Idea stream subpanel and compact branch lanes — 2026-10-17
@@ -997,8 +998,92 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Milestone navigation and markers — 2026-10-17
 
 - Historical Idea stream uses a “Milestone x/x” selector. Previous/next wrap through nodes with nonempty milestone messages in chronological order, selecting and focusing each at reading zoom without opening its command card. The middle button recenters the current milestone; an empty stream shows “Milestone 0/0” with disabled controls. Test visual retains endpoint navigation.
-- A milestone station uses a filled trophy glyph in its branch color instead of a circular node. Notes and station interactions retain their shared behavior. Adding/removing a milestone updates navigation, markers and automatic folding immediately.
+- A milestone station uses a filled trophy glyph matching the canvas background instead of a circular node, with no button background fill. Notes and station interactions retain their shared behavior. Adding/removing a milestone updates navigation, markers and automatic folding immediately.
 - Fold every connected run of at least two consecutive same-branch versions without milestones, including runs immediately before or after a milestone and runs containing merge/chronology junctions. Preserve and remap all external Git connections and origins; never fold across a milestone or intervening branch. Keep multiple external chronology anchors separate rather than dropping them. Expanding restores original stations and ancestry.
 - Chat version cards have zero top, bottom and left padding. Their thumbnail reaches the full content height inside the card border, cropping with object-fit: cover without distorting pixels; keep the shared minimum preview height, right padding and exact-frame button behavior.
 - Fullscreen and existing corner-style fit controls use the shared regular Phosphor FullscreenIcon renderer and header glyph size, including legacy graph reset controls. Fullscreen and fit behaviors stay distinct.
 - A home capture requesting a zoomed-in milestone focuses the latest available milestone at 100% using the same framing helper as milestone navigation, with Chat and the shared Playback/Idea stream reader visible.
+
+## Drawer motion and historical to-dos — 2026-10-17
+
+- The shared chat drawer animates its intrinsic height with a 440ms decelerating opening and 300ms closing, using shared drawer motion tokens. Reverse transitions smoothly; keep contents mounted and make collapsed contents inert and hidden from assistive technology. Respect reduced-motion preferences. Fade the heading to 65% after expansion, restoring it on collapse.
+- To-do timestamps use 50% opacity and local creation time, with calendar-relative date labels (Today, Yesterday, N days ago) and a saved version suffix such as “(v30)”. Compute labels from persisted ISO timestamps and refresh while the app is open; calendar-day arithmetic must handle DST and year boundaries. Resolve the version from capture history at creation, preserve it thereafter, and omit unknown versions rather than inventing one.
+- Seed three past-dated sample to-dos once in the bundled gallery conversation, retaining existing items, completion, composer mode and drafts. Persist their generated dates; reloads must not regenerate or duplicate them. Other conversations retain empty drawers until used.
+
+## Drawer ordering and milestone cutouts — 2026-10-17
+
+- Display pending to-dos first and completed to-dos last, newest creation time first within both groups. Derive display order without mutating saved item order or IDs. Animate checkbox-triggered moves from each row’s current visual position, including interrupted animations, using shared timing and easing tokens; honor reduced motion and preserve focus on the checkbox.
+- Drawer text hover/focus gently shifts and fades in its underline using shared motion tokens. Completed text retains its strike-through. Relative timestamps include the clock only for Today and Yesterday; older days retain their relative date and version suffix.
+- Inserting a to-do into a nonempty draft preserves the draft and appends a newline (if needed), `------`, a newline, `Execute this todo: `, a newline, then the to-do text. An empty draft receives only the text. Switch to Prompt without submitting or changing the to-do.
+- Milestone trophies are canvas-colored cutouts with transparent button backgrounds, centered exactly on the branch station using the shared graph/card offsets and glyph size, independent of the bordered circular-node offsets.
+- A capture requesting a to-do added to the chat field opens the drawer and inserts its newest pending item through the normal draft action without submitting it.
+
+## Browser feedback: thumbnail, header controls, model selector and drawer count — 2026-10-17
+
+- Increase the shared message preview dimensions by 1.5×: 144px wide and a 90px minimum card height, with a 45% width cap for narrow panels. Keep the thumbnail flush to the card edges and allow content to grow vertically.
+- Fullscreen glyphs inherit the shared header button ink color at full opacity, including within the reader; generic muted reader icons must not override them.
+- Give the model trigger 7px vertical / 10px horizontal padding and its popup 8px padding on every side. Use the shared accessible selector with provider labels and persist the selection per chat. Keep the filled active state. This remains a prototype preference, not an API connection.
+- The model catalog is verified 2026-10-17 against [OpenAI](https://developers.openai.com/api/docs/models), [Anthropic](https://www.anthropic.com/claude/fable), and [Google](https://ai.google.dev/gemini-api/docs/models). Offer GPT-6 Astra, GPT-6.1 Sol, GPT-6 Luna, Claude Fable 5.1, Gemini 3.8 Flash and Gemini 3.5 Flash-Lite. Keep the catalog and sources together for future refreshes.
+- The To-do drawer header includes an outlined circular count of unfinished items, including zero, in both collapsed and expanded states. Derive it from completion state; update it immediately and provide an accessible live description. Use shared size/type tokens and let multi-digit counts grow without clipping.
+
+## Vertical Idea stream and composer refinements — 2026-10-17
+
+- Historical Idea stream now presents versions in one chronological vertical column, changing branch colors halfway between neighboring stations. Derive order, color ownership, folds and labels from graph data; preserve all original Git ancestry and keep the divergent `layoutGitHistory` implementation available for future use. This supersedes compact divergent lanes in the default Idea stream only; Test visual keeps its existing layout.
+- Milestone trophies have circular branch-colored backgrounds, centered on their station using the shared 36px milestone diameter; the 28px trophy remains canvas-colored. Branch colors remain consistent across routes, markers and labels regardless of selection.
+- Prompt / To-do pills share 7px vertical and 10px horizontal padding. The attachment icon matches the field placeholder foreground at full opacity. Align the unfinished to-do count to the header's right edge using a 14px minimum diameter and 9px type, allowing larger counts to grow.
+- Version output cards retain the preview, text and arrow without an additional logo beside the label. Push-frame Enter prototype actions render immediately with no entrance delay or animation; disable them while checking availability or building, and retain the missing-archive feedback.
+
+## Footer navigation and borderless playback actions — 2026-10-17
+
+- Put Center selected version and Milestone previous/current/next controls in Idea stream's footer, alongside its existing view controls. Keep Version blocks' shared header and fullscreen control. Footer controls may wrap in narrow panes without clipping; Test visual retains its standalone header navigation.
+- Playback's frame-action row has no border or right padding and a 0.4rem bottom margin. The annotation action is fully rounded with shared 6px vertical / 12px horizontal padding and a 13px icon.
+- All dropdown panels have zero outer padding through the shared dropdown-panel token. Preserve padding within option rows. Model options show only model names, without company suffixes; selections and keyboard behavior are unchanged. This supersedes the earlier 8px model-popup padding rule.
+- Saved-frame selectors stretch through their wrapper chain to fill the header's content height in both Gallery and Playback.
+
+## Recent Idea stream and reference images — 2026-10-17
+
+- Keep the latest three chronological versions individually visible, even without milestones; automatic folding applies to older eligible runs. On opening Idea stream, disclose the latest non-WIP commit and frame the recent versions plus that disclosure. Derive the default from Git/capture metadata and WIP titles, never version numbers. Explicit user selection and capture framing take precedence after launch.
+- Idea stream commit cards omit the details/line-change row. Their prompt-count button has no arrow and navigates to the node's matching saved push in Playback; disable it if no matching push exists. Test visual retains its detail controls.
+- Idea stream reference images appear as shared 84px square thumbnails, with all references available. Clicking one appends the original image as chat context without submitting or changing draft text; avoid duplicate attachments by URL. Nonimage references keep their file treatment.
+- The shared reader heading consumes spare width; date-range selectors stretch through their wrappers to fill the header just like saved-frame selectors.
+- New annotation-mode reference images use `visual_ref/annotation/[prompt #N] [annotation] <original filename>`. Ordinary references and historical filenames remain in place. The catalog, local server, production build and archived-prototype reference serving support this designated subfolder without permitting arbitrary paths. The save-reference command copies without overwriting existing files.
+
+
+## Main branch and draft milestones — 2026-10-17
+
+- Idea stream's `main` branch uses the semantic contrast color: white in dark mode and black in light mode. Apply it consistently to routes, stations, trophy backgrounds and branch labels; other branches keep their palette colors, independent of selection.
+- Only finished commits receive commit cards. WIP stations always offer milestone creation/editing and a prompt-count line underneath using the shared commit-statistics styling, without a commit card. Draft milestone notes persist locally against stable capture-version identity and transfer to the eventual Git commit. Include them in Milestone x/x navigation only after that version is finished; preserve edits and intentional deletions through reloads and identity changes.
+- Gallery / Playback view-switch labels use shared 10px inline padding. Composer Prompt / To-do pills use 5px vertical and 10px horizontal padding, superseding their previous 7px vertical padding.
+
+
+## Completed frames and compact stream controls — 2026-10-17
+
+- Gallery and Playback publish only completed prompt captures. Use the recorded completed-prompt counter as the publication boundary; a prompt-log entry or a new PNG alone must not expose the running prompt. Re-read the catalog when that boundary advances, retaining the latest completed prompt and existing push frames. Legacy catalogs without a completion counter remain readable.
+- Message version cards use a shared 20px image/content gap and a subtle fill lighter than the user bubble, derived by mixing its surface with 10% white. Keep previews flush with the outer card edges.
+- Header date selectors preserve the intrinsic width of their selected label, including padding and chevron; do not truncate the time range. Gallery / Playback switch labels use 6px inline padding.
+- Milestone trophy circles retain branch fill and receive a 2px black border in both themes. Fold count circles use 26px diameter and 16px type; folded timeline segments use an 80px gap. Derive these from shared Idea stream tokens, preserving node order, expansion and Git ancestry.
+
+
+## Filled gallery labels and date collision spacing — 2026-10-17
+
+- Gallery hover captions and featured frame-axis labels use the same flat page-color background as the top-left version counter: 94% fill with shared 2px block / 4px inline padding. Remove text halos and blurred backing; retain existing typography, plane alignment and theme colors.
+- Detect date-label overlap from measured text and projected bounding boxes at the current camera, zoom and viewport size. Move crowded dates in whole text-row increments, preferring upward placement and using downward rows near the top edge. Recompute from original anchors to avoid cumulative drift or camera feedback; restore baseline positions when space permits. Keep chronological ordering deterministic, wall/overhead rails independent during crossfade, and axis titles fixed. Do not modify frame positions, timestamps or version-axis spacing.
+
+## Flat prompt previews and drawer hover — 2026-10-17
+
+- Gallery prompt previews render in screen space, horizontally centered at 25% of the gallery viewport height, independent of frame perspective and camera zoom. Use the inspected frame's full prompt with summary fallback, normalize whitespace, and cap at 50 characters including `...` when truncated. Preserve the shared version-counter background and padding. Hide previews during Playback transitions and token view; leave axis labels and their collision spacing unchanged. This supersedes plane alignment for prompt previews only.
+- Drawer heading text starts at 65% opacity and brightens to full opacity on hover or keyboard focus over the shared 180ms hover timing. Expanded, idle headings dim to 50% after the drawer opens. Clip hover fill to the header's shared 12px upper corners without clipping the composer's dropdowns. Respect reduced-motion preferences.
+
+## Idea stream hover actions and return to Gallery — 2026-10-17
+
+- Playback remains switchable while Idea stream is open. Switching to Gallery closes the Idea stream subpanel and returns through the existing Gallery transition; opening Idea stream still enters Playback.
+- Only the latest chronological unpushed capture receives persistent Add milestone and prompt-count controls. Historical commits whose titles contain WIP do not qualify. Derive this distinction from capture metadata and chronology, never display labels.
+- Hovering an unfolded station reveals its Add milestone action with a shared 180ms opacity entrance. Retain it within a circular radius of 5% of browser viewport width around the station's rendered center, independent of graph zoom, and while interacting with the action or editor. Keyboard focus also reveals the action. Respect reduced motion.
+- Milestone cards omit the pencil glyph; clicking their text opens the existing editor. Their 17px text and 12px block / 14px inline padding scale together with the graph, without fixed-screen compensation or global control-height constraints.
+- Fold labels share branch-label typography and zoom compensation. Keep both their text and the number centered vertically on the fold station; count glyphs use explicit unit line-height.
+
+## Gallery pill navigation and simplified commit cards — 2026-10-17
+
+- Clicking the Version blocks title pill in Playback returns to Gallery, including when Idea stream is open. Reuse the existing return transition and close Idea stream; animate the mode label toward Gallery as the return begins. Respect the shared reduced-motion behavior.
+- Idea stream commit cards omit file-change counts, their separator, the overflow menu and Add branch. Retain the prompt-count navigation and a single Add to chat action using the shared filled secondary-button style formerly used by Add branch. Other graph modes retain their existing controls.
+- Fold-count numerals share the version-label font size, weight and zoom compensation. Apply the compensation only to the numeral so the circle retains its shared diameter and centered text.
