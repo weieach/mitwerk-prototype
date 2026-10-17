@@ -21,7 +21,7 @@ export const galleryTokens = {
   topView: { startDegrees: 55, fullDegrees: 75, dateFadeMs: 240, titleEndGap: 48 },
   labelFontSize: 10, labelWorldHeight: 22, labelTextureMin: 96, labelTextureMax: 512,
   hoverCaptionFrame: 0.2, hoverCaptionViewport: 0.055, hoverCaptionGap: 6, hoverCaptionScale: .25,
-  promptLabel: { maxCharacters: 50, topPercent: 25, fontSize: 12, edgeGap: 24 },
+  promptLabel: { maxCharacters: 50, topPercent: 20, fontSize: 12, edgeGap: 24 },
   labelBackdrop: { color: 'var(--paper)', opacity: .94, paddingInline: 4, paddingBlock: 2 }, labelSummaryLength: 42,
   disabledOpacity: 0.14, endpointOpacity: 0.72, refreshMs: 30_000,
   zoomMin: 0.5, zoomMax: 3, zoomStep: 0.25,

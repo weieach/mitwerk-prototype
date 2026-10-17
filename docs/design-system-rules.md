@@ -1187,3 +1187,25 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Branch-colored milestone cards — 2026-10-17
 
 - Every Idea stream milestone card uses a thin 1px border in its graph-derived branch route color, matching its station and branch label. Keep that color while editing inline. Reuse `--route-color`, including the theme-aware main-branch contrast color; do not assign colors by milestone text, version number or selection.
+
+
+## Workspace chrome restoration and to-do metadata — 2026-10-17
+
+- Load workspace layout styles once, after base and control styles. Home's dark-theme backdrop behind panels stays black through `--workspace-background`; panels retain their paper surface. Chat and Version blocks share the existing 44px border-box heading height, including the combined reader header. Narrow readers can still wrap their controls.
+- Add milestone and its replacement Not yet chip share action height, minimum width, typography, padding and 10px card separation; changing invitation state must not shift the content below. Keep the chip's rounded shape.
+- Each Idea stream to-do displays its persisted creation timestamp beneath its text, aligned with the text after the checkbox. Share the drawer's relative local-time formatting, saved version suffix, muted opacity and live refresh. Completed text stays struck through; timestamps remain readable. Keep the existing bounded list scrolling and graph-derived space reservation.
+
+
+## Brand menu spacing, growing to-do cards and zoom controls — 2026-10-17
+
+- Brand dropdown rows use the logo button's shared 10px inline padding, with a 4px anchor gap. Keep menu placement viewport-aware.
+- Idea stream to-do cards grow to fit all their items, including four or more, with no fixed max height or internal scrolling. Measure rendered list height independent of graph zoom and include it in timeline spacing and fit bounds so later versions remain clear. This supersedes the bounded list rule.
+- All zoom percentage buttons use the reusable ZoomScaleButton with a shared 64px minimum width; preserve reset and fit behavior and keep surrounding icon controls at their own size.
+
+
+## Compact brand and unfilled milestone dismissal — 2026-10-17
+
+- The workspace logo symbol and wordmark share a 4px gap. Preserve the menu anchor gap and inline padding.
+- Idea stream footer controls and their groups have no decorative borders or separators, with a 52px minimum width for icon buttons. Zoom percentage buttons retain their wider 64px minimum. Keep keyboard focus outlines.
+- Gallery hover prompt previews sit at 20% of the viewport height (previously 25%), retaining their horizontal centering and screen-space rendering.
+- Not yet uses a transparent background, including on hover, and shares Add milestone's 1px line-color border and 4px corner radius. Preserve their matching dimensions and card spacing.

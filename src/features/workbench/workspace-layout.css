@@ -17,7 +17,7 @@
 :root[data-theme=dark] { --workspace-background: #000; }
 .mw-app { background: var(--workspace-background); }
 .mw-app .mw-topbar { height:var(--workspace-bar-height); min-height:var(--workspace-bar-height); padding:0 14px 0 10px; background:var(--workspace-background); gap:16px; }
-.mw-topbar .workspace-brand { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.mw-topbar .workspace-brand { display:flex; align-items:center; gap:var(--workspace-brand-gap); flex-shrink:0; }
 .mw-topbar .workspace-brand .workspace-logo { width:25px; height:25px; object-fit:contain; }
 .mw-topbar .workspace-brand strong { font-size:14px; font-weight:700; }
 .workspace-links { display:flex; align-items:center; min-width:0; gap:8px; overflow:auto; scrollbar-width:none; }
@@ -327,7 +327,7 @@
 .workspace .playback-end-controls { justify-self:end; display:flex; align-items:center; gap:var(--playback-end-gap); }
 .workspace .playback-end-controls .playback-options { display:contents; }
 .workspace .playback-end-controls .row-select { flex:none; width:auto; padding-inline:6px; }
-.message-version-output > .idea-add { margin-top:10px; font:var(--control-font-size)/1.25 var(--sans); height:var(--base-control-height); min-height:var(--base-control-height); padding:0 12px; }
+.mw-app .message-version-output > :is(.idea-add, .milestone-not-yet) { display:inline-flex; align-items:center; justify-content:center; margin-top:var(--message-milestone-action-gap); min-width:var(--message-milestone-action-width); font:var(--control-font-size)/1.25 var(--sans); height:var(--base-control-height); min-height:var(--base-control-height); padding:0 12px; }
 .message-version-output > .idea-editor { margin-top:10px; }
 .message-version-output .idea-editor textarea { height:auto; font:12px/1.4 var(--sans); }
 
@@ -336,7 +336,7 @@
 .milestone-commit-option input { accent-color:var(--ink); }
 
 .workspace-brand-menu { flex:none; }
-.mw-topbar .workspace-brand-menu .workspace-brand { padding:6px 10px; border-radius:var(--control-radius); }
+.mw-topbar .workspace-brand-menu .workspace-brand { padding:6px var(--brand-padding-inline); border-radius:var(--control-radius); }
 .workspace-brand-menu .workspace-brand[aria-expanded=true], .brand-dropdown { background:var(--user-message-fill); }
 /* Landing intro: complete-white frames with a white glow on a dark stage, under a dark scrim. Timing in landing-*.ts; colors and reveal here. No blur. */
 .landing-page {
@@ -396,8 +396,8 @@
 /* Static grain sits over the invitation gradient without intercepting clicks. */
 .mw-app .message-version-output.is-milestone-ready .message-version-card { position:relative; isolation:isolate; overflow:hidden; }
 .message-version-output.is-milestone-ready .message-version-card::before { content:''; position:absolute; inset:0; z-index:-1; pointer-events:none; opacity:var(--milestone-grain-opacity); background-image:var(--milestone-grain); }
-.mw-app .message-version-output .milestone-not-yet { width:fit-content; border:1px solid var(--line); border-radius:999px; padding:3px 10px; background:var(--fill); color:var(--muted); font:inherit; }
-.mw-app .message-version-output .milestone-not-yet:hover { background:var(--fill-hover); color:var(--ink); }
+.mw-app .message-version-output .milestone-not-yet { width:fit-content; background:transparent; color:var(--muted); }
+.mw-app .message-version-output .milestone-not-yet:hover { background:transparent; color:var(--ink); }
 
 .capture-bucket-control { display:inline-flex; align-items:center; min-width:0; }
 
@@ -409,3 +409,13 @@
 .workspace .tree-panel[data-tree-mode=history] .canvas-controls button { min-width:var(--idea-footer-control-min-width); }
 .workspace .tree-panel[data-tree-mode=history] .canvas-controls .icon-button,
 .workspace .tree-panel[data-tree-mode=history] .idea-footer-navigation .zoom-controls > button:not(.endpoint-jump) { width:var(--idea-footer-control-min-width); }
+
+/* Shared header children fit inside the border-box height, including the reader portal. */
+.workspace .shared-reader-header .workspace-panel-header :is(.panel-heading, .panel-header-actions, .panel-expand) { min-height:calc(var(--panel-heading-height) - 1px); }
+
+.select-menu.brand-dropdown [role=option] { padding-inline:var(--brand-padding-inline); }
+.workspace .icon-button.zoom-scale-button,
+.workspace .tree-panel[data-tree-mode=history] .canvas-controls .icon-button.zoom-scale-button { width:var(--zoom-scale-min-width); min-width:var(--zoom-scale-min-width); flex-shrink:0; }
+
+.mw-app .message-version-output > :is(.idea-add, .milestone-not-yet) { border:1px solid var(--line); border-radius:var(--control-radius); }
+.workspace .tree-panel[data-tree-mode=history] .canvas-controls :is(button, .zoom-controls) { border:0; }

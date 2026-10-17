@@ -413,4 +413,10 @@
 .select-menu.capture-bucket-menu { font-size:var(--capture-chip-font-size); padding:0; }
 .capture-bucket-menu [role=option] { padding:6px var(--capture-chip-padding-inline); min-height:0; font-weight:inherit; }
 
-:root { --idea-footer-control-min-width:44px; }
+:root { --idea-footer-control-min-width:52px; }
+
+:root { --message-milestone-action-gap:10px; --message-milestone-action-width:116px; --idea-todo-time-size:12px; --idea-todo-time-gap:4px; }
+
+:root { --brand-padding-inline:10px; --zoom-scale-min-width:64px; }
+
+:root { --workspace-brand-gap:4px; }

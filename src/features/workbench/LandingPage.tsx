@@ -7,7 +7,6 @@ import { multiplyIntro } from './landing-multiply';
 import { impactIntro } from './landing-impact';
 import { flattenIntro, unfoldIntro } from './landing-trials';
 import { createLandingStage } from './landing-stage';
-import './workspace-layout.css';
 
 const geometry = logoGeometry(logoShapePart, logoShape);
 /** Version 3 (impact) is the default; `?intro=` picks `stack`, `multiply`, or the `flatten` / `unfold` trials. */

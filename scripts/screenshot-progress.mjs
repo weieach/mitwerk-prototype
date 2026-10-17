@@ -728,6 +728,11 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
         const draft = await cdp('Runtime.evaluate', { expression: '!!document.querySelector("textarea[aria-label=Message]")?.value', returnByValue: true });
         if (!draft.result?.value) { await delay(100); continue; }
       }
+      if (hasFlag('brand-menu')) {
+        await cdp('Runtime.evaluate', { expression: `(() => { const trigger = document.querySelector('button[aria-label="MitWerk menu"]'); if (trigger?.getAttribute('aria-expanded') !== 'true') trigger?.click(); })()` });
+        const menu = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.brand-dropdown:popover-open')`, returnByValue: true });
+        if (!menu.result?.value) { await delay(100); continue; }
+      }
       if (hasFlag('model-menu')) {
         await cdp('Runtime.evaluate', { expression: `(() => { const trigger = document.querySelector('button[aria-label="Model"]'); if (trigger?.getAttribute('aria-expanded') !== 'true') trigger?.click(); })()` });
         const menu = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('[role="listbox"][aria-label="Model"]')`, returnByValue: true });

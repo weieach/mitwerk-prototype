@@ -6,7 +6,7 @@ export function ZoomScaleButton({ zoom, onResetZoom, onResetView, label = 'Reset
   const pending = useRef<number | null>(null);
   const cancel = () => { if (pending.current !== null) window.clearTimeout(pending.current); pending.current = null; };
   useEffect(() => cancel, []);
-  return <button type="button" className="icon-button" aria-label={label}
+  return <button type="button" className="icon-button zoom-scale-button" aria-label={label}
     title="Click to reset zoom · Double-click or Shift+Enter to reset view"
     onClick={event => {
       cancel();

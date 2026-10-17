@@ -1138,3 +1138,103 @@ for all the milestone cards in stream, add an outline to it the same color as it
 ```text
 commit with "added landing screen & agent-attempted animation. milestone reminder as special status of version card; improve milestone edit / create overlay; todo integrated into idea stream. implemented more detailed bucket sorting logic in capture chips" and merge back to main. x counter
 ```
+
+## Prompt #313 uncounted
+
+```text
+push & switch me back to main branch. x counter
+```
+
+## Prompt #314
+
+```text
+the bg color of home behind all panels should still be black. Check why the version block header is in a different height as chat and restore to the height that was used before. The "not yet" chip should be same size and margin away from the version card. For the todos in idea stream, each todo should include timecode below each checkbox text
+```
+
+## Prompt #315
+
+```text
+# Browser comments:
+
+## User Comment 1
+Browser
+Node position: (194, 62) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "Switch to light mode"
+Target role: "option"
+Target selector: div#_r_0_-0
+Target path: header > div > div > div
+Saved marker screenshot: attached as a labeled image for Comment 1
+Comment:
+inline padding of these two rows here should match the logo. add a little gap above the dropdown list
+
+## User Comment 2
+Browser
+Node position: (1585, 974) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "To-dos for V30"
+Target selector: div.canvas-world > div.version-position:nth-of-type(11) > article.idea-card > ul.idea-todos
+Target path: div > div > article > ul
+Nearby text: "Incomplete: Update serif typeface Today 09:04 (v29) Incomplete: Polish contrast"
+Saved marker screenshot: attached as a labeled image for Comment 2
+Comment:
+this shouldnt clip off with a max height, it could expand to fit 4 todos
+
+## User Comment 3
+Browser
+Node position: (1753, 1283) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "Reset Idea stream zoom"
+Target selector: section#workspace-pane-ideas > footer.canvas-controls.has-navigation > div.panel-header-actions:nth-of-type(2) > button.icon-button:nth-of-type(2)
+Target path: section > footer > div > button
+Nearby text: "100%"
+Saved marker screenshot: attached as a labeled image for Comment 3
+Comment:
+zoom scale number btns should all have higher min width
+
+## My request:
+
+```
+
+## Prompt #316
+
+```text
+# Browser comments:
+
+## User Comment 1
+Browser
+Node position: (51, 29) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "MitWerk menu"
+Target selector: button#navigation-toggle
+Target path: div > header > div > button
+Nearby text: "MitWerk"
+Saved marker screenshot: attached as a labeled image for Comment 1
+Comment:
+reduce gap
+
+## User Comment 2
+Browser
+Node position: (1392, 1279) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "Jump to milestone 7 of 7"
+Target selector: div.idea-footer-navigation:nth-of-type(1) > div.panel-header-actions > div.zoom-controls.endpoint-controls:nth-of-type(2) > button.endpoint-jump:nth-of-type(2)
+Target path: div > div > div > button
+Nearby text: "Milestone 7/7"
+Saved marker screenshot: attached as a labeled image for Comment 2
+Comment:
+remove border on these btns, and increase min width of the icon btns once more
+
+## My request:
+for the prompt label shown upon frame hover in gallery, move it upward a bit more. The not yet btn shouldnt have fill, its corner radius and border should match the "add milestone" chip
+```

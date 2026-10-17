@@ -2,7 +2,8 @@ import { EditableTodoText } from './EditableTodoText';
 import { CaptureBucketChip } from './CaptureBucketChip';
 import { composerModels } from './composer-models';
 import { SelectMenu, useSelectMenu } from '../../components/SelectMenu';
-import { useEffect, useId, useState } from 'react';
+import { useId, useState } from 'react';
+import { useMinuteClock } from '../../shared/useMinuteClock';
 import type { ReactNode } from 'react';
 import { PhosphorIcon } from '../../components/PhosphorIcon';
 import { useReorderAnimation } from '../../shared/useReorderAnimation';
@@ -38,13 +39,7 @@ export function ComposerDrawer({ state, onToggle, onComplete, onUseTodo, onEdit,
   const todos = orderedComposerTodos(state.todos);
   const unfinished = state.todos.filter(todo => !todo.complete).length;
   const countId = `${id}-count`;
-  const [clock, setClock] = useState(() => new Date());
-  useEffect(() => {
-    const refresh = () => setClock(new Date());
-    const timer = window.setInterval(refresh, 60_000);
-    document.addEventListener('visibilitychange', refresh);
-    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', refresh); };
-  }, []);
+  const clock = useMinuteClock();
   const [editing, setEditing] = useState<'screen' | 'overlay' | null>(null);
   const [value, setValue] = useState('');
   const captureChip = (key: 'screen' | 'overlay') => editing === key
