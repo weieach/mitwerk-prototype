@@ -536,3 +536,10 @@
 /* The message box sits one equal inset from the panel's sides and bottom; panel radius − inset = drawer radius, so the corners are concentric. */
 :root { --composer-inset:calc(var(--workspace-radius) - var(--composer-drawer-radius)); }
 .mw-app .composer-area { padding:8px var(--composer-inset) var(--composer-inset); }
+
+/* "Not yet" folds the version card to half its height; the preview keeps its aspect ratio, so it shrinks and slides left with the card. */
+:root { --milestone-dismiss-scale:.5; }
+.mw-app .message-version-card { transition:min-height var(--motion-layout) var(--ease-layout), background-color var(--motion-base) var(--ease-standard); }
+.message-version-preview { transition:flex-basis var(--motion-layout) var(--ease-layout); }
+.mw-app .message-version-output.is-milestone-dismissed .message-version-card { min-height:calc(var(--message-preview-height) * var(--milestone-dismiss-scale)); }
+.message-version-output.is-milestone-dismissed .message-version-preview { flex-basis:calc(min(var(--message-preview-width), var(--message-preview-max-width)) * var(--milestone-dismiss-scale)); }

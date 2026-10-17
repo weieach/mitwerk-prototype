@@ -47,7 +47,7 @@ export function MessageOutput({ output, onOpen }: { output: NonNullable<Message[
     window.addEventListener(milestonesChangedEvent, sync);
     return () => { window.removeEventListener('storage', sync); window.removeEventListener(milestonesChangedEvent, sync); };
   }, [key]);
-  return <div ref={root} className={`message-version-output${jumping ? ' is-milestone-jumping' : ''}${invited ? ' is-milestone-ready' : ''}`} style={{'--milestone-invite-gradient':milestoneInviteGradient, '--milestone-bump-duration':`${milestoneInviteMotion.duration}ms`} as CSSProperties}>
+  return <div ref={root} className={`message-version-output${jumping ? ' is-milestone-jumping' : ''}${invited ? ' is-milestone-ready' : ''}${key && dismissedKey === key ? ' is-milestone-dismissed' : ''}`} style={{'--milestone-invite-gradient':milestoneInviteGradient, '--milestone-bump-duration':`${milestoneInviteMotion.duration}ms`} as CSSProperties}>
     <button type="button" className="message-version-card" aria-label={invited ? 'Ready to mark a new milestone?' : `Version block #${output.version}, Prompt #${output.prompt}`} onClick={invited ? openMilestone : () => onOpen()}>
       <span className="message-version-preview"><img src={`${import.meta.env.BASE_URL}${output.imageUrl}`} alt="Preview of the generated interface"/></span>
       <span className="message-version-label"><span>{invited ? 'Ready to mark a new milestone?' : `Version block #${output.version}, Prompt #${output.prompt}`}</span></span>

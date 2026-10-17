@@ -1292,3 +1292,4 @@ This file is reserved for project-wide design-system rules requested by the user
 - The To-do drawer count is a plain number with tabular figures, never ringed.
 - The message box keeps one equal inset (`--composer-inset` = panel radius − drawer radius, 10px) from the panel's sides and bottom, so its corners are concentric with the panel.
 - The to-do section above the composer is labeled “To-do” (accessible name “To-dos”); the word “drawer” is not shown.
+- Choosing “Not yet” on a milestone invitation folds the version card to `--milestone-dismiss-scale` (50%) of its height over `--motion-layout`; the preview keeps its aspect ratio, so it shrinks and slides left with the card.
