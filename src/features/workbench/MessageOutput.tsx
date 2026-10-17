@@ -4,6 +4,7 @@ import type { CSSProperties } from 'react';
 import type { Message } from './model';
 import { useEffect, useRef, useState } from 'react';
 import { MilestoneButton } from '../version-tree/MilestoneControls';
+import { MilestoneInviteField } from './MilestoneInviteField';
 import { captureMilestoneKey, milestoneStorageKey, milestonesChangedEvent, parseMilestones } from '../version-tree/idea-stream';
 
 /** The same output treatment is available to any conversation message. */
@@ -49,7 +50,7 @@ export function MessageOutput({ output, onOpen }: { output: NonNullable<Message[
   }, [key]);
   return <div ref={root} className={`message-version-output${jumping ? ' is-milestone-jumping' : ''}${invited ? ' is-milestone-ready' : ''}${key && dismissedKey === key ? ' is-milestone-dismissed' : ''}`} style={{'--milestone-invite-gradient':milestoneInviteGradient, '--milestone-bump-duration':`${milestoneInviteMotion.duration}ms`} as CSSProperties}>
     <button type="button" className="message-version-card" aria-label={invited ? 'Ready to mark a new milestone?' : `Version block #${output.version}, Prompt #${output.prompt}`} onClick={invited ? openMilestone : () => onOpen()}>
-      <span className="message-version-preview"><img src={`${import.meta.env.BASE_URL}${output.imageUrl}`} alt="Preview of the generated interface"/></span>
+      {invited && <MilestoneInviteField/>}<span className="message-version-preview"><img src={`${import.meta.env.BASE_URL}${output.imageUrl}`} alt="Preview of the generated interface"/></span>
       <span className="message-version-label"><span>{invited ? 'Ready to mark a new milestone?' : `Version block #${output.version}, Prompt #${output.prompt}`}</span></span>
       <ArrowUpRight size={14}/>
     </button>

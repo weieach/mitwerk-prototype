@@ -23,7 +23,7 @@ export function SavedFrameSelect({ frames, counts, value, onChange }: {
       <span className="row-select-copy">{selected ? formatFrameLabel(selected) : frames.length ? 'Select frame' : 'No frames in range'}</span>
       <PhosphorIcon name="caret-down" size="var(--selector-caret-size)"/>
     </button>
-    {menu.open && <SelectMenu id={id} label="Saved frames, newest first" anchor={menu.trigger} options={options} value={value}
+    {menu.open && <SelectMenu closing={menu.closing} id={id} label="Saved frames, newest first" anchor={menu.trigger} options={options} value={value}
       minWidth={savedFrameMenuMinWidth} onChoose={menu.choose} onDismiss={menu.dismiss}/>}
   </>;
 }

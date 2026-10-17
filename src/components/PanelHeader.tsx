@@ -9,8 +9,8 @@ export function PanelHeader({ title, mode, icon, actions, onTitleClick, onModeCh
 }) {
   return <header className="panel-header workspace-panel-header">
     <div className="panel-heading">
-      {icon && !mode && <PhosphorIcon name={icon} size={15}/>}
-      {mode ? <button className="panel-title-pill" onClick={onTitleClick} aria-label={onTitleClick ? 'Return to gallery' : undefined}>{icon && <PhosphorIcon name={icon} size={15}/>}{title}</button> : <h2 title={title}>{title}</h2>}
+      {icon && <PhosphorIcon name={icon} size={15}/>}
+      {onTitleClick ? <button type="button" className="panel-title-button" onClick={onTitleClick}>{title}</button> : <h2 title={title}>{title}</h2>}
       {mode && <PanelViewSwitch mode={mode} disabled={modeDisabled} onChange={onModeChange}/>}
     </div>
     <div className="panel-header-actions">

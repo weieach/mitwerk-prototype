@@ -430,3 +430,9 @@
 :root[data-theme=dark] { --view-tag-bg:rgb(255 255 255 / 14%); --view-tag-ink:var(--ink); }
 
 .mw-app .inline-text-field:focus-visible { outline:none; }
+
+/* Milestone invitation field: three pale, cool colors pooled by a slow noise shader (MilestoneInviteField). Dark ink reads on all three. */
+:root { --milestone-invite-a:#f0f4f5; --milestone-invite-b:#d9e2ef; --milestone-invite-c:#c1e4e9; --milestone-invite-ink:#191a1b; --milestone-grain-opacity:.08; }
+
+/* Dark-mode milestone field: the same three cool hues, deepened so the card glows quietly instead of flashing white; ink turns light. */
+:root[data-theme=dark] { --milestone-invite-a:#1d2629; --milestone-invite-b:#232c3c; --milestone-invite-c:#183338; --milestone-invite-ink:#e9eef0; }

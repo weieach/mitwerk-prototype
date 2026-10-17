@@ -14,7 +14,7 @@
 .sys-section-head p { max-width:60ch; color:var(--muted); }
 .sys-sub { margin:0 0 10px; font-size:12px; font-weight:500; color:var(--muted); }
 .sys-group + .sys-group { margin-top:24px; }
-.sys-principles { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:var(--workspace-gutter); margin:0; padding:0; list-style:none; }
+.sys-principles { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:var(--workspace-gutter); margin:0; padding:0; list-style:none; }
 .sys-principles li { padding:16px; border-radius:var(--composer-drawer-radius); background:var(--fill); color:var(--muted); }
 .sys-principles strong { display:block; margin-bottom:4px; color:var(--ink); font-weight:500; }
 .sys-swatches { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px; }

@@ -1299,3 +1299,38 @@ This file is reserved for project-wide design-system rules requested by the user
 - Supersedes the three-layer `src/design-system/tokens.css` and its Milestone / To-do / Bucket / Composed showcase, which the product never used; they are removed. `?view=system` is now a live reference that resolves the product's own tokens (surfaces, text, strokes, layout, motion, type) from the running stylesheet, in the current theme, so it cannot drift from the app.
 - Light mode inverts the old white-page hierarchy: panels are a soft gray (`--paper` #f5f5f3 on `--workspace-background` #e2e2df), and only what you act on is lighter — the message box and in-chat version and milestone cards are white (`--message-version-fill`), and your own sent messages are a low-contrast near-white (`--user-message-fill` #fafaf9). Control fills and the To-do section sit one step below the panel.
 - Card folds (milestone “Not yet”, the system page fold demo) use `--motion-fold` (380ms) with `--ease-fold`, which moves on the first frame and then settles; the slow-in layout curve read as a hitch after a click.
+
+## Version blocks title and view switch — 2026-10-17
+
+- Supersedes the titled pill: Version blocks uses the same title format as every panel (15px icon at `--panel-title-inset`, 13px/500 title, no outline). The panel radius stays 22px.
+- “Gallery” was the current view of Version blocks, shown alone. The switch now shows both views, Gallery (3D album of every version) and Playback (step through frames as a timelapse); the current one is in ink on `--fill`, the other is muted, and each has a tooltip.
+
+## Planned panel model (for the merge into main) — 2026-10-17
+
+- Idea stream is meant to become its own third panel, not a split inside Version blocks. That change waits for the Live server panel to be removed (another team owns Live server). Until then, toggling Idea stream still splits the reader. Whoever merges `design-system` into `main` should restructure Idea stream as a standalone panel once Live server is gone, and keep the top-bar icon order matching the panels left to right.
+- Lines inside panels (under titles, above footers, between controls and between Playback and Idea stream) use `--panel-divider`: #2b2a29 in dark mode, never black; light mode keeps the workspace background tone.
+
+## Milestone invitation field, Not yet width, date range — 2026-10-17
+
+- Supersedes the branch-color invitation gradient: the milestone invitation card is filled by `MilestoneInviteField`, a WebGL shader of three pale cool colors (`--milestone-invite-a/b/c`: #f0f4f5, #d9e2ef, #c1e4e9). Three large, soft Gaussian color masses wander on slow out-of-phase orbits with a low-frequency warp; each pixel is their weighted average, so the colors melt together with no edges or fine texture and visibly drift. Text is `--milestone-invite-ink` (#191a1b). It fades in, pauses off screen or in hidden tabs, and holds a single frame with reduced motion. Do not release the WebGL context on unmount: React StrictMode remounts the same canvas.
+- “Not yet” is 70% of the milestone action width.
+- The date range control centers its label with the caret beside it; its menu (`align="center"` on `RowSelect` / `SelectMenu`) is only as wide as its options, centered under the control, with centered labels.
+- The To-do section carries a very faint top glow: `--composer-drawer-glow` (dark #2e2b2f at 100% fading to #25272e at 0%; light 40% #d9e2ef fading to 0%) ending at 68% of its height, layered over `--composer-drawer-surface`. Hover changes only the surface color, so the glow stays.
+- The date range trigger stretches to fill its footer cell like the other footer controls, so “All time” shares their vertical center.
+- The Prompt / To-do toggle uses a low-contrast track (`--composer-mode-track`, one step off the message box) and its selected segment takes the message box color (`--composer-surface`); the unselected label is muted.
+- Composer tool buttons (attach, send) sit `--composer-tool-inset` (8px inside the border) from the message box sides, matching the bottom inset.
+
+## Bucket menu as a capsule stack; detail underline — 2026-10-17
+
+- Supersedes the pill that turned into a field with a menu unrolling beneath it. The bucket chip never changes while choosing. The other buckets drop below it as separate capsules (`--capture-option-surface`, paler than the chip), separated by `--capture-stack-gap`; each capsule hugs its own label. The last, palest capsule (`--capture-new-surface`) is a field for typing a new bucket, grows with its text from `--capture-new-min-width`, and has focus on open. Arrow keys move through the stack, Enter picks or creates, Escape closes. Page chips on to-dos use the same stack, with a “No page” capsule when one is set.
+- The capture detail field always shows a thin (0.5px) underline, slightly stronger on hover and 1px on focus.
+- Dark mode has its own milestone field: the same three cool hues deepened (`--milestone-invite-a/b/c` #1d2629, #232c3c, #183338) with light ink (#e9eef0), so the card glows quietly instead of flashing white. The shader re-reads the tokens when the theme changes.
+- Dragging the To-do heading stretches or squeezes only the to-do section (its top edge rises when dragging up; heading and list slide toward the message box when dragging down). The message box never moves.
+- Chip labels keep their full line box (never trim or clip ascenders and descenders) and lift half a pixel (`padding-bottom:1px`) so lowercase names sit optically centered with chip icons.
+
+- Every chip (bucket, page, empty page ghost), option capsule and add-new capsule uses one height (`--capture-chip-height`, 22px) and one font size (`--capture-chip-font-size`); there is no compact chip size.
+
+## Unified reveal and the canonical system — 2026-10-17
+
+- Every popover follows one reveal: enter fades and drops in over `--motion-base` with `--ease-enter`; exit reverses over `--motion-exit` (140ms) with `--ease-exit`, then unmounts. `useSelectMenu` keeps menus mounted through a `closing` phase that SelectMenu renders as `.is-closing` (inert). Bucket capsules stagger by `--motion-stagger` (28ms): top first in, bottom first out. Dialogs (`dialog.mw-modal`) and tooltips use the same reveal.
+- This branch's system is canonical; `docs/design-system.md` summarizes it and gives the merge procedure for branches with ongoing feature work.

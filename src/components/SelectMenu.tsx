@@ -10,8 +10,12 @@ const preferredHeight = 360;
  * The designed selection overlay shared by every selector. It opens in the top layer next to its trigger,
  * so it clears clipped panels and stays interactive inside modal dialogs such as fullscreen theater.
  */
-export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, gap = 0, className = '', focusOnOpen = true, activeIndex, onActiveIndexChange, onChoose, onDismiss }: {
+export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, gap = 0, className = '', align = 'start', closing = false, focusOnOpen = true, activeIndex, onActiveIndexChange, onChoose, onDismiss }: {
   id: string; label: string; anchor: RefObject<HTMLElement | null>; options: readonly SelectMenuOption[]; value: string;
+  /** `center` sizes the menu to its options and centers it under the trigger instead of matching the trigger width. */
+  align?: 'start' | 'center';
+  /** Exit phase: the menu plays its exit transition and ignores input until it unmounts. */
+  closing?: boolean;
   className?: string; minWidth?: number; gap?: number; focusOnOpen?: boolean; activeIndex?: number; onActiveIndexChange?: (index: number) => void; onChoose: (value: string) => void; onDismiss: (restoreFocus: boolean) => void;
 }) {
   const list = useRef<HTMLDivElement>(null);
@@ -24,15 +28,16 @@ export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, ga
     if (!menu.matches(':popover-open')) menu.showPopover();
     const place = () => {
       const rect = anchor.current!.getBoundingClientRect();
-      const width = Math.min(Math.max(rect.width, minWidth), innerWidth - viewportGap * 2);
+      const width = align === 'center' ? Math.min(Math.max(menu.scrollWidth, minWidth), innerWidth - viewportGap * 2) : Math.min(Math.max(rect.width, minWidth), innerWidth - viewportGap * 2);
+      const preferredLeft = align === 'center' ? rect.left + rect.width / 2 - width / 2 : rect.left;
       const below = innerHeight - rect.bottom - viewportGap - gap, above = rect.top - viewportGap - gap;
       const flip = below < Math.min(preferredHeight, menu.scrollHeight) && above > below;
-      setBounds({ left: Math.max(viewportGap, Math.min(rect.left, innerWidth - viewportGap - width)), minWidth: width, maxWidth: innerWidth - viewportGap * 2,
+      setBounds({ left: Math.max(viewportGap, Math.min(preferredLeft, innerWidth - viewportGap - width)), minWidth: width, maxWidth: innerWidth - viewportGap * 2,
         maxHeight: Math.min(preferredHeight, flip ? above : below), ...(flip ? { bottom: innerHeight - rect.top + gap } : { top: rect.bottom + gap }) });
     };
     place(); addEventListener('resize', place); addEventListener('scroll', place, true);
     return () => { removeEventListener('resize', place); removeEventListener('scroll', place, true); };
-  }, [anchor, minWidth, gap, options.length]);
+  }, [anchor, minWidth, gap, align, options.length]);
   useEffect(() => {
     if (focusOnOpen) list.current?.focus();
     const outside = (event: PointerEvent) => {
@@ -44,7 +49,7 @@ export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, ga
   }, [anchor, onDismiss, focusOnOpen]);
   useEffect(() => { list.current?.children[cursor]?.scrollIntoView({ block: 'nearest' }); }, [cursor]);
   return <div ref={list} id={id} popover="manual" role="listbox" aria-label={label} aria-activedescendant={`${id}-${cursor}`} tabIndex={-1}
-    className={`select-menu ${className}`} style={bounds} onMouseDown={event => { if (!focusOnOpen) event.preventDefault(); }}
+    className={`select-menu ${className}${align === 'center' ? ' is-centered' : ''}${closing ? ' is-closing' : ''}`} inert={closing} style={bounds} onMouseDown={event => { if (!focusOnOpen) event.preventDefault(); }}
     onKeyDown={event => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onDismiss(true); }
       else if (event.key === 'Tab') onDismiss(false);
@@ -61,16 +66,30 @@ export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, ga
   </div>;
 }
 
-/** Trigger state for a SelectMenu: arrow keys open it, choosing or Escape returns focus to the trigger. */
+/** Reads the shared exit duration so JS unmounting waits for the CSS exit transition. */
+export function exitDuration() {
+  if (typeof document === 'undefined') return 0;
+  return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--motion-exit')) || 0;
+}
+
+/** Trigger state for a SelectMenu: arrow keys open it, choosing or Escape returns focus to the trigger. `open` stays true through the exit transition; `closing` marks that phase. */
 export function useSelectMenu<T extends HTMLElement>(onChange: (value: string) => void) {
   const trigger = useRef<T>(null);
-  const [open, setOpen] = useState(false);
-  const dismiss = useRef((restoreFocus: boolean) => { setOpen(false); if (restoreFocus) trigger.current?.focus(); }).current;
+  const [phase, setPhase] = useState<'closed' | 'open' | 'closing'>('closed');
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const show = () => { clearTimeout(timer.current); setPhase('open'); };
+  const dismiss = useRef((restoreFocus: boolean) => {
+    clearTimeout(timer.current);
+    setPhase(current => current === 'closed' ? current : 'closing');
+    timer.current = setTimeout(() => setPhase(current => current === 'closing' ? 'closed' : current), exitDuration());
+    if (restoreFocus) trigger.current?.focus();
+  }).current;
+  useEffect(() => () => clearTimeout(timer.current), []);
   const choose = (value: string) => { onChange(value); dismiss(true); };
   const triggerProps = {
-    ref: trigger, 'aria-haspopup': 'listbox' as const, 'aria-expanded': open,
-    onClick: () => setOpen(current => !current),
-    onKeyDown: (event: KeyboardEvent) => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setOpen(true); } },
+    ref: trigger, 'aria-haspopup': 'listbox' as const, 'aria-expanded': phase === 'open',
+    onClick: () => phase === 'open' ? dismiss(false) : show(),
+    onKeyDown: (event: KeyboardEvent) => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); show(); } },
   };
-  return { trigger, open, dismiss, choose, triggerProps };
+  return { trigger, open: phase !== 'closed', closing: phase === 'closing', dismiss, choose, triggerProps };
 }

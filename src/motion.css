@@ -12,6 +12,9 @@
   --ease-standard: cubic-bezier(.2, 0, 0, 1);
   --ease-enter: cubic-bezier(.16, 1, .3, 1);
   --ease-exit: cubic-bezier(.4, 0, 1, 1);
+  /* Exits are shorter than entrances; staggered lists offset each item by this step. */
+  --motion-exit: 140ms;
+  --motion-stagger: 28ms;
   --press-scale: .97;
   --menu-enter-shift: -4px;
   --composer-rest-height: 34px;
@@ -31,6 +34,20 @@
 @starting-style { .select-menu:popover-open { opacity: 0; translate: 0 var(--menu-enter-shift); } }
 .select-menu.capture-bucket-menu:popover-open { translate: none; clip-path: inset(0 0 0 0); }
 @starting-style { .select-menu.capture-bucket-menu:popover-open { opacity: 1; translate: none; clip-path: inset(0 0 100% 0); } }
+
+/* One reveal pattern for every popover: enter = fade + drop over --motion-base with --ease-enter; exit = reverse over --motion-exit with --ease-exit, then unmount. */
+.select-menu.is-closing:popover-open { opacity: 0; translate: 0 var(--menu-enter-shift); pointer-events: none; transition: opacity var(--motion-exit) var(--ease-exit), translate var(--motion-exit) var(--ease-exit), clip-path var(--motion-exit) var(--ease-exit); }
+
+/* Bucket capsules drop in one after another (top first) and leave in reverse (bottom first). */
+.capture-bucket-stack .capture-bucket-option, .capture-bucket-stack .capture-bucket-new { transition: opacity var(--motion-base) var(--ease-enter) calc(var(--i, 0) * var(--motion-stagger)), translate var(--motion-base) var(--ease-enter) calc(var(--i, 0) * var(--motion-stagger)), background-color var(--motion-fast) var(--ease-standard); }
+@starting-style { .capture-bucket-stack:popover-open .capture-bucket-option, .capture-bucket-stack:popover-open .capture-bucket-new { opacity: 0; translate: 0 calc(var(--menu-enter-shift) * 1.5); } }
+.capture-bucket-stack.is-closing .capture-bucket-option, .capture-bucket-stack.is-closing .capture-bucket-new { opacity: 0; translate: 0 calc(var(--menu-enter-shift) * 1.5); pointer-events: none; transition: opacity var(--motion-exit) var(--ease-exit) calc((var(--n, 1) - 1 - var(--i, 0)) * var(--motion-stagger) / 2), translate var(--motion-exit) var(--ease-exit) calc((var(--n, 1) - 1 - var(--i, 0)) * var(--motion-stagger) / 2); }
+
+/* Dialogs and tooltips use the same reveal. */
+dialog.mw-modal[open] { opacity: 1; translate: 0 0; transition: opacity var(--motion-base) var(--ease-enter), translate var(--motion-base) var(--ease-enter); }
+@starting-style { dialog.mw-modal[open] { opacity: 0; translate: 0 8px; } }
+dialog.mw-modal::backdrop { transition: background-color var(--motion-base) var(--ease-standard); }
+@starting-style { dialog.mw-modal[open]::backdrop { background-color: transparent; } }
 
 /* Text entry: the composer grows and gains a soft ring when focused; inline fields fade their underline. */
 .mw-app .composer-drawer .mw-composer { transition: border-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-base) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard); }
@@ -62,5 +79,9 @@ html[data-vt-leave~=panel-reader]::view-transition-old(panel-reader) { opacity: 
 html[data-vt-leave~=panel-live]::view-transition-old(panel-live) { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
-  :root { --motion-instant: 0ms; --motion-fast: 0ms; --motion-base: 0ms; --motion-layout: 0ms; --motion-fold: 0ms; --press-scale: 1; }
+  :root { --motion-instant: 0ms; --motion-fast: 0ms; --motion-base: 0ms; --motion-layout: 0ms; --motion-fold: 0ms; --motion-exit: 0ms; --motion-stagger: 0ms; --press-scale: 1; }
 }
+
+/* Tooltips fade and drop in with the same reveal. */
+@keyframes mw-reveal-in { from { opacity: 0; translate: 0 var(--menu-enter-shift); } to { opacity: 1; translate: 0 0; } }
+.info-tooltip-content { animation: mw-reveal-in var(--motion-base) var(--ease-enter) both; }

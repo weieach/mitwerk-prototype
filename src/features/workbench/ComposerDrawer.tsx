@@ -21,7 +21,7 @@ export function ComposerModelSelect({ value, onChange }: { value?: string; onCha
     <button type="button" {...menu.triggerProps} className="composer-model" aria-label="Model" aria-controls={menu.open ? id : undefined}>
       {options.find(option => option.value === model)?.label}<PhosphorIcon name="caret-down" size={10}/>
     </button>
-    {menu.open && <SelectMenu id={id} label="Model" anchor={menu.trigger} options={options} value={model} minWidth={280} className="composer-model-menu" onChoose={menu.choose} onDismiss={menu.dismiss}/>}
+    {menu.open && <SelectMenu closing={menu.closing} id={id} label="Model" anchor={menu.trigger} options={options} value={model} minWidth={280} className="composer-model-menu" onChoose={menu.choose} onDismiss={menu.dismiss}/>}
   </>;
 }
 

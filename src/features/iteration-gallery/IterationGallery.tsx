@@ -158,7 +158,7 @@ export function IterationGallery({ headerTarget, headerActions, playbackOnly = f
 
   const header = <PanelHeader title="Version blocks" icon="circuitry" mode={view === 'album' || view === 'focusing' || view === 'returning' ? 'Gallery' : 'Playback'} onModeChange={switchView} modeDisabled={!visibleFrames.length || !['album','theater'].includes(view)} onTitleClick={view === 'theater' ? exit : undefined} onToggle={onToggle} expanded={expanded} actions={<>
       <VersionPanelSwitch onClick={onSwitchPanel} target="Version stream"/>
-      {view !== 'album' && view !== 'focusing' && <div className="gallery-range"><RowSelect label="Date range" value={range} onChange={value => { setRange(value as RangeKey); setNow(Date.now()); }} options={ranges}/></div>}
+      {view !== 'album' && view !== 'focusing' && <div className="gallery-range"><RowSelect label="Date range" align="center" value={range} onChange={value => { setRange(value as RangeKey); setNow(Date.now()); }} options={ranges}/></div>}
       <div className="gallery-frame-picker-slot" ref={setFramePickerSlot}/>
       {headerActions}
     </>}/>;
@@ -175,7 +175,7 @@ export function IterationGallery({ headerTarget, headerActions, playbackOnly = f
     <footer className="gallery-footer" inert={view === 'turning' || view === 'returning' || view === 'orbiting'}>
       <TrackedInterface value={interfaceId} onChange={value => { setInterfaceId(value); setSelectedId(''); setView('album'); setTarget(null); }}/>
       {view !== 'theater' && view !== 'orbiting' && <div className="panel-header-actions">
-        <div className="gallery-range"><RowSelect label="Date range" value={range} onChange={value => { setRange(value as RangeKey); setNow(Date.now()); }} options={ranges}/></div>
+        <div className="gallery-range"><RowSelect label="Date range" align="center" value={range} onChange={value => { setRange(value as RangeKey); setNow(Date.now()); }} options={ranges}/></div>
         <button className="icon-button" aria-label="Zoom gallery out" disabled={zoom <= t.zoomMin} onClick={() => camera.current?.zoom(-1)}><Icon name="minus"/></button>
         <ZoomScaleButton zoom={zoom} onResetZoom={() => camera.current?.zoom(0)} onResetView={() => camera.current?.reset()}/>
         <button className="icon-button" aria-label="Zoom gallery in" disabled={zoom >= t.zoomMax} onClick={() => camera.current?.zoom(1)}><Icon name="plus"/></button>

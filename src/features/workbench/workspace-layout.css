@@ -2,6 +2,8 @@
 :root {
   --workspace-background: var(--line);
   --workspace-gutter: 4px;
+  /* Lines inside panels (under titles, above footers, between controls and subpanels). Dark mode uses a dark gray, never black. */
+  --panel-divider: var(--workspace-background);
   --workspace-edge: 10px;
   --user-message-fill:var(--line);
   --landing-brand-size:32px;
@@ -15,7 +17,7 @@
   --playback-annotation-fill: var(--line-strong);
   --playback-annotation-ink: var(--ink);
 }
-:root[data-theme=dark] { --workspace-background: #000; --user-message-fill: #252423; }
+:root[data-theme=dark] { --workspace-background: #000; --user-message-fill: #252423; --panel-divider: #2b2a29; }
 .mw-app { background: var(--workspace-background); }
 .mw-app .mw-topbar { height:var(--workspace-bar-height); min-height:var(--workspace-bar-height); padding:0 var(--workspace-edge); background:var(--workspace-background); gap:16px; }
 .mw-topbar .workspace-brand { display:flex; align-items:center; gap:var(--workspace-brand-gap); flex-shrink:0; }
@@ -44,7 +46,7 @@
 .workspace-gallery-only .workspace-split { min-width:0; }
 .workspace-panel-header, .workspace .workspace-panel-header {
   display:flex; flex-wrap:nowrap; height:var(--panel-heading-height); min-height:var(--panel-heading-height); flex:0 0 var(--panel-heading-height);
-  padding:0; gap:0; border-bottom:1px solid var(--workspace-background); background:var(--paper);
+  padding:0; gap:0; border-bottom:1px solid var(--panel-divider); background:var(--paper);
 }
 .workspace-panel-header .panel-heading, .workspace .workspace-panel-header .panel-heading {
   display:flex; flex:1 1 auto; min-width:0; align-items:center; justify-content:flex-start; gap:10px; padding:0 6px;
@@ -61,7 +63,7 @@
 .workspace .workspace-panel-header .gallery-range { flex:0 1 145px; min-width:110px; }
 .workspace .workspace-panel-header .gallery-range > .row-select { flex:1; padding:0 14px; }
 .workspace .workspace-panel-header .row-select { padding-inline:14px; }
-.workspace .gallery-footer { height:var(--panel-footer-height); min-height:var(--panel-footer-height); border-color:var(--workspace-background); }
+.workspace .gallery-footer { height:var(--panel-footer-height); min-height:var(--panel-footer-height); border-color:var(--panel-divider); }
 .workspace .gallery-footer .gallery-range { border:0; flex:none; }
 .workspace .gallery-footer .gallery-range > .row-select { flex:1; padding-inline:22px; }
 .workspace .gallery-footer :is(.panel-header-actions > button + button, .album-camera-actions) { border:0; }
@@ -162,11 +164,11 @@
 .mw-app .capture-setting-chip { display:inline-flex; align-items:center; gap:5px; min-width:0; max-width:100%; padding:1px var(--capture-chip-padding-inline); border-radius:var(--capture-pill-radius); background:var(--capture-chip-surface); color:var(--capture-chip-ink); font-size:var(--capture-chip-font-size); }
 .capture-setting-chip span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .capture-setting-input { max-width:140px; min-width:0; border:1px solid var(--line-strong); border-radius:var(--capture-pill-radius); padding:2px 8px; background:var(--paper); color:var(--ink); font:inherit; }
-.composer-drawer { border-radius:var(--composer-drawer-radius); background:var(--composer-drawer-surface); }
+.composer-drawer { border-radius:var(--composer-drawer-radius); background-color:var(--composer-drawer-surface); background-image:linear-gradient(180deg, var(--composer-drawer-glow) 0%, var(--composer-drawer-glow-end) var(--composer-drawer-glow-stop)); }
 .mw-app .composer-drawer-heading { overflow:hidden; display:flex; align-items:center; gap:8px; width:100%; padding:6px 12px; text-align:left; font-size:12px; font-weight:700; transition:background-color var(--drawer-hover-duration) ease; border-radius:var(--composer-drawer-radius) var(--composer-drawer-radius) 0 0; }
 /* Hovering the heading lights the whole drawer frame, including behind the composer, as one surface. */
 .composer-drawer { transition:background-color var(--drawer-hover-duration) ease; }
-.composer-drawer:has(.composer-drawer-heading:is(:hover,:focus-visible)) { background:var(--composer-drawer-hover); }
+.composer-drawer:has(.composer-drawer-heading:is(:hover,:focus-visible)) { background-color:var(--composer-drawer-hover); }
 .composer-drawer-heading > span { opacity:var(--drawer-heading-opacity); transition:opacity var(--drawer-hover-duration) ease; }
 .composer-drawer-heading:is(:hover,:focus-visible) > span { opacity:1; transition-delay:0s; }
 .composer-drawer-content { max-height: min(30vh,260px); overflow:auto; padding:4px 12px 12px; }
@@ -253,7 +255,7 @@
 .mw-app .history-content:has(> .workspace-idea-split) { overflow-x:auto; }
 .workspace-idea-split { min-width:calc(var(--reading-column-min) * 2); }
 .workspace-idea-split > .workspace-split > .iteration-gallery { container:version-column / inline-size; }
-.workspace-idea-split > .workspace-split > .tree-panel { border-left:1px solid var(--workspace-background); }
+.workspace-idea-split > .workspace-split > .tree-panel { border-left:1px solid var(--panel-divider); }
 @container version-column (max-width:620px) {
   .workspace .workspace-panel-header { flex-wrap:wrap; height:auto; flex-basis:auto; }
   .workspace .workspace-panel-header .panel-heading { min-height:var(--panel-heading-height); flex-basis:100%; }
@@ -476,7 +478,7 @@
 @container (max-width: 620px) {
   .workspace .gallery-footer { flex-wrap:wrap; flex:0 0 auto; height:auto; min-height:var(--panel-footer-height); row-gap:0; }
   .workspace .gallery-footer > .tracked-interface { flex:1 1 100%; max-width:none; min-height:var(--panel-footer-height); }
-  .workspace .gallery-footer > .panel-header-actions { flex:1 1 100%; min-width:0; min-height:var(--panel-footer-height); justify-content:flex-end; border-top:1px solid var(--workspace-background); }
+  .workspace .gallery-footer > .panel-header-actions { flex:1 1 100%; min-width:0; min-height:var(--panel-footer-height); justify-content:flex-end; border-top:1px solid var(--panel-divider); }
   .workspace .gallery-footer .gallery-range, .workspace .gallery-footer .gallery-range > .row-select { flex:1 1 auto; width:auto; min-width:0; }
 }
 
@@ -485,7 +487,7 @@
 @container (max-width: 559px) {
   .workspace-idea-split { min-width:0; }
   .workspace-idea-split > .workspace-split { grid-template-columns:minmax(0, 1fr) !important; grid-template-rows:minmax(0, 1fr) minmax(0, 1fr); }
-  .workspace-idea-split > .workspace-split > .tree-panel { border-left:0; border-top:1px solid var(--workspace-background); }
+  .workspace-idea-split > .workspace-split > .tree-panel { border-left:0; border-top:1px solid var(--panel-divider); }
 }
 
 /* Chip icons recede so the name reads first. */
@@ -510,18 +512,21 @@
 .mw-topbar .workspace-brand-menu .workspace-brand { height:var(--brand-trigger-height); padding-block:0; }
 
 /* To-do drawer: drag feedback and inline entry. The heading follows the pointer lightly while dragging; release past the threshold opens or closes. */
-.composer-drawer.is-dragging { translate:0 var(--drawer-drag); transition:none; }
-.composer-drawer:not(.is-dragging) { transition:translate var(--motion-base) var(--ease-enter), background-color var(--drawer-hover-duration) ease; }
+/* Dragging stretches or squeezes only the to-do section; the message box never moves.
+   Up (negative) grows the section's top edge; down (positive) slides the heading and list toward the message box. */
+.composer-drawer { transition:padding-top var(--motion-base) var(--ease-enter), background-color var(--drawer-hover-duration) ease; }
+.composer-drawer.is-dragging { padding-top:max(0px, calc(var(--drawer-drag) * -1)); transition:background-color var(--drawer-hover-duration) ease; }
+.composer-drawer > :is(.composer-drawer-heading, .composer-drawer-reveal) { transition:translate var(--motion-base) var(--ease-enter); }
+.composer-drawer.is-dragging > :is(.composer-drawer-heading, .composer-drawer-reveal) { translate:0 max(0px, var(--drawer-drag)); transition:none; }
+.composer-drawer > .mw-composer { position:relative; z-index:1; }
 .composer-drawer-heading { touch-action:none; cursor:grab; }
 .composer-drawer.is-dragging .composer-drawer-heading { cursor:grabbing; }
 .composer-drawer-content li.composer-todo-new { align-items:center; }
-.composer-todo-input { flex:1; min-width:0; height:var(--capture-chip-compact-height); padding:0; border:0; outline:none; background:transparent; color:var(--ink); caret-color:var(--ink); font:inherit; }
+.composer-todo-input { flex:1; min-width:0; height:var(--capture-chip-height); padding:0; border:0; outline:none; background:transparent; color:var(--ink); caret-color:var(--ink); font:inherit; }
 .composer-todo-input::placeholder { color:var(--capture-detail-placeholder); opacity:1; }
 .mw-app .composer-drawer .composer-todo-input:focus-visible { outline:none; }
-/* Compact page chips inside to-do rows; an empty one is a quiet ghost until a page is picked. */
-:root { --capture-chip-compact-height:18px; }
-.capture-bucket-control.is-compact { --capture-chip-height:var(--capture-chip-compact-height); flex:none; }
-.mw-app .capture-bucket-control.is-compact .capture-setting-chip { height:var(--capture-chip-compact-height); }
+/* Page chips inside to-do rows use the same height and font as every chip; an empty one is a quiet ghost until a page is picked. */
+.capture-bucket-control.is-compact { flex:none; }
 .mw-app .capture-setting-chip.is-empty { background:transparent; color:var(--capture-detail-placeholder); box-shadow:inset 0 0 0 1px var(--inline-field-line); }
 .mw-app .capture-setting-chip.is-empty:hover { color:var(--ink); box-shadow:inset 0 0 0 1px var(--inline-field-line-hover); }
 
@@ -558,3 +563,79 @@
   --composer-drawer-hover:#dfdfdc;
   --message-version-fill:#fff;
 }
+
+/* Version blocks title matches every other panel title (icon + text, no outline). Its view switch shows both modes,
+   Gallery (3D album) and Playback (timelapse); the current one reads in ink, the other stays muted. */
+.mw-app .workspace-panel-header .panel-title-button { padding:0; font-size:13px; font-weight:500; white-space:nowrap; }
+.workspace .workspace-panel-header .panel-view-switch { display:flex; align-items:center; gap:2px; margin-left:4px; }
+.workspace .workspace-panel-header .panel-view-option { height:24px; min-height:0; padding:0 8px; border:0; border-radius:var(--control-radius); color:var(--muted); font:400 12px/1 var(--sans); background:transparent; }
+.workspace .workspace-panel-header .panel-view-option:hover:not(:disabled) { color:var(--ink); background:var(--fill-hover); }
+.workspace .workspace-panel-header .panel-view-option[aria-pressed=true] { color:var(--ink); background:var(--fill); }
+
+/* The invitation's color comes from the shader canvas, not the old branch-color gradient. */
+.mw-app .message-version-output.is-milestone-ready .message-version-card::after { content:none; }
+.milestone-invite-field { position:absolute; inset:0; z-index:-2; width:100%; height:100%; pointer-events:none; animation:milestone-field-in var(--motion-layout) var(--ease-standard) both; }
+@keyframes milestone-field-in { from { opacity:0; } to { opacity:1; } }
+.mw-app .message-version-output.is-milestone-ready .message-version-card { color:var(--milestone-invite-ink); }
+
+/* "Not yet" is a secondary action: 70% of the milestone action width. */
+.mw-app .message-version-output > .milestone-not-yet { min-width:calc(var(--message-milestone-action-width) * .7); }
+
+/* Date range: label and caret sit together, centered in the control; its menu is only as wide as its options, centered under the control, with centered labels. */
+.workspace .row-select.is-centered { justify-content:center; gap:6px; }
+.workspace .row-select.is-centered > .row-select-value { flex:0 1 auto; }
+.select-menu.is-centered [role=option] { justify-content:center; padding-inline:20px; }
+
+/* A very faint cool glow at the top of the To-do section, fading out by 68% of its height. */
+:root { --composer-drawer-glow:rgb(217 226 239 / 40%); --composer-drawer-glow-end:rgb(217 226 239 / 0%); --composer-drawer-glow-stop:68%; }
+:root[data-theme=dark] { --composer-drawer-glow:#2e2b2f; --composer-drawer-glow-end:rgb(37 39 46 / 0%); }
+
+/* The date range trigger fills its footer cell like every other footer control, so its label shares their vertical center. */
+.workspace .gallery-footer .gallery-range { display:flex; align-items:stretch; }
+.workspace .gallery-footer .gallery-range > .row-select { height:auto; min-height:0; align-self:stretch; align-items:center; }
+
+/* Prompt / To-do toggle: the selected segment is the message box color, cut out of a low-contrast track one step off that surface. */
+:root { --composer-mode-track:#ebebe8; }
+:root[data-theme=dark] { --composer-mode-track:#383735; }
+.composer-mode-switch { background:var(--composer-mode-track); }
+.composer-mode-switch input:checked + span { background:var(--composer-surface); }
+.composer-mode-switch span { transition:background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard); }
+.composer-mode-switch input:not(:checked) + span { color:var(--muted); }
+
+/* Composer tool buttons (attach, send) sit the same distance from the message box's side and bottom edges. */
+:root { --composer-tool-inset:8px; }
+.mw-app .composer-drawer .mw-composer .composer-tools { margin-inline:calc(var(--composer-tool-inset) - 12px); }
+
+/* Bucket menu: a stack of separate capsules under the unchanged chip. Options are paler than the chip; the last, palest capsule takes a new name. */
+:root { --capture-option-surface:color-mix(in srgb, var(--capture-chip-surface) 78%, var(--paper)); --capture-option-highlight:var(--capture-chip-surface); --capture-new-surface:color-mix(in srgb, var(--capture-chip-surface) 52%, var(--paper)); --capture-stack-gap:4px; }
+.capture-bucket-stack { position:fixed; inset:auto; margin:0; padding:0; border:0; background:transparent; overflow:visible; display:flex; flex-direction:column; gap:var(--capture-stack-gap); width:max-content; font-size:var(--capture-chip-font-size); }
+.capture-bucket-stack:not(:popover-open) { display:none; }
+.capture-bucket-options { display:flex; flex-direction:column; gap:var(--capture-stack-gap); }
+.capture-bucket-option, .capture-bucket-new { box-sizing:border-box; display:flex; align-items:center; width:100%; height:var(--capture-chip-height); padding:0 var(--capture-chip-padding-inline); border-radius:var(--capture-chip-radius); color:var(--capture-chip-ink); white-space:nowrap; cursor:pointer; transition:background-color var(--motion-fast) var(--ease-standard); }
+.capture-bucket-option { background:var(--capture-option-surface); }
+.capture-bucket-option.is-highlighted { background:var(--capture-option-highlight); }
+.capture-bucket-option.is-clear { color:var(--capture-edit-placeholder); }
+.capture-bucket-new { border:0; outline:none; background:var(--capture-new-surface); font:inherit; cursor:text; caret-color:var(--capture-chip-ink); }
+.capture-bucket-new::placeholder { color:var(--capture-edit-placeholder); opacity:1; }
+.capture-bucket-new.is-highlighted:not(:placeholder-shown) { background:var(--capture-option-surface); }
+.capture-bucket-control.is-open .capture-setting-chip { box-shadow:none; }
+/* Capsule enter/exit motion lives in src/motion.css with every other reveal. */
+
+/* Capture detail keeps a thin underline at all times. */
+.mw-app .capture-detail-field { border-bottom:0; box-shadow:inset 0 -0.5px 0 var(--inline-field-line-hover); }
+.mw-app .capture-detail-field:hover { box-shadow:inset 0 -0.5px 0 var(--inline-field-line-focus); }
+.mw-app .capture-detail-field:focus, .mw-app .capture-detail-field:focus-visible { box-shadow:inset 0 -1px 0 var(--inline-field-line-focus); }
+:root { --capture-new-surface:color-mix(in srgb, var(--capture-chip-surface) 64%, var(--paper)); --capture-new-placeholder:color-mix(in srgb, var(--capture-chip-ink) 55%, transparent); }
+.mw-app .capture-bucket-new:focus, .mw-app .capture-bucket-new:focus-visible { outline:none; }
+.capture-bucket-new::placeholder { color:var(--capture-new-placeholder); }
+/* Each capsule hugs its own label instead of stretching to the widest one; the add-new field grows with what is typed. */
+.capture-bucket-stack, .capture-bucket-options { align-items:flex-start; }
+.capture-bucket-option { width:auto; }
+.capture-bucket-new { width:auto; field-sizing:content; min-width:var(--capture-new-min-width); }
+:root { --capture-new-min-width:9ch; }
+
+/* Chip labels keep their full line box (ascenders and descenders are never clipped) and lift half a pixel so lowercase names sit optically centered with the icons. */
+.mw-app .capture-setting-chip > span { line-height:1.4; padding-bottom:1px; }
+
+/* Every chip, option capsule and add-new capsule shares one height and one font size, wherever it appears. */
+.mw-app :is(.capture-setting-chip, .capture-bucket-option, .capture-bucket-new) { height:var(--capture-chip-height); font-size:var(--capture-chip-font-size); }
