@@ -532,3 +532,7 @@
 
 /* The drawer count is a plain number; no ring around it. */
 .composer-drawer-count { border:0; border-radius:0; padding:0; min-width:0; font-variant-numeric:tabular-nums; }
+
+/* The message box sits one equal inset from the panel's sides and bottom; panel radius − inset = drawer radius, so the corners are concentric. */
+:root { --composer-inset:calc(var(--workspace-radius) - var(--composer-drawer-radius)); }
+.mw-app .composer-area { padding:8px var(--composer-inset) var(--composer-inset); }
