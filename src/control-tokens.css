@@ -7,7 +7,16 @@
   --focus-ring-offset:-1px;
   --focus-ring-color:currentColor;
   --font-code:"SF Mono", SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
-  --playback-end-gap:10px;
+  --playback-end-gap:clamp(14px, 2cqw, 32px);
+  --text-action-icon-gap:6px;
+  --timeline-overview-height:4px;
+  --timeline-overview-thumb-height:2.5px;
+  --timeline-overview-radius:999px;
+  --runtime-panel-duration:320ms;
+  --runtime-panel-easing:cubic-bezier(.22,.61,.36,1);
+  --timeline-overview-track:#000;
+  --timeline-overview-thumb:#fff;
+  --timeline-range-hint-width:170px;
   --reader-title-gap:10px;
   --milestone-invite-color-strength:64%;
   --milestone-invite-ink:#fff;
@@ -60,7 +69,9 @@
   --message-version-fill: color-mix(in srgb, var(--line) 90%, white);
   --composer-attach-icon-size: 17px;
   --composer-bottom-space: 17px;
-  --composer-chip-top-gap: 4px;
+  --composer-chip-top-padding: 6px;
+  --context-chip-radius: 999px;
+  --frame-chip-inset: 2px;
   --message-byline-bottom-gap: 5px;
   --message-byline-role-gap: 4px;
   --gallery-stats-top-gap: calc(var(--row-size-unit) * 3);
@@ -421,3 +432,17 @@
 :root { --brand-padding-inline:10px; --zoom-scale-min-width:64px; }
 
 :root { --workspace-brand-gap:4px; }
+
+/* Site header view tags (from mavix237's design-system branch). */
+:root { --view-tag-slant:4px; --view-tag-fade:.15s; --view-tag-bg:rgb(0 0 0 / 8%); --view-tag-ink:var(--ink); }
+:root[data-theme=dark] { --view-tag-bg:rgb(255 255 255 / 14%); }
+
+/* Capture detail field, matching design-system 8eb969a. */
+:root {
+  --capture-detail-height:22px;
+  --capture-detail-min-width:7ch;
+  --capture-detail-placeholder:color-mix(in srgb, var(--ink) 38%, transparent);
+  --inline-field-line-hover:color-mix(in srgb, var(--ink) 28%, transparent);
+  --inline-field-line-focus:color-mix(in srgb, var(--ink) 60%, transparent);
+  --inline-field-fade:150ms;
+}

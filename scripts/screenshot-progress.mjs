@@ -355,7 +355,8 @@ function writePromptCounter(outFile) {
   const agentsPath = join(root, 'AGENTS.md');
   try {
     const text = readFileSync(agentsPath, 'utf8');
-    const next = text.replace(/(\*\*push #\d+ · )prompt #\d+/, `$1prompt #${count}`);
+    const latest = Math.max(count, Number(/\*\*push #\d+ · prompt #(\d+)/.exec(text)?.[1] ?? 0));
+    const next = text.replace(/(\*\*push #\d+ · )prompt #\d+/, `$1prompt #${latest}`);
     if (next !== text) writeFileSync(agentsPath, next);
   } catch (error) {
     captureLog(`prompt counter update failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -489,7 +490,7 @@ function chatCaptureTitle(prompt = '') {
   if (quoted) return quoted[1].trim();
   const plain = /\bc(?:\s*\/)? chat\s+([^\n]+)/i.exec(prompt);
   if (!plain) return '';
-  return plain[1].replace(/\s+w\/\s+[\s\S]*$/i, '').replace(/\s+/g, ' ').trim();
+  return plain[1].replace(/(?:^|\s+)(?:w\/|with)\s+[\s\S]*$/i, '').replace(/\s+/g, ' ').trim();
 }
 
 function wantsTodosCapture(prompt = '') {
@@ -538,6 +539,10 @@ function wantsGalleryHover(prompt = '') {
   return argValue('gallery-view') === 'top' || hasFlag('gallery-hover') || (/\bhover(?:ing|ed)?\b/i.test(prompt) && !wantsResetCapture(prompt));
 }
 
+function wantsPrototypeCapture(prompt) { return /\bc prototype embed\b|\bc playback\b[^.\n]*\bprototype\b/i.test(prompt); }
+
+function wantsLiveCapture(prompt) { return /\bc chat (?:and|&) playback\b[^.\n]*\blive server\b/i.test(prompt); }
+
 function screenshotUrl(prompt = '') {
   const target = new URL(url);
   target.searchParams.set('screenshot', '1');
@@ -545,11 +550,13 @@ function screenshotUrl(prompt = '') {
   if (/\bc (?:home|homescreen)\b[^.\n]*milestone[^.\n]*zoomed in/i.test(prompt)) { target.searchParams.set('treeMilestone', 'latest'); target.searchParams.set('treeZoom', '1'); }
   if (hasFlag('tree-fit') || /fit all view/i.test(prompt)) target.searchParams.set('treeFit', '1');
   if (/\bc (?:home|homescreen)\b[^.\n]*todo added to chat field/i.test(prompt)) target.searchParams.set('todoDraft', '1');
-  if (hasFlag('todo-drawer') || /\bc (?:home|homescreen)\b[\s\S]*\btodo drawer\b/i.test(prompt)) target.searchParams.set('todoDrawer', 'open');
+  if (hasFlag('todo-drawer') || /\bc (?:home|homescreen|chat)\b[\s\S]*\btodo drawer\b/i.test(prompt)) target.searchParams.set('todoDrawer', 'open');
   if (wantsDarkCapture(prompt)) target.searchParams.set('theme', 'dark');
   // Capture the complete prototype shell, retaining gallery state parameters.
   target.searchParams.delete('view');
   target.searchParams.set('treeMode', argValue('tree-mode', 'history'));
+  if (wantsLiveCapture(prompt)) { target.searchParams.set('layout', 'side-by-side'); target.searchParams.set('galleryView', 'theater'); target.searchParams.set('liveOpen', '1'); return target.href; }
+  if (wantsPrototypeCapture(prompt)) { target.searchParams.set('layout', 'side-by-side'); target.searchParams.set('galleryView', 'theater'); target.searchParams.set('frameKind', 'prototype'); target.searchParams.set('prototypeOpen', '1'); return target.href; }
   if (wantsIdeaStreamCapture(prompt)) { if (/milestone edit/i.test(prompt)) { target.searchParams.set('treeMilestone', 'latest'); target.searchParams.set('treeZoom', '0.8'); } target.searchParams.set('ideaStream', '1'); target.searchParams.delete('galleryView'); if (wantsHomeCapture(prompt) || /\bc chat\b/i.test(prompt)) target.searchParams.set('layout', 'side-by-side'); return target.href; }
   if (wantsTodosCapture(prompt)) {
     target.searchParams.set('page', 'todos');
@@ -564,6 +571,7 @@ function screenshotUrl(prompt = '') {
   if (wantsChatPlaybackCapture(prompt)) {
     target.searchParams.set('layout', 'side-by-side'); target.searchParams.set('galleryView', 'theater');
     if (/annotation overlay/i.test(prompt) && !/milestone overlay/i.test(prompt)) target.searchParams.set('annotationOverlay', '1');
+    if (/\breference chip\b/i.test(prompt)) target.searchParams.set('frameChip', '1');
     return target.href;
   }
   if (wantsChatCapture(prompt)) {
@@ -673,20 +681,25 @@ function createCdp(ws) {
     if (message.error) waiter.reject(new Error(message.error.message));
     else waiter.resolve(message.result);
   });
-  return (method, params = {}) => new Promise((resolve, reject) => {
+  return (method, params = {}, sessionId) => new Promise((resolve, reject) => {
     const id = nextId += 1;
     pending.set(id, { resolve, reject });
-    ws.send(JSON.stringify({ id, method, params }));
+    ws.send(JSON.stringify({ id, method, params, ...(sessionId ? {sessionId} : {}) }));
   });
 }
 
 async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
   const started = Date.now();
   let milestoneRequested = false;
+  let runtimeSession = null;
   while (Date.now() - started < timeoutMs) {
     const result = await cdp('Runtime.evaluate', {
       expression: wantsLandingCapture(prompt)
         ? 'document.querySelector(".landing-page")?.dataset.intro === "settled" && !!document.querySelector(".landing-page .landing-open")'
+        : wantsLiveCapture(prompt)
+        ? 'document.querySelector(".theater-runtime")?.dataset.runtimeReady === "true" && !!document.querySelector(".theater-screen .theater-runtime iframe") && !document.querySelector(".runtime-status")'
+        : wantsPrototypeCapture(prompt)
+        ? 'document.querySelector(".theater-runtime")?.dataset.runtimeReady === "true" && !!document.querySelector(".theater-runtime iframe") && !document.querySelector(".runtime-status")'
         : wantsIdeaStreamCapture(prompt)
         ? '!!document.querySelector(".workspace-idea-split #workspace-pane-ideas .tree-viewport") && document.querySelector(".iteration-gallery")?.dataset.galleryPhase === "theater" && document.querySelector(".theater-view")?.dataset.frameReady === "true" && !!document.querySelector(".theater-screen img")?.complete'
         : wantsTodosCapture(prompt)
@@ -702,7 +715,7 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
         : wantsTransitionCapture(prompt)
         ? '(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && document.querySelector(".album-3d-viewport")?.dataset.transitionReady === "true"'
         : wantsTheaterCapture(prompt)
-        ? `(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete && (() => { const tag = document.querySelector(".annotation-tag"); return !tag || (tag.classList.contains("is-ready") && !tag.getAnimations().some(animation => animation.playState === "running")); })()${/annotation overlay|\bc theater overlay\b/i.test(prompt) && !/milestone overlay/i.test(prompt) ? ' && !!document.querySelector(".annotation-overlay[open][data-entered=true]")' : ''}${/overlay open/i.test(prompt) ? ' && !!document.querySelector(".theater-fullscreen") && !document.querySelector(".theater-fullscreen .is-exit")' : ''}${/mobile breakpoint|\bat mobile\b/i.test(prompt) ? ' && document.querySelector("[aria-label=\\"Preview viewport\\"]")?.value === "phone" && !!document.querySelector(".theater-frame-bed")' : ''}${/prototype (?:is )?entered|prototype mode/i.test(prompt) ? ' && !!document.querySelector("[aria-label=\\"Preview viewport\\"]")' : ''}${/playhead at last frame/i.test(prompt) ? ' && document.querySelector(".theater-view")?.dataset.rangeEdge === "end" && (() => { const head = document.querySelector(".gallery-timeline-playhead"); const scroller = document.querySelector(".gallery-timeline-scroll"); if (!head || !scroller) return false; const h = head.getBoundingClientRect(); const s = scroller.getBoundingClientRect(); return h.left >= s.left - 4 && h.right <= s.right + 4; })()' : ''}`
+        ? `(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete && (() => { const tag = document.querySelector(".annotation-tag"); return !tag || (tag.classList.contains("is-ready") && !tag.getAnimations().some(animation => animation.playState === "running")); })()${/annotation overlay|\bc theater overlay\b/i.test(prompt) && !/milestone overlay/i.test(prompt) ? ' && !!document.querySelector(".annotation-overlay[open][data-entered=true]")' : ''}${/overlay open/i.test(prompt) ? ' && !!document.querySelector(".theater-fullscreen") && !document.querySelector(".theater-fullscreen .is-exit")' : ''}${/mobile breakpoint|\bat mobile\b/i.test(prompt) ? ' && document.querySelector("[aria-label=\\"Preview viewport\\"]")?.value === "phone" && !!document.querySelector(".theater-frame-bed")' : ''}${/\breference chip\b/i.test(prompt) ? ' && !!document.querySelector(".mw-composer .frame-context-chip img")?.complete' : ''}${/prototype (?:is )?entered|prototype mode/i.test(prompt) ? ' && !!document.querySelector("[aria-label=\\"Preview viewport\\"]")' : ''}${/playhead at last frame/i.test(prompt) ? ' && document.querySelector(".theater-view")?.dataset.rangeEdge === "end" && (() => { const head = document.querySelector(".gallery-timeline-playhead"); const scroller = document.querySelector(".gallery-timeline-scroll"); if (!head || !scroller) return false; const h = head.getBoundingClientRect(); const s = scroller.getBoundingClientRect(); return h.left >= s.left - 4 && h.right <= s.right + 4; })()' : ''}`
         : /annotation overlay|\bc theater overlay\b/i.test(prompt)
         ? '(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && !!document.querySelector(".annotation-overlay[open][data-entered=true]") && document.querySelector(".annotation-preview")?.complete'
         : wantsGalleryHover(prompt)
@@ -711,6 +724,36 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
       returnByValue: true,
     });
     if (result.result?.value === true) {
+      if (wantsPrototypeCapture(prompt)) {
+        // Sandboxed archives run in an out-of-process iframe, with their own CDP target.
+        if (!runtimeSession) {
+          const { targetInfos } = await cdp('Target.getTargets');
+          const embedded = targetInfos.find(target => target.type === 'iframe' && target.url.includes('/__mitwerk/prototype-assets/'));
+          if (!embedded) { await delay(100); continue; }
+          runtimeSession = (await cdp('Target.attachToTarget', {targetId:embedded.targetId, flatten:true})).sessionId;
+        }
+        const runtime = await cdp('Runtime.evaluate', { expression: `(() => {
+          if (document.fonts.status !== 'loaded' || !document.querySelector('.mw-app')) return false;
+          const album = document.querySelector('.album-3d-viewport');
+          if (document.querySelector('.gallery-empty') || (album && album.dataset.imagesReady !== 'true')) return false;
+          return [...document.images].filter(image => image.getClientRects().length).every(image => image.complete && image.naturalWidth > 0);
+        })()`, returnByValue: true }, runtimeSession);
+        if (runtime.result?.value !== true) { await delay(100); continue; }
+      }
+      if (wantsLiveCapture(prompt)) {
+        const live = await cdp('Runtime.evaluate', { expression: `(() => {
+          const doc = document.querySelector('.theater-runtime iframe')?.contentDocument;
+          if (!doc || doc.fonts.status !== 'loaded' || !doc.querySelector('.mw-app')) return false;
+          const album = doc.querySelector('.album-3d-viewport');
+          if (doc.querySelector('.gallery-empty') || (album && album.dataset.imagesReady !== 'true')) return false;
+          return [...doc.images].filter(image => image.getClientRects().length).every(image => image.complete && image.naturalWidth > 0);
+        })()`, returnByValue:true });
+        if (live.result?.value !== true) { await delay(100); continue; }
+      }
+      if (wantsLiveCapture(prompt) || wantsPrototypeCapture(prompt)) {
+        const settled = await cdp('Runtime.evaluate', { expression: `!document.querySelector('.theater-view')?.getAnimations({subtree:true}).some(animation => animation.playState === 'running')`, returnByValue:true });
+        if (settled.result?.value !== true) { await delay(100); continue; }
+      }
       const images = await cdp('Runtime.evaluate', { expression: `(() => {
         const gallery = document.querySelector('.iteration-gallery');
         if (gallery?.dataset.galleryPhase === 'album' && gallery.querySelector('.album-3d-viewport')?.dataset.imagesReady !== 'true') return false;
@@ -721,9 +764,13 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
         const themed = await cdp('Runtime.evaluate', { expression: 'document.documentElement.dataset.theme === "dark" && document.querySelector(".mw-app")?.dataset.theme === "dark"', returnByValue: true });
         if (themed.result?.value !== true) { await delay(100); continue; }
       }
-      if (hasFlag('todo-drawer') || /\bc (?:home|homescreen)\b[\s\S]*\btodo drawer\b/i.test(prompt)) {
+      if (hasFlag('todo-drawer') || /\bc (?:home|homescreen|chat)\b[\s\S]*\btodo drawer\b/i.test(prompt)) {
         const drawer = await cdp('Runtime.evaluate', { expression: 'document.querySelector(".composer-drawer-heading")?.getAttribute("aria-expanded") === "true"', returnByValue: true });
         if (drawer.result?.value !== true) { await delay(100); continue; }
+        if (/\b(?:location|bucket) chip\b/i.test(prompt)) {
+          const tagged = await cdp('Runtime.evaluate', { expression: '!!document.querySelector(".composer-drawer-content .bucket-tag")', returnByValue: true });
+          if (tagged.result?.value !== true) { await delay(100); continue; }
+        }
       }
       if (/\bc (?:home|homescreen)\b[^.\n]*todo added to chat field/i.test(prompt)) {
         const draft = await cdp('Runtime.evaluate', { expression: '!!document.querySelector("textarea[aria-label=Message]")?.value', returnByValue: true });
@@ -732,6 +779,15 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
       if (hasFlag('milestone-invite')) {
         const invitation = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.message-version-output.is-milestone-ready:not(.is-milestone-jumping) .milestone-not-yet')`, returnByValue: true });
         if (!invitation.result?.value) { await delay(100); continue; }
+      }
+      if (hasFlag('expanded-versions')) {
+        const expanded = await cdp('Runtime.evaluate', { expression: `(() => {
+          const fold = document.querySelector('.idea-refold');
+          if (!fold) { document.querySelector('.idea-fold')?.click(); return false; }
+          fold.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+          return true;
+        })()`, returnByValue: true });
+        if (!expanded.result?.value) { await delay(100); continue; }
       }
       if (hasFlag('brand-menu')) {
         await cdp('Runtime.evaluate', { expression: `(() => { const trigger = document.querySelector('button[aria-label="MitWerk menu"]'); if (trigger?.getAttribute('aria-expanded') !== 'true') trigger?.click(); })()` });
@@ -748,7 +804,7 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
         const menu = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('[role="listbox"][aria-label="Date range"]')`, returnByValue: true });
         if (!menu.result?.value) { await delay(100); continue; }
       }
-      if (/milestone overlay/i.test(prompt)) {
+      if (/milestone overlay/i.test(prompt) && !wantsLiveCapture(prompt) && !wantsPrototypeCapture(prompt)) {
         const milestone = await cdp('Runtime.evaluate', { expression: `(() => {
           const button = document.querySelector('.message-version-output.is-milestone-ready .message-version-card');
           const clicked = !${milestoneRequested} && !!button;
@@ -825,7 +881,7 @@ async function capture(chrome, outFile, prompt = '') {
     const ws = new WebSocket(page.webSocketDebuggerUrl);
     await waitForSocket(ws);
     const cdp = createCdp(ws);
-    await waitForScreenshotReady(cdp, wantsLandingCapture(prompt) ? 20000 : 10000, prompt);
+    await waitForScreenshotReady(cdp, wantsLandingCapture(prompt) ? 20000 : (wantsPrototypeCapture(prompt) || wantsLiveCapture(prompt)) ? 60000 : 10000, prompt);
     await cdp('Runtime.evaluate', { expression: 'document.fonts.ready.then(() => true)', awaitPromise: true, returnByValue: true });
     if (/edit annotation overlay/i.test(prompt)) {
       const note = await cdp('Runtime.evaluate', { expression: `(() => {
@@ -1167,7 +1223,7 @@ async function takeScreenshot({ tag, label, sha, base }) {
   await assertServer();
   mkdirSync(screenshotsDir, { recursive: true });
   const message = `${wantsLandingCapture(label) ? '[screen landing] ' : ''}${sanitizeMessage(label, tag === 'prompt' ? 'prompt' : 'commit')}`;
-  const overwrite = tag === 'prompt' && (hasFlag('recapture-last') || /recapture last prompt/i.test(label) && /overwrite/i.test(label));
+  const overwrite = tag === 'prompt' && (hasFlag('recapture-last') || argValue('recapture-prompt') || /recapture last prompt/i.test(label) && /overwrite/i.test(label));
   if (overwrite) {
     const number = name => Number(/^\[prompt #(\d+)\]/i.exec(name)?.[1] ?? 0);
     const prompts = readdirSync(screenshotsDir).filter(name => /^\[prompt #\d+\]/i.test(name)).sort((a, b) => number(a) - number(b));
@@ -1176,7 +1232,9 @@ async function takeScreenshot({ tag, label, sha, base }) {
       if (/recapture last prompt/i.test(name)) unlinkSync(join(screenshotsDir, name));
       else kept.push(name);
     }
-    const previous = kept.at(-1);
+    const requested = argValue('recapture-prompt');
+    const previous = requested ? kept.find(name => number(name) === Number(requested)) : kept.at(-1);
+    if (requested && !previous) throw new Error('The requested capture to repair does not exist.');
     if (previous) {
       const outFile = join(screenshotsDir, previous);
       await capture(chrome, outFile, label);
@@ -1186,7 +1244,10 @@ async function takeScreenshot({ tag, label, sha, base }) {
   const requestedPrompt = tag === 'prompt' ? argValue('prompt-number') : '';
   const requestedCount = Number(requestedPrompt);
   const nextCount = nextTagCount(screenshotsDir, tag);
-  if (requestedPrompt && (!Number.isSafeInteger(requestedCount) || requestedCount < nextCount)) throw new Error('Requested prompt number must be an unused integer at or above the next capture.');
+  // A concurrent chat may finish a later reserved prompt first. Fill the unused slot
+  // without overwriting an existing capture or moving the shared counter backwards.
+  const requestedExists = requestedPrompt && readdirSync(screenshotsDir).some(name => Number(/^\[prompt #(\d+)\]/i.exec(name)?.[1]) === requestedCount);
+  if (requestedPrompt && (!Number.isSafeInteger(requestedCount) || requestedCount < 1 || requestedExists)) throw new Error('Requested prompt number must be a positive unused integer.');
   const count = requestedCount || nextCount;
   if (tag === 'prompt') {
     const logPath = join(root, 'docs/prompt-log.md');
@@ -1305,7 +1366,7 @@ async function main() {
       }
       return;
     }
-    if (tag === 'prompt' && !hasFlag('recapture-last') && promptAlreadyCaptured(label)) {
+    if (tag === 'prompt' && !hasFlag('recapture-last') && !argValue('recapture-prompt') && promptAlreadyCaptured(label)) {
       captureLog('prompt skip: already captured this prompt');
       if (hookMode) emitHook({});
       return;

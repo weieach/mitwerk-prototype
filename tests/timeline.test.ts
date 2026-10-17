@@ -1,7 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { galleryTokens as t } from '../src/features/iteration-gallery/tokens.ts';
-import { timelineWheelDelta, adjacentPushIndex, buildTimeline, fitTimeline, nearestTimelineFrame, timelineBranch, timelinePointerIndex, timelineRangeLabelAt } from '../src/features/iteration-gallery/timeline.ts';
+import { adjacentTimelineIndex, timelineScrollWindow, timelineWheelDelta, adjacentPushIndex, buildTimeline, fitTimeline, nearestTimelineFrame, timelineBranch, timelinePointerIndex, timelineRangeLabelAt } from '../src/features/iteration-gallery/timeline.ts';
+
+test('version jumps target adjacent saved pushes, including the current version closing push', () => {
+  const frames = ['prompt', 'push', 'prompt', 'prompt', 'push', 'prompt', 'push'].map(kind => ({ kind: kind as 'prompt' | 'push' }));
+  assert.equal(adjacentTimelineIndex(frames, 3, -1, 'frame'), 2);
+  assert.equal(adjacentTimelineIndex(frames, 3, 1, 'frame'), 4);
+  assert.equal(adjacentTimelineIndex(frames, 3, -1, 'version'), 1);
+  assert.equal(adjacentTimelineIndex(frames, 3, 1, 'version'), 4);
+  assert.equal(adjacentTimelineIndex(frames, 4, -1, 'version'), 1);
+  assert.equal(adjacentTimelineIndex(frames, 4, 1, 'version'), 6);
+  assert.equal(adjacentTimelineIndex(frames, 0, -1, 'version'), null);
+  assert.equal(adjacentTimelineIndex(frames, 6, 1, 'version'), null);
+  assert.equal(adjacentTimelineIndex(frames, 6, 1, 'frame'), null);
+  assert.equal(adjacentTimelineIndex([{ kind: 'prompt' }, { kind: 'prompt' }], 0, 1, 'version'), null);
+  assert.equal(adjacentTimelineIndex([], 0, 1, 'frame'), null);
+});
+
+test('overview tracks the visible fraction, clamps overscroll, and fills when all blocks fit', () => {
+  assert.deepEqual(timelineScrollWindow(400, 1000, 300), { start: .3, size: .4, maxScroll: 600 });
+  assert.deepEqual(timelineScrollWindow(400, 1000, 900), { start: .6, size: .4, maxScroll: 600 });
+  assert.deepEqual(timelineScrollWindow(400, 1000, -50), { start: 0, size: .4, maxScroll: 600 });
+  assert.deepEqual(timelineScrollWindow(800, 500, 0), { start: 0, size: 1, maxScroll: 0 });
+  assert.deepEqual(timelineScrollWindow(1000, 1000, 0), { start: 0, size: 1, maxScroll: 0 });
+});
 
 test('unequal commit counts preserve equal version spacing and exact frame lookup', () => {
   const timeline = buildTimeline([{ id: 'a', version: 4 }, { id: 'b', version: 5 }, { id: 'c', version: 5 }, { id: 'd', version: 5 }]);

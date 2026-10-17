@@ -10,9 +10,9 @@ import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { GalleryVersion } from './model';
-import { galleryBranchPaint, dateTicks, edgePanArmed, edgePanStrength, formatDate, formatVersion, versionKeepsPush } from './model';
+import { galleryBranchPaint, dateTicks, edgePanArmed, edgePanStrength, formatDate, formatVersion } from './model';
 import type { buildAlbum, FramePlane, LabelFace } from './geometry';
-import { albumBlockBounds, albumFloorY, containingBlock, dateLabelPose, featuredFrameAxis, featuredTickLength, frameFocus, resetCameraDestination, versionLabelPose } from './geometry';
+import { albumAxisContent, albumBlockBounds, albumFloorY, containingBlock, dateLabelPose, featuredFrameAxis, featuredTickLength, defaultFrameFocus, frameFocus, resetCameraDestination, versionLabelPose } from './geometry';
 import { galleryTokens as t } from './tokens';
 import { axisTopBlend, mergeAxisAnchors, overheadDatePosition, projectAxisLabels, withOverheadDates } from './axis-label-layout';
 import { observeTheme, resolveColor } from '../../shared/theme';
@@ -507,7 +507,7 @@ export class AlbumScene {
     this.featuredAnchors = [];
     this.featuredGuides.visible = !this.theaterTurn;
     const frame = this.featuredId() ? this.frames.get(this.featuredId()!) : undefined;
-    if (!frame || !this.album) return;
+    if (!frame || !frame.plane.active || !this.album) return;
     const pair = featuredFrameAxis(this.album, frame.plane);
     this.featuredAnchors = [
       { id: 'featured:date', text: pair.date.text, position: new THREE.Vector3(pair.date.x, pair.date.y, pair.date.z), face: pair.date.face, timestamp: frame.plane.frame.timestamp, featured: true },
@@ -576,7 +576,14 @@ export class AlbumScene {
     const latest = this.album?.planes.filter(plane => plane.active).at(-1) ?? this.album?.planes.at(-1);
     if (!latest || !this.album) return;
     this.frameView(this.lookAt(frameFocus(latest)),
-      Math.max(this.album.blocks[0].width, this.album.blocks[0].height) * t.webgl.frontViewPadding, 'center');
+      Math.max(this.album.blocks[0].width, this.album.blocks[0].height) * t.webgl.frontViewPadding / t.webgl.defaultScale, 'center');
+    const viewUp = new THREE.Vector3(0, 1, 0).applyQuaternion(this.camera.quaternion);
+    const target = this.lookAt(defaultFrameFocus(latest, viewUp, this.camera.top - this.camera.bottom));
+    const shift = target.clone().sub(this.controls.target);
+    this.controls.target.copy(target);
+    this.camera.position.add(shift);
+    this.controls.update();
+    this.resize();
   }
   /** Pan through the blocks before starting the existing frame-to-playback rotation. */
   focusFrame(id: string, complete: () => void) {
@@ -811,17 +818,17 @@ export class AlbumScene {
     if (!this.album) return;
     const album = this.album;
     const floor = albumFloorY(album);
-    this.axisLabel('Date', album.width, t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, -album.depth / 2, 'wall', new THREE.Vector3(album.width, t.rulerTickLength + t.rulerLabelGap, -album.depth / 2));
+    this.axisLabel('Date', album.width, t.rulerTickLength + t.rulerLabelGap + t.axisTitle.dateValueGap, -album.depth / 2, 'wall', new THREE.Vector3(album.width, t.rulerTickLength + t.rulerLabelGap, -album.depth / 2));
     this.axisLabel('Version', -t.rulerTickLength - t.rulerLabelGap - t.axisTitle.valueGap, floor, -album.depth / 2, 'ground', new THREE.Vector3(-t.rulerTickLength - t.rulerLabelGap, floor, -album.depth / 2));
-    const shown = versions.flatMap(version => versionKeepsPush(version.frames) ? version.frames : version.frames.filter(frame => frame.kind !== 'push'));
-    for (const tick of dateTicks(shown)) {
+    const axis = albumAxisContent(album, versions);
+    for (const tick of dateTicks(axis.frames)) {
       const depth = this.frames.get(tick.id)?.plane.depth;
       if (depth === undefined) continue;
       this.line([new THREE.Vector3(album.width, 0, -depth), new THREE.Vector3(album.width, t.rulerTickLength, -depth)], 'wall');
       const pose = dateLabelPose(depth, album);
       this.axisLabel(formatDate(tick.timestamp), pose.x, pose.y, pose.z, pose.face, undefined, tick.timestamp);
     }
-    for (const version of versions) {
+    for (const version of axis.versions) {
       const pose = versionLabelPose(album, version.index);
       this.line([new THREE.Vector3(0, floor, pose.z), new THREE.Vector3(-t.rulerTickLength, floor, pose.z)], 'ground');
       this.axisLabel(formatVersion(version.number), pose.x, pose.y, pose.z, pose.face, undefined, Math.max(...version.frames.map(frame => frame.timestamp)));

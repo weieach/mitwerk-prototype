@@ -1,5 +1,14 @@
 # Design system rules
 
+## Embedded prototypes and live server — 2026-10-17
+
+- Enter prototype replaces the captured image inside its existing playback frame with the interactive saved codebase. It does not open a fullscreen dialog. Chat and Idea stream retain their positions.
+- The latest capture and latest push, derived from the complete catalog rather than the selected range, offer Live server instead. Live server recreates the current app in the same pane with fresh, isolated preview storage. The workspace Live server action opens this same view, including when Version blocks was hidden.
+- Runtime previews pause playback and make its transport, timeline, frame selector and date controls unavailable. Cover the surrounding details and capture-bucket footer with the runtime scrim, preserving their layout dimensions. Superimpose Exit prototype / Exit live server at the bottom over a dark scrim; exit restores the previous playback state and keyboard focus.
+- Keep saved prototypes on their exact pushed commit. Live previews use current app code and do not persist preview changes into the host workspace. Loading and build failures stay inside the same pane with Exit always available.
+- Playback frame actions use the shared 24px horizontal gap token.
+- `c prototype embed` captures Chat alongside the embedded saved prototype, using the newest historical push before the live-server push.
+
 This file is reserved for project-wide design-system rules requested by the user. Update it whenever a request changes a shared rule. Implement values as shared tokens and behavior as reusable graph-derived logic, never as exceptions for particular node IDs, version labels, or screenshots.
 
 ## Scope
@@ -751,6 +760,9 @@ This file is reserved for project-wide design-system rules requested by the user
 - Main-branch annotation bookmarks use a light gray accent shared by theater and the 3D gallery. Their bottom padding extends beneath the frame action row, keeping content aligned with Go to commit.
 - Gallery and theater share the same header, including the saved-frame selector. Selecting a frame in theater updates its selected frame and playhead without leaving theater.
 - Add frame to chat attaches a removable thumbnail context chip to the current chat, preserves its draft, and immediately shows Chat and Version control side by side. Keep attachments per conversation, deduplicate by frame identity, and retain frame references in sent messages.
+- To-do mode reuses the capture-bucket logic. Its placeholder hints that `/` plus a bucket name files the to-do under that bucket. A finished `/name` token (followed by whitespace) leaves the draft and becomes a removable bucket chip in the field (`extractBucketToken`); names resolve case-insensitively through `captureBucketStore`, creating a document-only bucket when new. Saving the to-do stores `bucket` and clears the chip. The drawer and Idea stream show it with the shared read-only `BucketTag`, drawn like the Capturing chip, leading the to-do text directly after the checkbox (`--bucket-tag-text-gap`). Editing a drawer to-do shows the chip in its plain `/bucket` form at the start of the editable text (`todoEditText`); on commit the first `/name` token sets the bucket, and removing it clears the bucket (`parseBucketText` / `editComposerTodo`). Context-chip remove × buttons are bare icons with no fill at rest or on hover; hover dims them to `--chip-remove-hover-opacity`. Using a bucketed to-do as a prompt switches Capturing to that bucket. `c chat ... todo drawer` opens the drawer (waiting for a bucket tag when a location chip is requested); the seeded sample “Polish contrast in the dark theme” is filed under `landing`.
+- Frame, file-reference and to-do context chips are pills (`--context-chip-radius`). Frame thumbnails are circles inset by `--frame-chip-inset` (2px). In the composer, chips have no border; their fill is a light tint of the field (`--composer-chip-surface`, 6% ink over `--composer-surface`) in both themes, and the remove × uses full `--ink`. `c chat & playback w/ reference chip` attaches the current Playback frame before capture (`frameChip=1`). When a chip leads the field, the field's top padding drops to `--composer-chip-top-padding` (6px) with no extra chip margin.
+- Dragging the Playback frame image onto the chat composer does the same as Add frame to chat. The image is a native drag source carrying the shared frame context (`frameDragType` in `frame-context.ts`); the composer shows a dashed focus-ring outline while a frame is over it and attaches through the same `attachFrame` path. A drag that starts on the frame image never orbits; orbit back to the album starts from the theater area around the frame. A plain click on the frame keeps its existing behavior.
 - Below the shared compact-reader breakpoint, show only the Visualizer by default instead of stacking panels. A regular Phosphor arrows-left-right button beside the title switches to Version stream and back with a brief transition; retain each panel's state and respect reduced motion.
 - Annotation text fields use a subtle inset focus treatment, without an external black outline. Text fields fit their sheet width, constrain vertical resizing, and remain inside the scrolling overlay body.
 
@@ -778,7 +790,7 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Quieter workspace chrome and spacing — 2026-09-30
 
-- Agent bylines use shared smaller gaps below the header and between Mit and its role. Add 4px above only the topmost composer context chip, and slightly increase composer bottom clearance.
+- Agent bylines use shared smaller gaps below the header and between Mit and its role. Slightly increase composer bottom clearance. (Superseded: the topmost context chip no longer adds a top gap; see the reference-chip rule below.)
 - Only the selected workspace tab has a white surface and a left/top/right border. Inactive tabs are transparent; tabs and the chat panel have no shadow. Breadcrumb and tab rows have no bottom border. Fullscreen hover keeps its background unchanged and only dims its icon.
 - Sidebar brand-row center aligns with the breadcrumb's bottom edge using half of the header-height token as top padding. Archive the unused Workspace onboarding sample project from the active project list.
 - Version-panel heading groups use space-between. Move the range statistics further below the header with a shared offset, retaining their header-aligned left inset.
@@ -1028,7 +1040,7 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Vertical Idea stream and composer refinements — 2026-10-17
 
-- Historical Idea stream now presents versions in one chronological vertical column, changing branch colors halfway between neighboring stations. Derive order, color ownership, folds and labels from graph data; preserve all original Git ancestry and keep the divergent `layoutGitHistory` implementation available for future use. This supersedes compact divergent lanes in the default Idea stream only; Test visual keeps its existing layout.
+- Historical Idea stream now presents versions in one chronological vertical column, changing branch colors directly behind the first station of each branch segment (updated 2026-10-17). Derive order, color ownership, folds and labels from graph data; preserve all original Git ancestry and keep the divergent `layoutGitHistory` implementation available for future use. This supersedes compact divergent lanes in the default Idea stream only; Test visual keeps its existing layout.
 - Milestone trophies have circular branch-colored backgrounds, centered on their station using the shared 36px milestone diameter; the 28px trophy remains canvas-colored. Branch colors remain consistent across routes, markers and labels regardless of selection.
 - Prompt / To-do pills share 7px vertical and 10px horizontal padding. The attachment icon matches the field placeholder foreground at full opacity. Align the unfinished to-do count to the header's right edge using a 14px minimum diameter and 9px type, allowing larger counts to grow.
 - Version output cards retain the preview, text and arrow without an additional logo beside the label. Push-frame Enter prototype actions render immediately with no entrance delay or animation; disable them while checking availability or building, and retain the missing-archive feedback.
@@ -1259,3 +1271,105 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Automatic capture publication — 2026-10-17
 
 - Queue Blob publication after each successful prompt/push capture and recapture, after recording prompt completion. Skip failed/excluded captures. Publish in a separate worker with a durable queue, coalesce overlapping requests, and retry failed uploads with bounded backoff without delaying or losing local captures. Retain requests arriving during an upload for the next batch. Reuse verified immutable objects during automatic publishing; retain the manual full verification workflow.
+
+
+## Smaller default gallery and latest-frame anchor — 2026-10-17
+
+- Default and Center framing render the album at 80% of the previous base scale, while the zoom readout and reset-to-100% action continue to use 1. Change the base orthographic span through the shared `defaultScale` token rather than initializing zoom at 80%.
+- Place the highest point of the latest active frame’s top edge at 54% of viewport height, below the panel center. Derive the camera pan from frame geometry, camera up direction and viewport span, preserving the shallow angle and horizontal focus. Explicit all-block Reset, manual orbit/pan and Playback retain their existing framing.
+
+
+## Higher default gallery placement — 2026-10-17
+
+- Move the latest-frame top anchor from 54% to 44% of gallery viewport height, lifting the blocks by 10% of the viewport. This supersedes the below-center placement; preserve the 80% base scale (displayed as 100%), shallow camera angle and geometry-derived pan.
+
+
+## Stable axis labels during gallery pan — 2026-10-17
+
+- Date collision rows consider the complete projected rail, including offscreen anchors, and always stack newer dates upward. Viewport edges clip labels naturally instead of changing row assignment or flipping dates downward; this supersedes the viewport-edge fallback. Pure camera translation must preserve each label’s collision row.
+- Apply projected label transforms directly in the scene’s render frame, alongside the WebGL blocks. React owns the label-layer container; the scene update owns its label children so deferred React renders cannot replay stale camera positions. Keep hover highlighting in CSS.
+
+
+## Gallery chrome alignment and navigation breathing room — 2026-10-17
+
+- Give the workspace navigation row equal 6px exterior gaps above and below, sharing the workspace gutter token.
+- Align gallery count text with the Version blocks pill text using shared heading inset, pill border and inline-padding tokens, subtracting the count backdrop’s own padding. Align the info glyph’s right inset with the fullscreen glyph using the same responsive action width and icon size. Preserve these relationships in compact and combined reader layouts.
+
+
+## Range-aware gallery rulers and closer Date title — 2026-10-17
+
+- Date ticks and version labels follow the album's selected time range. Derive them from active frame planes and active version blocks, retaining partially active versions and their original positions. Hide out-of-range featured labels too; inactive blocks remain in place. Share eligibility with XR exports.
+- Halve the Date title's clearance from its date values through the shared `axisTitle.dateValueGap` token (69, versus Version's unchanged 138). Preserve camera-relative projection and inverse-zoom spacing; this supersedes equal Date/Version title gaps.
+
+
+## Idea stream branch-color boundaries — 2026-10-17
+
+- Each new branch color starts at the center of its first displayed station, directly behind the node. Keep the preceding branch color through the entire incoming gap; never switch halfway between stations. Derive joins from chronological node positions so folding, variable card heights and returns to earlier branches preserve the rule. Keep the rounded route caps and existing station treatments.
+
+
+## Centered Idea stations and quiet empty drawer — 2026-10-17
+
+- Ordinary Idea stream station buttons center on the same graph coordinates as milestone and to-do stations. Compute their offsets from shared station center and diameter tokens without the bordered Version card's extra pixel compensation.
+- Workspace panel headers use a solid black 1px bottom divider in both themes, through `--panel-heading-divider`.
+- Hide the to-do drawer's circled unfinished count when that count is zero. Retain its accessible live count and the drawer controls.
+
+
+## Local fold actions for expanded Idea stream groups — 2026-10-17
+
+- Expanded version groups show a borderless “Fold” text action with a filled right-pointing triangle after the text, to the left of their first station and its existing labels. Include the action in the measured label bounds and shared zoom compensation.
+- Collapse only that group and refocus its folded representative; other expanded groups stay open. Keep the action anchored to the group's original first station while inspecting its commits. Remove the global Fold footer control. Derive group identity and membership from the existing same-branch folding projection.
+
+
+## Playback-following Idea stream and to-do station sizing — 2026-10-17
+
+- While Playback is playing, resolve the displayed frame by stable capture-version metadata, temporarily expand its folded group and show its corresponding commit card, then scroll vertically to that station. Moving to another version closes the previous automatic card; leaving a group refolds it unless the user had expanded it manually. These disclosures are derived from playback and never overwrite manual expansion or open-card choices; pausing or closing Playback restores those choices. Preserve selection, zoom and horizontal framing, including Fit all, and respect reduced motion.
+- To-do stations use the branch route width for their complete outer square and icon box, centered on the station coordinate. Derive this from `treeTheme.routeWidth`, independently of milestone diameter.
+- Idea stream to-do timestamps show relative date/time without a redundant version suffix; the graph station identifies the version. Keep the drawer's version suffix.
+
+
+## Runtime in the captured frame — 2026-10-17
+
+- Live server and archived prototypes replace the saved image inside the existing playback frame, preserving its position, dimensions and surrounding layout. Cover metadata, frame actions, transport and footer with a shared dark scrim and make those controls inert; retain the exit action above the transport scrim. This supersedes the full-pane runtime surface and hidden footer.
+- Live server and Enter prototype share the Add frame to chat text-action styling, including weight, spacing, background and icon size.
+- The workspace Live server action always selects the latest catalog frame, opens Playback if needed and starts live mode after that frame is ready. It does not toggle live mode off; the explicit exit action returns to the saved frame.
+
+
+## Runtime motion and backdrop — 2026-10-17
+
+- Live server and saved prototypes reuse milestone-overlay motion: 220ms blur entrance, frame entrance after 220ms, controls after 320ms, 180ms content fades with a one-unit upward entrance/downward exit. Keep the runtime mounted and surrounding controls inert through its 180ms exit; respect reduced motion and restore focus after exit.
+- Use a 34% black scrim with the shared annotation blur (12px), covering playback details and footer. Frame previews have a subtle 1px light border (45% white). These replace the prior 88% black mask and opaque exit gradient.
+- Place the runtime exit action in the same grid row as playback transport so their vertical centers stay aligned across panel sizes and layout changes. Preserve the captured frame dimensions.
+
+## Playback control spacing — 2026-10-17
+
+- Space playback speed, loop and end controls with the shared `--playback-end-gap`: 2% of the playback panel's content width, bounded between 14px and 32px. Use the theater's inline-size container so resizing a pane changes the spacing independently of viewport width.
+- Playback text actions, including Add frame to chat and runtime launch/exit actions, share a 6px icon-to-text gap through `--text-action-icon-gap`.
+
+## Timeline overview and range hints — 2026-10-17
+
+- Always show a 4px black track below the playback timeline with a white thumb representing the visible fraction of the entire sequence. Derive its width and position from actual scroll geometry; keep it synchronized with wheel, pan, playback-follow and resize. Dragging or keyboard navigation moves the timeline viewport, independently of the selected frame. When everything fits, the thumb fills the track. Hide native scrollbars.
+- Hovering an out-of-range timeline block shows a compact “Outside range · 14d ago” hint over the disabled region, using the nearest saved frame's actual age. Keep out-of-range blocks unselectable and clear the hint when leaving, scrolling or changing ranges.
+
+## Rounded overview and remembered playback jumps — 2026-10-17
+
+- Round both ends of the 4px black timeline overview track and its white thumb. Center the 2.5px thumb vertically using shared sizing and radius tokens.
+- Hovering either adjacent-frame transport control for 500ms opens the shared dropdown with “Jump to prev/next frame” and “Jump to prev/next version.” Arrow Up/Down opens it immediately for keyboard users. Choosing an option performs that jump and remembers the scale for both controls across visits; frame is the initial default. A normal click uses the remembered scale.
+- Frame jumps follow the filtered playable sequence, including saved push frames. Version jumps land on the nearest saved push node strictly before or after the current frame in the requested direction, including the closing push of the current version. From a push, skip to the next push in that direction; never substitute a prompt for a missing push. Never cross the selected time range or wrap at an endpoint; keep the scale menu accessible at endpoints.
+
+## Full-width runtime playback — 2026-10-17
+
+- Live server and archived prototype mode temporarily expand Playback to the full width of the Version blocks reader, animating the columns over 320ms with the shared runtime easing. Keep the Idea stream mounted but hidden and inert, preserving its state and the user's split width; leave Chat and the workspace fullscreen choice intact. Exiting restores the previous split or whole layout.
+- Fade out the Version blocks header's date range, frame selector and auxiliary actions in runtime mode; retain the fullscreen control and the Playback label. Playback acts as an exit back to the prior playback layout, using the same animated close as Exit server/prototype. Respect reduced motion for the layout and header fades.
+- Every panel heading leads with its panel icon from the shared `panelIcons` map (`src/components/panel-icons.ts`), the same icons the site header's view links use: Chat `chat`, Version blocks `circuitry`, Idea stream `git-branch`, Live server `globe`, and asset panels by kind (`file-text`, `image`, `squares-four`). A title pill carries the icon inside, ahead of its title; an adaptive title (standalone Idea stream) renders it inside the title and counts it when measuring. Icons sit `--panel-title-icon-gap` (8px) from the title.
+- Site header nav follows mavix237's `design-system` branch (8eb969a): view links run in panel order — Chat, Version blocks, Idea stream, Live server — each showing its icon and text label (the icon-only variant was reverted). The active link is ink over a light parallelogram tag (`--view-tag-bg`, `--view-tag-slant` 4px, fading over `--view-tag-fade`); inactive links are plain muted, never underlined. The bar pads `--workspace-bar-padding-inline` (10px) on both sides; the brand trigger is `--brand-trigger-height` tall. At narrow widths links drop their icons and keep their labels, as before. Live server keeps main's behavior (it opens in the Version pane).
+
+## Capture detail and version metadata — 2026-10-17
+
+- The drawer places a to-do's `(v#)` immediately after its text, outside the editable value; its timecode contains only date/time. Idea stream continues to omit the redundant version suffix.
+- Capture overlay details follow Mavix237's latest `design-system` commit `8eb969a`: a text-sized, frameless field with a persistent half-pixel underline, stronger on hover and 1px on focus. Use the shared field tokens, inherited capture-line typography, a quiet “details” placeholder and 22px height. Enter/blur commits, Escape cancels; keep the bucket picker separate.
+- Saved-frame selectors and their options use `#<capture number> - <local date/time>, v<version>`, derived from each frame's metadata. Unnumbered captures omit the number prefix.
+
+## Filled to-do stations and WIP action anchor — 2026-10-17
+
+- To-do stations use filled square icons (filled check-square when all tasks are complete), retaining their route-width outer size and branch-colored backing. The individual task checkboxes retain their interactive empty/checked treatment.
+- A WIP card always leads with its milestone action, vertically centered on its graph station using the shared station-center coordinate. Milestone text, to-dos and prompt count flow below; adding tasks never pushes the action away from the node. An existing WIP milestone uses the same aligned Edit milestone action.

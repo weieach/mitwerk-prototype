@@ -1318,3 +1318,394 @@ yes, automate publishing to vercel blob after every successful capture so i don'
 before that, my last commit had an error, and i really need to commit this fast
 
 ```
+
+## Prompt #324 uncounted
+
+```text
+push both commits and make sure the vercel deployment succeeds. x counter
+```
+
+## Prompt #325
+
+```text
+in default view of gallery, make the gallery zoomed out a little more by default (at 80% of current 100% default size), and set this to the new 100%. The top edge of the latest frame should be below the center point of the panel. 
+```
+
+## Prompt #326
+
+```text
+move the blocks upward more
+```
+
+## Prompt #327
+
+```text
+while panning in gallery, the position of axis labels shouldnt jitter
+```
+
+## Prompt #328
+
+```text
+# Browser comments:
+
+## User Comment 1
+Browser
+Node position: (109, 29) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "MitWerk menu"
+Target selector: button#navigation-toggle
+Target path: div > header > div > button
+Nearby text: "MitWerk"
+Saved marker screenshot: attached as a labeled image for Comment 1
+Comment:
+add a little margin to top of this row, same amount as gap below this row
+
+## My request:
+for the x/x versions label in gallery, dist btwn its text and left of panel should match that of version blocks header text and left of panel. same for info icon, whose spacing on the right should match right padding in fullscreen btn. 
+```
+
+## Prompt #329
+
+```text
+axis labels outside of the selected time range. the "date" label should be moved down, so the current gap between that and the date labels is halved
+```
+
+## Prompt #330
+
+```text
+On idea stream, the start of a new branch color should be right behind the first node of that branch not halfway btwn nodes
+```
+
+## Prompt #331
+
+```text
+# Browser comments:
+
+## User Comment 1
+Browser
+Node position: (1442, 872) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "Select V12"
+Target selector: div.canvas-world > div.version-position:nth-of-type(6) > article.idea-card > button.station.has-descendants
+Target path: div > div > article > button
+Saved marker screenshot: attached as a labeled image for Comment 1
+Comment:
+have nodes like these be centered
+
+## User Comment 2
+Browser
+Node position: (481, 84) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "Building an iteration gallery"
+Target selector: main#workspace-pane-chat > section.mw-dialog > header.panel-header.workspace-panel-header
+Target path: div > main > section > header
+Saved marker screenshot: attached as a labeled image for Comment 2
+Comment:
+border below these headers should be completely black
+
+## User Comment 3
+Browser
+Node position: (655, 1081) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "To-do drawer"
+Target selector: div.composer-area:nth-of-type(2) > div.chat-composer-stack > div.composer-drawer.is-expanded:nth-of-type(2) > button.composer-drawer-heading
+Target path: div > div > div > button
+Nearby text: "To-do drawer 4 4 unfinished to-dos"
+Saved marker screenshot: attached as a labeled image for Comment 3
+Comment:
+when theres no todo, this circled number wont show up
+
+## My request:
+
+
+```
+
+## Prompt #332
+
+```text
+when folded versions get expanded, there should be a fold text button with a rightward triangle icon to the right side on the left of the first node thats being folded. Dont have the fold button in footer
+```
+
+## Prompt #333
+
+```text
+# Browser comments:
+
+## User Comment 1
+Browser
+Node position: (1465, 745) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "Select V29 · 0/1 to-dos complete"
+Target selector: div.canvas-world > div.version-position:nth-of-type(10) > article.idea-card > button.station.is-todo
+Target path: div > div > article > button
+Nearby text: "Incomplete: Check keyboard navigation in playback 7 days ago (v28)"
+Saved marker screenshot: attached as a labeled image for Comment 1
+Comment:
+this node (outer part included) should be same width as branch width
+
+## User Comment 2
+Browser
+Node position: (1723, 1118) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "To-dos for V30"
+Target selector: div.canvas-world > div.version-position:nth-of-type(11) > article.idea-card > ul.idea-todos
+Target path: div > div > article > ul
+Nearby text: "Incomplete: Update serif typeface Today 09:04 (v29) Incomplete: Polish contrast"
+Saved marker screenshot: attached as a labeled image for Comment 2
+Comment:
+the todos here need not to mention version number
+
+## My request:
+While the playback is playing, the idea stream will be dynamically scrolled to matching location (if the corresponding version is folded, dont have to expand it). c chat and idea stream fit all view
+
+```
+
+## Prompt #334
+
+```text
+# Browser comments:
+
+## User Comment 1
+Browser
+Node position: (1136, 447) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "Add frame to chat Enter prototype"
+Target selector: div.theater-body:nth-of-type(2) > div.theater-stage > div.theater-frame-actions:nth-of-type(1) > div.theater-action-buttons
+Target path: div > div > div > div
+Saved marker screenshot: attached as a labeled image for Comment 1
+Comment:
+wider gap
+
+## My request:
+When user click on "enter prototype", instead of doing a fullscreen overlay, have playback occupy the full space below the version block header and show the prototype there. I want to build out the live server feature. It will use this same format - in the newest frame / push node, instead of "enter prototype", there's a "live server" btn instead that recreate the prototype. Also, while user turned on a prototype or a live server, the "exit prototype / live server" button will be superimposed on top of the playback area (there should be a dark scrim below the btn) so that user can't access playback feature at this point. c prototype embed
+
+```
+
+## Prompt #335
+
+```text
+in addition to "add frame to chat", user is allowed to directly drag the frame image from playback onto chat field to accomplish this. set counter to 335
+```
+
+## Prompt #336
+
+```text
+make the frame / file reference chip more circular and its color closer to the chat field. When a reference chip is added, reduce top padding in chat field. set counter to 336
+```
+
+## Prompt #338
+
+```text
+the chip doesn't need a border either, but the x btn can be brighter. set counter to 338. c chat & playback w/ reference chip
+```
+
+## Prompt #337
+
+```text
+On the matched scroll between playback and stream, it should expand the folded version group and show the corresponding commit card; but after its been scrolled past the commit card can be undisplayed again and the group folded. set counter to 337
+```
+
+## Prompt #339
+
+```text
+the live server / prototype should not create a new overlay, but should render directly where the captured image is, but other details in the panel including footer should be covered like in overlay mode. The enter prototype / live server button should be styled the same as "add frame to chat". clicking on live server in site nav should take user to that liver server frame in playback and auto turn on live server mode. c chat and playback w live server. set counter to 339
+```
+
+## Prompt #340
+
+```text
+i want to apply the capture location chip logic to to-do mode too; while user is in that mode, in placehodler text, can hint to user to type "/" followed by bucket name to contextualize the change to a bucket; after user typed the slash and the content followed by whitespace it auto forms a chip directly in chat field, and the chip shows up in todo drawer & idea stream as well. c chat with todo drawer expanded featuring a todo with location chip. set counter to 340
+```
+
+## Prompt #341
+
+```text
+animate the transition showing the live server and prototype just like the milestone overlay. the exit btn should be vertically aligned with height of playback controls. c chat and playback with live server overlay. Make the scrim behind prototype / server less dark but more blurred, and add a little light colored border around the proto / server. set counter to 341
+```
+
+## Prompt #342
+
+```text
+the x btn on the chip should not have bg fill, it should be just an icon. And in a finished todo with chip, the chip should be appended to front of todo text (so directly following the checkbox) not after. And when user is editing said todo, the chip should be in its plain editable text form as part of the string. set counter to 342
+```
+
+## Prompt #343
+
+```text
+# Browser comments:
+
+## User Comment 1
+Browser
+Node position: (1748, 1192) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "1× No loop"
+Target selector: div.theater-view > div.theater-playback:nth-of-type(2) > div.gallery-toolbar.playback-controls:nth-of-type(1) > div.playback-end-controls:nth-of-type(2)
+Target path: div > div > div > div
+Saved marker screenshot: attached as a labeled image for Comment 1
+Comment:
+increase gap here. gap should also be proportional to panel width
+
+## User Comment 2
+Browser
+Node position: (1655, 293) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "Add frame to chat"
+Target selector: div.theater-stage > div.theater-frame-actions:nth-of-type(1) > div.theater-action-buttons > button.theater-text-action.frame-chat-action:nth-of-type(1)
+Target path: div > div > div > button
+Saved marker screenshot: attached as a labeled image for Comment 2
+Comment:
+for this type of btns, increase gap a little
+
+## My request:
+
+```
+
+## Prompt #344
+
+```text
+Below the timeline, add a scroller that's always present indicating the portion of blocks currently displayed in timeline in relation to the length of the entire sequence - it should be 4px high with with fill as white and bg as black, and dragging it should update the visible portion of the timeline above. Dont show the native overflow scroller in the timeline. 
+
+in relation to the time range selected, when cursor is in a region of timeline beyond that range, a text should be shown on the visually disabled block saying a shortened version of "beyond selected time range (14 days ago)"
+c chat and playback.
+
+```
+
+## Prompt #345
+
+```text
+have the scroller be rounded at both end (white part and black part) and the white part be 2.5px high. While user is hovering on either jump to prev or jump to next frame for 0.5s+, show a dropdown that says "Jump to prev / next frame" and "Jump to prev / next version", and whichever option user chooses will be the default jump scale until they chooses again
+
+```
+
+## Prompt #346
+
+```text
+whenever user click "jump to prev / next ver", it should always land on the first / last push node next to where user is
+
+```
+
+## Prompt #347
+
+```text
+when user is in server mode (live server / prototype), the playback should auto expand to the full panel width (animate transition), and the time range and prompt selector on header row of version blocks should disappear (fade out), leaving only the fullscreen btn. When user click exit or the "playback" btn, it returns to its previous view, whether split or whole. c playback w prototype
+
+```
+
+## Prompt #348
+
+```text
+set counter to 348. For every panel heading, add its respective icon on the left if it doesnt have it already - version blocks, idea stream. Look at latest commit from mavix237's branch and apply her design of site header nav here
+```
+
+## Prompt #349
+
+```text
+bring back the text in site nav btns
+```
+
+## Prompt #350
+
+```text
+# Browser comments:
+
+## User Comment 1
+Browser
+Node position: (213, 1078) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "Edit to-do: add this and that"
+Target selector: ul > li:nth-of-type(1) > span.composer-todo-line > button.composer-todo-text
+Target path: ul > li > span > button
+Nearby text: "add this and that"
+Saved marker screenshot: attached as a labeled image for Comment 1
+Comment:
+add the (v#) to the end of the todo text, not in timecode
+
+## User Comment 2
+Browser
+Node position: (346, 1021) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "Edit capture overlay"
+Target selector: div.composer-area:nth-of-type(2) > div.chat-composer-stack > div.capture-settings:nth-of-type(1) > button.capture-setting-chip
+Target path: div > div > div > button
+Nearby text: "editor overlay"
+Saved marker screenshot: attached as a labeled image for Comment 2
+Comment:
+update the design here to match Mavix237's latest commit on her branch
+
+## User Comment 3
+Browser
+Node position: (1715, 74) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "Saved frame"
+Target selector: span.gallery-header-runtime-controls > div.gallery-frame-picker-slot:nth-of-type(2) > div.album-saved-frame > button.row-select.saved-frame-trigger
+Target path: span > div > div > button
+Nearby text: "[v37] - Oct 17, 5:24"
+Saved marker screenshot: attached as a labeled image for Comment 3
+Comment:
+update format to "#347 - [date], v37"
+
+## My request:
+
+
+```
+
+## Prompt #351
+
+```text
+# Browser comments:
+
+## User Comment 1
+Browser
+Node position: (1402, 468) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "Select V29 · 0/1 to-dos complete"
+Target selector: div.canvas-world > div.version-position:nth-of-type(10) > article.idea-card > button.station.is-todo
+Target path: div > div > article > button
+Nearby text: "Incomplete: Check keyboard navigation in playback 7 days ago"
+Saved marker screenshot: attached as a labeled image for Comment 1
+Comment:
+use filled squares for these
+
+## User Comment 2
+Browser
+Node position: (1623, 874) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "Incomplete: home add this and that Today 16:33 Add milestone 26 prompts"
+Target selector: div.canvas-size > div.canvas-world > div.version-position:nth-of-type(14) > article.idea-card
+Target path: div > div > div > article
+Saved marker screenshot: attached as a labeled image for Comment 2
+Comment:
+for wip node, always have the "add" btn vertically aligned with the node and add other things to its bottom
+
+## My request:
+
+
+```

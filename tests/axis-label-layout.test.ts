@@ -80,7 +80,7 @@ test('axis labels unfold continuously toward the front, independently of zoom an
   assert.ok(Math.abs(faceAt(29.999) - faceAt(30.001)) < 1e-6);
 });
 
-test('Date and Version title gaps match in screen space and grow gently as zoom decreases', async () => {
+test('Date title clearance is half the Version clearance across orbit and zoom', async () => {
   const { axisLabelScreenPosition } = await import('../src/features/iteration-gallery/axis-label-layout.ts');
   const view = camera();
   const titles: AxisAnchor[] = [
@@ -96,11 +96,11 @@ test('Date and Version title gaps match in screen space and grow gently as zoom 
     view.position.set(...position as [number, number, number]); view.lookAt(0, 0, 0); view.updateMatrixWorld();
     view.zoom = 1; view.updateProjectionMatrix();
     const baseline = gap(titles[0]);
-    assert.ok(Math.abs(baseline - gap(titles[1])) < 1e-8);
+    assert.ok(Math.abs(baseline * 2 - gap(titles[1])) < 1e-8);
     view.zoom = .5; view.updateProjectionMatrix();
     assert.ok(gap(titles[0]) > baseline);
     assert.ok(gap(titles[0]) < baseline * 1.25);
-    assert.ok(Math.abs(gap(titles[0]) - gap(titles[1])) < 1e-8);
+    assert.ok(Math.abs(gap(titles[0]) * 2 - gap(titles[1])) < 1e-8);
   }
 });
 
@@ -244,13 +244,13 @@ test('crowded dates stagger by whole text rows, stay deterministic, and return w
   assert.ok(spaceDateLabels(roomy,800,640,()=>40).every(item=>item.row===0));
 });
 
-test('date staggering handles the top edge and keeps faded rails, titles and version labels independent', () => {
+test('date staggering keeps rows at the top edge and faded rails, titles and versions independent', () => {
   const base = {text:'Oct 17',fontSize:10,hidden:false,rise:0,opacity:1,align:.5,dateRail:'wall' as const,transform:'matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,100,8,0,1)'};
   const input = [{...base,id:'title',text:'Date',layer:0},{...base,id:'date',layer:1},
     {...base,id:'faded',layer:2,opacity:0},{...base,id:'version',layer:3,dateRail:undefined}];
   const placed = spaceDateLabels(input,800,640,()=>40);
   assert.equal(placed[0].row,0);
-  assert.ok(placed[1].row! < 0, 'move down by whole rows when the upper edge has no room');
+  assert.equal(placed[1].row, 1, 'retain the upward row even when clipped by the viewport');
   assert.equal(placed[2].transform,input[2].transform);
   assert.equal(placed[3].transform,input[3].transform);
 });
@@ -276,5 +276,20 @@ test('date text never enlarges when orbiting to oblique or overhead angles', () 
       assert.ok(Math.hypot(m[4], m[5]) <= 1 + 1e-8);
       assert.ok(m.every(Number.isFinite));
     }
+  }
+});
+
+
+test('panning across every viewport edge preserves date rows and translates labels exactly', () => {
+  const input = [0,1,2,3].map(i => ({id:String(i),text:'Oct 17',layer:i,fontSize:10,hidden:false,rise:0,opacity:1,align:.5,dateRail:'wall' as const,transform:`matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,${100+i*5},100,0,1)`}));
+  const baseline = spaceDateLabels(input,800,640,()=>40);
+  for (const dx of [-150,-100,0,700,850]) for (const dy of [-120,-95,0,540,700]) {
+    const moved = input.map(label => {const m=matrix(label.transform);m[12]+=dx;m[13]+=dy;return {...label,transform:`matrix3d(${m.join(',')})`};});
+    const result=spaceDateLabels(moved,800,640,()=>40);
+    result.forEach((label,i)=>{
+      assert.equal(label.row,baseline[i].row);
+      assert.equal(matrix(label.transform)[12],matrix(baseline[i].transform)[12]+dx);
+      assert.equal(matrix(label.transform)[13],matrix(baseline[i].transform)[13]+dy);
+    });
   }
 });

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ideaBranchColor, isFinishedIdeaVersion, navigableMilestones, saveMilestone, ideaStreamDefaults, milestoneNavigationIndex, parseMilestones, projectIdeaStream, seedMilestones } from '../src/features/version-tree/idea-stream.ts';
+import { playbackIdeaId, playbackIdeaDisclosure, ideaBranchColor, isFinishedIdeaVersion, navigableMilestones, saveMilestone, ideaStreamDefaults, milestoneNavigationIndex, parseMilestones, projectIdeaStream, seedMilestones } from '../src/features/version-tree/idea-stream.ts';
 import { layoutGitHistory, layoutIdeaTimeline } from '../src/features/version-tree/git-layout.ts';
 import type { VersionNode } from '../src/features/version-tree/model.ts';
 import { captureMilestoneKey, currentIdeaWipId, withinNodeHoverRadius } from '../src/features/version-tree/idea-stream.ts';
@@ -166,6 +166,16 @@ test('vertical idea timeline keeps chronology and branch colors without changing
   assert.deepEqual(layout.nodes.map(n => n.y - layout.nodes[0].y), [0, 100, 400, 500]);
   assert.equal(layout.edges.length, 6);
   assert.deepEqual(layout.edges.slice(0, 2).map(e => e.branchId), ['main', 'feature']);
+  // Every incoming segment keeps the preceding branch color until the target station,
+  // even with unequal row heights or a return to an earlier branch.
+  for (let i = 1; i < layout.nodes.length; i++) {
+    const from = layout.nodes[i - 1], target = layout.nodes[i];
+    const [outgoing, incoming] = layout.edges.slice((i - 1) * 2, i * 2);
+    assert.equal(outgoing.branchId, from.branchId);
+    assert.equal(outgoing.path, `M ${from.x} ${from.y} L ${from.x} ${target.y}`);
+    assert.equal(incoming.branchId, target.branchId);
+    assert.equal(incoming.path, `M ${target.x} ${target.y} L ${target.x} ${target.y}`);
+  }
   assert.deepEqual(layout.mergeOrigins, []);
   assert.deepEqual(layout.nodes.at(-1)?.git?.parents, ['3', '2']);
   assert.equal(JSON.stringify(source), original);
@@ -218,4 +228,47 @@ test('legacy commit milestones migrate to stable capture identity without losing
 test('main uses theme contrast regardless of palette; other branches retain their assigned color', () => {
   assert.equal(ideaBranchColor('main', '#7A9EF7'), 'var(--contrast)');
   assert.equal(ideaBranchColor('feature', '#FFC629'), '#FFC629');
+});
+
+
+test('capture lookup resolves current projection representatives without confusing Git labels', () => {
+  const source = [1,2,3,4].map((version, i) => ({ ...node(String(i), i ? [String(i-1)] : []),
+    label:`V${version + 10}`, capture:{version,pushed:true,branches:['main'],added:null,removed:null} }));
+  const folded = projectIdeaStream(source, {'0':'Milestone'});
+  assert.equal(playbackIdeaId(source, folded.representative, 1), '0');
+  assert.equal(playbackIdeaId(source, folded.representative, 2), '3');
+  assert.equal(playbackIdeaId(source, folded.representative, 3), '3');
+  assert.equal(playbackIdeaId(source, folded.representative, 11), null);
+  assert.equal(playbackIdeaId(source, folded.representative, null), null);
+  const expanded = projectIdeaStream(source, {'0':'Milestone'}, new Set(['3']));
+  assert.equal(playbackIdeaId(source, expanded.representative, 2), '1');
+  assert.equal(folded.folded.size, 1);
+});
+
+
+test('playback temporarily opens the exact commit and expands only its current group', () => {
+  const source = Array.from({length:8}, (_, i) => ({...node(String(i), i ? [String(i-1)] : []),
+    label:`V${i + 20}`, capture:{version:i+1,pushed:true,branches:['main']} }));
+  const milestones = {'3':'Milestone'};
+  const runs = projectIdeaStream(source, milestones).runs;
+  const manual = new Set<string>();
+  const first = playbackIdeaDisclosure(source, runs, 2, manual, '7');
+  assert.equal(first.commandId, '1');
+  assert.deepEqual([...first.expandedRuns], ['2']);
+  assert.equal(projectIdeaStream(source, milestones, first.expandedRuns).representative.get('1'), '1');
+  const sameGroup = playbackIdeaDisclosure(source, runs, 3, manual, '7');
+  assert.equal(sameGroup.commandId, '2');
+  assert.deepEqual([...sameGroup.expandedRuns], ['2']);
+  const next = playbackIdeaDisclosure(source, runs, 6, manual, '7');
+  assert.equal(next.commandId, '5');
+  assert.deepEqual([...next.expandedRuns], ['7']);
+  assert.equal(projectIdeaStream(source, milestones, next.expandedRuns).folded.has('2'), true);
+  const paused = playbackIdeaDisclosure(source, runs, null, manual, '7');
+  assert.equal(paused.commandId, '7');
+  assert.equal(paused.nodeId, null);
+  assert.equal(paused.expandedRuns.size, 0);
+  assert.equal(manual.size, 0);
+  assert.deepEqual([...playbackIdeaDisclosure(source, runs, 6, new Set(['2']), '0').expandedRuns], ['2','7']);
+  assert.equal(playbackIdeaDisclosure(source, runs, 20, manual, '0').commandId, '0', 'capture identity is distinct from the displayed Git label');
+  assert.equal(playbackIdeaDisclosure(source, runs, 4, manual, '0').expandedRuns.size, 0, 'milestone station needs no expansion');
 });

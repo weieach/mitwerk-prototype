@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 type Mode = 'Gallery' | 'Playback';
 
 /** One Figma-style label; the old word leaves before the new word enters. */
-export function PanelViewSwitch({ mode, disabled, onChange }: { mode: Mode; disabled: boolean; onChange?: (mode: Mode) => void }) {
+export function PanelViewSwitch({ mode, disabled, onChange, action }: { mode: Mode; disabled: boolean; onChange?: (mode: Mode) => void; action?: { label: string; onClick: () => void } }) {
   const [label, setLabel] = useState(mode);
   const [leaving, setLeaving] = useState(false);
   const labelRef = useRef(mode);
@@ -23,9 +23,9 @@ export function PanelViewSwitch({ mode, disabled, onChange }: { mode: Mode; disa
   useEffect(() => { transition(mode); }, [mode]);
   useEffect(() => () => clearTimeout(timer.current), []);
   return <button ref={button} type="button" className="panel-view-label" disabled={disabled}
-    aria-label={`${label} view. Switch to ${label === 'Gallery' ? 'Playback' : 'Gallery'}`}
-    title={`Switch to ${label === 'Gallery' ? 'Playback' : 'Gallery'}`}
-    onClick={() => { if (pending.current) return; const next = mode === 'Gallery' ? 'Playback' : 'Gallery'; transition(next); onChange?.(next); }}>
+    aria-label={action?.label ?? `${label} view. Switch to ${label === 'Gallery' ? 'Playback' : 'Gallery'}`}
+    title={action?.label ?? `Switch to ${label === 'Gallery' ? 'Playback' : 'Gallery'}`}
+    onClick={() => { if (action) { action.onClick(); return; } if (pending.current) return; const next = mode === 'Gallery' ? 'Playback' : 'Gallery'; transition(next); onChange?.(next); }}>
     <span key={label} className={leaving ? 'panel-view-word is-leaving' : 'panel-view-word'}>{label}</span>
   </button>;
 }

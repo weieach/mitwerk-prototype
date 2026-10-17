@@ -1,7 +1,8 @@
 import { useLayoutEffect, useRef, useState } from 'react';
+import { PhosphorIcon } from './PhosphorIcon';
 
 /** Shorten only when the full title and its sibling controls cannot fit. */
-export function AdaptivePanelTitle({ full, short, id }: { full: string; short: string; id?: string }) {
+export function AdaptivePanelTitle({ full, short, id, icon }: { full: string; short: string; id?: string; icon?: string }) {
   const title = useRef<HTMLHeadingElement>(null);
   const [compact, setCompact] = useState(false);
   useLayoutEffect(() => {
@@ -37,7 +38,9 @@ export function AdaptivePanelTitle({ full, short, id }: { full: string; short: s
       const minimum = Math.ceil(needed - fullWidth + shortMeasure.getBoundingClientRect().width - switchWidth);
       if (header.getBoundingClientRect().width > 0) header.dataset.minHeaderWidth = String(minimum);
       const fits = needed <= header.clientWidth + 1;
-      element.style.minWidth = fits ? `${fullWidth + parseFloat(titleStyle.paddingLeft) + parseFloat(titleStyle.paddingRight)}px` : '';
+      const iconWidth = element.querySelector<HTMLElement>(':scope > .ui-icon')?.getBoundingClientRect().width ?? 0;
+      const iconSpace = iconWidth ? iconWidth + (parseFloat(titleStyle.columnGap) || 0) : 0;
+      element.style.minWidth = fits ? `${fullWidth + iconSpace + parseFloat(titleStyle.paddingLeft) + parseFloat(titleStyle.paddingRight)}px` : '';
       setCompact(!fits);
     }
     const observer = new ResizeObserver(update);
@@ -54,6 +57,7 @@ export function AdaptivePanelTitle({ full, short, id }: { full: string; short: s
   return <h2 ref={title} id={id} className="adaptive-panel-title" aria-label={full} title={full}>
     <span className="panel-title-measure" aria-hidden="true">{full}</span>
     <span className="panel-title-short-measure" aria-hidden="true">{short}</span>
+    {icon && <PhosphorIcon name={icon} size={15}/>}
     <span className={`panel-title-visible${compact ? ' is-compact' : ''}`} aria-hidden="true">{compact ? short : full}</span>
   </h2>;
 }

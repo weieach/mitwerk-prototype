@@ -1,3 +1,5 @@
+import type { RuntimeMode } from './EmbeddedPrototype';
+import { panelIcons } from '../../components/panel-icons';
 import { captureScreen } from '../../shared/capture-screens';
 import { createPortal } from 'react-dom';
 import { VersionPanelSwitch } from '../../components/VersionPanelSwitch';
@@ -24,7 +26,10 @@ import './gallery.css';
 
 type Catalog = { frames: Capture[]; ignored: number; references?: VisualReference[] };
 
-export function IterationGallery({ headerTarget, headerActions, playbackOnly = false, onExitPlayback, pushRequest, onSwitchPanel, onToggle, expanded }: { headerTarget?:HTMLElement|null; headerActions?:ReactNode; playbackOnly?:boolean; onExitPlayback?:()=>void; onToggle?:()=>void; expanded?:boolean; onSwitchPanel?:()=>void; pushRequest: FrameRequest | null }) {
+export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTarget, headerActions, playbackOnly = false, onExitPlayback, pushRequest, onSwitchPanel, onToggle, expanded }: { onRuntimeChange?:(mode:RuntimeMode|null)=>void; onPlaybackVersion?:(version:number|null)=>void; headerTarget?:HTMLElement|null; headerActions?:ReactNode; playbackOnly?:boolean; onExitPlayback?:()=>void; onToggle?:()=>void; expanded?:boolean; onSwitchPanel?:()=>void; pushRequest: FrameRequest | null }) {
+  const [runtimeMode, setRuntimeMode] = useState<RuntimeMode|null>(null);
+  const [liveRequestKey, setLiveRequestKey] = useState(0);
+  const runtimeChanged = useCallback((mode:RuntimeMode|null) => { setRuntimeMode(mode); onRuntimeChange?.(mode); }, [onRuntimeChange]);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
@@ -96,12 +101,14 @@ export function IterationGallery({ headerTarget, headerActions, playbackOnly = f
   const handledPush = useRef<typeof pushRequest>(null);
   useEffect(() => {
     if (!pushRequest || handledPush.current === pushRequest || !['album', 'theater'].includes(view)) return;
+    if ('live' in pushRequest && !pushRequest.live) { handledPush.current = pushRequest; setLiveRequestKey(key => -Math.abs(key) - 1); return; }
     const push = resolveFrameRequest(allVersions, pushRequest);
     if (!push) return;
     if (captureScreen(push) !== interfaceId) { setInterfaceId(captureScreen(push)); return; }
     handledPush.current = pushRequest;
     if (!inRange(push, range, now)) setRange('all');
     select(push.id, true);
+    if ('live' in pushRequest) setLiveRequestKey(key => Math.abs(key) + 1);
     setMilestoneFrame(pushRequest.milestone ? push : null);
     if (view === 'album') { updateTimelineMotion(0); setView('turning'); }
   }, [pushRequest, versions, view, select, updateTimelineMotion, range, now]);
@@ -142,6 +149,7 @@ export function IterationGallery({ headerTarget, headerActions, playbackOnly = f
     const ranged = frames.filter(frame => inRange(frame, range, now));
     const featured = params.get('frameNumber') ? frames.find(frame => frame.kind === 'prompt' && frame.number === Number(params.get('frameNumber')))
       : params.get('playhead') === 'end' ? ranged.at(-1)
+      : params.get('frameKind') === 'prototype' ? frames.filter(frame => frame.kind === 'push').sort((a,b) => a.timestamp - b.timestamp).at(-2)
       : params.get('frameKind') === 'push'
       ? frames.find(frame => frame.kind === 'push' && (frame.version === pushVersion || frame.number === pushVersion)) ?? frames.find(frame => frame.kind === 'push')
       : referenceCapture(frames, t.theaterReference);
@@ -156,23 +164,23 @@ export function IterationGallery({ headerTarget, headerActions, playbackOnly = f
 
   useEffect(() => { try { seedAnnotations(versions.flatMap(version => version.frames)); } catch { /* Demo seeds can be retried after storage is available. */ } }, [versions]);
 
-  const header = <PanelHeader title="Version blocks" mode={view === 'album' || view === 'focusing' || view === 'returning' ? 'Gallery' : 'Playback'} onModeChange={switchView} modeDisabled={!visibleFrames.length || !['album','theater'].includes(view)} onTitleClick={view === 'theater' ? exit : undefined} onToggle={onToggle} expanded={expanded} actions={<>
-      <VersionPanelSwitch onClick={onSwitchPanel} target="Version stream"/>
+  const header = <PanelHeader title="Version blocks" icon={panelIcons.versionBlocks} mode={view === 'album' || view === 'focusing' || view === 'returning' ? 'Gallery' : 'Playback'} onModeChange={switchView} modeAction={runtimeMode ? { label: 'Return to Playback', onClick: () => setLiveRequestKey(key => -Math.abs(key) - 1) } : undefined} modeDisabled={!visibleFrames.length || !['album','theater'].includes(view)} onTitleClick={!runtimeMode && view === 'theater' ? exit : undefined} onToggle={onToggle} expanded={expanded} actions={<>
+      <span className="gallery-header-runtime-controls" inert={!!runtimeMode} aria-hidden={!!runtimeMode}><VersionPanelSwitch onClick={onSwitchPanel} target="Version stream"/>
       {view !== 'album' && view !== 'focusing' && <div className="gallery-range"><RowSelect label="Date range" value={range} onChange={value => { setRange(value as RangeKey); setNow(Date.now()); }} options={ranges}/></div>}
       <div className="gallery-frame-picker-slot" ref={setFramePickerSlot}/>
-      {headerActions}
+      {headerActions}</span>
     </>}/>;
 
-  return <section ref={galleryRoot} data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-label="Version blocks" style={{ '--gallery-label-background': t.labelBackdrop.color, '--gallery-label-opacity': `${t.labelBackdrop.opacity * 100}%`, '--gallery-label-padding': `${t.labelBackdrop.paddingBlock}px ${t.labelBackdrop.paddingInline}px`, '--gallery-axis-line-height': t.axisText.lineHeight, '--gallery-header-gap': `${t.controls.headerGap}px`, '--gallery-token-lift': `${t.controls.tokenLift}px`, '--gallery-floating-background': t.controls.floatingBackground, '--gallery-floating-label-opacity': t.controls.labelOpacity, '--gallery-frame-selector-share': `${t.controls.frameSelectorShare * 100}%`, '--gallery-floating-width': `${t.controls.floatingWidth}px`, '--gallery-floating-pad-inline': `${t.controls.floatingPaddingInline}px`, '--gallery-floating-pad-block': `${t.controls.floatingPaddingBlock}px`, '--gallery-file-max-width': `${t.controls.fileMaxWidth}px`, '--gallery-control-inset': `${t.controls.inset}px`, '--gallery-control-gap': `${t.controls.gap}px`, '--gallery-frame-select-max-width': `${t.controls.frameSelectMaxWidth}px`, '--theater-focus-background': t.theater.focusBackground, '--theater-frame-shadow': t.theater.frameShadow, '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px` } as CSSProperties}>
+  return <section ref={galleryRoot} data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${runtimeMode ? ' gallery-runtime-active' : ''}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-label="Version blocks" style={{ '--annotation-blur': `${t.annotations.blur}px`, '--annotation-blur-ms': `${t.annotations.blurMs}ms`, '--annotation-enter-ms': `${t.annotations.enterMs}ms`, '--annotation-exit-ms': `${t.annotations.exitMs}ms`, '--annotation-frame-delay': `${t.annotations.frameDelayMs}ms`, '--annotation-ui-delay': `${t.annotations.uiDelayMs}ms`, '--gallery-label-background': t.labelBackdrop.color, '--gallery-label-opacity': `${t.labelBackdrop.opacity * 100}%`, '--gallery-label-padding-inline': `${t.labelBackdrop.paddingInline}px`, '--gallery-label-padding': `${t.labelBackdrop.paddingBlock}px ${t.labelBackdrop.paddingInline}px`, '--gallery-axis-line-height': t.axisText.lineHeight, '--gallery-header-gap': `${t.controls.headerGap}px`, '--gallery-token-lift': `${t.controls.tokenLift}px`, '--gallery-floating-background': t.controls.floatingBackground, '--gallery-floating-label-opacity': t.controls.labelOpacity, '--gallery-frame-selector-share': `${t.controls.frameSelectorShare * 100}%`, '--gallery-floating-width': `${t.controls.floatingWidth}px`, '--gallery-floating-pad-inline': `${t.controls.floatingPaddingInline}px`, '--gallery-floating-pad-block': `${t.controls.floatingPaddingBlock}px`, '--gallery-file-max-width': `${t.controls.fileMaxWidth}px`, '--gallery-control-inset': `${t.controls.inset}px`, '--gallery-control-gap': `${t.controls.gap}px`, '--gallery-frame-select-max-width': `${t.controls.frameSelectMaxWidth}px`, '--theater-focus-background': t.theater.focusBackground, '--theater-frame-shadow': t.theater.frameShadow, '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px` } as CSSProperties}>
     {headerTarget ? createPortal(header, headerTarget) : header}
     {error && <div className="gallery-message" role="alert">{error} <button onClick={() => setRetry(value => value + 1)}>Retry</button></div>}
     {!catalog ? <div className="gallery-empty">{error ? 'Screenshot catalog unavailable.' : 'Reading saved frames…'}</div>
       : !versions.length ? <div className="gallery-empty">No saved frames found.</div>
       : <div className="gallery-view-stack" ref={viewStack}>
       {<><AlbumView focusing={view === 'focusing'} onSelectFrame={id => select(id, true)} framePickerSlot={framePickerSlot} rangeStats={catalog ? `${counts.versions}/${counts.versionTotal} versions${rangePromptLabel}` : 'Loading frames…'} onMotion={updateTimelineMotion} turning={view === 'turning'} returning={view === 'returning'} hidden={view === 'theater' || view === 'orbiting'} onReturnStarted={startReturn} theaterTarget={target} theaterId={selectedId} onTurnComplete={finishTurn} versions={versions} range={range} now={now} onOpen={open} onZoom={setZoom} onCamera={api => { camera.current = api; }}/>{!visibleFrames.length && <div className="gallery-message">No frames in this range. Earlier versions remain visible in gray.</div>}</>}
-      {view !== 'album' && view !== 'focusing' && <div className="gallery-theater-layer" inert={view === 'turning' || view === 'returning'} aria-hidden={view === 'turning' || view === 'returning'}><TheaterView navigationKey={navigationKey} references={catalog?.references ?? []} baseline={baseline ?? t.viewportPresets[1]} frames={visibleFrames} catalog={versions.flatMap(version => version.frames)} range={range} now={now} selectedId={selectedId} onSelect={select} onOrbit={(id, rect) => playbackOnly ? null : camera.current?.orbit(id, rect, () => { setSelectedId(id); setView('orbiting'); }, () => { setView('album'); setTarget(null); }) ?? null} onDismiss={exit} active={view === 'theater'}/></div>}
+      {view !== 'album' && view !== 'focusing' && <div className="gallery-theater-layer" inert={view === 'turning' || view === 'returning'} aria-hidden={view === 'turning' || view === 'returning'}><TheaterView runtimeCatalog={allVersions.flatMap(version => version.frames)} liveRequestKey={liveRequestKey} onRuntimeChange={runtimeChanged} onPlaybackVersion={onPlaybackVersion} navigationKey={navigationKey} references={catalog?.references ?? []} baseline={baseline ?? t.viewportPresets[1]} frames={visibleFrames} catalog={versions.flatMap(version => version.frames)} range={range} now={now} selectedId={selectedId} onSelect={select} onOrbit={(id, rect) => playbackOnly ? null : camera.current?.orbit(id, rect, () => { setSelectedId(id); setView('orbiting'); }, () => { setView('album'); setTarget(null); }) ?? null} onDismiss={exit} active={view === 'theater'}/></div>}
       </div>}
-    <footer className="gallery-footer" inert={view === 'turning' || view === 'returning' || view === 'orbiting'}>
+    <footer className="gallery-footer" aria-hidden={!!runtimeMode} inert={!!runtimeMode || view === 'turning' || view === 'returning' || view === 'orbiting'}>
       <TrackedInterface value={interfaceId} onChange={value => { setInterfaceId(value); setSelectedId(''); setView('album'); setTarget(null); }}/>
       {view !== 'theater' && view !== 'orbiting' && <div className="panel-header-actions">
         <div className="gallery-range"><RowSelect label="Date range" value={range} onChange={value => { setRange(value as RangeKey); setNow(Date.now()); }} options={ranges}/></div>

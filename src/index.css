@@ -101,7 +101,7 @@ button .ui-icon { flex: 0 0 auto; }
 html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .version-position { position: absolute; width: var(--node-card-width); }
 .idea-card { position: relative; width: var(--node-card-width); color: var(--ink); }
-.idea-card .station { cursor: pointer; }
+.idea-card .station { cursor:pointer; left:calc(var(--station-center-x) - var(--station-size) / 2); top:calc(var(--station-center-y) - var(--station-size) / 2); }
 .idea-card .station.is-milestone { width:var(--milestone-size); height:var(--milestone-size); border:var(--milestone-border-width) solid var(--milestone-border-color); border-radius:50%; color:var(--canvas-bg); background:var(--route-color); box-shadow:none; left:calc(var(--station-center-x) - var(--milestone-size) / 2); top:calc(var(--station-center-y) - var(--milestone-size) / 2); }
 .tree-panel .idea-card .idea-milestone { display:block; position:relative; width:100%; height:auto; min-height:0; max-height:152px; overflow:auto; padding:var(--milestone-padding); border-radius:var(--surface-radius); background:var(--paper); color:var(--ink); border:1px solid var(--route-color); font:var(--milestone-font-size)/1.35 var(--sans); text-align:left; white-space:pre-wrap; overflow-wrap:anywhere; cursor:pointer; }
 .idea-add { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: var(--surface-radius); padding: 8px 12px; background: var(--paper); color: var(--ink); cursor: pointer; animation:idea-action-enter var(--idea-action-fade) ease-out; }
@@ -110,7 +110,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .idea-command { margin-top: 10px; }
 .idea-command .node-details { max-height: 180px; overflow: auto; }
 .idea-editor { padding: 12px; background: var(--paper); border: 1px solid var(--line-strong); border-radius: var(--surface-radius); }
-.idea-card > .idea-editor { border-color:var(--route-color); }
+.idea-card > .idea-editor, .idea-wip-action > .idea-editor { border-color:var(--route-color); }
 .idea-editor label { display: block; margin-bottom: 8px; font-size: 12px; }
 .idea-editor textarea { box-sizing: border-box; width: 100%; resize: vertical; min-height: 70px; max-height: 150px; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); padding: 8px; }
 .idea-editor > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
@@ -120,6 +120,8 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .idea-fold-count { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; place-items: center; width: var(--idea-fold-count-size); height: var(--idea-fold-count-size); background: var(--paper); border: 2px solid var(--ink); border-radius: 50%; font: var(--version-label-weight, 700) var(--version-label-size)/1 var(--sans); }
 .idea-fold-count > span { display:block; transform:scale(var(--version-label-zoom, 1)); transform-origin:center; }
 .idea-fold-label { position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%) scale(var(--version-label-zoom, 1)); transform-origin:left center; font: 400 var(--branch-label-size, 10px)/1.25 var(--sans); }
+.idea-refold { display:inline-flex; align-items:center; gap:4px; padding:2px 4px; border:0; border-radius:var(--control-radius); background:transparent; color:var(--muted); font:400 var(--branch-label-size, 10px)/1.25 var(--sans); pointer-events:auto; cursor:pointer; }
+.idea-refold:hover { color:var(--ink); }
 .idea-fold:focus-visible { outline:var(--focus-ring-width) solid var(--focus-ring-color); outline-offset:var(--focus-ring-offset); border-radius: 20px; }
 .version-card { --card-border-color: var(--line); box-shadow: inset 0 0 0 0 var(--card-border-color); transition: border-color var(--card-hover-transition) ease, box-shadow var(--card-hover-transition) ease; position: relative; width: var(--node-card-width); padding: var(--card-padding); border: 1px solid var(--card-border-color); border-radius: var(--surface-radius); background: var(--paper); cursor: default; }
 .version-card.is-compact { cursor: pointer; }
@@ -225,7 +227,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 
 .node-actions button { font-size:calc(11px + var(--action-button-font-increase)); }
 
-.idea-card .station.is-todo { width:var(--milestone-size); height:var(--milestone-size); left:calc(var(--station-center-x) - var(--milestone-size) / 2); top:calc(var(--station-center-y) - var(--milestone-size) / 2); border:0; border-radius:0; background:var(--route-color); color:var(--canvas-bg); box-shadow:none; }
+.idea-card .station.is-todo { width:var(--idea-todo-station-size); height:var(--idea-todo-station-size); left:calc(var(--station-center-x) - var(--idea-todo-station-size) / 2); top:calc(var(--station-center-y) - var(--idea-todo-station-size) / 2); border:0; border-radius:0; background:var(--route-color); color:var(--canvas-bg); box-shadow:none; }
 .idea-todos { display:flex; flex-direction:column; gap:var(--idea-todo-gap);  box-sizing:border-box; list-style:none; margin:0 0 var(--idea-todo-gap); padding:var(--milestone-padding); background:var(--paper); border:1px solid var(--line); border-radius:var(--surface-radius); font:var(--milestone-font-size)/1.35 var(--sans); }
 .idea-todos li { display:flex; align-items:flex-start; gap:8px; }
 .idea-todos .ui-icon { flex:none; margin-top:3px; }
@@ -238,4 +240,9 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .idea-todo-toggle { display:inline-flex; flex:none; padding:0; background:transparent; color:inherit; cursor:pointer; }
 
 .idea-todo-copy { display:flex; flex-direction:column; min-width:0; gap:var(--idea-todo-time-gap); overflow-wrap:anywhere; }
+.idea-todo-text > .bucket-tag { margin-right:var(--bucket-tag-text-gap); vertical-align:text-bottom; }
 .idea-todo-copy time { font-size:var(--idea-todo-time-size); opacity:var(--drawer-time-opacity); text-decoration:none; }
+
+/* Keep the WIP action centered on its graph station; details grow below it. */
+.idea-wip-action { display:flex; align-items:center; min-height:calc(var(--station-center-y) * 2); margin-bottom:var(--idea-todo-gap); }
+.idea-wip-action > .idea-editor { width:100%; }

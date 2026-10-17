@@ -42,7 +42,7 @@ export function withOverheadDates(anchors: AxisAnchor[], floor: number, endDepth
   });
 }
 
-/** Match both title gaps in screen space using the Date-to-values clearance as base.
+/** Project title clearances in screen space, with a tighter Date-to-values gap.
  * Inverse zoom makes the visible gap larger as the album gets smaller. */
 export function axisLabelScreenPosition(anchor: AxisAnchor, camera: THREE.OrthographicCamera, width: number, height: number) {
   const project = (position: THREE.Vector3) => {
@@ -58,7 +58,7 @@ export function axisLabelScreenPosition(anchor: AxisAnchor, camera: THREE.Orthog
   const dateUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion.clone().invert());
   const dateScale = Math.hypot(dateUp.x * width / (camera.right - camera.left), dateUp.y * height / (camera.top - camera.bottom));
   const minimumScale = t.axisTitle.minProjection * height / (camera.top - camera.bottom);
-  const gap = t.axisTitle.valueGap * Math.max(minimumScale, dateScale) / camera.zoom ** t.axisTitle.zoomGapPower;
+  const gap = (anchor.face === 'wall' ? t.axisTitle.dateValueGap : t.axisTitle.valueGap) * Math.max(minimumScale, dateScale) / camera.zoom ** t.axisTitle.zoomGapPower;
   return new THREE.Vector3(origin.x + direction.x * gap, origin.y + direction.y * gap, point.z);
 }
 
@@ -124,11 +124,10 @@ export function projectAxisLabels(anchors: AxisAnchor[], camera: THREE.Orthograp
 
 /** Stagger projected dates in whole text rows, recomputing from untouched anchors
  * each frame. Camera/zoom never receives this presentation-only adjustment. */
-export function spaceDateLabels(labels: AxisLabel[], width: number, height: number, measureText: (text: string, size: number) => number): AxisLabel[] {
+export function spaceDateLabels(labels: AxisLabel[], _width: number, _height: number, measureText: (text: string, size: number) => number): AxisLabel[] {
   type Point = {x:number;y:number};
   type Box = { left: number; right: number; top: number; bottom: number; corners:Point[] };
   const result = [...labels];
-  const gap = 0;
   // Test the rendered quadrilaterals, not their oversized rotated bounding boxes.
   const intersects = (a: Box, b: Box) => {
     for (const polygon of [a.corners,b.corners]) {
@@ -153,7 +152,6 @@ export function spaceDateLabels(labels: AxisLabel[], width: number, height: numb
       const h = label.fontSize + padY * 2;
       const corners = [-label.align * w, (1 - label.align) * w].flatMap(x => [-h / 2, h / 2].map(y => ({x:matrix[12] + matrix[0] * x + matrix[4] * y, y:matrix[13] + matrix[1] * x + matrix[5] * y})));
       const box = {corners,left:Math.min(...corners.map(p => p.x)),right:Math.max(...corners.map(p => p.x)),top:Math.min(...corners.map(p => p.y)),bottom:Math.max(...corners.map(p => p.y))};
-      if (box.right < 0 || box.left > width || box.bottom < 0 || box.top > height) return [];
       return [{label,index,matrix,box,rowHeight:Math.max(1,label.fontSize * Math.hypot(matrix[4],matrix[5]))}];
     }).sort((a,b) => Number(AXIS_TITLES.has(b.label.text)) - Number(AXIS_TITLES.has(a.label.text)) || a.label.layer - b.label.layer || a.label.id.localeCompare(b.label.id));
     const occupied: Box[] = [];
@@ -161,14 +159,13 @@ export function spaceDateLabels(labels: AxisLabel[], width: number, height: numb
       const {label,index,matrix,box,rowHeight} = entry;
       let row = 0, placed = box;
       if (!AXIS_TITLES.has(label.text) && occupied.some(other => intersects(box, other))) {
-        const limit = Math.ceil(entries.reduce((sum,e) => sum + e.box.bottom - e.box.top + gap, height) / rowHeight) + 1;
-        search: for (const direction of [1,-1]) {
-          for (let step = 1; step <= limit; step++) {
-            const offset = direction * step * rowHeight;
-            const candidate = {...box,top:box.top-offset,bottom:box.bottom-offset,corners:box.corners.map(point=>({...point,y:point.y-offset}))};
-            if (candidate.top < 0 || (candidate.bottom > height && step < limit)) continue;
-            if (!occupied.some(other => intersects(candidate,other))) {row = direction * step; placed = candidate; break search;}
-          }
+        // All anchors participate, including offscreen dates. Panning translates
+        // the rail but must never change row assignment at viewport boundaries.
+        const limit = Math.ceil(entries.reduce((sum,e) => sum + e.box.bottom - e.box.top, 0) / rowHeight) + entries.length;
+        for (let step = 1; step <= limit; step++) {
+          const offset = step * rowHeight;
+          const candidate = {...box,top:box.top-offset,bottom:box.bottom-offset,corners:box.corners.map(point=>({...point,y:point.y-offset}))};
+          if (!occupied.some(other => intersects(candidate,other))) {row = step; placed = candidate; break;}
         }
       }
       occupied.push(placed);

@@ -1,10 +1,11 @@
-import { attachFrameEvent } from '../workbench/frame-context';
+import { attachFrame, writeFrameDrag } from '../workbench/frame-context';
 import { annotationBookmarkColor } from '../annotations/appearance';
 import { FrameAnnotations } from '../annotations/FrameAnnotations';
 import "@phosphor-icons/web/fill/style.css";
 import { ReferenceFiles } from '../../components/ReferenceFiles';
 import { frameReferences, type VisualReference } from './references';
-import { FullscreenPreview } from './FullscreenPreview';
+import { EmbeddedPrototype, type RuntimeMode } from './EmbeddedPrototype';
+import { liveFrameIds } from './runtime-targets';
 import { usePrototype } from './usePrototype';
 import { formatVersion } from './model';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -12,9 +13,10 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from
 import type { GalleryFrame, LoopMode, RangeKey } from './model';
 import { formatTime, playbackStep, ranges, inRange } from './model';
 import { galleryTokens as t } from './tokens';
-import { aspectRatioLabel, fitPrototypeFrame, presentedFrame, theaterFrameSize, wheelFrameDelta } from './theater-layout';
+import { presentedFrame, theaterFrameSize, wheelFrameDelta } from './theater-layout';
 import { FrameLoader } from './frame-loader';
-import { adjacentPromptIndex } from './timeline';
+import { adjacentTimelineIndex, type JumpScale } from './timeline';
+import { PlaybackJump } from './PlaybackJump';
 import { PlaybackTimeline } from './PlaybackTimeline';
 import { containedFrameTarget, reservedControlContains } from './theater-transition';
 import type { TheaterOrbit, TheaterTarget } from './theater-transition';
@@ -32,18 +34,39 @@ function PlaybackTip({ label, children, edge }: { label: string; children: React
 
 const loopModes: { value: LoopMode; label: string }[] = [{ value: 'once', label: 'No loop' }, { value: 'loop', label: 'Loop' }, { value: 'ping-pong', label: 'Ping-pong' }];
 
-export function TheaterView({ navigationKey, references, frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline }: { navigationKey: number; references: VisualReference[]; baseline: { width: number; height: number }; active: boolean; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string, animate?: boolean) => void }) {
+const frameContextOf = (frame: GalleryFrame) => ({ id: frame.id, url: `${import.meta.env.BASE_URL}${frame.url}`, label: `${formatVersion(frame.version)} · ${frame.summary}`, filename: frame.filename });
+
+export function TheaterView({ runtimeCatalog, liveRequestKey = 0, onRuntimeChange, onPlaybackVersion, navigationKey, references, frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline }: { runtimeCatalog: GalleryFrame[]; liveRequestKey?:number; onRuntimeChange?:(mode:RuntimeMode|null)=>void; onPlaybackVersion?:(version:number|null)=>void; navigationKey: number; references: VisualReference[]; baseline: { width: number; height: number }; active: boolean; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string, animate?: boolean) => void }) {
   const timelineRef = useRef<HTMLDivElement>(null);
   const gesture = useRef<{ pointer: number; x: number; y: number; frameClick: boolean; orbit: TheaterOrbit | null } | null>(null);
   const [playing, setPlaying] = useState(false);
-  const [fullscreenId, setFullscreenId] = useState<string | null>(null);
+  const [runtimeMode, setRuntimeMode] = useState<RuntimeMode | null>(null);
+  const [runtimeExiting, setRuntimeExiting] = useState(false);
+  const runtimeExitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (runtimeExitTimer.current) clearTimeout(runtimeExitTimer.current); }, []);
+  function openRuntime(mode: RuntimeMode) {
+    if (runtimeExitTimer.current) clearTimeout(runtimeExitTimer.current);
+    runtimeExitTimer.current = null;
+    setRuntimeExiting(false); setRuntimeMode(mode);
+  }
+  const entryButton = useRef<HTMLButtonElement>(null);
+  const exitButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => { if (runtimeMode) exitButton.current?.focus(); }, [runtimeMode]);
+  const handledLiveRequest = useRef(0);
   const [toast, setToast] = useState('');
-  useEffect(() => { setFullscreenId(null); }, [selectedId, active]);
+  useEffect(() => {
+    if (runtimeExitTimer.current) clearTimeout(runtimeExitTimer.current);
+    runtimeExitTimer.current = null;
+    setRuntimeExiting(false); setRuntimeMode(null);
+  }, [selectedId, active]);
+  useEffect(() => { onRuntimeChange?.(runtimeMode); }, [runtimeMode, onRuntimeChange]);
+  useEffect(() => () => onRuntimeChange?.(null), [onRuntimeChange]);
   const [speed, setSpeed] = useState(1);
   const [mode, setMode] = useState<LoopMode>('once');
+  const [jumpScale, setJumpScale] = useState<JumpScale>(() => {
+    try { return localStorage.getItem('mitwerk-playback-jump-scale') === 'version' ? 'version' : 'frame'; } catch { return 'frame'; }
+  });
   const [direction, setDirection] = useState(1);
-  const [preset, setPreset] = useState('original');
-  const [custom, setCustom] = useState({ width: 1280, height: 800 });
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
@@ -82,11 +105,12 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
   useEffect(() => {
     setPlaying(false); setPreviewId(null); setPreviewImage(null); prototype.exit();
   }, [navigationKey]);
-  const fullscreen = active && frame?.kind === 'push' && fullscreenId === frame.id;
+  const liveTarget = !!frame && liveFrameIds(runtimeCatalog).has(frame.id);
   const showingPreview = !!previewFrame && !!previewImage;
   const navigationFrames = catalog.filter(item => inRange(item, range, now));
-  const previousPrompt = adjacentPromptIndex(navigationFrames, Math.max(0, navigationFrames.findIndex(item => item.id === selectedId)), -1);
-  const nextPrompt = adjacentPromptIndex(navigationFrames, Math.max(0, navigationFrames.findIndex(item => item.id === selectedId)), 1);
+  const navigationIndex = navigationFrames.findIndex(item => item.id === selectedId);
+  const previousJump = adjacentTimelineIndex(navigationFrames, navigationIndex, -1, jumpScale);
+  const nextJump = adjacentTimelineIndex(navigationFrames, navigationIndex, 1, jumpScale);
 
   useEffect(() => {
     if (!previewFrame) return;
@@ -139,6 +163,11 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
     return () => observer.disconnect();
   }, [Boolean(frame)]);
 
+  // Follow the image actually on screen, never a loading request or hover preview.
+  const playingVersion = playing && active ? displayed?.version ?? null : null;
+  useEffect(() => { onPlaybackVersion?.(playingVersion); }, [playingVersion, onPlaybackVersion]);
+  useEffect(() => () => onPlaybackVersion?.(null), [onPlaybackVersion]);
+
   useEffect(() => { setPlaying(false); setDirection(1); setPreviewId(null); setPreviewImage(null); wheel.current = 0; }, [sequence]);
   useEffect(() => {
     if (!playing || !frame || !ready || !active || previewFrame) return;
@@ -165,15 +194,25 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
     if (prototype.error) setToast(prototype.error);
   }, [prototype.error]);
   useEffect(() => {
+    if (!active || !ready || !liveRequestKey || handledLiveRequest.current === liveRequestKey) return;
+    handledLiveRequest.current = liveRequestKey;
+    if (liveRequestKey < 0) { exitPrototype(); return; }
+    setPlaying(false); setPreviewId(null); setPreviewImage(null); openRuntime('live');
+  }, [active, ready, liveRequestKey]);
+  const capturedRuntime = useRef(false);
+  useEffect(() => {
     const params = new URLSearchParams(location.search);
-    if (params.get('screenshot') !== '1') return;
-    if (params.get('viewport') === 'phone') setPreset('phone');
+    if (capturedRuntime.current || params.get('screenshot') !== '1' || !active || !ready) return;
     if (params.get('prototypeOpen') === '1' && prototype.available && frame?.kind === 'push') {
-      setPlaying(false);
-      if (params.get('overlay') === '1') setFullscreenId(frame.id);
-      void prototype.enter();
+      capturedRuntime.current = true; setPlaying(false); openRuntime('prototype'); void prototype.enter();
     }
-  }, [prototype.available, frame?.id, frame?.kind]);
+  }, [prototype.available, frame?.id, active, ready]);
+  const capturedFrameChip = useRef(false);
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (capturedFrameChip.current || params.get('screenshot') !== '1' || params.get('frameChip') !== '1' || !active || !ready || !frame) return;
+    capturedFrameChip.current = true; attachFrame(frameContextOf(frame));
+  }, [frame?.id, active, ready]);
   useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(''), 5000);
@@ -181,14 +220,11 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
   }, [toast]);
 
   if (!frame) return <div className="gallery-empty">No frames in this date range. Choose a wider range to play.</div>;
-  const viewport = t.viewportPresets.find(option => option.value === preset)!;
-  const dimensions = preset === 'original' ? baseline : preset === 'custom' ? custom : viewport;
   const naturalFrame = theaterFrameSize(stageSize, baseline, baseline);
   const staticRatio = baseline.width / Math.max(baseline.height, 1);
   const staticHeight = Math.min(naturalFrame.height, stageSize.height);
   const staticFrame = { width: staticHeight * staticRatio, height: staticHeight };
-  const prototypeFrame = fitPrototypeFrame({ width: stageSize.width, height: staticFrame.height }, dimensions);
-  const frameSize = frame?.kind === 'push' && prototype.open ? prototypeFrame : staticFrame;
+  const frameSize = staticFrame;
   function selectFrame(next: number) {
     prototype.exit();
     const nextFrame = frames[next];
@@ -196,23 +232,27 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
     setPlaying(false); setPreviewId(null); setPreviewImage(null); onSelect(nextFrame.id);
   }
   stepFrame.current = move => {
-    if (!active || frames.length < 2 || gesture.current) return;
+    if (runtimeMode || !active || frames.length < 2 || gesture.current) return;
     const next = Math.max(0, Math.min(frames.length - 1, index + move));
     if (next !== index) selectFrame(next);
   };
-  function skipPrompt(next: number | null) {
+  function jump(next: number | null) {
     if (next === null) return;
-    const push = navigationFrames[next];
-    if (!push) return;
-    setDirection(1); setPlaying(false); setPreviewId(null); setPreviewImage(null); onSelect(push.id);
+    setDirection(1); prototype.exit(); setPlaying(false); setPreviewId(null); setPreviewImage(null); onSelect(navigationFrames[next].id, true);
+  }
+  function chooseJump(scale: JumpScale, direction: -1 | 1) {
+    setJumpScale(scale);
+    try { localStorage.setItem('mitwerk-playback-jump-scale', scale); } catch { /* Keep the session preference when storage is unavailable. */ }
+    jump(adjacentTimelineIndex(navigationFrames, navigationIndex, direction, scale));
   }
 
+  const frameContext = () => frameContextOf(frame);
   function goToCommit() {
     if (!frame) return;
     window.dispatchEvent(new CustomEvent('mitwerk-go-to-commit', { detail: { version: frame.version } }));
   }
   function pointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!active || !event.isPrimary || event.button !== 0 || gesture.current) return;
+    if (runtimeMode || !active || !event.isPrimary || event.button !== 0 || gesture.current) return;
     const root = event.currentTarget;
     if ((event.target as HTMLElement).closest('button, input, select, label, a, [data-orbit-blocked]')) return;
     // Control rows reserve their own box and margins; open gaps between them dismiss theater.
@@ -228,12 +268,14 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
       );
     });
     if (blocked) return;
-    gesture.current = { pointer: event.pointerId, x: event.clientX, y: event.clientY, frameClick: !!(event.target as HTMLElement).closest('.theater-screen'), orbit: null };
-    root.setPointerCapture(event.pointerId);
+    const frameClick = !!(event.target as HTMLElement).closest('.theater-screen');
+    gesture.current = { pointer: event.pointerId, x: event.clientX, y: event.clientY, frameClick, orbit: null };
+    // The frame image is a native drag source for chat; orbit starts from the theater area around it.
+    if (!frameClick) root.setPointerCapture(event.pointerId);
   }
   function pointerMove(event: ReactPointerEvent<HTMLDivElement>) {
     const drag = gesture.current;
-    if (!drag || drag.pointer !== event.pointerId) return;
+    if (!drag || drag.pointer !== event.pointerId || drag.frameClick) return;
     const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
     if (!drag.orbit && Math.hypot(dx, dy) >= t.webgl.dragThreshold) {
       const screen = event.currentTarget.querySelector('.theater-screen');
@@ -259,37 +301,20 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
 
   function enterPrototype() {
     setPlaying(false); setPreviewId(null); setPreviewImage(null);
+    if (liveTarget) { openRuntime('live'); return; }
     if (prototype.available === false) { setToast('No saved codebase for this push.'); return; }
-    if (frame) setFullscreenId(frame.id);
-    void prototype.enter();
+    openRuntime('prototype'); void prototype.enter();
   }
-  const exitPrototype = frame?.kind === 'push' && prototype.open
-    ? <button className="theater-text-action is-exit" onClick={() => { prototype.exit(); setFullscreenId(null); }}><Icon name="close"/>Exit prototype</button>
-    : null;
-
-  function resizeSide(side: 'left' | 'right', event: ReactPointerEvent<HTMLButtonElement>) {
-    event.stopPropagation();
-    event.preventDefault();
-    const startX = event.clientX;
-    const start = frameSize;
-    const handle = event.currentTarget;
-    try { handle.setPointerCapture(event.pointerId); } catch { /* A captured pointer is optional; window listeners still resize. */ }
-    const move = (pointer: PointerEvent) => {
-      const dx = pointer.clientX - startX;
-      const width = Math.max(120, Math.min(stageSize.width, start.width + (side === 'right' ? dx : -dx)));
-      setPreset('custom');
-      setCustom({ width: Math.round(width), height: Math.round(start.height) });
-    };
-    const end = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', end);
-      window.removeEventListener('pointercancel', end);
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', end);
-    window.addEventListener('pointercancel', end);
+  function exitPrototype() {
+    if (runtimeExitTimer.current || runtimeExiting) return;
+    setRuntimeExiting(true);
+    const duration = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : t.annotations.exitMs;
+    runtimeExitTimer.current = setTimeout(() => {
+      runtimeExitTimer.current = null;
+      prototype.exit(); setRuntimeMode(null); setRuntimeExiting(false);
+      requestAnimationFrame(() => entryButton.current?.focus());
+    }, duration);
   }
-  const prototypeMode = frame.kind === 'push' && prototype.open;
 
   const playbackOptions = <div className="playback-options">
         <RowSelect label="Playback speed" value={String(speed)} onChange={value => setSpeed(+value)} options={t.speeds.map(value => ({ value: String(value), label: `${value}×` }))}/>
@@ -306,58 +331,28 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
     onSelect(next.id, true);
   }
 
-  return <div className="theater-view" data-frame-id={frame?.id} data-selected-frame-id={requested?.id} data-preview-frame-id={previewFrame?.id} data-range-edge={atRangeEnd ? 'end' : atRangeStart ? 'start' : ''} data-frame-ready={ready && stageMeasured}
-    style={{ '--theater-footer-gap': `${t.theater.playbackFooterGap}px` } as CSSProperties}
+  return <div className={`theater-view${runtimeMode ? ' is-runtime' : ''}`} data-runtime-exiting={runtimeExiting} data-frame-id={frame?.id} data-selected-frame-id={requested?.id} data-preview-frame-id={previewFrame?.id} data-range-edge={atRangeEnd ? 'end' : atRangeStart ? 'start' : ''} data-frame-ready={ready && stageMeasured}
+    style={{ '--theater-footer-gap': `${t.theater.playbackFooterGap}px`, '--theater-action-buttons-gap': `${t.theater.actionButtonsGap}px` } as CSSProperties}
     onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} onLostPointerCapture={pointerEnd}>
-    {fullscreen && <FullscreenPreview label={`${formatVersion(frame.version)} full screen`} ratio={dimensions.width / dimensions.height}
-      onClose={() => { if (prototype.loading) prototype.exit(); setFullscreenId(null); }} footer={null}>
-      {prototype.loading ? <div className="theater-loading" role="status">Building prototype…</div> : prototype.error ? <div className="gallery-empty" role="alert">{prototype.error}</div> : prototype.open && prototype.url
-        ? <iframe className="theater-prototype" src={prototype.url} title={`${formatVersion(frame.version)} interactive archived prototype`}
-            sandbox="allow-scripts" referrerPolicy="no-referrer"/>
-        : <img draggable={false} src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`${formatVersion(frame.version)}: ${frame.summary}`}/>}
-    </FullscreenPreview>}
-    <div className="gallery-toolbar theater-top-toolbar" data-orbit-blocked hidden={!prototypeMode}>
-      {prototypeMode && <>
-      <RowSelect label="Preview viewport" value={preset} onChange={setPreset} options={t.viewportPresets}/>
-      {preset === 'custom' && <div className="gallery-custom-size">
-        <input aria-label="Custom viewport width" type="number" min="120" max="4096" value={custom.width} onChange={event => setCustom({ ...custom, width: Math.max(120, Math.min(4096, +event.target.value || 120)) })}/>
-        <span>×</span><input aria-label="Custom viewport height" type="number" min="120" max="4096" value={custom.height} onChange={event => setCustom({ ...custom, height: Math.max(120, Math.min(4096, +event.target.value || 120)) })}/>
-      </div>}
-      <span className="gallery-small">{aspectRatioLabel(dimensions.width, dimensions.height)}</span>
-      </>}
-
-    </div>
     <div className="theater-body" ref={bodyRef} style={{ '--theater-metadata-height': `${t.theater.metadataHeight}px`, '--theater-metadata-max': `${t.theater.metadataHeightMaxVh}vh`, '--theater-metadata-gap': `${t.theater.metadataGap}px` } as CSSProperties}>
       <div className="theater-stage" style={{ width: '100%', '--theater-action-gap': `${t.theater.actionGap}px`, '--theater-frame-bed': t.theater.frameBed } as CSSProperties}>
-      <div className="theater-frame-actions" data-orbit-blocked ref={actionsRef}>
+      <div className="theater-frame-actions" inert={!!runtimeMode} aria-hidden={!!runtimeMode} data-orbit-blocked ref={actionsRef}>
         {frame.kind !== 'push' && <FrameAnnotations key={navigationKey} color={annotationBookmarkColor(frame.branch, branches)} frame={frame} active={active && ready && !playing} onOpen={() => { setPlaying(false); setDisplayed(frame); setPreviewId(null); setPreviewImage(null); onSelect(frame.id); }}/>}
-        <div className="theater-action-buttons">{exitPrototype}
+        <div className="theater-action-buttons">
 
-        <button className="theater-text-action frame-chat-action" onClick={event => { event.stopPropagation(); window.dispatchEvent(new CustomEvent(attachFrameEvent, {detail:{id:frame.id, url:`${import.meta.env.BASE_URL}${frame.url}`, label:`${formatVersion(frame.version)} · ${frame.summary}`, filename:frame.filename}})); }}><Icon name="plus"/>Add frame to chat</button>
-        {frame.kind === 'push' && (prototype.open
-          ? <button className="theater-text-action" onClick={() => { setPlaying(false); setFullscreenId(frame.id); }}><Icon name="expand"/>Full screen</button>
-          : <button className="theater-text-action frame-chat-action" disabled={!active || prototype.loading || prototype.available === null} onClick={enterPrototype}>
-            <Icon name="play"/>Enter prototype
-          </button>)}
+        <button className="theater-text-action frame-chat-action" onClick={event => { event.stopPropagation(); attachFrame(frameContext()); }}><Icon name="plus"/>Add frame to chat</button>
+        {(frame.kind === 'push' || liveTarget) && <button ref={entryButton} className="theater-text-action frame-chat-action is-enter" disabled={!active || (!liveTarget && (prototype.loading || prototype.available === null))} onClick={enterPrototype}>
+          <Icon name={liveTarget ? 'globe' : 'play'}/>{liveTarget ? 'Live server' : 'Enter prototype'}
+        </button>}
         </div>
       </div>
-        {prototypeMode ? <div className="theater-frame-bed" style={{ '--theater-bed-height': `${staticFrame.height}px` } as CSSProperties}><div className={`theater-screen${displayed?.kind === 'push' ? ' is-push' : ''}`} ref={screenRef} data-orbit-blocked style={{ height: frameSize.height, width: frameSize.width }}>
-          {!fullscreen && prototype.url && <iframe className="theater-prototype" src={prototype.url} title={`${formatVersion(frame.version)} interactive archived prototype`} sandbox="allow-scripts" referrerPolicy="no-referrer"/>}
-          {displayed ? <img draggable={false} src={`${import.meta.env.BASE_URL}${displayed.url}`} alt={`${formatVersion(displayed.version)}: ${displayed.summary}`} aria-hidden={showingPreview}/>
+        <div className={`theater-screen${displayed?.kind === 'push' ? ' is-push' : ''}${runtimeMode ? ' is-runtime-screen' : ''}`} inert={runtimeExiting} ref={screenRef} style={{ height: frameSize.height, width: '100%' }}
+          onDragStart={event => { if (runtimeMode) { event.preventDefault(); return; } setPlaying(false); writeFrameDrag(event.dataTransfer, frameContext()); }}>
+          {runtimeMode ? <EmbeddedPrototype key={runtimeMode} mode={runtimeMode} url={prototype.url} loading={prototype.loading} error={prototype.error} version={frame.version} onRetry={() => void prototype.enter()}/> : displayed ? <img draggable src={`${import.meta.env.BASE_URL}${displayed.url}`} alt={`${formatVersion(displayed.version)}: ${displayed.summary}`} aria-hidden={showingPreview}/>
             : <div className="gallery-empty">{failedImage ? 'This saved image could not be loaded.' : 'Loading frame…'}</div>}
-          {showingPreview && <img draggable={false} className="theater-preview-image" src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`Preview ${formatVersion(frame.version)}: ${frame.summary}`}/>}
-          {prototype.loading && <div className="theater-loading" role="status">Building prototype…</div>}
-          {!fullscreen && <>
-            <button type="button" className="theater-resize is-left" aria-label="Resize frame from the left" data-orbit-blocked onPointerDown={event => resizeSide('left', event)}/>
-            <button type="button" className="theater-resize is-right" aria-label="Resize frame from the right" data-orbit-blocked onPointerDown={event => resizeSide('right', event)}/>
-          </>}
-        </div></div> : <div className={`theater-screen${displayed?.kind === 'push' ? ' is-push' : ''}`} ref={screenRef} style={{ height: frameSize.height, width: '100%' }}>
-          {displayed ? <img draggable={false} src={`${import.meta.env.BASE_URL}${displayed.url}`} alt={`${formatVersion(displayed.version)}: ${displayed.summary}`} aria-hidden={showingPreview}/>
-            : <div className="gallery-empty">{failedImage ? 'This saved image could not be loaded.' : 'Loading frame…'}</div>}
-          {showingPreview && <img draggable={false} className="theater-preview-image" src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`Preview ${formatVersion(frame.version)}: ${frame.summary}`}/>}
-          {prototype.loading && <div className="theater-loading" role="status">Building prototype…</div>}
-        </div>}
-      <div className="theater-metadata" ref={metaRef} style={{ '--theater-reference-width': `${t.theater.referenceChipWidth}px`, '--line-added': t.theater.addedColor, '--line-removed': t.theater.removedColor, '--theater-row-gap': `${t.theater.metadataRowGap}px`, '--theater-summary-gap': `${t.theater.metadataRowGap * (t.theater.summaryGapScale - 1)}px` } as CSSProperties}>
+          {!runtimeMode && showingPreview && <img draggable className="theater-preview-image" src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`Preview ${formatVersion(frame.version)}: ${frame.summary}`}/>}
+        </div>
+      <div className="theater-metadata" inert={!!runtimeMode} aria-hidden={!!runtimeMode} ref={metaRef} style={{ '--theater-reference-width': `${t.theater.referenceChipWidth}px`, '--line-added': t.theater.addedColor, '--line-removed': t.theater.removedColor, '--theater-row-gap': `${t.theater.metadataRowGap}px`, '--theater-summary-gap': `${t.theater.metadataRowGap * (t.theater.summaryGapScale - 1)}px` } as CSSProperties}>
         {failedImage && displayed && <span role="status" data-orbit-blocked>The next image could not be loaded. The previous frame is still shown.</span>}
         <div className="theater-version" data-orbit-blocked>
           <span className="theater-version-group">
@@ -375,19 +370,22 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
       </div>
     </div>
     <div className="theater-playback" data-orbit-blocked>
-      <div className="gallery-toolbar playback-controls" style={{ '--playback-enabled': t.theater.playbackEnabled, '--playback-disabled': t.theater.playbackDisabled } as CSSProperties}>
+      {runtimeMode && <div className="runtime-exit-scrim" inert={runtimeExiting}>
+        <button ref={exitButton} className="theater-text-action" onClick={exitPrototype}><Icon name="close"/>Exit {runtimeMode === 'live' ? 'live server' : 'prototype'}</button>
+      </div>}
+      <div className="gallery-toolbar playback-controls" inert={!!runtimeMode} aria-hidden={!!runtimeMode} style={{ '--playback-enabled': t.theater.playbackEnabled, '--playback-disabled': t.theater.playbackDisabled } as CSSProperties}>
         <PlaybackTip label={`Jump to timeline start (${rangeLabel})`} edge="start"><button className="icon-button" aria-label="Jump to timeline start" disabled={!rangeFrames.length || atRangeStart} onClick={() => scrollTimeline('start')}><i className="ph-fill ph-caret-line-left" aria-hidden="true"/></button></PlaybackTip>
         <div className="playback-transport">
-        <PlaybackTip label="Jump to previous prompt"><button className="icon-button" onClick={() => skipPrompt(previousPrompt)} disabled={previousPrompt === null} aria-label="Previous prompt"><Icon name="previous"/></button></PlaybackTip>
+        <PlaybackJump direction={-1} scale={jumpScale} unavailable={previousJump === null} onJump={() => jump(previousJump)} onChoose={scale => chooseJump(scale, -1)}/>
         <PlaybackTip label={playing ? 'Pause' : 'Play'}><button className="icon-button playback-toggle" onClick={() => { prototype.exit(); if (!playing && mode === 'once' && index === frames.length - 1) onSelect(frames[0].id); setPlaying(!playing); }} disabled={frames.length < 2} aria-label={playing ? 'Pause playback' : 'Play frames'}><Icon name={playing ? 'pause' : 'play'}/></button></PlaybackTip>
-        <PlaybackTip label="Jump to next prompt"><button className="icon-button" onClick={() => skipPrompt(nextPrompt)} disabled={nextPrompt === null} aria-label="Next prompt"><Icon name="next"/></button></PlaybackTip>
+        <PlaybackJump direction={1} scale={jumpScale} unavailable={nextJump === null} onJump={() => jump(nextJump)} onChoose={scale => chooseJump(scale, 1)}/>
         </div>
         <div className="playback-end-controls">
           {playbackOptions}
           <PlaybackTip label={`Jump to timeline end (${rangeLabel})`} edge="end"><button className="icon-button" aria-label="Jump to timeline end" disabled={!rangeFrames.length || atRangeEnd} onClick={() => scrollTimeline('end')}><i className="ph-fill ph-caret-line-right" aria-hidden="true"/></button></PlaybackTip>
         </div>
       </div>
-      <PlaybackTimeline navigationKey={navigationKey} viewportRef={timelineRef} frames={frames} catalog={catalog} range={range} now={now} index={Math.max(0, index)} selectedId={selectedId} previewIndex={previewIndex} onPreview={next => { if (prototype.open || prototype.loading) return; setPreviewId(next === null ? null : frames[next].id); if (next === null) setPreviewImage(null); }} onSelect={selectFrame} onSelectPush={id => { prototype.exit(); setPlaying(false); setPreviewId(null); setPreviewImage(null); onSelect(id); }}/>
+      <div className="runtime-passive-timeline" inert={!!runtimeMode} aria-hidden={!!runtimeMode}><PlaybackTimeline navigationKey={navigationKey} viewportRef={timelineRef} frames={frames} catalog={catalog} range={range} now={now} index={Math.max(0, index)} selectedId={selectedId} previewIndex={previewIndex} onPreview={next => { if (prototype.open || prototype.loading) return; setPreviewId(next === null ? null : frames[next].id); if (next === null) setPreviewImage(null); }} onSelect={selectFrame} onSelectPush={id => { prototype.exit(); setPlaying(false); setPreviewId(null); setPreviewImage(null); onSelect(id); }}/></div>
       {toast && <div className="project-toast" role="status">{toast}</div>}
     </div>
   </div>;

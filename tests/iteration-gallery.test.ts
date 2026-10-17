@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { defaultVersionRange, buildVersions, formatFrameDate, formatFrameLabel, galleryBranchPaint, hoverCaptionLines, wrapTextToWidth, dateTicks, edgePanArmed, edgePanStrength, promptShare, representativeFrames, inRange, parseCaptureName, playbackStep, rangeCounts, rangeStart, ratioLabel } from '../src/features/iteration-gallery/model.ts';
 import type { Capture } from '../src/features/iteration-gallery/model.ts';
-import { albumBlockBounds, albumEnvelope, albumFloorY, boxCorners, buildAlbum, containingBlock, coverRadius, dateLabelPose, featuredFrameAxis, frameFocus, hoverCaptionHeight, imageSize, resetCameraDestination, resetLook, versionLabelPose } from '../src/features/iteration-gallery/geometry.ts';
+import { albumAxisContent, albumBlockBounds, albumEnvelope, albumFloorY, boxCorners, buildAlbum, containingBlock, coverRadius, dateLabelPose, featuredFrameAxis, defaultFrameFocus, frameFocus, hoverCaptionHeight, imageSize, resetCameraDestination, resetLook, versionLabelPose } from '../src/features/iteration-gallery/geometry.ts';
 import { galleryTokens as t } from '../src/features/iteration-gallery/tokens.ts';
 import { readCaptureCatalog } from '../server/gallery-catalog.ts';
 import { galleryPromptLabel } from '../src/features/iteration-gallery/model.ts';
@@ -184,7 +184,7 @@ test('reset look stays on the block volume even when guides extend farther out',
   const fitPoints = [
     ...boxCorners(bounds),
     { x: bounds.min.x - t.rulerTickLength - t.rulerLabelGap - t.axisTitle.valueGap, y: bounds.min.y, z: bounds.center.z },
-    { x: bounds.max.x, y: bounds.max.y + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, z: bounds.center.z },
+    { x: bounds.max.x, y: bounds.max.y + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.dateValueGap, z: bounds.center.z },
   ];
   assert.equal(look.span, coverRadius(bounds.center, fitPoints) * 2 * t.overviewPadding / t.overviewFitScale);
   const far = { x: bounds.center.x + 800, y: bounds.center.y + 800, z: bounds.center.z };
@@ -227,11 +227,11 @@ test('edge travel ramps toward the border and waits for the dwell delay', () => 
   assert.equal(edgePanArmed(t.edgePan.delayMs), true);
 });
 
-test('saved-frame labels use bracketed versions and dashed local times', () => {
+test('saved-frame labels lead with capture number and end with version', () => {
   assert.equal(formatFrameDate(new Date(2026, 8, 17, 16, 41).getTime()), 'Sep 17, 4:41');
-  assert.equal(formatFrameLabel({ version: 10, timestamp: new Date(2026, 8, 17, 16, 41).getTime() }), '[v10] - Sep 17, 4:41');
-  assert.equal(formatFrameLabel({ version: 11, timestamp: new Date(2026, 8, 22, 10, 7).getTime() }), '[v11] - Sep 22, 10:07');
-  assert.equal(formatFrameLabel({ version: 2, timestamp: new Date(2026, 8, 17, 0, 5).getTime() }), '[v2] - Sep 17, 12:05');
+  assert.equal(formatFrameLabel({ number: 347, version: 10, timestamp: new Date(2026, 8, 17, 16, 41).getTime() }), '#347 - Sep 17, 4:41, v10');
+  assert.equal(formatFrameLabel({ number: 36, version: 11, timestamp: new Date(2026, 8, 22, 10, 7).getTime() }), '#36 - Sep 22, 10:07, v11');
+  assert.equal(formatFrameLabel({ number: null, version: 2, timestamp: new Date(2026, 8, 17, 0, 5).getTime() }), 'Sep 17, 12:05, v2');
 });
 
 test('hover captions contain only the quoted summary', () => {
@@ -289,4 +289,34 @@ test('default date range chooses the narrowest window containing ten distinct vi
   assert.equal(defaultVersionRange(today, date(29)), 'all', 'future frames do not count');
   const busy = buildVersions(Array.from({ length: 100 }, (_, i) => capture(`prompt${i}`, 30)));
   assert.equal(defaultVersionRange(busy, date(30)), 'all', 'many captures in one version are still one version');
+});
+
+
+test('default gallery anchors the top edge across frame shapes and viewport spans', () => {
+  for (const width of [180, 340]) for (const height of [120, 240]) for (const span of [600, 1000]) {
+    const plane = { x:10, y:20, depth:90, width, height };
+    const up = { x:.2, y:Math.sqrt(.87), z:-.3 };
+    const center = defaultFrameFocus(plane, up, span);
+    const edgeScreenY = [plane.x, plane.x + width].map(x => {
+      const projected = (x-center.x)*up.x + (-plane.y-center.y)*up.y + (-plane.depth-center.z)*up.z;
+      return .5 - projected/span;
+    });
+    assert.ok(Math.abs(Math.min(...edgeScreenY) - t.webgl.latestFrameTop) < 1e-10);
+  }
+});
+
+
+test('axis ticks exclude out-of-range frames and retain partially active versions without reindexing', () => {
+  const versions = buildVersions([
+    capture('old', 17), capture('push-old', 18, 'push', 1),
+    capture('before-boundary', 21), capture('in-range', 22), capture('push-mixed', 22, 'push', 2),
+    capture('future', 23),
+  ]);
+  const today = albumAxisContent(buildAlbum(versions, 'today', date(22)), versions);
+  assert.deepEqual(today.frames.map(frame => frame.id), ['in-range']);
+  assert.deepEqual(today.versions.map(version => [version.number, version.index]), [[2, 1]]);
+  const all = albumAxisContent(buildAlbum(versions, 'all', date(23)), versions);
+  assert.deepEqual(all.versions, versions);
+  const empty = albumAxisContent(buildAlbum(versions, 'today', date(24)), versions);
+  assert.deepEqual(empty, { frames: [], versions: [] });
 });

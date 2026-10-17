@@ -56,10 +56,27 @@ export function buildAlbum(versions: GalleryVersion[], range: RangeKey, now: num
   return { blocks, planes, width, depth };
 }
 
+/** Rulers share the album's range eligibility, including partially active versions. */
+export function albumAxisContent(album: Pick<ReturnType<typeof buildAlbum>, 'planes' | 'blocks'>, versions: GalleryVersion[]) {
+  const activeVersions = new Set(album.blocks.filter(block => block.active).map(block => block.version));
+  return {
+    frames: album.planes.filter(plane => plane.active).map(plane => plane.frame),
+    versions: versions.filter(version => activeVersions.has(version.number)),
+  };
+}
+
 export type Vec3 = { x: number; y: number; z: number };
 
 export function frameFocus(plane: Pick<FramePlane, 'x' | 'y' | 'width' | 'height' | 'depth'>): Vec3 {
   return { x: plane.x + plane.width / 2, y: -plane.y - plane.height / 2 + plane.height * t.webgl.frontViewLift, z: -plane.depth };
+}
+
+/** Anchor the highest point of the latest frame's top edge at the shared viewport fraction. */
+export function defaultFrameFocus(plane: Pick<FramePlane, 'x' | 'y' | 'width' | 'height' | 'depth'>, viewUp: Vec3, verticalSpan: number): Vec3 {
+  const center = frameFocus(plane);
+  const topAboveCenter = Math.abs(viewUp.x) * plane.width / 2 + viewUp.y * (-plane.y - center.y);
+  const shift = topAboveCenter + (t.webgl.latestFrameTop - .5) * verticalSpan;
+  return { x: center.x + viewUp.x * shift, y: center.y + viewUp.y * shift, z: center.z + viewUp.z * shift };
 }
 
 export function albumBlockBounds(album: Pick<ReturnType<typeof buildAlbum>, 'blocks'>) {
@@ -149,7 +166,7 @@ export function resetLook(album: ReturnType<typeof buildAlbum>) {
   const points = [
     ...boxCorners(bounds),
     { x: bounds.min.x - t.rulerTickLength - t.rulerLabelGap - t.axisTitle.valueGap, y: bounds.min.y, z: bounds.center.z },
-    { x: bounds.max.x, y: bounds.max.y + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, z: bounds.center.z },
+    { x: bounds.max.x, y: bounds.max.y + t.rulerTickLength + t.rulerLabelGap + t.axisTitle.dateValueGap, z: bounds.center.z },
   ];
   const span = coverRadius(bounds.center, points) * 2 * t.overviewPadding / t.overviewFitScale;
   return { center: bounds.center, span };

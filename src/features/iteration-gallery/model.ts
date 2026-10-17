@@ -186,8 +186,8 @@ export function formatFrameDate(timestamp: number) {
 export function formatVersion(number: number) { return `v${number}`; }
 
 /** Compact local timestamp shared by the saved-frame menu. */
-export function formatFrameLabel(frame: Pick<GalleryFrame, 'version' | 'timestamp'>) {
-  return `[${formatVersion(frame.version)}] - ${formatFrameDate(frame.timestamp)}`;
+export function formatFrameLabel(frame: Pick<GalleryFrame, 'version' | 'timestamp' | 'number'>) {
+  return `${frame.number === null ? "" : `#${frame.number} - `}${formatFrameDate(frame.timestamp)}, ${formatVersion(frame.version)}`;
 }
 
 /** Hover captions contain only the quoted summary; metadata stays on the axis rulers. */
@@ -228,8 +228,9 @@ export function wrapTextToWidth(text: string, maxWidth: number, measure: (value:
   return lines;
 }
 
-export type FrameRequest = ({version: number} | {frameId: string}) & { milestone?: boolean };
+export type FrameRequest = ({version: number} | {frameId: string} | {live: boolean}) & { milestone?: boolean };
 export function resolveFrameRequest(versions: GalleryVersion[], request: FrameRequest) {
+  if ('live' in request) return versions.flatMap(version => version.frames).sort((a,b) => b.timestamp - a.timestamp)[0];
   return versions.flatMap(version => version.frames).find(frame => 'frameId' in request
     ? frame.id === request.frameId : frame.kind === 'push' && frame.version === request.version);
 }

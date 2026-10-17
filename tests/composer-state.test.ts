@@ -2,6 +2,7 @@ import { editComposerTodo } from '../src/features/workbench/composer-state.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { addComposerTodo, defaultComposer, toggleComposerTodo, useTodoAsPrompt, todoTimestamp, todoVersionAt, hydrateComposerTodos, orderedComposerTodos } from '../src/features/workbench/composer-state.ts';
+import * as composerState from '../src/features/workbench/composer-state.ts';
 import { migrateState } from '../src/features/workbench/model.ts';
 
 test('to-do submission trims text, opens the drawer and leaves messages and other chats alone',()=>{
@@ -106,4 +107,35 @@ test('editing preserves identity and context; a committed empty edit removes onl
  assert.equal(base.todos[0].text,'Original');
  assert.equal(editComposerTodo(edited,'edit','  ').todos.length,0);
  assert.deepEqual(editComposerTodo(edited,'missing',''),edited);
+});
+
+test('a finished /bucket token becomes the field chip and leaves the draft',()=>{
+ const { extractBucketToken } = composerState;
+ assert.equal(extractBucketToken('Fix /landing'),null);
+ assert.equal(extractBucketToken('path a/b test '),null);
+ assert.deepEqual(extractBucketToken('/landing '),{text:'',bucket:'landing',caret:0});
+ assert.deepEqual(extractBucketToken('Fix hero /landing '),{text:'Fix hero ',bucket:'landing',caret:9});
+ assert.deepEqual(extractBucketToken('Fix /landing hero',5+9),{text:'Fix hero',bucket:'landing',caret:5});
+});
+
+test('to-dos keep their bucket and executing one captures in that bucket',()=>{
+ const saved=addComposerTodo({...defaultComposer(),mode:'todo' as const},'Tighten hero','one','2026-10-17T12:05:00',{bucket:'landing'});
+ assert.equal(saved.todos[0].bucket,'landing');
+ const used=useTodoAsPrompt(saved,'','one');
+ assert.equal(used.composer.capture.screen,'landing');
+ assert.equal(useTodoAsPrompt(addComposerTodo(defaultComposer(),'Plain','two','2026-10-17T12:05:00'),'','two').composer.capture.screen,'homescreen');
+});
+
+test('editing a bucketed to-do round-trips the chip through its plain /bucket text',()=>{
+ const { todoEditText, parseBucketText } = composerState;
+ const saved=addComposerTodo(defaultComposer(),'Polish contrast','one','2026-10-17T12:05:00',{bucket:'landing'});
+ assert.equal(todoEditText(saved.todos[0]),'/landing Polish contrast');
+ assert.deepEqual(parseBucketText('Polish contrast /landing'),{text:'Polish contrast',bucket:'landing'});
+ assert.deepEqual(parseBucketText('path a/b stays'),{text:'path a/b stays'});
+ assert.equal(editComposerTodo(saved,'one','/homescreen Polish contrast more').todos[0].bucket,'homescreen');
+ assert.equal(editComposerTodo(saved,'one','/Landing Polish',()=> 'landing').todos[0].bucket,'landing');
+ const cleared=editComposerTodo(saved,'one','Polish contrast');
+ assert.equal(cleared.todos[0].text,'Polish contrast');
+ assert.equal('bucket' in cleared.todos[0],false);
+ assert.equal(editComposerTodo(saved,'one','/landing ').todos.length,0);
 });

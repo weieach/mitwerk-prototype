@@ -1,4 +1,4 @@
-import { albumEnvelope, albumFloorY, buildAlbum, dateLabelPose, imageSize, versionLabelPose } from './geometry.ts';
+import { albumAxisContent, albumEnvelope, albumFloorY, buildAlbum, dateLabelPose, imageSize, versionLabelPose } from './geometry.ts';
 import { buildVersions, dateTicks, formatDate, formatVersion, representativeFrames } from './model.ts';
 import type { Capture, RangeKey } from './model.ts';
 import { galleryTokens as t } from './tokens.ts';
@@ -26,13 +26,14 @@ export function createXRManifest(captures: Capture[], range: RangeKey = 'all', n
       position: point(envelope.width / 2, -envelope.height / 2, -plane.depth),
       size: [size.width * scale, size.height * scale], active: plane.active, showAtRest: representativeIds.has(plane.frame.id) };
   });
+  const axis = albumAxisContent(album, versions);
   const floor = versions.length ? albumFloorY(album) : -envelope.height;
   const labels: { id: string; text: string; position: number[]; rotation: number[]; height: number }[] = [];
   const guides: { id: string; axis: string; points: number[][] }[] = [];
   const label = (id: string, text: string, x: number, y: number, z: number, face: 'ground' | 'wall') => labels.push({ id, text, position: point(x, y, z), rotation: face === 'ground' ? [-Math.PI / 2, 0, 0] : [0, -Math.PI / 2, 0], height: xrTokens.labelHeightMeters });
-  label('date-title', 'Date', album.width, t.rulerTickLength + t.rulerLabelGap + t.axisTitle.valueGap, -album.depth / 2, 'wall');
+  label('date-title', 'Date', album.width, t.rulerTickLength + t.rulerLabelGap + t.axisTitle.dateValueGap, -album.depth / 2, 'wall');
   label('version-title', 'Version', -t.rulerTickLength - t.rulerLabelGap - t.axisTitle.valueGap, floor, -album.depth / 2, 'ground');
-  for (const tick of dateTicks(album.planes.map(plane => plane.frame))) {
+  for (const tick of dateTicks(axis.frames)) {
     const plane = album.planes.find(item => item.frame.id === tick.id);
     if (!plane) continue;
     const pose = dateLabelPose(plane.depth, album);
@@ -40,7 +41,7 @@ export function createXRManifest(captures: Capture[], range: RangeKey = 'all', n
     guides.push({ id, axis: 'date', points: [point(album.width, 0, -plane.depth), point(album.width, t.rulerTickLength, -plane.depth)] });
     label(id, formatDate(tick.timestamp), pose.x, pose.y, pose.z, 'wall');
   }
-  for (const version of versions) {
+  for (const version of axis.versions) {
     const pose = versionLabelPose(album, version.index);
     const id = `version-${version.number}`;
     guides.push({ id, axis: 'version', points: [point(0, floor, pose.z), point(-t.rulerTickLength, floor, pose.z)] });

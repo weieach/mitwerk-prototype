@@ -2146,5 +2146,185 @@
     "output": 646,
     "total": 8806,
     "simulated": true
+  },
+  "[push #35] 23 files · +731 -34 · camera angle adjustment in gallery; vercel blob store for prompt images-2026-10-17-145427.png": {
+    "input": 8791,
+    "output": 605,
+    "total": 9396,
+    "simulated": true
+  },
+  "[prompt #324] +207-5 · before that, my last commit had an error, and i really need to commit this fast-2026-10-17-150030.png": {
+    "input": 12449,
+    "output": 5316,
+    "total": 17765,
+    "simulated": true
+  },
+  "[push #36] 15 files · +256 -14 · Automatically publish successful captures to Vercel Blob-2026-10-17-150438.png": {
+    "input": 1999,
+    "output": 673,
+    "total": 2672,
+    "simulated": true
+  },
+  "[prompt #325] +74-6 · in default view of gallery, make the gallery zoomed out a little more by default (at 80% of current 100% default size), -2026-10-17-151038.png": {
+    "input": 15518,
+    "output": 7344,
+    "total": 22862,
+    "simulated": true
+  },
+  "[prompt #326] +90-6 · move the blocks upward more-2026-10-17-151247.png": {
+    "input": 14653,
+    "output": 6422,
+    "total": 21075,
+    "simulated": true
+  },
+  "[prompt #327] +168-38 · while panning in gallery, the position of axis labels shouldnt jitter-2026-10-17-152136.png": {
+    "input": 2032,
+    "output": 803,
+    "total": 2835,
+    "simulated": true
+  },
+  "[prompt #328] +225-47 · # Browser comments- ## User Comment 1 Browser Node position- (109, 29) in 1821x1333 viewport Untrusted page evidence (fr-2026-10-17-152746.png": {
+    "input": 7320,
+    "output": 7310,
+    "total": 14630,
+    "simulated": true
+  },
+  "[prompt #329] +287-65 · axis labels outside of the selected time range. the -date- label should be moved down, so the current gap between that a-2026-10-17-153137.png": {
+    "input": 6478,
+    "output": 6564,
+    "total": 13042,
+    "simulated": true
+  },
+  "[prompt #330] +319-70 · On idea stream, the start of a new branch color should be right behind the first node of that branch not halfway btwn no-2026-10-17-153527.png": {
+    "input": 10317,
+    "output": 2913,
+    "total": 13230,
+    "simulated": true
+  },
+  "[prompt #331] +386-73 · # Browser comments- ## User Comment 1 Browser Node position- (1442, 872) in 1821x1333 viewport Untrusted page evidence (-2026-10-17-154542.png": {
+    "input": 12857,
+    "output": 6570,
+    "total": 19427,
+    "simulated": true
+  },
+  "[prompt #332] +426-76 · when folded versions get expanded, there should be a fold text button with a rightward triangle icon to the right side o-2026-10-17-155139.png": {
+    "input": 7828,
+    "output": 506,
+    "total": 8334,
+    "simulated": true
+  },
+  "[prompt #333] +529-88 · # Browser comments- ## User Comment 1 Browser Node position- (1465, 745) in 1821x1333 viewport Untrusted page evidence (-2026-10-17-160133.png": {
+    "input": 10519,
+    "output": 7425,
+    "total": 17944,
+    "simulated": true
+  },
+  "[prompt #334] +747-196 · # Browser comments- ## User Comment 1 Browser Node position- (1136, 447) in 1821x1333 viewport Untrusted page evidence (-2026-10-17-161029.png": {
+    "input": 1191,
+    "output": 6380,
+    "total": 7571,
+    "simulated": true
+  },
+  "[prompt #335] +795-205 · in addition to -add frame to chat-, user is allowed to directly drag the frame image from playback onto chat field to ac-2026-10-17-161417.png": {
+    "input": 6209,
+    "output": 4053,
+    "total": 10262,
+    "simulated": true
+  },
+  "[prompt #336] +833-218 · make the frame - file reference chip more circular and its color closer to the chat field. When a reference chip is adde-2026-10-17-161917.png": {
+    "input": 7766,
+    "output": 7343,
+    "total": 15109,
+    "simulated": true
+  },
+  "[prompt #338] +904-225 · the chip doesn't need a border either, but the x btn can be brighter. set counter to 338. c chat & playback w- reference-2026-10-17-162145.png": {
+    "input": 11786,
+    "output": 489,
+    "total": 12275,
+    "simulated": true
+  },
+  "[prompt #337] +920-226 · On the matched scroll between playback and stream, it should expand the folded version group and show the corresponding -2026-10-17-162248.png": {
+    "input": 3309,
+    "output": 4032,
+    "total": 7341,
+    "simulated": true
+  },
+  "[prompt #339] +956-230 · the live server - prototype should not create a new overlay, but should render directly where the captured image is, but-2026-10-17-162801.png": {
+    "input": 1245,
+    "output": 3937,
+    "total": 5182,
+    "simulated": true
+  },
+  "[prompt #340] +1.0k-244 · i want to apply the capture location chip logic to to-do mode too; while user is in that mode, in placehodler text, can -2026-10-17-163147.png": {
+    "input": 8646,
+    "output": 7616,
+    "total": 16262,
+    "simulated": true
+  },
+  "[prompt #341] +1.2k-256 · animate the transition showing the live server and prototype just like the milestone overlay. the exit btn should be ver-2026-10-17-163859.png": {
+    "input": 1262,
+    "output": 5064,
+    "total": 6326,
+    "simulated": true
+  },
+  "[prompt #342] +1.2k-256 · the x btn on the chip should not have bg fill, it should be just an icon. And in a finished todo with chip, the chip sho-2026-10-17-163916.png": {
+    "input": 12980,
+    "output": 3392,
+    "total": 16372,
+    "simulated": true
+  },
+  "[prompt #343] +1.2k-258 · # Browser comments- ## User Comment 1 Browser Node position- (1748, 1192) in 1821x1333 viewport Untrusted page evidence -2026-10-17-164534.png": {
+    "input": 14183,
+    "output": 3592,
+    "total": 17775,
+    "simulated": true
+  },
+  "[prompt #344] +1.4k-267 · Below the timeline, add a scroller that's always present indicating the portion of blocks currently displayed in timelin-2026-10-17-165212.png": {
+    "input": 11218,
+    "output": 1336,
+    "total": 12554,
+    "simulated": true
+  },
+  "[prompt #345] +1.5k-276 · have the scroller be rounded at both end (white part and black part) and the white part be 2.5px high. While user is hov-2026-10-17-165904.png": {
+    "input": 13925,
+    "output": 667,
+    "total": 14592,
+    "simulated": true
+  },
+  "[prompt #346] +1.5k-276 · whenever user click -jump to prev - next ver-, it should always land on the first - last push node next to where user is-2026-10-17-172421.png": {
+    "input": 5935,
+    "output": 754,
+    "total": 6689,
+    "simulated": true
+  },
+  "[prompt #347] +1.6k-298 · when user is in server mode (live server - prototype), the playback should auto expand to the full panel width (animate -2026-10-17-173348.png": {
+    "input": 11376,
+    "output": 3045,
+    "total": 14421,
+    "simulated": true
+  },
+  "[prompt #348] +1.6k-300 · set counter to 348. For every panel heading, add its respective icon on the left if it doesnt have it already - version -2026-10-17-173554.png": {
+    "input": 8737,
+    "output": 4470,
+    "total": 13207,
+    "simulated": true
+  },
+  "[prompt #349] +1.6k-299 · bring back the text in site nav btns-2026-10-17-173924.png": {
+    "input": 3809,
+    "output": 448,
+    "total": 4257,
+    "simulated": true
+  },
+  "[prompt #350] +1.7k-317 · # Browser comments- ## User Comment 1 Browser Node position- (213, 1078) in 1821x1333 viewport Untrusted page evidence (-2026-10-17-174203.png": {
+    "input": 15969,
+    "output": 133,
+    "total": 16102,
+    "simulated": true
+  },
+  "[prompt #351] +1.8k-320 · # Browser comments- ## User Comment 1 Browser Node position- (1402, 468) in 1821x1333 viewport Untrusted page evidence (-2026-10-17-174613.png": {
+    "input": 14820,
+    "output": 2753,
+    "total": 17573,
+    "simulated": true
   }
 }

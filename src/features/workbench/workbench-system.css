@@ -173,7 +173,7 @@
 .mw-app .empty-chat { padding-right:0; }
 .mw-app .mw-sidebar .sidebar-task-list > button.sidebar-new-chat { color:var(--mw-muted); }
 .composer-context { min-width:0; margin-bottom:var(--context-title-gap); }
-.todo-context-chip { display:flex; align-items:center; gap:var(--row-size-unit); width:fit-content; max-width:100%; padding-left:calc(var(--row-size-unit) * 2); background:var(--mw-panel); border:1px solid var(--mw-line); border-radius:var(--control-radius); font-size:var(--control-font-size); }
+.todo-context-chip { display:flex; align-items:center; gap:var(--row-size-unit); width:fit-content; max-width:100%; padding-left:calc(var(--row-size-unit) * 2); background:var(--mw-panel); border:1px solid var(--mw-line); border-radius:var(--context-chip-radius); font-size:var(--control-font-size); }
 .todo-context-chip > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
 .todo-context-chip > .ui-icon, .todo-context-chip > button { flex:none; }
 .workspace-tabs { overflow-x:auto; scrollbar-width:none; }
@@ -234,8 +234,9 @@
 .mw-app .mw-composer { --mw-composer-radius:var(--composer-radius); padding-top:var(--composer-top-space); padding-bottom:var(--composer-inner-bottom-space); }
 
 :root { --frame-chip-thumbnail-size:26px; }
-.frame-context-chip > img { width:var(--frame-chip-thumbnail-size);height:var(--frame-chip-thumbnail-size);object-fit:cover;flex:none;border:1px solid var(--mw-line); }
-.message-content .frame-context-chip { padding-block:var(--row-size-unit);padding-right:var(--row-size-unit); }
+.frame-context-chip { padding-left:var(--frame-chip-inset); }
+.frame-context-chip > img { width:var(--frame-chip-thumbnail-size);height:var(--frame-chip-thumbnail-size);object-fit:cover;flex:none;border:1px solid var(--mw-line);border-radius:50%; }
+.message-content .frame-context-chip { padding-block:var(--frame-chip-inset);padding-right:var(--row-size-unit); }
 
 /* Context rows use the file row as their shared density baseline. */
 .mw-app .conversation-cards .mw-attachment.compact { height:var(--context-row-height); min-height:var(--context-row-height); padding-block:var(--context-file-padding-block); }
@@ -271,7 +272,6 @@
 
 /* Quiet workspace chrome with one outlined active tab. */
 .mw-app .message-byline { gap:var(--message-byline-role-gap); margin-bottom:var(--message-byline-bottom-gap); }
-.mw-composer > .composer-context:first-child { margin-top:var(--composer-chip-top-gap); }
 .mw-app .mw-topbar, .mw-app .workspace-tabs-row { border-bottom:0; }
 .mw-app .workspace-tabs .workspace-tab { background:transparent; box-shadow:none; }
 .mw-app .workspace-tabs .workspace-tab[data-selected=true] { border:0; background:var(--mw-page); overflow:visible; }

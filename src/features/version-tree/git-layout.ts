@@ -11,13 +11,13 @@ export function layoutIdeaTimeline(source: VersionNode[], spacing: (node: Versio
     if (row) y += spacing(source[row - 1]);
     return { ...node, row, column: 0, x: geometry.originX, y };
   });
-  // Color changes halfway between stations so every station sits on its own branch color.
+  // Keep the preceding color up to the next station; the new color begins behind that station.
   const edges: GraphEdge[] = nodes.slice(1).flatMap((target, index) => {
-    const from = nodes[index], middle = (from.y + target.y) / 2;
+    const from = nodes[index], joinY = target.y;
     const edge = { sourceId: from.id, targetId: target.id, dashed: false };
     return [
-      { ...edge, id: `timeline:out:${from.id}:${target.id}`, branchId: from.branchId, path: `M ${from.x} ${from.y} L ${from.x} ${middle}` },
-      { ...edge, id: `timeline:in:${from.id}:${target.id}`, branchId: target.branchId, path: `M ${target.x} ${middle} L ${target.x} ${target.y}` },
+      { ...edge, id: `timeline:out:${from.id}:${target.id}`, branchId: from.branchId, path: `M ${from.x} ${from.y} L ${from.x} ${joinY}` },
+      { ...edge, id: `timeline:in:${from.id}:${target.id}`, branchId: target.branchId, path: `M ${target.x} ${joinY} L ${target.x} ${target.y}` },
     ];
   });
   return { nodes, edges, origins: [], mergeOrigins: [], levels: [], forks: [],

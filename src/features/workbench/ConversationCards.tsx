@@ -1,6 +1,6 @@
 import type { FrameContext } from './frame-context';
 import { useId, useState, type ReactNode } from 'react';
-import { ListTodo, Plus, X } from '../../components/PhosphorIcon';
+import { ListTodo, PhosphorIcon, Plus, X } from '../../components/PhosphorIcon';
 import { TaskStatusPicker } from './TaskStatusPicker';
 import { isTodoChat } from './model';
 import type { Asset, Task, TaskStatus } from './model';
@@ -37,6 +37,13 @@ export function TodoContextChip({text,onRemove}:{text:string;onRemove:()=>void})
  return <div className="composer-context"><div className="todo-context-chip" title={`To-do: ${text}`}>
   <ListTodo size={15}/><span>To-do: {text}</span>
   <button type="button" className="mw-icon" aria-label="Remove to-do context" onClick={onRemove}><X size={13}/></button>
+ </div></div>;
+}
+
+export function BucketContextChip({bucket,onRemove}:{bucket:string;onRemove:()=>void}) {
+ return <div className="composer-context"><div className="todo-context-chip bucket-context-chip" title={`Capture bucket: ${bucket}`}>
+  <PhosphorIcon name="folder" size={13}/><span>{bucket}</span>
+  <button type="button" className="mw-icon" aria-label={`Remove capture bucket ${bucket}`} onClick={onRemove}><X size={13}/></button>
  </div></div>;
 }
 

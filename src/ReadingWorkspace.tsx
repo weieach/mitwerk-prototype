@@ -1,5 +1,6 @@
+import type { RuntimeMode } from './features/iteration-gallery/EmbeddedPrototype';
 import type { VisualReference } from './features/iteration-gallery/references';
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { VersionTreePanel } from './features/version-tree/VersionTreePanel';
 import { loadGraphState } from './features/version-tree/model';
@@ -21,10 +22,13 @@ function clampLeftWidth(width: number, total: number) {
   return Math.max(MIN_PANEL, Math.min(total - MIN_PANEL, width));
 }
 
-export default function ReadingWorkspace({ initialMode, galleryOnly = false, streamOnly = false, ideaOpen = false, externalPush, onOpenPush, onCloseIdeas, onToggle, expanded }: {initialMode?: 'history' | 'test'; galleryOnly?: boolean; streamOnly?: boolean; ideaOpen?: boolean; externalPush?: FrameRequest | null; onOpenPush?: (version:number)=>void; onCloseIdeas?: () => void; onToggle?: () => void; expanded?: boolean}) {
+export default function ReadingWorkspace({ onRuntimeChange, initialMode, galleryOnly = false, streamOnly = false, ideaOpen = false, externalPush, onOpenPush, onCloseIdeas, onToggle, expanded }: {onRuntimeChange?:(mode:RuntimeMode|null)=>void; initialMode?: 'history' | 'test'; galleryOnly?: boolean; streamOnly?: boolean; ideaOpen?: boolean; externalPush?: FrameRequest | null; onOpenPush?: (version:number)=>void; onCloseIdeas?: () => void; onToggle?: () => void; expanded?: boolean}) {
   const [panels, dispatchPanel] = useReducer(panelReducer, undefined, () => { const saved = loadTreePanels(loadGraphState(), panelBrowserStorage()); return initialMode ? {...saved, mode:initialMode} : saved; });
   const captureMode = captureTreeMode(location.search);
   const mode = captureMode ?? panels.mode;
+  const [playbackVersion, setPlaybackVersion] = useState<number | null>(null);
+  const [runtimeMode, setRuntimeMode] = useState<RuntimeMode | null>(null);
+  const runtimeChanged = useCallback((mode: RuntimeMode | null) => { setRuntimeMode(mode); onRuntimeChange?.(mode); }, [onRuntimeChange]);
   const [pushRequest, setPushRequest] = useState<FrameRequest | null>(externalPush ?? null);
   useEffect(() => { if (externalPush) setPushRequest(externalPush); }, [externalPush]);
   const [historyReady, setHistoryReady] = useState(false);
@@ -65,6 +69,10 @@ export default function ReadingWorkspace({ initialMode, galleryOnly = false, str
     return () => { abort.abort(); clearInterval(timer); };
   }, []);
   const workspace = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const stream = workspace.current?.querySelector<HTMLElement>('.workspace-split > .tree-panel');
+    if (stream) stream.inert = !!runtimeMode;
+  }, [runtimeMode]);
   const [headerTarget, setHeaderTarget] = useState<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!headerTarget) return;
@@ -184,20 +192,21 @@ export default function ReadingWorkspace({ initialMode, galleryOnly = false, str
 
   return <main
     ref={workspace}
-    className={`workspace${galleryOnly ? ' workspace-gallery-only' : ''}${ideaOpen ? ' workspace-idea-split' : ''}${resizing ? ' is-resizing' : ''}${compact && !galleryOnly && !streamOnly && !ideaOpen ? ' workspace-compact' : ''}`}
+    className={`workspace${runtimeMode ? ' workspace-runtime-active' : ''}${galleryOnly ? ' workspace-gallery-only' : ''}${ideaOpen ? ' workspace-idea-split' : ''}${resizing ? ' is-resizing' : ''}${compact && !galleryOnly && !streamOnly && !ideaOpen ? ' workspace-compact' : ''}`}
     data-active-panel={activePanel}
     style={{ '--reading-column-min': `${MIN_PANEL}px`, '--panel-switch-ms': `${versionPanelLayout.transitionMs}ms`, '--split': leftWidth === null ? '50%' : `${leftWidth}px` } as CSSProperties}
   >
     {ideaOpen && <div className="shared-reader-header" ref={setHeaderTarget}/>}
-    <div className="workspace-split" style={{ gridTemplateColumns: galleryOnly || streamOnly ? 'minmax(0, 1fr)' : leftWidth === null ? 'minmax(0, 1fr) minmax(0, 1fr)' : `${leftWidth}px minmax(0, 1fr)` }}>
-      {!streamOnly && <IterationGallery headerTarget={ideaOpen ? headerTarget : null} playbackOnly={ideaOpen} onExitPlayback={onCloseIdeas} pushRequest={pushRequest} onToggle={onToggle} expanded={expanded} onSwitchPanel={!ideaOpen && !galleryOnly && compact ? () => setActivePanel('stream') : undefined}/>}
-      {!galleryOnly && <VersionTreePanel embedded={ideaOpen} id={ideaOpen ? "workspace-pane-ideas" : undefined} title={ideaOpen || streamOnly ? 'Idea stream' : undefined} onSwitchPanel={!ideaOpen && !streamOnly && compact ? () => setActivePanel('visualizer') : undefined} key={`${mode}-${mode === 'history' && historyReady}`} graph={panels[mode]}
+    <div className="workspace-split" style={{ gridTemplateColumns: galleryOnly || streamOnly ? 'minmax(0, 1fr)' : `minmax(0, ${runtimeMode ? '100%' : leftWidth === null ? '50%' : `${leftWidth}px`}) minmax(0, 1fr)` }}>
+      {!streamOnly && <IterationGallery onRuntimeChange={runtimeChanged} onPlaybackVersion={setPlaybackVersion} headerTarget={ideaOpen ? headerTarget : null} playbackOnly={ideaOpen} onExitPlayback={onCloseIdeas} pushRequest={pushRequest} onToggle={onToggle} expanded={expanded} onSwitchPanel={!ideaOpen && !galleryOnly && compact ? () => setActivePanel('stream') : undefined}/>}
+      {!galleryOnly && <VersionTreePanel playbackVersion={playbackVersion} embedded={ideaOpen} id={ideaOpen ? "workspace-pane-ideas" : undefined} title={ideaOpen || streamOnly ? 'Idea stream' : undefined} onSwitchPanel={!ideaOpen && !streamOnly && compact ? () => setActivePanel('visualizer') : undefined} key={`${mode}-${mode === 'history' && historyReady}`} graph={panels[mode]}
         status={mode === 'history' ? historyError || (!historyReady ? 'Reading capture history…' : !panels.history.nodes.length ? 'No saved captures found.' : '') : ''}
         onOpenPush={version => { onOpenPush?.(version); setPushRequest({ version }); setActivePanel('visualizer'); }} mode={mode} modeSwitchVisible={modeSwitchVisible} onModeChange={mode => dispatchPanel({ type: 'switch', mode })}
         dispatch={action => dispatchPanel({ type: 'graph', mode, action })} />}
     </div>
     {!galleryOnly && !streamOnly && <div
       ref={divider}
+      inert={!!runtimeMode}
       className={`panel-divider${resizing ? ' is-resizing' : ''}`}
       role="separator"
       aria-orientation="vertical"

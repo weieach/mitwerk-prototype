@@ -1,7 +1,7 @@
 import type { FrameContext } from './frame-context.ts';
 
 export type ComposerMode = 'prompt' | 'todo';
-export type ComposerTodo = { id: string; text: string; created: string; complete: boolean; version?: number; frames?: FrameContext[]; assetIds?: string[] };
+export type ComposerTodo = { id: string; text: string; created: string; complete: boolean; version?: number; frames?: FrameContext[]; assetIds?: string[]; bucket?: string };
 export type CaptureSettings = { screen: string; overlay: string };
 export type ChatComposerState = {
   sampleTodosSeeded?: boolean;
@@ -10,6 +10,8 @@ export type ChatComposerState = {
   open: boolean;
   todos: ComposerTodo[];
   capture: CaptureSettings;
+  /** Capture bucket chip waiting in the To-do field for the next saved to-do. */
+  todoBucket?: string;
 };
 
 export function defaultComposer(): ChatComposerState {
@@ -17,7 +19,7 @@ export function defaultComposer(): ChatComposerState {
 }
 
 /** Saving a to-do never mutates conversation messages or starts an agent run. */
-export function addComposerTodo(state: ChatComposerState, text: string, id: string, created: string, context: Pick<ComposerTodo, 'frames' | 'assetIds' | 'version'> = {}): ChatComposerState {
+export function addComposerTodo(state: ChatComposerState, text: string, id: string, created: string, context: Pick<ComposerTodo, 'frames' | 'assetIds' | 'version' | 'bucket'> = {}): ChatComposerState {
   if (!text.trim()) return state;
   return { ...state, open: true, todos: [...state.todos, { ...context, id, text: text.trim(), created, complete: false }] };
 }
@@ -41,7 +43,17 @@ export function todoTimestamp(created: string, today = new Date()): string {
 export function useTodoAsPrompt(state: ChatComposerState, draft: string, id: string) {
   const todo = state.todos.find(item => item.id === id);
   if (!todo) return { composer: state, draft };
-  return { composer: { ...state, mode: 'prompt' as const }, draft: draft + (draft.trim() ? `${draft.endsWith('\n') ? '' : '\n'}------\nExecute this todo: \n` : '') + todo.text };
+  // A to-do filed under a bucket captures its change in that bucket.
+  const capture = todo.bucket ? { ...state.capture, screen: todo.bucket } : state.capture;
+  return { composer: { ...state, mode: 'prompt' as const, capture }, draft: draft + (draft.trim() ? `${draft.endsWith('\n') ? '' : '\n'}------\nExecute this todo: \n` : '') + todo.text };
+}
+
+/** A finished `/bucket` token (followed by whitespace) becomes the field's bucket chip; the token and its trailing space leave the draft. */
+export function extractBucketToken(text: string, caret = text.length): { text: string; bucket: string; caret: number } | null {
+  const match = /(^|\s)\/([^\s/]+)\s/.exec(text);
+  if (!match) return null;
+  const start = match.index + match[1].length, end = match.index + match[0].length;
+  return { text: text.slice(0, start) + text.slice(end), bucket: match[2], caret: caret >= end ? caret - (end - start) : Math.min(caret, start) };
 }
 
 export type TodoVersion = { timestamp: number; version: number };
@@ -58,15 +70,15 @@ export function hydrateComposerTodos(composers: Record<string, ChatComposerState
   }]));
   const sample = next[sampleChatId] ?? defaultComposer();
   if (sample.sampleTodosSeeded || !history.length) return next;
-  const examples = [
+  const examples: { id: string; text: string; days: number; hour: number; minute: number; bucket?: string }[] = [
     { id: 'drawer-sample-keyboard', text: 'Check keyboard navigation in playback', days: 7, hour: 16, minute: 35 },
     { id: 'drawer-sample-labels', text: 'Review branch labels at smaller screen sizes', days: 3, hour: 14, minute: 20 },
-    { id: 'drawer-sample-contrast', text: 'Polish contrast in the dark theme', days: 1, hour: 9, minute: 4 },
+    { id: 'drawer-sample-contrast', text: 'Polish contrast in the dark theme', days: 1, hour: 9, minute: 4, bucket: 'landing' },
   ];
   const samples = examples.filter(item => !sample.todos.some(todo => todo.id === item.id)).map(item => {
     const date = new Date(today); date.setDate(date.getDate() - item.days); date.setHours(item.hour, item.minute, 0, 0);
     const created = date.toISOString();
-    return { id: item.id, text: item.text, created, complete: false, version: todoVersionAt(history, created) };
+    return { id: item.id, text: item.text, created, complete: false, version: todoVersionAt(history, created), ...(item.bucket ? { bucket: item.bucket } : {}) };
   });
   next[sampleChatId] = { ...sample, sampleTodosSeeded: true, todos: [...samples, ...sample.todos].sort((a, b) => Date.parse(a.created) - Date.parse(b.created)) };
   return next;
@@ -78,8 +90,27 @@ export function orderedComposerTodos(todos: ComposerTodo[]) {
   return [...todos].sort((a, b) => Number(a.complete) - Number(b.complete) || timestamp(b) - timestamp(a));
 }
 
-/** Blank committed edits remove the item; otherwise preserve its identity and context. */
-export function editComposerTodo(state: ChatComposerState, id: string, text: string): ChatComposerState {
-  const value = text.trim();
-  return { ...state, todos: value ? state.todos.map(todo => todo.id === id ? { ...todo, text: value } : todo) : state.todos.filter(todo => todo.id !== id) };
+/** Editing shows a to-do's bucket chip in its plain `/bucket` text form. */
+export function todoEditText(todo: Pick<ComposerTodo, 'text' | 'bucket'>) {
+  return todo.bucket ? `/${todo.bucket} ${todo.text}` : todo.text;
+}
+
+/** The first `/bucket` token anywhere in committed text, removed from the to-do's wording. */
+export function parseBucketText(text: string): { text: string; bucket?: string } {
+  const match = /(^|\s)\/([^\s/]+)(?:\s|$)/.exec(text);
+  if (!match) return { text: text.trim() };
+  const start = match.index + match[1].length, end = match.index + match[0].length;
+  return { text: (text.slice(0, start) + text.slice(end)).trim(), bucket: match[2] };
+}
+
+/** Blank committed edits remove the item; otherwise preserve its identity and context. A `/bucket` token sets the bucket; removing it clears the bucket. */
+export function editComposerTodo(state: ChatComposerState, id: string, text: string, resolveBucket: (name: string) => string | null = name => name): ChatComposerState {
+  const parsed = parseBucketText(text);
+  const value = parsed.text;
+  const bucket = parsed.bucket ? resolveBucket(parsed.bucket) ?? undefined : undefined;
+  return { ...state, todos: value ? state.todos.map(todo => {
+    if (todo.id !== id) return todo;
+    const { bucket: _previous, ...rest } = todo;
+    return { ...rest, text: value, ...(bucket ? { bucket } : {}) };
+  }) : state.todos.filter(todo => todo.id !== id) };
 }

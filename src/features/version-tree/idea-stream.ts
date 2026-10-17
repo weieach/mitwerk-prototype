@@ -141,3 +141,21 @@ export function milestoneNavigationIndex(source: VersionNode[], milestones: Mile
   const preceding = stations.filter(node => source.indexOf(node) <= selectedIndex);
   return Math.max(0, preceding.length - 1);
 }
+
+
+/** Resolve playback by capture identity, retaining folded representatives and Git labels. */
+export function playbackIdeaId(nodes: VersionNode[], representative: ReadonlyMap<string, string>, version: number | null) {
+  if (version === null) return null;
+  const node = nodes.find(node => node.capture?.version === version);
+  return node ? representative.get(node.id) ?? node.id : null;
+}
+
+
+/** Playback disclosure is temporary: moving or pausing never changes manual choices. */
+export function playbackIdeaDisclosure(nodes: VersionNode[], runs: IdeaRun[], version: number | null, expanded: ReadonlySet<string>, commandId: string | null) {
+  const nodeId = version === null ? null : nodes.find(node => node.capture?.version === version)?.id ?? null;
+  const expandedRuns = new Set(expanded);
+  const run = nodeId ? runs.find(group => group.nodeIds.includes(nodeId)) : undefined;
+  if (run) expandedRuns.add(run.id);
+  return { nodeId, expandedRuns, commandId: nodeId ?? commandId };
+}

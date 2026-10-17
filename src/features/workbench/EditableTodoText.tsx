@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react';
-export function EditableTodoText({ text, onSave }: { text: string; onSave: (text: string) => void }) {
+import { useRef, useState, type ReactNode } from 'react';
+/** `prefix` (a bucket chip) leads the text at rest; editing shows `editText`, the chip's plain form. */
+export function EditableTodoText({ text, editText = text, prefix, suffix, onSave }: { text: string; editText?: string; prefix?: ReactNode; suffix?: ReactNode; onSave: (text: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(text);
   const cancelled = useRef(false);
@@ -7,5 +8,5 @@ export function EditableTodoText({ text, onSave }: { text: string; onSave: (text
   return editing ? <textarea autoFocus rows={1} className="composer-todo-edit" aria-label={`Edit to-do: ${text}`} value={draft} onChange={event => setDraft(event.target.value)} onBlur={finish} onKeyDown={event => {
     if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.blur(); }
     if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); cancelled.current = true; setEditing(false); }
-  }}/> : <button type="button" className="composer-todo-text" aria-label={`Edit to-do: ${text}`} onClick={() => { cancelled.current = false; setDraft(text); setEditing(true); }}>{text}</button>;
+  }}/> : <span className="composer-todo-line">{prefix}<button type="button" className="composer-todo-text" aria-label={`Edit to-do: ${text}`} onClick={() => { cancelled.current = false; setDraft(editText); setEditing(true); }}>{text}{suffix}</button></span>;
 }

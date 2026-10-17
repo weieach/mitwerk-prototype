@@ -3,6 +3,24 @@ import { galleryTokens as t } from './tokens.ts';
 
 export type TimelineInput = Pick<GalleryFrame, 'id' | 'version'> & { enabled?: boolean; branch?: string | null; kind?: GalleryFrame['kind'] };
 
+export type JumpScale = 'frame' | 'version';
+export const jumpMenuDelayMs = 500;
+
+/** Version jumps land on the nearest saved push in the requested direction. */
+export function adjacentTimelineIndex(frames: Pick<GalleryFrame, 'kind'>[], index: number, direction: -1 | 1, scale: JumpScale) {
+  if (!frames[index]) return null;
+  if (scale === 'version') return adjacentPushIndex(frames, index, direction);
+  const next = index + direction;
+  return next >= 0 && next < frames.length ? next : null;
+}
+
+/** Fractions of the full sequence, including the full-width thumb when everything fits. */
+export function timelineScrollWindow(viewportWidth: number, contentWidth: number, scrollLeft: number) {
+  const width = Math.max(viewportWidth, contentWidth, 1);
+  const maxScroll = Math.max(0, contentWidth - viewportWidth);
+  return { start: Math.max(0, Math.min(maxScroll, scrollLeft)) / width, size: Math.min(1, Math.max(0, viewportWidth) / width), maxScroll };
+}
+
 /** Share the available width between equal version slots and their push gutters. */
 export function fitTimeline(versionCount: number, availableWidth: number) {
   const slots = Math.max(1, versionCount);
