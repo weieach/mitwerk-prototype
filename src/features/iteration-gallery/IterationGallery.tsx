@@ -1,5 +1,7 @@
+import { captureScreen } from '../../shared/capture-screens';
 import { createPortal } from 'react-dom';
 import { VersionPanelSwitch } from '../../components/VersionPanelSwitch';
+import { AnnotationOverlay } from '../annotations/FrameAnnotations';
 import { seedAnnotations } from '../annotations/store';
 import { Icon } from '../../components/Icon';
 import { RowSelect } from '../../components/RowSelect';
@@ -15,8 +17,8 @@ import type { CSSProperties, ReactNode } from 'react';
 import { AlbumView } from './AlbumView';
 import { referenceCapture } from './theater-layout';
 import { TheaterView } from './TheaterView';
-import { resolveFrameRequest, buildVersions, defaultVersionRange, inRange, rangeCounts, ranges, versionKeepsPush } from './model';
-import type { Capture, RangeKey, FrameRequest } from './model';
+import { resolveFrameRequest, buildVersions, versionsForScreen, defaultVersionRange, inRange, rangeCounts, ranges, versionKeepsPush } from './model';
+import type { Capture, GalleryFrame, RangeKey, FrameRequest } from './model';
 import { galleryTokens as t } from './tokens';
 import './gallery.css';
 
@@ -36,6 +38,7 @@ export function IterationGallery({ headerTarget, headerActions, playbackOnly = f
   const [zoom, setZoom] = useState(1);
   const [view, setView] = useState<'album' | 'focusing' | 'turning' | 'theater' | 'returning' | 'orbiting'>('album');
   const [selectedId, setSelectedId] = useState('');
+  const [milestoneFrame, setMilestoneFrame] = useState<GalleryFrame | null>(null);
   const [navigationKey, setNavigationKey] = useState(0);
   const [target, setTarget] = useState<TheaterTarget | null>(null);
   const [framePickerSlot, setFramePickerSlot] = useState<HTMLDivElement | null>(null);
@@ -81,7 +84,8 @@ export function IterationGallery({ headerTarget, headerActions, playbackOnly = f
     return () => { abort.abort(); window.clearInterval(timer); };
   }, [retry]);
 
-  const versions = useMemo(() => buildVersions(catalog?.frames ?? []), [catalog]);
+  const allVersions = useMemo(() => buildVersions(catalog?.frames ?? []), [catalog]);
+  const versions = useMemo(() => versionsForScreen(allVersions, interfaceId), [allVersions, interfaceId]);
   const range = chosenRange ?? defaultVersionRange(versions, now);
   const baseline = useMemo(() => referenceCapture(versions.flatMap(version => version.frames), t.theaterReference), [versions]);
   const visibleFrames = useMemo(() => versions.flatMap(version => (versionKeepsPush(version.frames) ? version.frames : version.frames.filter(frame => frame.kind !== 'push')).filter(frame => inRange(frame, range, now))), [versions, range, now]);
@@ -92,11 +96,13 @@ export function IterationGallery({ headerTarget, headerActions, playbackOnly = f
   const handledPush = useRef<typeof pushRequest>(null);
   useEffect(() => {
     if (!pushRequest || handledPush.current === pushRequest || !['album', 'theater'].includes(view)) return;
-    const push = resolveFrameRequest(versions, pushRequest);
+    const push = resolveFrameRequest(allVersions, pushRequest);
     if (!push) return;
+    if (captureScreen(push) !== interfaceId) { setInterfaceId(captureScreen(push)); return; }
     handledPush.current = pushRequest;
     if (!inRange(push, range, now)) setRange('all');
     select(push.id, true);
+    setMilestoneFrame(pushRequest.milestone ? push : null);
     if (view === 'album') { updateTimelineMotion(0); setView('turning'); }
   }, [pushRequest, versions, view, select, updateTimelineMotion, range, now]);
   const enterPlayback = useCallback(() => {
@@ -129,6 +135,7 @@ export function IterationGallery({ headerTarget, headerActions, playbackOnly = f
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
+    if (handledPush.current) return;
     if (params.get('screenshot') !== '1' || !['theater', 'transition', 'timeline-transition'].includes(params.get('galleryView') ?? '')) return;
     const frames = versions.flatMap(version => version.frames);
     const pushVersion = Number(params.get('pushVersion')) || t.capturePushVersion;
@@ -166,7 +173,7 @@ export function IterationGallery({ headerTarget, headerActions, playbackOnly = f
       {view !== 'album' && view !== 'focusing' && <div className="gallery-theater-layer" inert={view === 'turning' || view === 'returning'} aria-hidden={view === 'turning' || view === 'returning'}><TheaterView navigationKey={navigationKey} references={catalog?.references ?? []} baseline={baseline ?? t.viewportPresets[1]} frames={visibleFrames} catalog={versions.flatMap(version => version.frames)} range={range} now={now} selectedId={selectedId} onSelect={select} onOrbit={(id, rect) => playbackOnly ? null : camera.current?.orbit(id, rect, () => { setSelectedId(id); setView('orbiting'); }, () => { setView('album'); setTarget(null); }) ?? null} onDismiss={exit} active={view === 'theater'}/></div>}
       </div>}
     <footer className="gallery-footer" inert={view === 'turning' || view === 'returning' || view === 'orbiting'}>
-      <TrackedInterface value={interfaceId} onChange={setInterfaceId}/>
+      <TrackedInterface value={interfaceId} onChange={value => { setInterfaceId(value); setSelectedId(''); setView('album'); setTarget(null); }}/>
       {view !== 'theater' && view !== 'orbiting' && <div className="panel-header-actions">
         <div className="gallery-range"><RowSelect label="Date range" value={range} onChange={value => { setRange(value as RangeKey); setNow(Date.now()); }} options={ranges}/></div>
         <button className="icon-button" aria-label="Zoom gallery out" disabled={zoom <= t.zoomMin} onClick={() => camera.current?.zoom(-1)}><Icon name="minus"/></button>
@@ -174,5 +181,6 @@ export function IterationGallery({ headerTarget, headerActions, playbackOnly = f
         <button className="icon-button" aria-label="Zoom gallery in" disabled={zoom >= t.zoomMax} onClick={() => camera.current?.zoom(1)}><Icon name="plus"/></button>
       </div>}
     </footer>
+    {milestoneFrame && view === 'theater' && galleryRoot.current && <AnnotationOverlay key={milestoneFrame.id} frame={milestoneFrame} milestoneOnly container={galleryRoot.current} onClose={() => setMilestoneFrame(null)}/>}
   </section>;
 }

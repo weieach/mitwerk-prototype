@@ -1,7 +1,9 @@
+import { captureScreen, type CaptureScreen } from '../../shared/capture-screens.ts';
 import { activeRouteColor, branchColor } from '../version-tree/tokens.ts';
 import { galleryTokens as t } from './tokens.ts';
 
 export type Capture = {
+  screen?: CaptureScreen;
   fullPrompt?: string;
   tokenUsage?: { input: number; output: number; total: number; simulated: boolean };
   id: string; filename: string; url: string; width: number; height: number;
@@ -42,9 +44,10 @@ export function parseCaptureName(filename: string) {
   const pieces = body.split(' · ');
   const rest = pieces.filter(piece => !isFiles(piece) && !isDelta(piece));
   const branch = rest.length > 1 && isBranch(rest[0]) ? rest[0] : null;
-  const summary = rest.filter(piece => piece !== branch).join(' · ');
+  const summary = rest.filter(piece => piece !== branch).join(' · ').replace(/\[screen landing\]\s*/g, '');
+  const screen: CaptureScreen = body.includes('[screen landing]') ? 'landing' : 'homescreen';
   return { kind: (tag?.[1].toLowerCase() ?? 'capture') as Capture['kind'], number: tag?.[2] ? +tag[2] : null,
-    branch, timestamp: date.getTime(), summary: summary || 'Saved project frame',
+    screen, branch, timestamp: date.getTime(), summary: summary || 'Saved project frame',
     added: changes?.[1] ?? null, removed: changes?.[2] ?? null };
 }
 
@@ -68,13 +71,21 @@ export function buildVersions(captures: Capture[]): GalleryVersion[] {
     groups.get(version)!.push(frame);
   }
   return [...groups].sort(([a], [b]) => a - b).map(([number, frames], index) => {
-    const lastPrompt = frames.filter(frame => frame.kind === 'prompt').at(-1);
-    return { number, index, frames: frames.map((frame, i) => ({ ...frame,
+    return { number, index, frames: frames.map((frame, i) => {
+      const lastPrompt = frames.filter(candidate => candidate.kind === 'prompt' && captureScreen(candidate) === captureScreen(frame)).at(-1);
+      return { ...frame,
       // Keep push identity and metadata; only its displayed image comes from the final prompt.
       ...(frame.kind === 'push' && lastPrompt ? { url: lastPrompt.url, width: lastPrompt.width, height: lastPrompt.height } : {}),
       version: number, position: index + (i + 0.5) / frames.length,
-    })) };
+    }; }) };
   });
+}
+
+/** Filter after assigning versions, so buckets keep the same Git identities. */
+export function versionsForScreen(versions: GalleryVersion[], screen: string): GalleryVersion[] {
+  return versions.map(version => ({ ...version, frames:version.frames.filter(frame => captureScreen(frame) === screen) }))
+    .filter(version => version.frames.length > 0)
+    .map((version, index) => ({ ...version, index, frames:version.frames.map((frame, i) => ({ ...frame, position:index + (i + .5) / version.frames.length })) }));
 }
 
 export function rangeStart(range: RangeKey, now = Date.now()) {
@@ -217,7 +228,7 @@ export function wrapTextToWidth(text: string, maxWidth: number, measure: (value:
   return lines;
 }
 
-export type FrameRequest = {version: number} | {frameId: string};
+export type FrameRequest = ({version: number} | {frameId: string}) & { milestone?: boolean };
 export function resolveFrameRequest(versions: GalleryVersion[], request: FrameRequest) {
   return versions.flatMap(version => version.frames).find(frame => 'frameId' in request
     ? frame.id === request.frameId : frame.kind === 'push' && frame.version === request.version);

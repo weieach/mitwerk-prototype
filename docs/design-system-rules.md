@@ -1087,3 +1087,103 @@ This file is reserved for project-wide design-system rules requested by the user
 - Clicking the Version blocks title pill in Playback returns to Gallery, including when Idea stream is open. Reuse the existing return transition and close Idea stream; animate the mode label toward Gallery as the return begins. Respect the shared reduced-motion behavior.
 - Idea stream commit cards omit file-change counts, their separator, the overflow menu and Add branch. Retain the prompt-count navigation and a single Add to chat action using the shared filled secondary-button style formerly used by Add branch. Other graph modes retain their existing controls.
 - Fold-count numerals share the version-label font size, weight and zoom compensation. Apply the compensation only to the numeral so the circle retains its shared diameter and centered text.
+
+## Playback controls and chat milestones — 2026-10-17
+
+- Add frame to chat and New annotation share 11px text and 13px icons. Speed and loop selectors live on the playback transport row, centered in the space between Next prompt and Jump to timeline end; keep the central transport centered. The upper toolbar is reserved for live-prototype viewport controls.
+- Header date-range and saved-frame dropdowns use the same shared 171px preferred width and matching shrink constraints in both standalone and combined readers.
+- Every chat version output has the shared Add milestone action immediately below it. Reuse Idea stream's editor, save to the version's stable capture identity, and synchronize open views and tabs. Existing notes are editable, cancellation preserves them, and storage failures stay visible. Unresolved versions wait for catalog identity before allowing edits; saving a draft milestone does not publish it before its commit.
+- `c chat & playback` (or `c chat and playback`) captures the full home workspace with Chat and Playback side by side, rather than closing the reader.
+
+## Milestone and to-do overlay — 2026-10-17
+
+- Playback's annotation entry and creation heading read “New milestone / to-do”. Use a single-choice To-do / Milestone radio group; preserve existing plain notes when editing. Milestones share the stable capture-version storage used by Idea stream and chat, and remain outside finished-milestone navigation until committed. Editing or deleting a linked annotation updates its milestone only if another surface has not replaced that text.
+- Center the entire annotation sheet vertically with equal surrounding padding and scrolling for short panels, replacing the earlier lifted placement. Omit the Theater back button; the bright semantic-ink close action and Escape dismiss the overlay while preserving Playback. Keep the panel-local focus, blur and reduced-motion behavior.
+- Chat version-card milestone actions open a modal using the shared milestone editor. Include “Also commit to [current branch]”, deriving the branch from current Git history. This checkbox only displays a temporary Success toast; it never commits, calls a write endpoint or persists a commit setting. Saving the milestone still saves its local note.
+- Composer attachment, model and mode controls use a shared 4px gap.
+
+## Brand menu, landing and capture buckets — 2026-10-17
+
+- The workspace logo opens a two-option dropdown: Switch to light/dark mode and Exit to landing screen. Its expanded fill and menu use the same shared surface token as user messages. The logo no longer opens navigation; preserve keyboard dismissal and focus restoration.
+- Exit navigates to the separate `?page=landing` page, using the home workspace background and a centered MitWerk logo with Open project below. Open project navigates to the clean home URL, with Chat left and Version blocks right in Gallery, preserving saved conversations and drafts.
+- `c landing` captures that page. Composer capture-screen and Version blocks footer selectors share homescreen and landing buckets. Landing capture filenames carry explicit screen metadata; historical frames default to homescreen. Filter after assigning version identities, preserving Git version numbering across buckets, and resolve frame links across buckets automatically.
+
+## Milestone invitation and compact label spacing — 2026-10-17
+
+- Gallery and Playback headings keep the same shared 10px gap between title pill and mode label, aligned at the start even when the heading fills extra space. Playback speed, loop and jump-to-end form a single flex row with equal 10px gaps.
+- Date collision detection uses the projected text quadrilateral rather than its oversized axis-aligned rectangle. Process older dates first and shift newer colliding dates upward by their rendered font height per step, with no added inter-row gap. Keep titles fixed, rails independent and the existing viewport-edge fallback.
+- After a visible chat version output without a milestone has remained visible for 3 seconds, its Add milestone button jumps upward to touch the card. At impact the card gains a flowing colorful gradient and reads “Ready to mark a new milestone?”. Its primary click opens the shared milestone dialog. Use shared timing/color tokens, preserve the original version navigation before the invitation and after saving, and never create a milestone automatically. Reduced motion shows the final static invitation without the jump or moving gradient; hidden panels do not start the countdown.
+- `c chat and playback with milestone overlay` captures the full Chat/Playback workspace after the invitation with the chat milestone dialog open.
+
+## Compact focus and milestone dialog — 2026-10-17
+
+- Keyboard focus uses a shared 1px foreground-color outline inset 1px at the component edge, with no outward gap or layout shift. Apply the same tokens to buttons, button-like controls and custom radio labels throughout the project, preserving a visible focus indicator in both themes.
+- Date labels retain natural foreshortening at oblique camera angles; cap their projection compensation at 1 so an angled view cannot enlarge their text. Keep chronological collision stacking based on the resulting rendered geometry.
+- New chat milestones ask “What's your new milestone?”. Hide the redundant field label visually while keeping its accessible name. Place the optional commit checkbox and Cancel / Save milestone actions in one wrapping footer row. Branch references use a branch icon followed by a monospace name derived from Git history.
+- `c milestone overlay` captures Chat and Gallery with the milestone dialog open. Explicit Chat/Playback milestone captures continue to use Playback.
+
+## Landing intro: stacked-frame film — 2026-10-17
+
+- The landing page opens with a stacked-frame sequence derived from `src/assets/logo-shape-part.svg` (one frame) and `src/assets/logo-shape.svg` (two frames stacked at a fixed depth offset). Derive frame shape and offset from those assets with `logoGeometry`; never hardcode logo coordinates. The landing symbol renders the `logo-shape.svg` path inline so the film lands exactly on it.
+- Sequence (tokens in `LANDING_INTRO`, `landing-intro.ts`): bands drop in bottom-first, one beat apart; a traveling bulge thickens and tilts bands after the attached rhythm reference (prompt #303), with spacing opening around the bulge so neighbors never overlap; bands open into isometric frames at album scale; the album collapses onto the two logo frames at the landing symbol's box; the wordmark and Open project reveal; then the stack releases back into the looping bands under the dark scrim. All stages are one band description, so states morph continuously.
+- Film treatment: sub-frame shutter samples average into motion blur, a WebGL pass keeps a decaying long-exposure trail, then grades with animated grain and a vignette. Stage colors come from `--landing-stage-background` / `--landing-stage-ink` (workspace background and ink); the scrim and on-scrim brand/action colors are landing tokens and stay dark in both themes.
+- Pointer or key input skips to the reveal. Reduced motion renders a static loop frame with the brand already revealed; without WebGL the brand shows immediately. `data-intro` on `.landing-page` reports `playing` → `revealed` → `settled`; `c landing` waits for `settled`.
+
+## Panel-local milestone creation — 2026-10-17
+
+- Chat milestone actions open Version blocks if hidden, select that card's actual frame in Playback and open the existing annotation overlay inside the panel. This replaces the standalone milestone modal. Keep Chat usable beside it; closing or cancelling returns to Playback without saving.
+- This entry uses “What's your new milestone?” and the current-branch commit checkbox instead of annotation-kind radios. Preserve the shared preview, local milestone persistence, Cancel / Save order, monospace branch reference and prototype-only commit Success toast. Ordinary annotation entry retains its To-do / Milestone chooser.
+- Milestone invitation gradients include a shared static SVG grain layer. In the ready state, replace the button below with a “Not yet” chip. Dismissing restores normal card navigation and suppresses re-invitation for that mounted card; Add milestone remains available manually. Respect reduced motion for the gradient and bump.
+- Milestone-overlay captures now show the full Chat/Playback workspace with the panel-local milestone annotation form.
+
+## Version-linked to-dos in Idea stream — 2026-10-17
+
+- Display only the current conversation’s drawer to-dos beside their designated Idea stream versions, matching stable capture version numbers rather than labels, chronology guesses or Git SHAs. Keep versions with to-dos visible when folding history. Unassigned to-dos remain unplaced until their version is known.
+- A version with to-dos uses a checkbox station instead of its ordinary circle or trophy. Check the station only when all its to-dos are complete; show each item's own checkbox and strike through completed text using the drawer's muted treatment. Preserve milestone text and navigation when both kinds of content belong to the same version.
+- To-do lists use the shared graph typography and scale with zoom. Reserve their bounded list height in timeline layout so cards cannot overlap later stations. Use the drawer’s exact React state array and shared ordering, so additions, completion changes, removals and conversation switches update both surfaces in the same render. Do not aggregate other conversations or independently seeded annotation tasks. Standalone history reads the default conversation’s saved drawer and observes storage updates.
+
+## Landing intro version 2: one frame multiplies — 2026-10-17
+
+- Version 2 (`landing-multiply.ts`, tokens `MULTIPLY_INTRO`) is reachable at `?page=landing&intro=multiply`; version 1 (vertical bands) at `?page=landing&intro=stack`. Both implement the shared `LandingIntro` contract and render through the same film stage.
+- Version 2 ignores the prompt #303 rhythm image and never arranges frames vertically. It opens with a single frame sliding in along the depth axis, then doubles by repeated binary splits (1 → 2 → 4 → 8 → 16) along the logo's isometric depth offset, with the camera zooming out to fit. A lift ripple travels through the stack, then all frames fold onto the two logo frames at the landing symbol. The background loop repeats multiply → ripple → merge back to one frame, with a slow periodic drift, under the dark scrim.
+- No landing frame has a hard border or stroke, in either version. Overlapping frames separate only through depth tone (back frames dimmer) and a soft left-to-right shade inside each frame; both resolve to flat full tone as frames become the logo.
+
+## Landing intro version 3: thrown frames with physical timing — 2026-10-17
+
+- Version 3 (`landing-impact.ts`, tokens `IMPACT_INTRO`) is the default landing intro. It never multiplies frames and never fills them with gradients: a fixed set of seven frames, each a single flat tone (depth fog only), separated without strokes.
+- Timing simulates physics rather than easing curves. Each frame is thrown from the camera as a perspective dive under constant acceleration (it starts `1 / cameraDepth` times larger than its slot), then lands with a damped-oscillation bounce. Frames arrive one by one from different sides onto an isometric pile.
+- The drastic scale shift comes when the whole pile recedes under constant acceleration from album scale to the landing symbol's size. It bounces in scale on impact while the frames gather onto the two logo slots as an underdamped spring. The brand reveals at impact.
+- Release flings the logo's frames back past the camera, front first. The background loop under the scrim repeats throw → hold → fling, with an empty beat that makes the period seamless. Physics helpers (`springStep`, `impactBounce`, `throwDepth`) are closed-form functions of time, so shutter samples stay deterministic.
+
+## Landing intro: white shapes, eased motion, trials — 2026-10-17
+
+- Supersedes the film treatment and tone rules above. The landing stage uses no shaders: a plain Canvas2D renderer (`landing-stage.ts`) fills every visible frame in complete white (`--landing-frame`) as one path on a dark stage (`--landing-stage-background`, dark in both themes so white reads). The only effect is one white glow (`--landing-frame-glow`, `LANDING_INTRO.glowBlur`). Never use gradients, tone or depth fog, shadows, grain, motion blur, trails or CSS blur on the landing; this includes the wordmark reveal and the Open project button.
+- Motion uses eases only (cubic in / out / in-out, and geometric scale interpolation for big zooms). No springs, bounces or overshooting curves. Version 3 keeps its drastic scale shifts (throws ease down from 16× magnification; the pile eases down to the symbol size) without the bounce.
+- Because frames are uniformly white, frames meant to read separately sit far enough apart along the depth axis that they never touch (`depthStep` 2.9 logo offsets). Frames intentionally overlap only when they merge, as in the logo.
+- Trials at `?page=landing&intro=flatten` (separated frames slide in, flatten into one frame, which settles onto the logo) and `?page=landing&intro=unfold` (the reverse: one frame eases in from a drastic scale and unfolds into many before settling onto the logo). Their loops alternate spread ↔ single frame. Version 3 (`impact`) stays the default; `stack` and `multiply` remain available and render under the same white rules.
+
+
+## Editable capture buckets and overlay dismissal — 2026-10-17
+
+- The capture-screen chip retains its pen icon. Editing opens a text combobox with the shared bucket dropdown; nonempty new names prepend a `Create bucket "name"` option. Enter creates/selects the typed name, blank input offers existing buckets only, and Escape cancels. Trim names and reuse case-insensitive matches.
+- UI-created buckets share one in-memory registry between composer and Version blocks footer. They and their selection disappear on full reload; creating/selecting a bucket never writes or relocates frames. Progress captures remain controlled by the user's capture prompt.
+- Milestone/to-do overlays fade and move out using the shared annotation exit duration on close, Cancel, Escape, save-and-close and navigation to the task board. Keep the dialog mounted and underlying panel inert until dismissal finishes, restore focus afterward, and dismiss immediately for reduced motion.
+
+
+## Editable to-dos and consistent compact actions — 2026-10-17
+
+- Idea stream to-do checkboxes invoke the same completion action as the current conversation drawer. Drawer text opens an inline editor; blur or Enter commits, Escape cancels, and committing blank text removes the item. A separate plus action at the right adds the item to the prompt using the existing reuse behavior. Preserve version identity and completion while editing.
+- Inline milestone editors have no visible heading (retain the accessible field label). Existing milestones show a red trash icon at the left of the action row, with Cancel and Save at the right.
+- Enter prototype shares Add frame to chat's text-action style, with a filled triangular play icon.
+- Capture bucket menus share the pill's font-size and inline-padding tokens. Their minimum width equals the pill, growing naturally for longer names. Hover and highlighted states never change font weight anywhere in the application; selected dropdown rows also keep their normal weight.
+
+
+## Idea stream footer and playback defaults — 2026-10-17
+
+- Idea stream keeps its isometric grid visible without a Show/Hide grid control. Its footer buttons have a shared 44px minimum width, including navigation and zoom actions; longer labels may grow and the footer can wrap on narrow panels. The Test diagram retains its grid control.
+- Playback starts in the non-repeating mode, labeled “No loop” everywhere it is offered. At the final frame it stops; Loop and Ping-pong remain explicit alternatives.
+
+
+## Branch-colored milestone cards — 2026-10-17
+
+- Every Idea stream milestone card uses a thin 1px border in its graph-derived branch route color, matching its station and branch label. Keep that color while editing inline. Reuse `--route-color`, including the theme-aware main-branch contrast color; do not assign colors by milestone text, version number or selection.

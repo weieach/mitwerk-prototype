@@ -1,3 +1,5 @@
+import { EditableTodoText } from './EditableTodoText';
+import { CaptureBucketChip } from './CaptureBucketChip';
 import { composerModels } from './composer-models';
 import { SelectMenu, useSelectMenu } from '../../components/SelectMenu';
 import { useEffect, useId, useState } from 'react';
@@ -27,8 +29,8 @@ export function ComposerModeSwitch({ mode, onChange }: { mode: ComposerMode; onC
   )}</fieldset>;
 }
 
-export function ComposerDrawer({ state, onToggle, onComplete, onUseTodo, onCapture, children }: {
-  state: ChatComposerState; onToggle: () => void; onComplete: (id: string) => void; onUseTodo: (id: string) => void;
+export function ComposerDrawer({ state, onToggle, onComplete, onUseTodo, onEdit, onCapture, children }: {
+  onEdit: (id: string, text: string) => void; state: ChatComposerState; onToggle: () => void; onComplete: (id: string) => void; onUseTodo: (id: string) => void;
   onCapture: (key: 'screen' | 'overlay', value: string) => void; children: ReactNode;
 }) {
   const id = useId();
@@ -53,13 +55,13 @@ export function ComposerDrawer({ state, onToggle, onComplete, onUseTodo, onCaptu
       {key === 'screen' && <PhosphorIcon name="folder" size={10}/>}<span>{state.capture[key]}</span><PhosphorIcon name="pencil-simple" weight="fill" size={10}/>
     </button>;
   return <div className="chat-composer-stack">
-    <div className="capture-settings"><span>Capturing</span>{captureChip('screen')}<span>with</span>{captureChip('overlay')}</div>
+    <div className="capture-settings"><span>Capturing</span><CaptureBucketChip value={state.capture.screen} onChange={value => onCapture('screen', value)}/><span>with</span>{captureChip('overlay')}</div>
     <div className={`composer-drawer ${state.open ? 'is-expanded' : ''}`}>
       <button type="button" className="composer-drawer-heading" aria-expanded={state.open} aria-controls={id} aria-label="To-do drawer" aria-describedby={countId} onClick={onToggle}><span>To-do drawer</span><span className="composer-drawer-count" aria-hidden="true">{unfinished}</span><span className="sr-only" id={countId} aria-live="polite">{unfinished} unfinished to-dos</span></button>
       <div id={id} className="composer-drawer-reveal" inert={!state.open} aria-hidden={!state.open} role="region" aria-label="Chat to-dos"><div className="composer-drawer-clip"><div className="composer-drawer-content">
         {state.todos.length ? <ul ref={listRef}>{todos.map(todo => <li key={todo.id} data-reorder-id={todo.id} className={todo.complete ? 'is-complete' : ''}>
-          <input type="checkbox" aria-label={`Complete to-do: ${todo.text}`} checked={todo.complete} onChange={() => { capturePositions(); onComplete(todo.id); }}/><button type="button" className="composer-todo-text" aria-label={`Use to-do as prompt: ${todo.text}`} onClick={() => onUseTodo(todo.id)}>{todo.text}</button>
-          <time dateTime={todo.created}>{todoTimestamp(todo.created, clock)}{todo.version !== undefined && ` (v${todo.version})`}</time>
+          <input type="checkbox" aria-label={`Complete to-do: ${todo.text}`} checked={todo.complete} onChange={() => { capturePositions(); onComplete(todo.id); }}/><EditableTodoText text={todo.text} onSave={text => { capturePositions(); onEdit(todo.id, text); }}/>
+          <time dateTime={todo.created}>{todoTimestamp(todo.created, clock)}{todo.version !== undefined && ` (v${todo.version})`}</time><button type="button" className="composer-todo-add" aria-label={`Add to-do to prompt: ${todo.text}`} onClick={() => onUseTodo(todo.id)}><PhosphorIcon name="plus" size={12}/></button>
         </li>)}</ul> : <p className="composer-drawer-empty">Switch to To-do and send a message to save it here.</p>}
       </div></div></div>
       {children}

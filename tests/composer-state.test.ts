@@ -1,3 +1,4 @@
+import { editComposerTodo } from '../src/features/workbench/composer-state.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { addComposerTodo, defaultComposer, toggleComposerTodo, useTodoAsPrompt, todoTimestamp, todoVersionAt, hydrateComposerTodos, orderedComposerTodos } from '../src/features/workbench/composer-state.ts';
@@ -95,4 +96,14 @@ test('drawer order is newest first with completed items last, without mutating s
  assert.deepEqual(orderedComposerTodos(checked.todos).map(todo=>todo.id),['middle','old','new']);
  assert.deepEqual(orderedComposerTodos(toggleComposerTodo(checked,'new').todos).map(todo=>todo.id),['new','middle','old']);
  assert.deepEqual(state.todos.map(todo=>todo.id),['old','new','middle']);
+});
+
+test('editing preserves identity and context; a committed empty edit removes only that todo', () => {
+ const base=addComposerTodo(defaultComposer(),'Original','edit','today',{version:29});
+ const checked=toggleComposerTodo(base,'edit');
+ const edited=editComposerTodo(checked,'edit','  Revised text  ');
+ assert.deepEqual(edited.todos[0],{...checked.todos[0],text:'Revised text'});
+ assert.equal(base.todos[0].text,'Original');
+ assert.equal(editComposerTodo(edited,'edit','  ').todos.length,0);
+ assert.deepEqual(editComposerTodo(edited,'missing',''),edited);
 });

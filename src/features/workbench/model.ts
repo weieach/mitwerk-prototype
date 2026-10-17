@@ -1,3 +1,5 @@
+import { durableCaptureScreen } from '../../shared/capture-buckets.ts';
+import { workbenchStorageKey } from './composer-events.ts';
 import { buildVersions, type Capture } from '../iteration-gallery/model.ts';
 import type { ChatComposerState } from './composer-state.ts';
 import type { FrameContext } from './frame-context.ts';
@@ -85,7 +87,7 @@ const previousGalleryMessages: Message[] = [
       { id:'m3', role:'user', name:userName, time:'10:28', text:'Keep out-of-range versions visible but dimmed. Clicking a frame should rotate it into theater view, where I can play the sequence like a timelapse. Show the frame first, then the timeline, then the other controls.' },
       { id:'m4', role:'mit', name:'Design Mit', time:'10:42', text:'The sample direction is ready to review. The gallery groups frames by version and supports date-range filtering, orbiting and hover inspection. Theater uses a segmented version timeline, and its preview stays visible while the next image loads.\n\nOpen the Iteration Visualizer to explore the blocks. The review notes cover the camera transition, timeline behavior and checks for the next iteration.', assetId:'prototype' },
 ];
-const KEY = 'mitwerk-workbench-v1';
+const KEY = workbenchStorageKey;
 export const defaultInstructions = 'Build MitWerk’s iteration visualizer and version stream with reusable components and shared design tokens. Derive frames from capture metadata and branching from Git. Keep test data separate from recorded history; preserve clear labels, keyboard access and stable playback.';
 export type Project = {mitIds?:string[];archived?:boolean;id:string; name:string; description:string; members:string[]; instructions:string};
 export const colleagues = [
@@ -171,11 +173,14 @@ export function loadState(): SavedState {
  try {
   const raw=JSON.parse(localStorage.getItem(KEY)||'null');
   if(raw && (!Array.isArray(raw.tasks)||!raw.tasks.every((t:Task)=>typeof t.id==='string' && typeof t.title==='string' && typeof t.mit==='string' && statuses.includes(t.status) && Array.isArray(t.input) && Array.isArray(t.output) && Array.isArray(t.messages))))return migrateState(null);
-  return migrateState(raw);
+  return durableCaptureState(migrateState(raw));
  }catch{return migrateState(null);}
 }
 export function tasksForProject(tasks:Task[],id:string){return tasks.filter(t=>t.projectId===id);}
-export function saveState(state:SavedState) { localStorage.setItem(KEY,JSON.stringify(state)); }
+function durableCaptureState(state: SavedState): SavedState {
+ return { ...state, chatComposers: Object.fromEntries(Object.entries(state.chatComposers ?? {}).map(([id, composer]) => [id, { ...composer, capture: { ...composer.capture, screen: durableCaptureScreen(composer.capture.screen) } }])) };
+}
+export function saveState(state:SavedState) { localStorage.setItem(KEY,JSON.stringify(durableCaptureState(state))); }
 export function now() { return new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
 export function uid() { return crypto.randomUUID(); }
 

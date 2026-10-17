@@ -1,3 +1,4 @@
+import { useIdeaTodos } from './useIdeaTodos';
 import { ZoomScaleButton } from '../../components/ZoomScaleButton';
 import { VersionPanelSwitch } from '../../components/VersionPanelSwitch';
 import { RowSelect } from '../../components/RowSelect';
@@ -17,7 +18,7 @@ import { VersionCard } from './VersionCard';
 import { branchName, isBranchDivergence, mergedBranchIds, presentTree } from './presentation';
 import { canEditTree, treeModes, type TreeMode } from './panel-state';
 import { IdeaCard } from './IdeaCard';
-import { currentIdeaWipId, ideaBranchColor, isFinishedIdeaVersion, navigableMilestones, saveMilestone, ideaStreamDefaults, milestoneStorageKey, milestoneNavigationIndex, parseMilestones, firstBranchLabels, projectIdeaStream, seedMilestones } from './idea-stream';
+import { milestonesChangedEvent, currentIdeaWipId, ideaBranchColor, isFinishedIdeaVersion, navigableMilestones, saveMilestone, ideaStreamDefaults, milestoneStorageKey, milestoneNavigationIndex, parseMilestones, firstBranchLabels, projectIdeaStream, seedMilestones } from './idea-stream';
 
 type Props = { embedded?:boolean; id?:string; title?:string; onSwitchPanel?:()=>void; onOpenPush?: (version: number) => void; status?: string; graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; modeSwitchVisible: boolean; onModeChange: (mode: TreeMode) => void };
 
@@ -58,6 +59,7 @@ if (screenshotFlags.countHover) document.documentElement.dataset.screenshotCount
 
 export function VersionTreePanel({ embedded = false, id, title = 'Idea stream', graph, dispatch, onSwitchPanel, onOpenPush, mode, modeSwitchVisible, onModeChange, status = '' }: Props) {
   const ideaMode = mode === 'history';
+  const { todosByNode, toggleTodo } = useIdeaTodos(graph.nodes);
   const [savedMilestones, setSavedMilestones] = useState(() => {
     try { return parseMilestones(localStorage.getItem(milestoneStorageKey)); } catch { return {}; }
   });
@@ -66,21 +68,26 @@ export function VersionTreePanel({ embedded = false, id, title = 'Idea stream', 
   const currentWipId = currentIdeaWipId(graph.nodes);
   const defaults = useMemo(() => ideaStreamDefaults(graph.nodes), [graph.nodes]);
   const [openCommand, setOpenCommand] = useState<string | null>(() => ideaMode ? ideaStreamDefaults(graph.nodes).commandId : null);
-  const visibleIdeas = useMemo(() => new Set([...defaults.latestIds, ...(openCommand ? [openCommand] : [])]), [defaults, openCommand]);
+  const visibleIdeas = useMemo(() => new Set([...defaults.latestIds, ...todosByNode.keys(), ...(openCommand ? [openCommand] : [])]), [defaults, openCommand, todosByNode]);
   const [pendingFocus, setPendingFocus] = useState<string | null>(null);
   const ideas = useMemo(() => projectIdeaStream(graph.nodes, milestones, expandedRuns, visibleIdeas), [graph.nodes, milestones, expandedRuns, visibleIdeas]);
   useEffect(() => {
     if (!ideaMode || status || !graph.nodes.length) return;
-    try { localStorage.setItem(milestoneStorageKey, JSON.stringify(milestones)); } catch { /* Session editing remains available. */ }
+    try { localStorage.setItem(milestoneStorageKey, JSON.stringify(milestones)); window.dispatchEvent(new Event(milestonesChangedEvent)); } catch { /* Session editing remains available. */ }
   }, [ideaMode, milestones, graph.nodes.length, status]);
   useEffect(() => {
     function sync(event: StorageEvent) { if (event.key === milestoneStorageKey) setSavedMilestones(parseMilestones(event.newValue)); }
+    function syncLocal() {
+      const next = parseMilestones(localStorage.getItem(milestoneStorageKey));
+      setSavedMilestones(current => JSON.stringify(current) === JSON.stringify(next) ? current : next);
+    }
     window.addEventListener('storage', sync);
-    return () => window.removeEventListener('storage', sync);
+    window.addEventListener(milestonesChangedEvent, syncLocal);
+    return () => { window.removeEventListener('storage', sync); window.removeEventListener(milestonesChangedEvent, syncLocal); };
   }, []);
   const selectedDisplayId = ideaMode && graph.selectedId ? ideas.representative.get(graph.selectedId) ?? null : graph.selectedId;
   const activePath = useMemo(() => branchPathIds(graph.nodes, graph.activeBranchId), [graph.nodes, graph.activeBranchId]);
-  const layout = useMemo(() => ideaMode ? layoutIdeaTimeline(ideas.nodes, node => openCommand === node.id && isFinishedIdeaVersion(node) ? ideaTheme.openGap : ideas.folded.has(node.id) ? ideaTheme.foldedGap : milestones[node.id] ? ideaTheme.milestoneGap : ideaTheme.nodeGap) : layoutBranchView(layoutGraph(graph.nodes), graph.selectedId, activePath), [graph.nodes, graph.selectedId, activePath, ideaMode, ideas, milestones, openCommand]);
+  const layout = useMemo(() => ideaMode ? layoutIdeaTimeline(ideas.nodes, node => (openCommand === node.id && isFinishedIdeaVersion(node) ? ideaTheme.openGap : ideas.folded.has(node.id) ? ideaTheme.foldedGap : milestones[node.id] ? ideaTheme.milestoneGap : ideaTheme.nodeGap) + (todosByNode.has(node.id) ? ideaTheme.todoListMaxHeight + ideaTheme.todoGap : 0)) : layoutBranchView(layoutGraph(graph.nodes), graph.selectedId, activePath), [graph.nodes, graph.selectedId, activePath, ideaMode, ideas, milestones, openCommand, todosByNode]);
   const branchLabels = useMemo(() => firstBranchLabels(graph.nodes, ideas.representative), [graph.nodes, ideas]);
   const boundsNodes = useMemo(() => [...layout.nodes, ...(layout.mergeOrigins ?? []).map(origin => ({ ...origin, title: '' }))], [layout]);
   const levelColor = useMemo(() => levelColorLookup([...layout.nodes, ...(layout.mergeOrigins ?? []).map(origin => ({ branchId: origin.branchId, row: 0 }))]), [layout]);
@@ -453,6 +460,8 @@ export function VersionTreePanel({ embedded = false, id, title = 'Idea stream', 
   return <section id={id} className="tree-panel" data-tree-mode={mode} aria-labelledby="tree-title" data-selected-branch={presentation.selectedBranchId || undefined} data-active-branch={graph.activeBranchId} style={{
     '--branch-label-size': `${treeTheme.branchLabelFontSize}px`,
     '--idea-action-fade': `${ideaTheme.actionFadeMs}ms`,
+    '--idea-todo-max-height': `${ideaTheme.todoListMaxHeight}px`,
+    '--idea-todo-gap': `${ideaTheme.todoGap}px`,
     '--milestone-font-size': `${ideaTheme.milestoneFontSize}px`,
     '--milestone-padding': `${ideaTheme.milestonePaddingBlock}px ${ideaTheme.milestonePaddingInline}px`,
     '--idea-fold-count-size': `${ideaTheme.foldCountSize}px`,
@@ -499,7 +508,7 @@ export function VersionTreePanel({ embedded = false, id, title = 'Idea stream', 
         <div className="canvas-size" style={{ width: (worldWidth + worldShift + fitInset) * zoom, height: worldHeight * zoom }}>
           <div className="canvas-world" style={{ width: worldWidth, height: worldHeight, transform: `scale(${zoom}) translate(${worldShift + fitInset}px, 0)` }}>
             <svg className="route-layer" width={worldWidth} height={worldHeight} style={{ overflow: 'visible' }} aria-hidden="true">
-              <IsometricGrid x={-(worldShift + fitInset)} width={worldWidth + worldShift + fitInset} height={worldHeight} visible={grid}/>
+              <IsometricGrid x={-(worldShift + fitInset)} width={worldWidth + worldShift + fitInset} height={worldHeight} visible={ideaMode || grid}/>
               {/* Paint clearance first so connected segments do not erase each other's junctions. */}
               {presentation.routes.filter(route => !route.dashed).map(route => <path key={`clearance:${route.id}`} d={route.path} fill="none" stroke="var(--canvas-bg)" strokeWidth={treeTheme.routeWidth + treeTheme.routeClearance * 2} strokeLinejoin="round" strokeLinecap="round"/>)}
               {/* Routes arrive pre-sorted: later versions, Vx.1, then the checked-out branch on top. */}
@@ -594,7 +603,7 @@ export function VersionTreePanel({ embedded = false, id, title = 'Idea stream', 
                   left: -geometry.cardOffsetX + label.x,
                   top: -cardOffsetY + label.y,
                 }}>{(ideaMode ? branchLabels.get(node.branchId) === node.id : isBranchDivergence(node, graph.nodes)) && <BranchTag name={node.branchId} color={color}/>}<span className="version-header">{node.label.toLowerCase()}</span></span>
-                {ideaMode ? <IdeaCard currentWip={node.id === currentWipId} node={node} milestone={milestones[node.id] ?? ''} open={openCommand === node.id} color={color}
+                {ideaMode ? <IdeaCard onToggleTodo={toggleTodo} todos={todosByNode.get(node.id) ?? []} currentWip={node.id === currentWipId} node={node} milestone={milestones[node.id] ?? ''} open={openCommand === node.id} color={color}
                   hasDescendants={presentation.nodesWithChildren.has(node.id)}
                   onSelect={() => { setOpenCommand(current => current === node.id ? null : node.id); dispatch({ type: 'select', id: node.id }); if (node.capture?.pushed) onOpenPush?.(node.capture.version); }}
                   onSave={text => setSavedMilestones(saveMilestone(milestones, node, text))}>{commitCard}</IdeaCard>
@@ -628,9 +637,9 @@ export function VersionTreePanel({ embedded = false, id, title = 'Idea stream', 
         </div>}
         <div className="panel-header-actions">
           {ideaMode && expandedRuns.size > 0 && <button className="icon-button" onClick={() => { setExpandedRuns(new Set()); setOpenCommand(null); }} title="Fold versions without milestones">Fold</button>}
-          <button className="icon-button tree-grid-toggle" onClick={() => setGrid(!grid)} aria-label="Grid" aria-pressed={grid} title={grid ? 'Hide grid' : 'Show grid'}>
+          {!ideaMode && <button className="icon-button tree-grid-toggle" onClick={() => setGrid(!grid)} aria-label="Grid" aria-pressed={grid} title={grid ? 'Hide grid' : 'Show grid'}>
             <i className={grid ? 'ph ph-eye-closed' : 'ph ph-eye'} aria-hidden="true"/>Grid
-          </button>
+          </button>}
           <button className="icon-button" onClick={() => changeZoom(zoom - treeTheme.zoomStep)} disabled={zoom <= treeTheme.minZoom} aria-label="Zoom out"><Icon name="minus"/></button>
           <ZoomScaleButton zoom={zoom} label="Reset Idea stream zoom" onResetZoom={() => changeZoom(1)} onResetView={fitAll}/>
           <button className="icon-button" onClick={() => changeZoom(zoom + treeTheme.zoomStep)} disabled={zoom >= treeTheme.maxZoom} aria-label="Zoom in"><Icon name="plus"/></button>

@@ -3,6 +3,8 @@ import { geometry } from './layout.ts';
 export const ideaTheme = {
   fitMinZoom: 0.05,
   nodeGap: 140,
+  todoListMaxHeight: 152,
+  todoGap: 10,
   milestoneGap: 190,
   openGap: 390,
   foldedGap: 80,

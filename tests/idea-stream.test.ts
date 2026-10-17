@@ -3,7 +3,16 @@ import assert from 'node:assert/strict';
 import { ideaBranchColor, isFinishedIdeaVersion, navigableMilestones, saveMilestone, ideaStreamDefaults, milestoneNavigationIndex, parseMilestones, projectIdeaStream, seedMilestones } from '../src/features/version-tree/idea-stream.ts';
 import { layoutGitHistory, layoutIdeaTimeline } from '../src/features/version-tree/git-layout.ts';
 import type { VersionNode } from '../src/features/version-tree/model.ts';
-import { currentIdeaWipId, withinNodeHoverRadius } from '../src/features/version-tree/idea-stream.ts';
+import { captureMilestoneKey, currentIdeaWipId, withinNodeHoverRadius } from '../src/features/version-tree/idea-stream.ts';
+
+test('chat milestones resolve onto the matching committed version and override old aliases', () => {
+  const commit = { ...node('sha'), capture:{version:29,pushed:true,branches:['main'],added:null,removed:null} };
+  const saved = {sha:'Older note', [captureMilestoneKey(29)]:'Decision from chat'};
+  const resolved = seedMilestones([commit], saved);
+  assert.equal(resolved.sha, 'Decision from chat');
+  assert.deepEqual(navigableMilestones([commit], resolved).map(n => n.id), ['sha']);
+  assert.equal(seedMilestones([commit], {...saved, [captureMilestoneKey(29)]:''}).sha, '');
+});
 
 test('only the latest unpushed capture receives persistent draft controls', () => {
   const oldWip = { ...node('old'), title:'Begin 3D view (WIP)', capture:{version:12,pushed:true,branches:['main'],added:null,removed:null} };

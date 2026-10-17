@@ -1,10 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { appendAnnotationContext, emptyAnnotations, removeAnnotation, saveAnnotation } from '../src/features/annotations/model.ts';
+import { annotationMilestones, appendAnnotationContext, emptyAnnotations, removeAnnotation, saveAnnotation } from '../src/features/annotations/model.ts';
 import type { AnnotationFrame, FrameAnnotation } from '../src/features/annotations/model.ts';
 import { seedAnnotationSamples } from '../src/features/annotations/samples.ts';
 const frame:AnnotationFrame={id:'frame-240',number:240,kind:'prompt',version:26,url:'gallery/frame.png',summary:'Frame controls',timestamp:1000};
 const note:FrameAnnotation={id:'one',frame,text:'  Review the footer  ',todo:true,status:'To do',createdAt:'now',updatedAt:'now'};
+test('milestone annotations share version identity and preserve independently edited milestones', () => {
+ const created = saveAnnotation(emptyAnnotations, {...note, text:'Decision', todo:false, kind:'milestone'});
+ const saved = annotationMilestones(emptyAnnotations, created, {});
+ assert.equal(saved['capture-version-26'], 'Decision');
+ const edited = saveAnnotation(created, {...created.items[0], text:'Updated decision'});
+ assert.equal(annotationMilestones(created, edited, saved)['capture-version-26'], 'Updated decision');
+ const todo = saveAnnotation(created, {...created.items[0], todo:true, kind:'todo'});
+ assert.equal(annotationMilestones(created, todo, saved)['capture-version-26'], '');
+ assert.equal(annotationMilestones(created, emptyAnnotations, saved)['capture-version-26'], '');
+ assert.equal(annotationMilestones(created, emptyAnnotations, {'capture-version-26':'Independent edit'})['capture-version-26'], 'Independent edit');
+ assert.equal(annotationMilestones(created, created, {'capture-version-26':'Independent edit'})['capture-version-26'], 'Independent edit');
+});
 test('annotation updates keep frame identity, todo state and chat association without duplication',()=>{
  const created=saveAnnotation(emptyAnnotations,note);
  assert.equal(created.items[0].text,'Review the footer');
@@ -12,6 +24,9 @@ test('annotation updates keep frame identity, todo state and chat association wi
  assert.equal(edited.items.length,1);assert.equal(edited.items[0].frame.id,frame.id);assert.equal(edited.items[0].todo,false);assert.equal(edited.items[0].chatId,'chat-1');
  assert.equal(saveAnnotation(edited,{...note,text:'  '}),edited);
  assert.equal(removeAnnotation(edited,note.id).items.length,0);
+ assert.equal(edited.items[0].kind,'note');
+ const milestone=saveAnnotation(edited,{...note,kind:'milestone'}).items[0];
+ assert.equal(milestone.todo,false);
 });
 test('seeds are only added when their frame exists and deletion is permanent across seeding',()=>{
  assert.equal(seedAnnotationSamples(emptyAnnotations,[]),emptyAnnotations);

@@ -30,7 +30,7 @@ function PlaybackTip({ label, children, edge }: { label: string; children: React
   </span>;
 }
 
-const loopModes: { value: LoopMode; label: string }[] = [{ value: 'once', label: 'Play once' }, { value: 'loop', label: 'Loop' }, { value: 'ping-pong', label: 'Ping-pong' }];
+const loopModes: { value: LoopMode; label: string }[] = [{ value: 'once', label: 'No loop' }, { value: 'loop', label: 'Loop' }, { value: 'ping-pong', label: 'Ping-pong' }];
 
 export function TheaterView({ navigationKey, references, frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline }: { navigationKey: number; references: VisualReference[]; baseline: { width: number; height: number }; active: boolean; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string, animate?: boolean) => void }) {
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -40,7 +40,7 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
   const [toast, setToast] = useState('');
   useEffect(() => { setFullscreenId(null); }, [selectedId, active]);
   const [speed, setSpeed] = useState(1);
-  const [mode, setMode] = useState<LoopMode>('loop');
+  const [mode, setMode] = useState<LoopMode>('once');
   const [direction, setDirection] = useState(1);
   const [preset, setPreset] = useState('original');
   const [custom, setCustom] = useState({ width: 1280, height: 800 });
@@ -316,8 +316,7 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
             sandbox="allow-scripts" referrerPolicy="no-referrer"/>
         : <img draggable={false} src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`${formatVersion(frame.version)}: ${frame.summary}`}/>}
     </FullscreenPreview>}
-    <div className="gallery-toolbar theater-top-toolbar" data-orbit-blocked>
-      <div className="playback-options-top">{playbackOptions}</div>
+    <div className="gallery-toolbar theater-top-toolbar" data-orbit-blocked hidden={!prototypeMode}>
       {prototypeMode && <>
       <RowSelect label="Preview viewport" value={preset} onChange={setPreset} options={t.viewportPresets}/>
       {preset === 'custom' && <div className="gallery-custom-size">
@@ -331,14 +330,14 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
     <div className="theater-body" ref={bodyRef} style={{ '--theater-metadata-height': `${t.theater.metadataHeight}px`, '--theater-metadata-max': `${t.theater.metadataHeightMaxVh}vh`, '--theater-metadata-gap': `${t.theater.metadataGap}px` } as CSSProperties}>
       <div className="theater-stage" style={{ width: '100%', '--theater-action-gap': `${t.theater.actionGap}px`, '--theater-frame-bed': t.theater.frameBed } as CSSProperties}>
       <div className="theater-frame-actions" data-orbit-blocked ref={actionsRef}>
-        {frame.kind !== 'push' && <FrameAnnotations color={annotationBookmarkColor(frame.branch, branches)} frame={frame} active={active && ready && !playing} onOpen={() => { setPlaying(false); setDisplayed(frame); setPreviewId(null); setPreviewImage(null); onSelect(frame.id); }}/>}
+        {frame.kind !== 'push' && <FrameAnnotations key={navigationKey} color={annotationBookmarkColor(frame.branch, branches)} frame={frame} active={active && ready && !playing} onOpen={() => { setPlaying(false); setDisplayed(frame); setPreviewId(null); setPreviewImage(null); onSelect(frame.id); }}/>}
         <div className="theater-action-buttons">{exitPrototype}
 
-        <button className="theater-text-action" onClick={event => { event.stopPropagation(); window.dispatchEvent(new CustomEvent(attachFrameEvent, {detail:{id:frame.id, url:`${import.meta.env.BASE_URL}${frame.url}`, label:`${formatVersion(frame.version)} · ${frame.summary}`, filename:frame.filename}})); }}><Icon name="plus"/>Add frame to chat</button>
+        <button className="theater-text-action frame-chat-action" onClick={event => { event.stopPropagation(); window.dispatchEvent(new CustomEvent(attachFrameEvent, {detail:{id:frame.id, url:`${import.meta.env.BASE_URL}${frame.url}`, label:`${formatVersion(frame.version)} · ${frame.summary}`, filename:frame.filename}})); }}><Icon name="plus"/>Add frame to chat</button>
         {frame.kind === 'push' && (prototype.open
           ? <button className="theater-text-action" onClick={() => { setPlaying(false); setFullscreenId(frame.id); }}><Icon name="expand"/>Full screen</button>
-          : <button className="theater-text-action is-enter" disabled={!active || prototype.loading || prototype.available === null} onClick={enterPrototype}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="arrow"/>Enter prototype</span>
+          : <button className="theater-text-action frame-chat-action" disabled={!active || prototype.loading || prototype.available === null} onClick={enterPrototype}>
+            <Icon name="play"/>Enter prototype
           </button>)}
         </div>
       </div>
@@ -384,6 +383,7 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
         <PlaybackTip label="Jump to next prompt"><button className="icon-button" onClick={() => skipPrompt(nextPrompt)} disabled={nextPrompt === null} aria-label="Next prompt"><Icon name="next"/></button></PlaybackTip>
         </div>
         <div className="playback-end-controls">
+          {playbackOptions}
           <PlaybackTip label={`Jump to timeline end (${rangeLabel})`} edge="end"><button className="icon-button" aria-label="Jump to timeline end" disabled={!rangeFrames.length || atRangeEnd} onClick={() => scrollTimeline('end')}><i className="ph-fill ph-caret-line-right" aria-hidden="true"/></button></PlaybackTip>
         </div>
       </div>

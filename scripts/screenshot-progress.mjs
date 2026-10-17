@@ -470,11 +470,13 @@ function wantsResetCapture(prompt = '') {
 }
 
 function wantsIdeaStreamCapture(prompt = '') {
-  return hasFlag('idea-stream') || /\bc chat (?:and|&) idea stream\b/i.test(prompt) || /\bc idea stream\b/i.test(prompt) || /\bc (?:home|homescreen)\s+w\/?\s+[^.\n]*\bidea stream\b/i.test(prompt);
+  return /\bc chat\b[^.\n]*\bidea stream\b/i.test(prompt) || hasFlag('idea-stream') || /\bc chat (?:and|&) idea stream\b/i.test(prompt) || /\bc idea stream\b/i.test(prompt) || /\bc (?:home|homescreen)\s+w\/?\s+[^.\n]*\bidea stream\b/i.test(prompt);
 }
 
+function wantsLandingCapture(prompt = '') { return /\bc landing\b/i.test(prompt); }
+
 function wantsHomeCapture(prompt = '') {
-  return argValue('gallery-view') === 'home' || /\bc (?:home|homescreen)\b/i.test(prompt);
+  return argValue('gallery-view') === 'home' || /\bc (?:home|homescreen|milestone overlay)\b/i.test(prompt);
 }
 
 function wantsDarkCapture(prompt = '') {
@@ -497,11 +499,16 @@ function wantsSideBySideCapture(prompt = '') {
   return /\bc(?:\s*\/)? chat (?:and|&) version side[ -]by[ -]side\b/i.test(prompt);
 }
 
+function wantsChatPlaybackCapture(prompt = '') {
+  return /\bc chat (?:and|&) playback\b|\bc chat\b[^.\n]*\bplayback\b/i.test(prompt);
+}
+
 function wantsChatCapture(prompt = '') {
-  return /\bc(?:\s*\/)? chat\b/i.test(prompt) && !wantsSideBySideCapture(prompt);
+  return /\bc(?:\s*\/)? chat\b/i.test(prompt) && !wantsSideBySideCapture(prompt) && !wantsChatPlaybackCapture(prompt);
 }
 
 function wantsTheaterCapture(prompt = '') {
+  if (wantsChatPlaybackCapture(prompt)) return true;
   if (wantsHomeCapture(prompt)) return false;
   if (argValue('gallery-view') === 'theater') return true;
   if (/\bc gallery\b/i.test(prompt) || ['reset', 'center', 'top'].includes(argValue('gallery-view'))) return false;
@@ -533,6 +540,7 @@ function wantsGalleryHover(prompt = '') {
 function screenshotUrl(prompt = '') {
   const target = new URL(url);
   target.searchParams.set('screenshot', '1');
+  if (wantsLandingCapture(prompt)) { target.search = '?screenshot=1&page=landing'; if (wantsDarkCapture(prompt)) target.searchParams.set('theme', 'dark'); return target.href; }
   if (/\bc (?:home|homescreen)\b[^.\n]*milestone[^.\n]*zoomed in/i.test(prompt)) { target.searchParams.set('treeMilestone', 'latest'); target.searchParams.set('treeZoom', '1'); }
   if (hasFlag('tree-fit') || /fit all view/i.test(prompt)) target.searchParams.set('treeFit', '1');
   if (/\bc (?:home|homescreen)\b[^.\n]*todo added to chat field/i.test(prompt)) target.searchParams.set('todoDraft', '1');
@@ -541,7 +549,7 @@ function screenshotUrl(prompt = '') {
   // Capture the complete prototype shell, retaining gallery state parameters.
   target.searchParams.delete('view');
   target.searchParams.set('treeMode', argValue('tree-mode', 'history'));
-  if (wantsIdeaStreamCapture(prompt)) { target.searchParams.set('ideaStream', '1'); target.searchParams.delete('galleryView'); if (wantsHomeCapture(prompt) || /\bc chat (?:and|&) idea stream\b/i.test(prompt)) target.searchParams.set('layout', 'side-by-side'); return target.href; }
+  if (wantsIdeaStreamCapture(prompt)) { if (/milestone edit/i.test(prompt)) { target.searchParams.set('treeMilestone', 'latest'); target.searchParams.set('treeZoom', '0.8'); } target.searchParams.set('ideaStream', '1'); target.searchParams.delete('galleryView'); if (wantsHomeCapture(prompt) || /\bc chat\b/i.test(prompt)) target.searchParams.set('layout', 'side-by-side'); return target.href; }
   if (wantsTodosCapture(prompt)) {
     target.searchParams.set('page', 'todos');
     if (/todo navigation dialog/i.test(prompt)) target.searchParams.set('todoDialog', 'navigation');
@@ -550,6 +558,11 @@ function screenshotUrl(prompt = '') {
   if (wantsSideBySideCapture(prompt)) {
     target.searchParams.set('layout', 'side-by-side');
     if (/\btoast\b/i.test(prompt)) target.searchParams.set('toast', '1');
+    return target.href;
+  }
+  if (wantsChatPlaybackCapture(prompt)) {
+    target.searchParams.set('layout', 'side-by-side'); target.searchParams.set('galleryView', 'theater');
+    if (/annotation overlay/i.test(prompt) && !/milestone overlay/i.test(prompt)) target.searchParams.set('annotationOverlay', '1');
     return target.href;
   }
   if (wantsChatCapture(prompt)) {
@@ -668,9 +681,12 @@ function createCdp(ws) {
 
 async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
   const started = Date.now();
+  let milestoneRequested = false;
   while (Date.now() - started < timeoutMs) {
     const result = await cdp('Runtime.evaluate', {
-      expression: wantsIdeaStreamCapture(prompt)
+      expression: wantsLandingCapture(prompt)
+        ? 'document.querySelector(".landing-page")?.dataset.intro === "settled" && !!document.querySelector(".landing-page .landing-open")'
+        : wantsIdeaStreamCapture(prompt)
         ? '!!document.querySelector(".workspace-idea-split #workspace-pane-ideas .tree-viewport") && document.querySelector(".iteration-gallery")?.dataset.galleryPhase === "theater" && document.querySelector(".theater-view")?.dataset.frameReady === "true" && !!document.querySelector(".theater-screen img")?.complete'
         : wantsTodosCapture(prompt)
         ? `(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && !!document.querySelector(".todos-page .kanban") && !document.querySelector(".mw-reader")${/todo navigation dialog/i.test(prompt) ? ' && !!document.querySelector(".todo-navigation-dialog[open]")' : ''}`
@@ -685,7 +701,7 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
         : wantsTransitionCapture(prompt)
         ? '(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && document.querySelector(".album-3d-viewport")?.dataset.transitionReady === "true"'
         : wantsTheaterCapture(prompt)
-        ? `(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete && (() => { const tag = document.querySelector(".annotation-tag"); return !tag || (tag.classList.contains("is-ready") && !tag.getAnimations().some(animation => animation.playState === "running")); })()${/annotation overlay|\bc theater overlay\b/i.test(prompt) ? ' && !!document.querySelector(".annotation-overlay[open][data-entered=true]")' : ''}${/overlay open/i.test(prompt) ? ' && !!document.querySelector(".theater-fullscreen") && !document.querySelector(".theater-fullscreen .is-exit")' : ''}${/mobile breakpoint|\bat mobile\b/i.test(prompt) ? ' && document.querySelector("[aria-label=\\"Preview viewport\\"]")?.value === "phone" && !!document.querySelector(".theater-frame-bed")' : ''}${/prototype (?:is )?entered|prototype mode/i.test(prompt) ? ' && !!document.querySelector("[aria-label=\\"Preview viewport\\"]")' : ''}${/playhead at last frame/i.test(prompt) ? ' && document.querySelector(".theater-view")?.dataset.rangeEdge === "end" && (() => { const head = document.querySelector(".gallery-timeline-playhead"); const scroller = document.querySelector(".gallery-timeline-scroll"); if (!head || !scroller) return false; const h = head.getBoundingClientRect(); const s = scroller.getBoundingClientRect(); return h.left >= s.left - 4 && h.right <= s.right + 4; })()' : ''}`
+        ? `(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete && (() => { const tag = document.querySelector(".annotation-tag"); return !tag || (tag.classList.contains("is-ready") && !tag.getAnimations().some(animation => animation.playState === "running")); })()${/annotation overlay|\bc theater overlay\b/i.test(prompt) && !/milestone overlay/i.test(prompt) ? ' && !!document.querySelector(".annotation-overlay[open][data-entered=true]")' : ''}${/overlay open/i.test(prompt) ? ' && !!document.querySelector(".theater-fullscreen") && !document.querySelector(".theater-fullscreen .is-exit")' : ''}${/mobile breakpoint|\bat mobile\b/i.test(prompt) ? ' && document.querySelector("[aria-label=\\"Preview viewport\\"]")?.value === "phone" && !!document.querySelector(".theater-frame-bed")' : ''}${/prototype (?:is )?entered|prototype mode/i.test(prompt) ? ' && !!document.querySelector("[aria-label=\\"Preview viewport\\"]")' : ''}${/playhead at last frame/i.test(prompt) ? ' && document.querySelector(".theater-view")?.dataset.rangeEdge === "end" && (() => { const head = document.querySelector(".gallery-timeline-playhead"); const scroller = document.querySelector(".gallery-timeline-scroll"); if (!head || !scroller) return false; const h = head.getBoundingClientRect(); const s = scroller.getBoundingClientRect(); return h.left >= s.left - 4 && h.right <= s.right + 4; })()' : ''}`
         : /annotation overlay|\bc theater overlay\b/i.test(prompt)
         ? '(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && !!document.querySelector(".annotation-overlay[open][data-entered=true]") && document.querySelector(".annotation-preview")?.complete'
         : wantsGalleryHover(prompt)
@@ -722,7 +738,27 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
         const menu = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('[role="listbox"][aria-label="Date range"]')`, returnByValue: true });
         if (!menu.result?.value) { await delay(100); continue; }
       }
-      if (wantsChatCapture(prompt)||wantsTodosCapture(prompt)||wantsHomeCapture(prompt)) return;
+      if (/milestone overlay/i.test(prompt)) {
+        const milestone = await cdp('Runtime.evaluate', { expression: `(() => {
+          const button = document.querySelector('.message-version-output.is-milestone-ready .message-version-card');
+          const clicked = !${milestoneRequested} && !!button;
+          if (clicked) button.click();
+          return { clicked, ready: !!document.querySelector('.milestone-overlay[open][data-entered=true] .annotation-preview')?.complete && !!document.querySelector('.milestone-commit-option input:not(:disabled)') };
+        })()`, returnByValue: true });
+        milestoneRequested ||= !!milestone.result?.value?.clicked;
+        if (!milestone.result?.value?.ready) { await delay(100); continue; }
+      }
+      if (/idea stream[^.\n]*milestone edit/i.test(prompt)) {
+        await cdp('Runtime.evaluate', { expression: `(() => { if (!document.querySelector('.idea-card .idea-editor')) [...document.querySelectorAll('.idea-milestone')].at(-1)?.click(); })()` });
+        const editor = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.idea-card .idea-editor textarea')`, returnByValue: true });
+        if (!editor.result?.value) { await delay(100); continue; }
+      }
+      if (/capture (?:location|screen) (?:chip )?dropdown/i.test(prompt)) {
+        await cdp('Runtime.evaluate', { expression: `(() => { if (!document.querySelector('[role="listbox"][aria-label="Capture screen"]')) document.querySelector('button[aria-label="Capture screen"]')?.click(); })()` });
+        const menu = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('[role="listbox"][aria-label="Capture screen"]')`, returnByValue: true });
+        if (!menu.result?.value) { await delay(100); continue; }
+      }
+      if (wantsLandingCapture(prompt)||wantsChatCapture(prompt)||wantsTodosCapture(prompt)||wantsHomeCapture(prompt)) return;
       const shell = await cdp('Runtime.evaluate', { expression: '!!document.querySelector(".mw-reader .workspace") && !!document.querySelector("#main-navigation")', returnByValue: true });
       if (shell.result?.value === true) return;
     }
@@ -779,7 +815,7 @@ async function capture(chrome, outFile, prompt = '') {
     const ws = new WebSocket(page.webSocketDebuggerUrl);
     await waitForSocket(ws);
     const cdp = createCdp(ws);
-    await waitForScreenshotReady(cdp, 10000, prompt);
+    await waitForScreenshotReady(cdp, wantsLandingCapture(prompt) ? 20000 : 10000, prompt);
     await cdp('Runtime.evaluate', { expression: 'document.fonts.ready.then(() => true)', awaitPromise: true, returnByValue: true });
     if (/edit annotation overlay/i.test(prompt)) {
       const note = await cdp('Runtime.evaluate', { expression: `(() => {
@@ -1108,7 +1144,7 @@ async function takeScreenshot({ tag, label, sha, base }) {
   }
   await assertServer();
   mkdirSync(screenshotsDir, { recursive: true });
-  const message = sanitizeMessage(label, tag === 'prompt' ? 'prompt' : 'commit');
+  const message = `${wantsLandingCapture(label) ? '[screen landing] ' : ''}${sanitizeMessage(label, tag === 'prompt' ? 'prompt' : 'commit')}`;
   const overwrite = tag === 'prompt' && (hasFlag('recapture-last') || /recapture last prompt/i.test(label) && /overwrite/i.test(label));
   if (overwrite) {
     const number = name => Number(/^\[prompt #(\d+)\]/i.exec(name)?.[1] ?? 0);
@@ -1125,7 +1161,11 @@ async function takeScreenshot({ tag, label, sha, base }) {
       return outFile;
     }
   }
-  const count = nextTagCount(screenshotsDir, tag);
+  const requestedPrompt = tag === 'prompt' ? argValue('prompt-number') : '';
+  const requestedCount = Number(requestedPrompt);
+  const nextCount = nextTagCount(screenshotsDir, tag);
+  if (requestedPrompt && (!Number.isSafeInteger(requestedCount) || requestedCount < nextCount)) throw new Error('Requested prompt number must be an unused integer at or above the next capture.');
+  const count = requestedCount || nextCount;
   if (tag === 'prompt') {
     const logPath = join(root, 'docs/prompt-log.md');
     mkdirSync(dirname(logPath), { recursive: true });

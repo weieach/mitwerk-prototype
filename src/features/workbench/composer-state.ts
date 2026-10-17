@@ -77,3 +77,9 @@ export function orderedComposerTodos(todos: ComposerTodo[]) {
   const timestamp = (todo: ComposerTodo) => Date.parse(todo.created) || 0;
   return [...todos].sort((a, b) => Number(a.complete) - Number(b.complete) || timestamp(b) - timestamp(a));
 }
+
+/** Blank committed edits remove the item; otherwise preserve its identity and context. */
+export function editComposerTodo(state: ChatComposerState, id: string, text: string): ChatComposerState {
+  const value = text.trim();
+  return { ...state, todos: value ? state.todos.map(todo => todo.id === id ? { ...todo, text: value } : todo) : state.todos.filter(todo => todo.id !== id) };
+}

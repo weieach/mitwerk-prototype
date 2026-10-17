@@ -1,9 +1,10 @@
+import { captureScreens } from '../../shared/capture-screens.ts';
 export const galleryTokens = {
-  annotations: { blur: 12, blurMs: 220, frameDelayMs: 220, uiDelayMs: 320, enterMs: 180, mainColor: '#cdcdcd', messageStaggerMs: 110, messageEnterMs: 280, hoverLift: 10, bookmarkWidth: 22, bookmarkHeight: 18, bookmarkTextureSize: 128, bookmarkInset: 10 },
+  annotations: { exitMs: 180, blur: 12, blurMs: 220, frameDelayMs: 220, uiDelayMs: 320, enterMs: 180, mainColor: '#cdcdcd', messageStaggerMs: 110, messageEnterMs: 280, hoverLift: 10, bookmarkWidth: 22, bookmarkHeight: 18, bookmarkTextureSize: 128, bookmarkInset: 10 },
   theaterMotion: { rotateMs: 1100, verticalAxisFadeMs: 180, frameBorderMs: 180, controlsFadeMs: 280, captureProgress: .5, timelineMs: 320, timelineOffsetVh: 5 },
   theaterDrag: { radiansPerViewport: Math.PI, pitchLimit: Math.PI * .45 },
   controls: { headerGap: 14, tokenLift: 48, floatingBackground: 'var(--paper)', floatingWidth: 144, floatingPaddingInline: 16, floatingPaddingBlock: 6, labelOpacity: .6, frameSelectorShare: .3, fileMaxWidth: 240, frameSelectMaxWidth: 200, inset: 24, gap: 8 },
-  interfaces: [{ value: 'index.html', label: 'homescreen' }],
+  interfaces: captureScreens,
   webgl: { pixelRatioMax: 3, resolution: { panelStart: 600, panelEnd: 1600, largePanelScale: 1.5, maxPixels: 12_000_000 }, rotateSpeed: .7, zoomSpeed: .55, keyRotateRadians: .12, dragThreshold: 5,
     blockOpacity: .035, disabledOutlineScale: .5, edgeOpacity: .18, hoverEdgeOpacity: .5, edgeWidth: .75, hoverEdgeWidth: 1.5, frameOutlineOpacity: .92, frontViewPadding: 1.8, frontViewLift: .15,
     initialDirection: [-1, .85, 1] as const, groundRotationDegrees: -12, textureCacheSize: 8, prefetchConcurrency: 2, anisotropyMax: 16 },
@@ -15,7 +16,7 @@ export const galleryTokens = {
   axisTitle: { valueGap: 138, zoomGapPower: .25, minProjection: .1 },
   tokenUsage: { clockwiseDegrees: -90, startDegrees: 87, fullDegrees: 89, fadeMs: 300, rotateMs: 850, areaOpacity: .85, areaColor: 'var(--token-area)', branchTint: .5, barOpacity: .8, barWidth: .7, barSpacingRatio: .45, axisInsetPx: 24, axisTitleGapPx: 6, scaleTicks: [0, .5, 1], surfaceLift: 1, labelGap: 44, outlineOpacity: .18, outlineWidth: .75, outlineRenderOrder: 2 },
   featuredTickScale: .5,
-  axisText: { lineHeight: 1.25, collisionGap: 2, hoverBackground: 'var(--paper)', hoverBorderWidth: 1, hoverBorderColor: 'var(--paper)', hoverBorderGap: 1, minPx: 8, basePx: 9, maxPx: 11, referenceViewport: 640, minProjection: .55 },
+  axisText: { lineHeight: 1.25, collisionGap: 2, hoverBackground: 'var(--paper)', hoverBorderWidth: 1, hoverBorderColor: 'var(--paper)', hoverBorderGap: 1, minPx: 8, basePx: 9, maxPx: 11, referenceViewport: 640, minProjection: .55, dateMaxCompensation: 1 },
   axisFacing: { startDegrees: 30, fullyFrontDegrees: 12 },
   topView: { startDegrees: 55, fullDegrees: 75, dateFadeMs: 240, titleEndGap: 48 },
   labelFontSize: 10, labelWorldHeight: 22, labelTextureMin: 96, labelTextureMax: 512,

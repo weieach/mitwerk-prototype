@@ -10,12 +10,14 @@ const preferredHeight = 360;
  * The designed selection overlay shared by every selector. It opens in the top layer next to its trigger,
  * so it clears clipped panels and stays interactive inside modal dialogs such as fullscreen theater.
  */
-export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, className = '', onChoose, onDismiss }: {
+export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, className = '', focusOnOpen = true, activeIndex, onActiveIndexChange, onChoose, onDismiss }: {
   id: string; label: string; anchor: RefObject<HTMLElement | null>; options: readonly SelectMenuOption[]; value: string;
-  className?: string; minWidth?: number; onChoose: (value: string) => void; onDismiss: (restoreFocus: boolean) => void;
+  className?: string; minWidth?: number; focusOnOpen?: boolean; activeIndex?: number; onActiveIndexChange?: (index: number) => void; onChoose: (value: string) => void; onDismiss: (restoreFocus: boolean) => void;
 }) {
   const list = useRef<HTMLDivElement>(null);
-  const [cursor, setCursor] = useState(() => Math.max(0, options.findIndex(option => option.value === value)));
+  const [internalCursor, setInternalCursor] = useState(() => Math.max(0, options.findIndex(option => option.value === value)));
+  const cursor = activeIndex ?? internalCursor;
+  const setCursor = (next: number) => { setInternalCursor(next); onActiveIndexChange?.(next); };
   const [bounds, setBounds] = useState<CSSProperties>({});
   useLayoutEffect(() => {
     const menu = list.current!;
@@ -30,26 +32,26 @@ export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, cl
     };
     place(); addEventListener('resize', place); addEventListener('scroll', place, true);
     return () => { removeEventListener('resize', place); removeEventListener('scroll', place, true); };
-  }, [anchor, minWidth]);
+  }, [anchor, minWidth, options.length]);
   useEffect(() => {
-    list.current?.focus();
+    if (focusOnOpen) list.current?.focus();
     const outside = (event: PointerEvent) => {
       const target = event.target as Node;
       if (!list.current?.contains(target) && !anchor.current?.contains(target)) onDismiss(false);
     };
     document.addEventListener('pointerdown', outside);
     return () => document.removeEventListener('pointerdown', outside);
-  }, [anchor, onDismiss]);
+  }, [anchor, onDismiss, focusOnOpen]);
   useEffect(() => { list.current?.children[cursor]?.scrollIntoView({ block: 'nearest' }); }, [cursor]);
   return <div ref={list} id={id} popover="manual" role="listbox" aria-label={label} aria-activedescendant={`${id}-${cursor}`} tabIndex={-1}
-    className={`select-menu ${className}`} style={bounds}
+    className={`select-menu ${className}`} style={bounds} onMouseDown={event => { if (!focusOnOpen) event.preventDefault(); }}
     onKeyDown={event => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onDismiss(true); }
       else if (event.key === 'Tab') onDismiss(false);
       else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); if (options[cursor]) onChoose(options[cursor].value); }
       else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
         event.preventDefault();
-        setCursor(index => event.key === 'Home' ? 0 : event.key === 'End' ? options.length - 1 : Math.max(0, Math.min(options.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1))));
+        setCursor(event.key === 'Home' ? 0 : event.key === 'End' ? options.length - 1 : Math.max(0, Math.min(options.length - 1, cursor + (event.key === 'ArrowDown' ? 1 : -1))));
       }
     }}>
     {options.map((option, index) => <div id={`${id}-${index}`} key={option.value} role="option" aria-selected={value === option.value} aria-label={option.ariaLabel}

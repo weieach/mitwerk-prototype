@@ -232,11 +232,12 @@ test('crowded dates stagger by whole text rows, stay deterministic, and return w
   const source = JSON.stringify(crowded);
   const placed = spaceDateLabels(crowded,800,640,() => 40);
   assert.equal(placed[0].row,0);
-  assert.ok(placed[1].row! > 0);
+  assert.equal(placed[1].row,1);
+  assert.equal(placed[2].row,2);
   for (let i=0;i<placed.length;i++) for (let j=i+1;j<placed.length;j++) {
-    assert.ok(Math.abs(matrix(placed[i].transform)[13]-matrix(placed[j].transform)[13]) >= 14.5);
+    assert.ok(Math.abs(matrix(placed[i].transform)[13]-matrix(placed[j].transform)[13]) >= 10);
   }
-  for (const item of placed) assert.equal((100-matrix(item.transform)[13])/12.5,item.row);
+  for (const item of placed) assert.equal((100-matrix(item.transform)[13])/10,item.row);
   assert.deepEqual(spaceDateLabels([...crowded].reverse(),800,640,()=>40).reverse(),placed);
   assert.equal(JSON.stringify(crowded),source);
   const roomy = crowded.map((item,i)=>({...item,transform:label(item.id,100+i*100,100).transform}));
@@ -252,4 +253,28 @@ test('date staggering handles the top edge and keeps faded rails, titles and ver
   assert.ok(placed[1].row! < 0, 'move down by whole rows when the upper edge has no room');
   assert.equal(placed[2].transform,input[2].transform);
   assert.equal(placed[3].transform,input[3].transform);
+});
+
+test('rotated date labels do not stagger just because their bounding rectangles overlap', () => {
+  const c = Math.SQRT1_2;
+  const label = (id:string,x:number,y:number) => ({id,text:'Oct 17',layer:Number(id),transform:`matrix3d(${c},${c},0,0,${-c},${c},0,0,0,0,1,0,${x},${y},0,1)`,fontSize:10,hidden:false,rise:0,opacity:1,align:.5,dateRail:'wall' as const});
+  const placed=spaceDateLabels([label('1',100,100),label('2',90,110)],800,640,()=>40);
+  assert.deepEqual(placed.map(label=>label.row),[0,0]);
+});
+
+
+test('date text never enlarges when orbiting to oblique or overhead angles', () => {
+  const view = camera();
+  for (const elevation of [0, 400, 850, 4000]) for (let angle = 0; angle < 360; angle += 15) {
+    const radians = THREE.MathUtils.degToRad(angle);
+    view.position.set(Math.sin(radians) * 1000, elevation, Math.cos(radians) * 1000);
+    view.lookAt(0, 0, 0); view.updateMatrixWorld();
+    for (const overheadDate of [false, true]) {
+      const label = projectAxisLabels([{ ...anchors[0], overheadDate }], view, 800, 640)[0];
+      const m = matrix(label.transform);
+      assert.ok(Math.hypot(m[0], m[1]) <= 1 + 1e-8);
+      assert.ok(Math.hypot(m[4], m[5]) <= 1 + 1e-8);
+      assert.ok(m.every(Number.isFinite));
+    }
+  }
 });

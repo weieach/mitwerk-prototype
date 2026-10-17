@@ -2,6 +2,8 @@ import type { VersionNode } from './model.ts';
 
 export type Milestones = Record<string, string>;
 export const milestoneStorageKey = 'mitwerk.idea-stream.milestones.v1';
+export const milestonesChangedEvent = 'mitwerk-milestones-changed';
+export function captureMilestoneKey(version: number) { return `capture-version-${version}`; }
 /** Initial content only. Resolve labels to stable IDs; layout never depends on these labels. */
 export const initialMilestones: Record<string, string> = {
   V1: 'Record progress as a version stream instead of Figma annotations',
@@ -34,7 +36,7 @@ export function seedMilestones(nodes: VersionNode[], saved: Milestones): Milesto
 
 /** Capture identity survives the WIP node being joined to its eventual Git SHA. */
 function milestoneIdentity(node: VersionNode) {
-  return node.capture ? `capture-version-${node.capture.version}` : node.id;
+  return node.capture ? captureMilestoneKey(node.capture.version) : node.id;
 }
 
 export function saveMilestone(saved: Milestones, node: VersionNode, text: string): Milestones {

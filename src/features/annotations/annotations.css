@@ -1,4 +1,4 @@
-:root { --annotation-bookmark-bottom:var(--theater-action-gap, 8px); --annotation-color: #ffc629; --annotation-danger: #c73535; --annotation-preview-height: 42vh; --annotation-sheet-width: 720px; --annotation-content-lift: 10vh; --annotation-list-height: 40vh; --annotation-message-width: 85%; --annotation-action-font-size: var(--body-font-size); }
+:root { --annotation-bookmark-bottom:var(--theater-action-gap, 8px); --annotation-color: #ffc629; --annotation-danger: #c73535; --annotation-preview-height: 42vh; --annotation-sheet-width: 720px; --annotation-list-height: 40vh; --annotation-message-width: 85%; --annotation-action-font-size: var(--body-font-size); }
 .frame-annotation-bookmark { margin-right:auto; align-self:flex-end; overflow:hidden; margin-bottom:calc(-1 * var(--theater-action-gap)); padding-top:0; }
 .annotation-tag { display:flex; align-items:center; gap:8px; background:var(--annotation-color); color:var(--annotation-ink); padding:9px 16px var(--annotation-bookmark-bottom, 20px); border-radius:999px; transform:translateY(110%); transition:transform 280ms ease; }
 .annotation-tag.is-ready { transform:translateY(0); }
@@ -8,7 +8,7 @@
 .annotation-overlay[open] { display:flex; flex-direction:column; gap:var(--row-padding-inline); }
 .annotation-overlay::before { content:''; position:absolute; inset:0; pointer-events:none; background:color-mix(in srgb, var(--paper) 76%, transparent); backdrop-filter:blur(var(--annotation-blur)); animation:annotation-blur-in var(--annotation-blur-ms) ease both; }
 .annotation-return { position:relative; align-self:flex-start; flex:none; z-index:1; height:var(--base-control-height); }
-.annotation-body { position:relative; flex:1; min-height:0; overflow:auto; display:flex; padding:var(--row-size-unit); padding-bottom:calc(var(--row-size-unit) + 2 * var(--annotation-content-lift)); }
+.annotation-body { position:relative; flex:1; min-height:0; overflow:auto; display:flex; padding:var(--row-size-unit); }
 .annotation-sheet { flex:none; width:min(var(--annotation-sheet-width),100%); margin:auto; }
 .annotation-sheet header { display:flex; align-items:center; justify-content:space-between; gap:var(--row-size-unit); margin-bottom:calc(var(--row-size-unit) * 2); }
 .annotation-overlay .annotation-sheet h2 { display:flex; gap:var(--row-size-unit); align-items:center; margin:0; font-size:var(--row-title-size); font-weight:var(--compact-title-weight); }
@@ -26,7 +26,7 @@
 .annotation-list { margin-top:var(--row-padding-inline); max-height:var(--annotation-list-height); overflow:auto; display:flex; flex-direction:column; gap:calc(var(--row-size-unit) * 3); padding:var(--row-size-unit); }
 .annotation-message { flex:none; align-self:flex-end; width:fit-content; max-width:var(--annotation-message-width); display:flex; flex-direction:column; gap:calc(var(--row-size-unit) * 2); padding:var(--card-padding); text-align:left; background:var(--mw-panel, var(--fill)); border:1px solid transparent; border-radius:var(--surface-radius); animation:annotation-message-in var(--annotation-message-enter) ease both; animation-delay:calc(var(--annotation-ui-delay) + var(--annotation-message-index) * var(--annotation-message-stagger)); }
 .annotation-message:hover { background:var(--fill-hover); border-color:var(--line); }
-.annotation-message:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+.annotation-message:focus-visible { outline:var(--focus-ring-width) solid var(--focus-ring-color); outline-offset:var(--focus-ring-offset); }
 .annotation-message-body { white-space:pre-wrap; overflow-wrap:anywhere; line-height:var(--message-line-height); }
 .annotation-message-meta { display:flex; align-items:center; justify-content:flex-end; gap:calc(var(--row-size-unit) * 2); align-self:flex-end; color:var(--muted); font-size:var(--meta-font-size); }
 .annotation-kind { display:inline-flex; align-items:center; gap:var(--row-size-unit); color:var(--muted); font-size:var(--meta-font-size); white-space:nowrap; }
@@ -53,3 +53,18 @@
 .mw-app .annotation-sheet textarea:focus-visible, .annotation-sheet textarea:focus-visible { outline:none;box-shadow:inset 0 0 0 1px var(--line-strong);border-color:var(--line-strong); }
 
 .workspace .frame-annotation-bookmark .annotation-tag { height:auto; padding:var(--annotation-pill-padding); }
+
+.annotation-sheet header .icon-button, .workspace .annotation-sheet header .icon-button .ui-icon { color:var(--ink); opacity:1; }
+.annotation-kind-select { display:flex; flex-wrap:wrap; gap:calc(var(--row-size-unit) * 3); border:0; padding:0; margin:0; }
+.annotation-kind-select label { font-size:var(--annotation-action-font-size); cursor:pointer; }
+
+.annotation-form-actions .milestone-commit-option { margin:0; font-size:var(--body-font-size); }
+.annotation-form-actions .milestone-commit-option input { flex:none; }
+.milestone-overlay .annotation-form-actions > .mw-toast { position:fixed; }
+
+/* Retain the dialog and focus containment until every dismissal finishes. */
+.annotation-overlay { opacity:1; transition:opacity var(--annotation-exit-ms) ease; }
+.annotation-overlay .annotation-body { transition:transform var(--annotation-exit-ms) ease; }
+.annotation-overlay[data-exiting="true"] { opacity:0; pointer-events:none; }
+.annotation-overlay[data-exiting="true"] .annotation-body { transform:translateY(var(--row-size-unit)); }
+@media(prefers-reduced-motion:reduce) { .annotation-overlay, .annotation-overlay .annotation-body { transition:none; } }

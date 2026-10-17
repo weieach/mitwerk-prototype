@@ -89,7 +89,9 @@ export function projectAxisLabels(anchors: AxisAnchor[], camera: THREE.Orthograp
     const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(plane).applyQuaternion(inverseCamera);
     // Keep the reverse face readable when the user orbits behind the album.
     if (normal.z < 0) { right.negate(); normal.negate(); }
-    const compensation = 1 / Math.max(minProjection, Math.min(Math.hypot(right.x, right.y), Math.hypot(up.x, up.y)));
+    // Dates retain natural foreshortening instead of growing at oblique angles.
+    const compensation = Math.min(anchor.face === 'wall' || anchor.overheadDate ? t.axisText.dateMaxCompensation : Infinity,
+      1 / Math.max(minProjection, Math.min(Math.hypot(right.x, right.y), Math.hypot(up.x, up.y))));
     right.multiplyScalar(compensation); up.multiplyScalar(compensation);
     // At overhead angles, read every rail in screen orientation as the album turns.
     const readable = THREE.MathUtils.smoothstep(topBlend, 0, 1);
@@ -123,10 +125,24 @@ export function projectAxisLabels(anchors: AxisAnchor[], camera: THREE.Orthograp
 /** Stagger projected dates in whole text rows, recomputing from untouched anchors
  * each frame. Camera/zoom never receives this presentation-only adjustment. */
 export function spaceDateLabels(labels: AxisLabel[], width: number, height: number, measureText: (text: string, size: number) => number): AxisLabel[] {
-  type Box = { left: number; right: number; top: number; bottom: number };
+  type Point = {x:number;y:number};
+  type Box = { left: number; right: number; top: number; bottom: number; corners:Point[] };
   const result = [...labels];
-  const gap = t.axisText.collisionGap;
-  const intersects = (a: Box, b: Box) => a.left < b.right + gap && a.right + gap > b.left && a.top < b.bottom + gap && a.bottom + gap > b.top;
+  const gap = 0;
+  // Test the rendered quadrilaterals, not their oversized rotated bounding boxes.
+  const intersects = (a: Box, b: Box) => {
+    for (const polygon of [a.corners,b.corners]) {
+      for (const [i,j] of [[0,1],[0,2]]) {
+        const edge = {x:polygon[j].x-polygon[i].x,y:polygon[j].y-polygon[i].y};
+        const axis = {x:-edge.y,y:edge.x};
+        if (Math.hypot(axis.x,axis.y) < 1e-8) continue;
+        const project = (points:Point[]) => points.map(p=>p.x*axis.x+p.y*axis.y);
+        const first=project(a.corners),second=project(b.corners);
+        if (Math.max(...first) <= Math.min(...second)+1e-6 || Math.max(...second) <= Math.min(...first)+1e-6) return false;
+      }
+    }
+    return true;
+  };
   for (const rail of ['wall', 'overhead'] as const) {
     const entries = labels.flatMap((label, index) => {
       if (label.dateRail !== rail || label.hidden || label.opacity < .01) return [];
@@ -134,11 +150,11 @@ export function spaceDateLabels(labels: AxisLabel[], width: number, height: numb
       const padX = label.featured ? t.labelBackdrop.paddingInline : 0;
       const padY = label.featured ? t.labelBackdrop.paddingBlock : 0;
       const w = measureText(label.text, label.fontSize) + padX * 2;
-      const h = label.fontSize * t.axisText.lineHeight + padY * 2;
+      const h = label.fontSize + padY * 2;
       const corners = [-label.align * w, (1 - label.align) * w].flatMap(x => [-h / 2, h / 2].map(y => ({x:matrix[12] + matrix[0] * x + matrix[4] * y, y:matrix[13] + matrix[1] * x + matrix[5] * y})));
-      const box = {left:Math.min(...corners.map(p => p.x)),right:Math.max(...corners.map(p => p.x)),top:Math.min(...corners.map(p => p.y)),bottom:Math.max(...corners.map(p => p.y))};
+      const box = {corners,left:Math.min(...corners.map(p => p.x)),right:Math.max(...corners.map(p => p.x)),top:Math.min(...corners.map(p => p.y)),bottom:Math.max(...corners.map(p => p.y))};
       if (box.right < 0 || box.left > width || box.bottom < 0 || box.top > height) return [];
-      return [{label,index,matrix,box,rowHeight:h}];
+      return [{label,index,matrix,box,rowHeight:Math.max(1,label.fontSize * Math.hypot(matrix[4],matrix[5]))}];
     }).sort((a,b) => Number(AXIS_TITLES.has(b.label.text)) - Number(AXIS_TITLES.has(a.label.text)) || a.label.layer - b.label.layer || a.label.id.localeCompare(b.label.id));
     const occupied: Box[] = [];
     for (const entry of entries) {
@@ -148,7 +164,8 @@ export function spaceDateLabels(labels: AxisLabel[], width: number, height: numb
         const limit = Math.ceil(entries.reduce((sum,e) => sum + e.box.bottom - e.box.top + gap, height) / rowHeight) + 1;
         search: for (const direction of [1,-1]) {
           for (let step = 1; step <= limit; step++) {
-            const candidate = {...box,top:box.top - direction * step * rowHeight,bottom:box.bottom - direction * step * rowHeight};
+            const offset = direction * step * rowHeight;
+            const candidate = {...box,top:box.top-offset,bottom:box.bottom-offset,corners:box.corners.map(point=>({...point,y:point.y-offset}))};
             if (candidate.top < 0 || (candidate.bottom > height && step < limit)) continue;
             if (!occupied.some(other => intersects(candidate,other))) {row = direction * step; placed = candidate; break search;}
           }
