@@ -173,14 +173,15 @@ export function loadState(): SavedState {
  try {
   const raw=JSON.parse(localStorage.getItem(KEY)||'null');
   if(raw && (!Array.isArray(raw.tasks)||!raw.tasks.every((t:Task)=>typeof t.id==='string' && typeof t.title==='string' && typeof t.mit==='string' && statuses.includes(t.status) && Array.isArray(t.input) && Array.isArray(t.output) && Array.isArray(t.messages))))return migrateState(null);
-  return durableCaptureState(migrateState(raw));
+  // Unsent frame references are session-only, like queued file attachments.
+  return { ...durableCaptureState(migrateState(raw)), frameAttachments: {} };
  }catch{return migrateState(null);}
 }
 export function tasksForProject(tasks:Task[],id:string){return tasks.filter(t=>t.projectId===id);}
 function durableCaptureState(state: SavedState): SavedState {
  return { ...state, chatComposers: Object.fromEntries(Object.entries(state.chatComposers ?? {}).map(([id, composer]) => [id, { ...composer, capture: { ...composer.capture, screen: durableCaptureScreen(composer.capture.screen) } }])) };
 }
-export function saveState(state:SavedState) { localStorage.setItem(KEY,JSON.stringify(durableCaptureState(state))); }
+export function saveState(state:SavedState) { localStorage.setItem(KEY,JSON.stringify({ ...durableCaptureState(state), frameAttachments: {} })); }
 export function now() { return new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
 export function uid() { return crypto.randomUUID(); }
 

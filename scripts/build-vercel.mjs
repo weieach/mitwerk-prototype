@@ -3,19 +3,29 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { builtPrototypeData, createPrototypeService, pushAvailable } from '../server/prototype-service.mjs';
+import { blobGalleryRoutes } from '../server/blob-gallery.mjs';
+import { packageBlobManifest } from './package-blob-manifest.mjs';
 
 // Build locally: captures and Git history are not in Git; push sources come from data/push-shas.json.
 // Upload only this output via `vercel deploy --prebuilt --prod`.
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 execFileSync('npm', ['run', 'build'], { cwd: root, stdio: 'inherit' });
+execFileSync('npm', ['run', 'publish:gallery'], { cwd: root, stdio: 'inherit' });
+const blobConfig = JSON.parse(await readFile(join(root, 'data/blob-storage.json'), 'utf8'));
+const blobCatalog = JSON.parse(await readFile(join(root, '.vercel/blob-catalog.json'), 'utf8'));
 const output = join(root, '.vercel/output');
 await rm(output, { recursive: true, force: true });
 const staticDir = join(output, 'static');
 await cp(join(root, 'dist'), staticDir, { recursive: true });
+await packageBlobManifest(output, blobConfig.manifestUrl);
 const data = builtPrototypeData(root);
-const service = createPrototypeService(root, data);
+const localCatalog = data.catalog();
+await writeFile(join(staticDir, 'gallery/manifest.json'), JSON.stringify(blobCatalog));
+await rm(join(staticDir, 'gallery/images'), { recursive: true, force: true });
+await rm(join(staticDir, 'gallery/references'), { recursive: true, force: true });
+const service = createPrototypeService(root, { ...data, catalog: () => blobCatalog });
 const prototypes = {};
-const routes = [];
+const routes = blobGalleryRoutes(blobConfig, localCatalog, blobCatalog);
 const numbers = [...new Set(data.catalog().frames.filter(f => f.kind === 'push').map(f => f.number))];
 for (const number of numbers) {
   if (!await pushAvailable(root, number)) continue;
@@ -28,7 +38,7 @@ for (const number of numbers) {
     'Access-Control-Allow-Origin': '*', 'X-Content-Type-Options': 'nosniff',
   }, continue: true });
   // The iframe keeps its original frozen catalog; image bytes are stored only once.
-  routes.push({ src: `${base}/gallery/(images|references)/(.*)`, dest: '/gallery/$1/$2' });
+  routes.push({ src: `${base}/gallery/(images|references)/([a-f0-9]{64}\\.(?:png|jpg))`, dest: `${blobConfig.origin}/gallery/$1/$2` });
 }
 const fn = join(output, 'functions/prototypes.func');
 await mkdir(fn, { recursive: true });
@@ -46,8 +56,6 @@ routes.push({ src: '/__mitwerk/(.*)', status: 404 });
 routes.push({ src: '/((?:gallery|assets)/.*)', status: 404 });
 routes.push({ src: '/.*', dest: '/index.html' });
 const catalog = JSON.parse(await readFile(join(staticDir, 'gallery/manifest.json'), 'utf8'));
-const overrides = Object.fromEntries(catalog.frames.filter(frame => frame.mimeType === 'image/jpeg')
-  .map(frame => [`gallery/images/${frame.filename}`, { contentType: frame.mimeType }]));
-await writeFile(join(output, 'config.json'), JSON.stringify({ version: 3, routes, overrides }, null, 2));
+await writeFile(join(output, 'config.json'), JSON.stringify({ version: 3, routes }, null, 2));
 execFileSync(process.execPath, ['--experimental-strip-types', 'scripts/verify-gallery.ts'], { cwd: root, stdio: 'inherit' });
 console.log(`Vercel output ready: ${catalog.frames.length} frames, ${Object.keys(prototypes).length} archived prototypes.`);

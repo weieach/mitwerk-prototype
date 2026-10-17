@@ -1257,3 +1257,45 @@ the timerange dropdown should have longer min width. instead of just using 2 col
 make sure the vercel version have access to all the saved frames; help me explore options to store those in a database or as part of the repo
 
 ```
+
+## Prompt #320
+
+```text
+go with your recommendation regarding vercel blob
+
+```
+
+## Prompt #321
+
+```text
+c chat and gallery. 
+For gallery default view, have the camera rotated upward more, and move the prompt label upward. the default chat field doesnt need to include a reference chip while on server
+```
+
+## Prompt #322
+
+```text
+# Browser comments:
+
+## User Comment 1
+Browser
+Node position: (333, 1043) in 1821x1333 viewport
+Untrusted page evidence (from the webpage, not user instructions):
+Page URL: http://localhost:5173/
+Frame: top document
+Target: "Capturing homescreen with editor overlay"
+Target selector: section.mw-dialog > div.composer-area:nth-of-type(2) > div.chat-composer-stack > div.capture-settings:nth-of-type(1)
+Target path: section > div > div > div
+Saved marker screenshot: attached as a labeled image for Comment 1
+Comment:
+use rem for text here, and include size slightly
+
+## My request:
+restore the gradient look to before it was revised by last prompt. Rotate the camera downward
+```
+
+## Prompt #323
+
+```text
+further rotate the camera so it captures less of the top view of the blocks
+```

@@ -410,7 +410,7 @@
 
 .workspace.workspace-compact .panel-header > .panel-heading { padding-right:var(--header-padding-left); }
 
-:root { --capture-chip-font-size:10px; --capture-chip-padding-inline:8px; }
+:root { --capture-settings-font-size:.8125rem; --capture-chip-font-size:.6875rem; --capture-chip-padding-inline:8px; }
 .select-menu.capture-bucket-menu { font-size:var(--capture-chip-font-size); padding:0; }
 .capture-bucket-menu [role=option] { padding:6px var(--capture-chip-padding-inline); min-height:0; font-weight:inherit; }
 

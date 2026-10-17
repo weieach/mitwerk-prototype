@@ -1225,3 +1225,29 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Complete deployed frame catalog — 2026-10-17
 
 - Vercel releases include every completed saved frame and its original image bytes, preserving capture IDs, screen buckets and archived-prototype snapshots. Determine image dimensions and format from bytes, including historical JPEG images saved with PNG filenames. Never use frame-number exceptions. Reject empty production catalogs and verify all frame/reference assets before deployment and against the live release. Git-ignored captures require local prebuilt deployment until a shared storage source is adopted.
+
+## Blob-backed saved frames — 2026-10-17
+
+- Store deployed frames and planning references in Vercel Blob under immutable content-hash keys, preserving the original capture IDs and local originals. Publish a shared JSON catalog only after every referenced local image has been uploaded and verified; retain remotely published entries when a local checkout is older. Use conditional catalog writes to prevent concurrent publishers from silently overwriting one another. Keep immutable catalog snapshots for recovery.
+- Serve the live catalog through the existing gallery endpoint, and serve Blob images through same-origin asset routes so current and archived WebGL loaders retain their behavior. Preserve older filename-based links using catalog-derived routes. Archived prototypes keep frozen catalogs and immutable image references. Storage credentials remain outside Git and browser bundles. Publishing new captures updates the gallery without redeploying the app; code and archived-prototype changes still require deployment.
+
+
+## Brighter invitation flow and raised gallery view — 2026-10-17
+
+- Milestone invitations use the full-strength shared branch palette with OKLCH interpolation, replacing the black mix. Use dark text for contrast on the brighter field. Sweep a 250%-wide gradient across the card over a 6s alternate cycle with a subtle breathing scale; preserve grain and disable motion under reduced-motion preferences.
+- Gallery default, Center and Reset use the shared camera direction `[-1, 1.2, 1]`, raising elevation from about 31° to 40° without changing azimuth or frame ordering. Hover prompts sit at 12% of gallery viewport height, retaining existing edge constraints and horizontal centering.
+- Unsent frame reference chips are session-only, like queued file attachments, and are not restored or serialized with saved workspace state. Explicit Add frame to chat still attaches references during the current session; sent message references and to-do context are preserved.
+
+- `c chat and gallery` (or `c chat & gallery`) captures the default Chat/Gallery split, preserving the raised default camera; it must not resolve to a chat-only capture.
+
+
+## Softer milestone gradient and lower gallery camera — 2026-10-17
+
+- Restore milestone invitations to the shared branch palette mixed at 64% over black, white text, normal sRGB interpolation and the 10s breathing transform. Retain neutral grain and reduced-motion support. This supersedes the full-strength OKLCH sweep.
+- Lower the shared default, Center and Reset camera direction to `[-1, .85, 1]` (about 31° elevation); retain azimuth, chronology and the raised 12% hover-label position.
+- Capture-settings text uses `.8125rem` and its chips, bucket editor and bucket dropdown share `.6875rem`, slightly larger than the previous 12px/10px sizes. Keep sizing in shared tokens so the row respects the root text size.
+
+
+## Shallower gallery elevation — 2026-10-17
+
+- Default, Center and Reset now share camera direction `[-1, .5, 1]`, lowering elevation from about 31° to 19.5° so less of each block’s top surface is visible. Preserve horizontal angle, frame ordering, hover labels and manual orbit behavior. This supersedes the previous `.85` elevation component.

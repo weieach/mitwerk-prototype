@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { migrateState, seedTasks, tasksForProject, saveMit, archiveProject, mentionedMits, joinTaskMits, isTodoChat, todoContext } from '../src/features/workbench/model.ts';
+import { loadState, saveState, migrateState, seedTasks, tasksForProject, saveMit, archiveProject, mentionedMits, joinTaskMits, isTodoChat, todoContext } from '../src/features/workbench/model.ts';
 
 test('legacy workspace migration preserves task messages, drafts and renamed project',()=>{
  const tasks=seedTasks();
@@ -131,4 +131,30 @@ test('conversation origin survives migration independently of agent and status',
  assert.equal(restored.drafts['sidebar-chat'],'Unsent draft');
  assert.equal(restored.todoAttachments?.['sidebar-chat'].text,'Attached without changing chat origin');
  assert.deepEqual(migrateState(restored),restored);
+});
+
+
+test('unsent frame references stay in-session while drafts and sent references survive reload', () => {
+ const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+ let saved = '';
+ Object.defineProperty(globalThis, 'localStorage', { configurable:true, value:{ getItem:()=>saved || null, setItem:(_key:string,value:string)=>{saved=value;} } });
+ try {
+  const state = migrateState(null);
+  const frame = {id:'test-frame',url:'/gallery/test.png',label:'Test reference',filename:'test.png'};
+  state.frameAttachments = {panel:[frame]};
+  state.drafts.panel = 'Keep this draft';
+  state.tasks.find(task=>task.id==='panel')!.messages[0].frames = [frame];
+  // A legacy persisted reference must not become a default chip.
+  saved = JSON.stringify(state);
+  assert.deepEqual(loadState().frameAttachments, {});
+  saveState(state);
+  assert.deepEqual(state.frameAttachments.panel, [frame]);
+  const restored = loadState();
+  assert.deepEqual(restored.frameAttachments, {});
+  assert.equal(restored.drafts.panel, 'Keep this draft');
+  assert.deepEqual(restored.tasks.find(task=>task.id==='panel')!.messages[0].frames, [frame]);
+ } finally {
+  if (descriptor) Object.defineProperty(globalThis, 'localStorage', descriptor);
+  else Reflect.deleteProperty(globalThis, 'localStorage');
+ }
 });

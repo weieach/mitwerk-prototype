@@ -149,7 +149,7 @@
 .theater-branch-row .theater-branch { margin-top:0; }
 .mw-app .composer-area { width:min(100%,680px); padding:8px 20px 17px; }
 .chat-composer-stack { display:flex; flex-direction:column; gap:8px; }
-.capture-settings { display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:12px; }
+.capture-settings { display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:var(--capture-settings-font-size); }
 .mw-app .capture-setting-chip { display:inline-flex; align-items:center; gap:5px; min-width:0; max-width:100%; padding:1px var(--capture-chip-padding-inline); border-radius:var(--capture-pill-radius); background:var(--capture-chip-surface); color:var(--capture-chip-ink); font-size:var(--capture-chip-font-size); }
 .capture-setting-chip span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .capture-setting-input { max-width:140px; min-width:0; border:1px solid var(--line-strong); border-radius:var(--capture-pill-radius); padding:2px 8px; background:var(--paper); color:var(--ink); font:inherit; }

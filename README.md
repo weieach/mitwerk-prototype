@@ -116,22 +116,32 @@ npm run build:vercel
 npx vercel deploy --prebuilt --prod
 ```
 
-Prefer `npm run deploy:vercel` for subsequent releases: it builds locally, checks every frame and reference against its original SHA-256 hash, deploys the prebuilt output, then checks every live image. Run `npm run verify:gallery -- https://mitwerk-prototype.vercel.app` independently to audit production. Production builds fail if the capture catalog is empty, preventing a Git-only checkout from silently replacing the gallery with zero frames. New captures still require a rebuild and deployment.
+Use `npm run deploy:vercel` for code releases. It builds the UI, publishes and verifies the gallery in Vercel Blob, packages available archived prototypes, deploys the prebuilt output, and checks every live image. The image bytes are no longer bundled in the deployment.
 
-Frame storage choices:
+### Saved frames in Vercel Blob
 
-| Approach | What changes | Tradeoff |
-| --- | --- | --- |
-| Local prebuilt deployment (current) | Upload the compiled gallery with each release | Simplest immediate solution; depends on this machine and redeployment |
-| Images in Git | Remove the capture-directory ignore rule and commit all frames | Fresh checkouts can build; growing binary history increases clone size; each frame needs a commit/deploy |
-| Vercel Blob + JSON manifest (recommended next) | Upload immutable images, publish the manifest after upload verification, load it from the shared gallery | Independent of code releases; storage/transfer charges; requires a configured store and authenticated uploader |
-| Supabase Storage + Postgres | Store image bytes in Storage and frame metadata in a table | Useful for querying, permissions and future shared data; more integration work |
+The connected public `mitwerk-frames` store holds immutable image objects and a shared JSON catalog. Public addresses are recorded in `data/blob-storage.json`; write credentials stay in ignored `.env.local`, never in Git or browser code. Local originals stay in `[frame capture] screenshots/` and `visual_ref/`.
 
-Keep image bytes in object storage when using a database; store stable frame IDs, object keys, hashes, dimensions, prompt/push numbers, branch and timestamps in the database. Preserve current capture IDs so annotations and history links survive migration. External image delivery must allow cross-origin texture loading for the 3D gallery. Archived prototypes must retain frozen catalogs while sharing immutable image objects. Publish catalogs only after all referenced objects are verified, and keep originals backed up independently. Do not put storage write credentials in the browser.
+Publish newly saved frames without deploying the app:
 
-Provider references: [Vercel Blob](https://vercel.com/docs/vercel-blob), [Supabase Storage](https://supabase.com/docs/guides/storage), [GitHub large-file guidance](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github). Storage migration is a proposal; the current deployment still bundles images.
+```sh
+npm run publish:gallery
+npm run verify:gallery -- https://mitwerk-prototype.vercel.app
+```
 
-The Vercel build runs locally because capture images, Git history and saved codebases are local inputs. It packages the current UI, gallery assets and every available archived prototype into ignored `.vercel/output/`, with a small read-only API for **Enter prototype**. Only compiled output is uploaded; source archives and local credentials are not deployed. Rebuild before each deployment. Missing historical archives remain unavailable, as they do locally. Notes, to-dos and test graphs remain browser-local; this deployment does not add shared storage or a live agent backend.
+The catalog has a 60-second Blob cache lifetime, so allow up to a minute before verifying a changed live catalog. The gallery refreshes on its existing polling interval. New code, Git-history snapshots and archived prototypes still need `npm run deploy:vercel`.
+
+The publisher uses SHA-256 object keys, reuses existing identical images, verifies downloaded bytes, then publishes the catalog last. Original frame IDs remain stable. Remote entries are retained if the local capture folder is older or incomplete. Conditional writes reject concurrent publisher conflicts; rerun after such a conflict. Immutable catalog snapshots are saved under `gallery/catalogs/` for recovery. No upload step deletes old images or local originals.
+
+Image URLs retain their same-origin `gallery/images/` and `gallery/references/` shape. Vercel proxies these requests to Blob, preserving historical WebGL loaders and reference classification. This uses both Blob delivery and Vercel's delivery layer. A small read-only function serves the current catalog with browser and edge caching disabled; Blob itself retains its one-minute catalog cache. Legacy filename URLs are mapped from the build's catalog; new catalogs use content-hash URLs. Archived previews keep their frozen manifests while sharing immutable Blob images.
+
+On another machine, link the same Vercel project and run `npx vercel env pull .env.local` to obtain the uploader credentials. Publishing still requires the local image sources. The production app only needs public Blob URLs to read the gallery; ordinary development continues to read local images. Keep a separate backup of originals: Git deliberately excludes captures, and a Blob store is not a second Git repository.
+
+Run `npm run verify:gallery` to check the prepared deployment's catalog and its Blob images, or pass the production URL to verify the same-origin live image routes, archived images and legacy links. Add `--published` to compare with the last successful publication when other chats are still capturing new frames; deployment uses that fixed publication snapshot. Empty production catalogs and unreadable captures fail instead of silently removing frames. Keep using the prebuilt deployment workflow; a Git-only build does not package the archived prototypes.
+
+The Vercel build runs locally because Git history and archived-prototype source are local inputs. It packages the current UI, a catalog snapshot and every available archived prototype into ignored `.vercel/output/`, with a small read-only API for **Enter prototype**. Source archives and local credentials are not deployed. Missing historical archives remain unavailable, as they do locally. Notes, to-dos and test graphs remain browser-local.
+
+Provider references: [Vercel Blob](https://vercel.com/docs/vercel-blob), [Blob SDK and conditional writes](https://vercel.com/docs/vercel-blob/using-blob-sdk).
 
 ### Archived prototype behavior
 

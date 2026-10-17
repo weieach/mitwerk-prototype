@@ -476,7 +476,7 @@ function wantsIdeaStreamCapture(prompt = '') {
 function wantsLandingCapture(prompt = '') { return /\bc landing\b/i.test(prompt); }
 
 function wantsHomeCapture(prompt = '') {
-  return argValue('gallery-view') === 'home' || /\bc (?:home|homescreen|milestone overlay)\b/i.test(prompt);
+  return argValue('gallery-view') === 'home' || /\bc (?:home|homescreen|milestone overlay|chat (?:and|&) gallery)\b/i.test(prompt);
 }
 
 function wantsDarkCapture(prompt = '') {
@@ -504,7 +504,7 @@ function wantsChatPlaybackCapture(prompt = '') {
 }
 
 function wantsChatCapture(prompt = '') {
-  return /\bc(?:\s*\/)? chat\b/i.test(prompt) && !wantsSideBySideCapture(prompt) && !wantsChatPlaybackCapture(prompt);
+  return /\bc(?:\s*\/)? chat\b/i.test(prompt) && !wantsHomeCapture(prompt) && !wantsSideBySideCapture(prompt) && !wantsChatPlaybackCapture(prompt);
 }
 
 function wantsTheaterCapture(prompt = '') {
