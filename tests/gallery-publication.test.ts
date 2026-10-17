@@ -6,17 +6,41 @@ import { join } from 'node:path';
 import { readCaptureCatalog, captureDirectory, iterationGalleryCatalog } from '../server/gallery-catalog.ts';
 import { buildVersions, resolveFrameRequest } from '../src/features/iteration-gallery/model.ts';
 
-test('production refuses a checkout with no saved frames instead of publishing an empty gallery', () => {
+test('production refuses a checkout with no saved frames instead of publishing an empty gallery', async () => {
   const root = mkdtempSync(join(tmpdir(), 'mitwerk-empty-gallery-'));
   try {
     const plugin = iterationGalleryCatalog();
     (plugin.configResolved as Function)({ root });
-    assert.throws(() => (plugin.generateBundle as Function).call({
+    await assert.rejects(() => (plugin.generateBundle as Function).call({
       error(message: string) { throw new Error(message); },
       emitFile() { assert.fail('Empty production catalogs must not emit gallery assets'); },
     }), /No saved frames found/);
     assert.deepEqual(readCaptureCatalog(root).frames, [], 'development still supports empty state');
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('Vercel builds read the published Blob catalog without local capture images or upload credentials', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'mitwerk-cloud-gallery-'));
+  const fetchBefore = globalThis.fetch;
+  const mode = process.env.MITWERK_GALLERY_SOURCE;
+  try {
+    mkdirSync(join(root, 'data'));
+    writeFileSync(join(root, 'data/blob-storage.json'), JSON.stringify({ manifestUrl: 'https://example.com/manifest.json' }));
+    process.env.MITWERK_GALLERY_SOURCE = 'blob';
+    const published = { frames: [{ id: 'saved', url: 'gallery/images/hash.png' }], references: [], ignored: 0 };
+    globalThis.fetch = async () => new Response(JSON.stringify(published));
+    const plugin = iterationGalleryCatalog();
+    (plugin.configResolved as Function)({ root });
+    const assets: { fileName: string; source: string }[] = [];
+    await (plugin.generateBundle as Function).call({ error(message: string) { throw Error(message); }, emitFile(asset) { assets.push(asset); } });
+    assert.deepEqual(JSON.parse(assets.find(asset => asset.fileName === 'gallery/manifest.json')!.source), published);
+    assert.equal(assets.length, 2, 'only catalog and Git metadata are bundled');
+    assert.equal(readCaptureCatalog(root).frames.length, 0);
+  } finally {
+    globalThis.fetch = fetchBefore;
+    if (mode === undefined) delete process.env.MITWERK_GALLERY_SOURCE; else process.env.MITWERK_GALLERY_SOURCE = mode;
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('running prompts remain unpublished until completion, including already-written PNGs', () => {

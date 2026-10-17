@@ -117,11 +117,20 @@ export function iterationGalleryCatalog(): Plugin {
         } else next();
       });
     },
-    generateBundle() {
-      const catalog = readCaptureCatalog(root);
+    async generateBundle() {
+      const useBlob = process.env.VERCEL === '1' || process.env.MITWERK_GALLERY_SOURCE === 'blob';
+      let catalog = readCaptureCatalog(root);
+      if (useBlob) {
+        const storage = JSON.parse(readFileSync(join(root, 'data/blob-storage.json'), 'utf8'));
+        const response = await fetch(storage.manifestUrl, { signal: AbortSignal.timeout(60_000), cache: 'no-store' });
+        if (!response.ok) this.error(`Saved-frame catalog returned HTTP ${response.status}`);
+        catalog = await response.json();
+        if (!Array.isArray(catalog.frames) || !Array.isArray(catalog.references)) this.error('Invalid Blob gallery catalog');
+      }
       if (!catalog.frames.length) this.error('No saved frames found. Capture images are Git-ignored: build on the machine containing [frame capture] screenshots, then deploy with npm run deploy:vercel.');
       this.emitFile({ type: 'asset', fileName: 'gallery/git-history.json', source: JSON.stringify(readGitHistory(root)) });
       this.emitFile({ type: 'asset', fileName: 'gallery/manifest.json', source: JSON.stringify(catalog) });
+      if (useBlob) return; // Vercel routes serve immutable image objects from Blob.
       for (const frame of catalog.frames) this.emitFile({ type: 'asset', fileName: `gallery/images/${frame.filename}`,
         source: readFileSync(join(root, captureDirectory, frame.filename)) });
       for (const reference of catalog.references) this.emitFile({ type: 'asset', fileName: `gallery/references/${reference.name}`,

@@ -9,10 +9,11 @@ import { packageBlobManifest } from './package-blob-manifest.mjs';
 // Build locally: captures and Git history are not in Git; push sources come from data/push-shas.json.
 // Upload only this output via `vercel deploy --prebuilt --prod`.
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
+const cloudBuild = process.env.VERCEL === '1' || process.env.MITWERK_GALLERY_SOURCE === 'blob';
 execFileSync('npm', ['run', 'build'], { cwd: root, stdio: 'inherit' });
-execFileSync('npm', ['run', 'publish:gallery'], { cwd: root, stdio: 'inherit' });
+if (!cloudBuild) execFileSync('npm', ['run', 'publish:gallery'], { cwd: root, stdio: 'inherit' });
 const blobConfig = JSON.parse(await readFile(join(root, 'data/blob-storage.json'), 'utf8'));
-const blobCatalog = JSON.parse(await readFile(join(root, '.vercel/blob-catalog.json'), 'utf8'));
+const blobCatalog = JSON.parse(await readFile(join(root, cloudBuild ? 'dist/gallery/manifest.json' : '.vercel/blob-catalog.json'), 'utf8'));
 const output = join(root, '.vercel/output');
 await rm(output, { recursive: true, force: true });
 const staticDir = join(output, 'static');
@@ -57,5 +58,5 @@ routes.push({ src: '/((?:gallery|assets)/.*)', status: 404 });
 routes.push({ src: '/.*', dest: '/index.html' });
 const catalog = JSON.parse(await readFile(join(staticDir, 'gallery/manifest.json'), 'utf8'));
 await writeFile(join(output, 'config.json'), JSON.stringify({ version: 3, routes }, null, 2));
-execFileSync(process.execPath, ['--experimental-strip-types', 'scripts/verify-gallery.ts'], { cwd: root, stdio: 'inherit' });
+if (!cloudBuild) execFileSync(process.execPath, ['--experimental-strip-types', 'scripts/verify-gallery.ts'], { cwd: root, stdio: 'inherit' });
 console.log(`Vercel output ready: ${catalog.frames.length} frames, ${Object.keys(prototypes).length} archived prototypes.`);

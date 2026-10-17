@@ -33,7 +33,9 @@ export function blobGalleryRoutes(config, local, published) {
       const target = byId.get(row[key]);
       if (!target) throw new Error(`Unpublished gallery asset: ${row[key]}`);
       // Keep previously saved chat/annotation links to filename-based URLs alive.
-      const paths = new Set([row.url, decodeURIComponent(row.url)]);
+      const legacyUrl = key === 'id' && row.filename ? `gallery/images/${encodeURIComponent(row.filename)}`
+        : key === 'name' ? `gallery/references/${row.name.split('/').map(encodeURIComponent).join('/')}` : row.url;
+      const paths = new Set([legacyUrl, decodeURIComponent(legacyUrl)]);
       routes.push({ src: `/(?:${[...paths].map(escapeRegex).join('|')})`, dest: target.blobUrl });
     }
   }

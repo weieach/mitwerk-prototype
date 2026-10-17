@@ -1251,3 +1251,7 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Shallower gallery elevation — 2026-10-17
 
 - Default, Center and Reset now share camera direction `[-1, .5, 1]`, lowering elevation from about 31° to 19.5° so less of each block’s top surface is visible. Preserve horizontal angle, frame ordering, hover labels and manual orbit behavior. This supersedes the previous `.85` elevation component.
+
+## Git-triggered Vercel builds — 2026-10-17
+
+- Vercel cloud builds read the published Blob catalog and route images to immutable Blob objects. They must not require local screenshot folders or upload images during a build. Use the same deployment packager for cloud and local releases, preserving the live catalog reader, legacy image links and available archived prototypes. Local releases continue to publish new captures before packaging. Fail explicitly if the published catalog is unavailable or invalid.
