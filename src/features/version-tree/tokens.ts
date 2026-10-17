@@ -24,7 +24,7 @@ export const treeTheme = {
   levelConnectorColor: '#b9bdba',
   levelConnectorOpacity: 0.4,
   /** Reverted version titles only: gray plus strikethrough. */
-  revertedTitleColor: '#9a9a9a',
+  revertedTitleColor: 'var(--faint)',
   /** Incoming connectors to reverted stations. */
   revertedRouteColor: '#b9bdba',
   revertedRouteOpacity: 0.4,
@@ -42,10 +42,10 @@ export const treeTheme = {
   stationSelectedBorderWidth: 3,
   branchCountDiameter: 32,
   branchCountFontSize: 13,
-  stationFill: '#000000',
-  stationOpenFill: '#ffffff',
+  stationFill: 'var(--contrast)',
+  stationOpenFill: 'var(--paper)',
   /** Checked-out branch: spine, stations, and labels share this token. */
-  activeBranchColor: '#000000',
+  activeBranchColor: 'var(--contrast)',
   endpointTriangleWidth: 10,
   endpointTriangleHeight: 9,
   endpointTriangleGap: 10,
@@ -55,7 +55,7 @@ export const treeTheme = {
   countHintFadeMs: 160,
   versionLabelFontSize: 11,
   versionLabelFontWeight: 700,
-  versionLabelColor: '#000000',
+  versionLabelColor: 'var(--contrast)',
   /** How much label size ignores canvas zoom. 0 follows the board; 1 stays constant on screen. */
   versionLabelZoomCompensation: 0.85,
   /** At this zoom and below, labels shrink slightly after compensation. */

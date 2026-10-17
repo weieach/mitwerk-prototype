@@ -51,7 +51,8 @@ export function theaterCaptionLead(frame: Pick<Capture, 'kind' | 'number'>) {
 }
 
 /** Legacy filenames cannot distinguish exact-limit messages from truncated ones. */
-export function theaterCaption(frame: Pick<Capture, 'kind' | 'summary'>) {
+export function theaterCaption(frame: Pick<Capture, 'kind' | 'summary' | 'fullPrompt'>) {
+  if (frame.fullPrompt !== undefined) return frame.fullPrompt;
   if (frame.kind !== 'prompt') return frame.summary;
   const summary = frame.summary.trim();
   const text = summary.length >= captureSummaryMaxLength ? `${summary.slice(0, captureSummaryMaxLength).replace(/[. ]+$/, '')}...` : summary;

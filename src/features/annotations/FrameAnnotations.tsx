@@ -25,7 +25,7 @@ export function FrameAnnotations({ frame, active, onOpen, color }: { frame: Anno
       onOpen(); setOpened(true);
     }
   }, [ready, frame.id]);
-  return <div ref={anchor} className="frame-annotation-bookmark" data-orbit-blocked style={{ '--annotation-color': color, '--annotation-ink': 'var(--ink)' } as CSSProperties}>
+  return <div ref={anchor} className="frame-annotation-bookmark" data-orbit-blocked style={{ '--annotation-color': color, '--annotation-ink': 'var(--on-pale)' } as CSSProperties}>
     <button type="button" className={`annotation-tag${ready ? ' is-ready' : ''}`} disabled={!ready} aria-label={notes.length ? `Open ${notes.length} annotations` : 'New annotation'} onClick={() => { onOpen(); setOpened(true); }}>
       <PhosphorIcon name={notes.length ? "chat-circle-dots" : "chat-circle"}/>{notes.length ? <strong>{notes.length}</strong> : <span>New annotation…</span>}
     </button>

@@ -51,8 +51,8 @@ test('range counts collapse to one number when the filter includes everything', 
   assert.equal(ratioLabel(all.versions, all.versionTotal, 'version', 'versions'), '2 versions');
   assert.equal(promptShare(today.frames, today.frameTotal), 0.25);
   assert.equal(promptShare(0, 0), 0);
-  assert.equal(galleryBranchPaint('main', ['iteration-gallery-prelim-render']), '#000000');
-  assert.notEqual(galleryBranchPaint('iteration-gallery-prelim-render', ['iteration-gallery-prelim-render']), '#000000');
+  assert.equal(galleryBranchPaint('main', ['iteration-gallery-prelim-render']), 'var(--contrast)');
+  assert.notEqual(galleryBranchPaint('iteration-gallery-prelim-render', ['iteration-gallery-prelim-render']), 'var(--contrast)');
 });
 
 test('date ranges include local calendar boundaries and exclude future frames', () => {

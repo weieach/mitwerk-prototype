@@ -31,7 +31,7 @@ const names = {
 } as const;
 export type IconName = keyof typeof names;
 
-export function Icon({ name, size = 16, style }: { name: IconName; size?: number; style?: CSSProperties }) {
-  const weight = ['play', 'pause', 'previous', 'next'].includes(name) ? 'fill' : 'regular';
+export function Icon({ name, size = 16, style, weight: requestedWeight }: { name: IconName; size?: number; style?: CSSProperties; weight?: 'regular' | 'fill' }) {
+  const weight = requestedWeight ?? (['play', 'pause', 'previous', 'next'].includes(name) ? 'fill' : 'regular');
   return <PhosphorIcon name={names[name]} size={size} weight={weight} style={style}/>;
 }

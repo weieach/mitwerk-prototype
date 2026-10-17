@@ -14,10 +14,10 @@ import { InfoTooltip } from '../../components/InfoTooltip';
 import { AxisLabels } from './AxisLabels';
 import type { AxisLabelsHandle } from './AxisLabels';
 
-export function AlbumView({ framePickerSlot, onSelectFrame, rangeStats, versions, range, now, zoom, onOpen, onZoom, onCamera, turning, returning, hidden, onReturnStarted, theaterTarget, theaterId, onTurnComplete, onMotion }: {
-  onMotion: (progress: number) => void; returning: boolean; hidden: boolean; onReturnStarted: () => void; turning: boolean; theaterTarget: TheaterTarget | null; theaterId: string; onTurnComplete: () => void;
+export function AlbumView({ framePickerSlot, onSelectFrame, rangeStats, versions, range, now, onOpen, onZoom, onCamera, turning, returning, hidden, focusing, onReturnStarted, theaterTarget, theaterId, onTurnComplete, onMotion }: {
+  focusing?: boolean; onMotion: (progress: number) => void; returning: boolean; hidden: boolean; onReturnStarted: () => void; turning: boolean; theaterTarget: TheaterTarget | null; theaterId: string; onTurnComplete: () => void;
   framePickerSlot: HTMLDivElement | null; onSelectFrame: (id: string) => void; rangeStats: string;
-  versions: GalleryVersion[]; range: RangeKey; now: number; zoom: number;
+  versions: GalleryVersion[]; range: RangeKey; now: number;
   onOpen: (id: string) => void; onZoom: (zoom: number) => void;
   onCamera?: (camera: GalleryCamera | null) => void;
 }) {
@@ -53,7 +53,7 @@ export function AlbumView({ framePickerSlot, onSelectFrame, rangeStats, versions
         labels: labels => axisLabels.current?.update(labels),
       });
     } catch { setError('3D rendering is unavailable in this browser. You can still choose and open saved frames below.'); }
-    callbacks.current.onCamera?.({ center: () => scene.current?.center(), reset: () => scene.current?.reset(), top: () => scene.current?.top(), orbit: (id, target, ready, complete) => scene.current?.beginTheaterOrbit(id, target, ready, complete) ?? null });
+    callbacks.current.onCamera?.({ zoom: direction => scene.current?.zoomBy(direction), focus: (id, complete) => { if (scene.current) scene.current.focusFrame(id, complete); else complete(); }, center: () => scene.current?.center(), reset: () => scene.current?.reset(), top: () => scene.current?.top(), orbit: (id, target, ready, complete) => scene.current?.beginTheaterOrbit(id, target, ready, complete) ?? null });
     return () => { callbacks.current.onCamera?.(null); scene.current?.dispose(); scene.current = null; };
   }, []);
   useEffect(() => {
@@ -77,7 +77,6 @@ export function AlbumView({ framePickerSlot, onSelectFrame, rangeStats, versions
     const frame = album.planes.find(plane => plane.active && annotationCounts.has(plane.frame.id));
     if (frame) { setAnnotationId(frame.frame.id); scene.current?.reset(); }
   }, [album, annotations]);
-  useEffect(() => { scene.current?.setZoom(zoom); }, [zoom]);
   useEffect(() => {
     if ((!turning && !returning) || !theaterTarget) return;
     if (!scene.current || error) { onTurnComplete(); return; }
@@ -87,7 +86,7 @@ export function AlbumView({ framePickerSlot, onSelectFrame, rangeStats, versions
     scene.current.turnToTheater(theaterId, theaterTarget, onTurnComplete, freeze && !returning ? captureProgress : undefined, returning, onReturnStarted);
   }, [turning, returning, theaterTarget, theaterId, onTurnComplete, onReturnStarted, error]);
 
-  return <div className="album-webgl" inert={turning || returning || hidden}>
+  return <div className="album-webgl" inert={turning || returning || hidden || focusing}>
     {annotationFrame && host.current && <AnnotationOverlay frame={annotationFrame} container={host.current.closest<HTMLElement>('.iteration-gallery')!}
       onClose={() => setAnnotationId(null)} onReturn={() => { setAnnotationId(null); onOpen(annotationFrame.id); }}/>}
     <div ref={host} className="album-3d-viewport" aria-label="Interactive 3D album">

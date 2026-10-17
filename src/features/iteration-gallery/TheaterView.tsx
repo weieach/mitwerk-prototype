@@ -6,8 +6,7 @@ import { ReferenceFiles } from '../../components/ReferenceFiles';
 import { frameReferences, type VisualReference } from './references';
 import { FullscreenPreview } from './FullscreenPreview';
 import { usePrototype } from './usePrototype';
-import { BranchTag } from '../../components/BranchTag';
-import { formatVersion, galleryBranchPaint } from './model';
+import { formatVersion } from './model';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { GalleryFrame, LoopMode, RangeKey } from './model';
@@ -21,6 +20,7 @@ import { containedFrameTarget, reservedControlContains } from './theater-transit
 import type { TheaterOrbit, TheaterTarget } from './theater-transition';
 import { theaterCaption, theaterCaptionLead } from './theater-layout';
 import { Icon } from '../../components/Icon';
+import { RowSelect } from '../../components/RowSelect';
 
 function PlaybackTip({ label, children, edge }: { label: string; children: ReactNode; edge?: 'start' | 'end' }) {
   const [hover, setHover] = useState(false);
@@ -29,6 +29,8 @@ function PlaybackTip({ label, children, edge }: { label: string; children: React
     {hover && <span className="capsule-tooltip" role="tooltip">{label}</span>}
   </span>;
 }
+
+const loopModes: { value: LoopMode; label: string }[] = [{ value: 'once', label: 'Play once' }, { value: 'loop', label: 'Loop' }, { value: 'ping-pong', label: 'Ping-pong' }];
 
 export function TheaterView({ navigationKey, references, frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline }: { navigationKey: number; references: VisualReference[]; baseline: { width: number; height: number }; active: boolean; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string, animate?: boolean) => void }) {
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -314,8 +316,8 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
   const prototypeMode = frame.kind === 'push' && prototype.open;
 
   const playbackOptions = <div className="playback-options">
-        <label><span className="sr-only">Playback speed</span><select aria-label="Playback speed" value={speed} onChange={event => setSpeed(+event.target.value)}>{t.speeds.map(value => <option key={value} value={value}>{value}×</option>)}</select></label>
-        <select aria-label="Playback loop" value={mode} onChange={event => { setMode(event.target.value as LoopMode); setDirection(1); }}><option value="once">Play once</option><option value="loop">Loop</option><option value="ping-pong">Ping-pong</option></select>
+        <RowSelect label="Playback speed" value={String(speed)} onChange={value => setSpeed(+value)} options={t.speeds.map(value => ({ value: String(value), label: `${value}×` }))}/>
+        <RowSelect label="Playback loop" value={mode} onChange={value => { setMode(value as LoopMode); setDirection(1); }} options={loopModes}/>
         </div>;
   const rangeLabel = ranges.find(option => option.value === range)!.label.toLowerCase();
   const rangeFrames = catalog.filter(item => inRange(item, range, now));
@@ -339,12 +341,9 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
         : <img draggable={false} src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`${formatVersion(frame.version)}: ${frame.summary}`}/>}
     </FullscreenPreview>}
     <div className="gallery-toolbar theater-top-toolbar" data-orbit-blocked>
-      <button type="button" className="gallery-back" onClick={onDismiss} aria-label="Return to gallery"><i className="ph ph-arrow-left" aria-hidden="true"/>Gallery</button>
       <div className="playback-options-top">{playbackOptions}</div>
       {prototypeMode && <>
-      <select value={preset} onChange={event => setPreset(event.target.value)} aria-label="Preview viewport">
-        {t.viewportPresets.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-      </select>
+      <RowSelect label="Preview viewport" value={preset} onChange={setPreset} options={t.viewportPresets}/>
       {preset === 'custom' && <div className="gallery-custom-size">
         <input aria-label="Custom viewport width" type="number" min="120" max="4096" value={custom.width} onChange={event => setCustom({ ...custom, width: Math.max(120, Math.min(4096, +event.target.value || 120)) })}/>
         <span>×</span><input aria-label="Custom viewport height" type="number" min="120" max="4096" value={custom.height} onChange={event => setCustom({ ...custom, height: Math.max(120, Math.min(4096, +event.target.value || 120)) })}/>
@@ -354,11 +353,11 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
 
     </div>
     <div className="theater-body" ref={bodyRef} style={{ '--theater-metadata-height': `${t.theater.metadataHeight}px`, '--theater-metadata-max': `${t.theater.metadataHeightMaxVh}vh`, '--theater-metadata-gap': `${t.theater.metadataGap}px` } as CSSProperties}>
-      <div className="theater-stage" style={{ width: prototypeMode ? '100%' : frameSize.width, '--theater-action-gap': `${t.theater.actionGap}px`, '--theater-frame-bed': t.theater.frameBed } as CSSProperties}>
+      <div className="theater-stage" style={{ width: '100%', '--theater-action-gap': `${t.theater.actionGap}px`, '--theater-frame-bed': t.theater.frameBed } as CSSProperties}>
       <div className="theater-frame-actions" data-orbit-blocked ref={actionsRef}>
         {frame.kind !== 'push' && <FrameAnnotations color={annotationBookmarkColor(frame.branch, branches)} frame={frame} active={active && ready && !playing} onOpen={() => { setPlaying(false); setDisplayed(frame); setPreviewId(null); setPreviewImage(null); onSelect(frame.id); }}/>}
         <div className="theater-action-buttons">{exitPrototype}
-        <button className="theater-text-action" onClick={goToCommit}><Icon name="commit"/>Go to commit</button>
+
         <button className="theater-text-action" onClick={event => { event.stopPropagation(); window.dispatchEvent(new CustomEvent(attachFrameEvent, {detail:{id:frame.id, url:`${import.meta.env.BASE_URL}${frame.url}`, label:`${formatVersion(frame.version)} · ${frame.summary}`, filename:frame.filename}})); }}><Icon name="plus"/>Add frame to chat</button>
         {frame.kind === 'push' && (prototype.open
           ? <button className="theater-text-action" onClick={() => { setPlaying(false); setFullscreenId(frame.id); }}><Icon name="expand"/>Full screen</button>
@@ -387,13 +386,12 @@ export function TheaterView({ navigationKey, references, frames, catalog, range,
         {failedImage && displayed && <span role="status" data-orbit-blocked>The next image could not be loaded. The previous frame is still shown.</span>}
         <div className="theater-version" data-orbit-blocked>
           <span className="theater-version-group">
-            <span className="theater-version-tag">{formatVersion(frame.version)}</span>
-            {frame.branch && <BranchTag name={frame.branch} color={galleryBranchPaint(frame.branch, branches)}/>}
-            {frame.added ? <span className="gallery-small theater-lines"><span className="is-added">+{frame.added}</span> <span className="is-removed">−{frame.removed}</span> lines</span> : null}
+            <span className="theater-version-tag">{formatVersion(frame.version)}</span><span>{theaterCaptionLead(frame).replace(/: $/, '')}</span>
           </span>
           <time dateTime={new Date(frame.timestamp).toISOString()}>{formatTime(frame.timestamp)}</time>
         </div>
-        <p className="theater-summary"><span data-orbit-blocked data-orbit-inline>{frame.kind === 'push' ? <strong>{theaterCaptionLead(frame)}</strong> : theaterCaptionLead(frame)}{theaterCaption(frame)}</span></p>
+        <p className="theater-summary"><span data-orbit-blocked data-orbit-inline>{theaterCaption(frame)}</span></p>
+        {frame.branch && <span className="theater-branch"><Icon name="branch" size={12}/>{frame.branch}</span>}
         <ReferenceFiles files={frameReferences(frame, catalog, references)}/>
       </div>
       </div>

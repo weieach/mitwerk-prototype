@@ -399,10 +399,10 @@ test('connector width matches one grid triangle and cards clear both routing lev
   assert.ok(geometry.rowGap + geometry.cardOffsetY > geometry.gridRise * geometry.branchRouteRows + strokeRadius);
   assert.ok(treeTheme.endpointTriangleGap > 0);
   assert.deepEqual(treeTheme.routes, ['#7A9EF7', '#FFC629', '#00A66A', '#EA66B7', '#ED6A2C', '#9A85F0']);
-  assert.equal(treeTheme.activeBranchColor, '#000000');
+  assert.equal(treeTheme.activeBranchColor, 'var(--contrast)');
   assert.equal(stationLabelOffset().x, -(treeTheme.stationRadius + treeTheme.versionLabelGap));
   assert.equal(stationLabelOffset().y, 0);
-  assert.equal(treeTheme.versionLabelColor, '#000000');
+  assert.equal(treeTheme.versionLabelColor, 'var(--contrast)');
   assert.equal(treeTheme.versionLabelFontWeight, 700);
   assert.equal(versionLabelZoomScale(1), 1);
   assert.ok(versionLabelZoomScale(0.41) > versionLabelZoomScale(treeTheme.versionLabelLowZoom));

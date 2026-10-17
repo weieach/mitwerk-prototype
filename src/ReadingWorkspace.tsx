@@ -21,7 +21,7 @@ function clampLeftWidth(width: number, total: number) {
   return Math.max(MIN_PANEL, Math.min(total - MIN_PANEL, width));
 }
 
-export default function ReadingWorkspace({ initialMode }: {initialMode?: 'history' | 'test'}) {
+export default function ReadingWorkspace({ initialMode, galleryOnly = false, streamOnly = false, ideaOpen = false, externalPush, onOpenPush, onToggle, expanded }: {initialMode?: 'history' | 'test'; galleryOnly?: boolean; streamOnly?: boolean; ideaOpen?: boolean; externalPush?: {version:number} | null; onOpenPush?: (version:number)=>void; onToggle?: () => void; expanded?: boolean}) {
   const [panels, dispatchPanel] = useReducer(panelReducer, undefined, () => { const saved = loadTreePanels(loadGraphState(), panelBrowserStorage()); return initialMode ? {...saved, mode:initialMode} : saved; });
   const captureMode = captureTreeMode(location.search);
   const mode = captureMode ?? panels.mode;
@@ -166,7 +166,7 @@ export default function ReadingWorkspace({ initialMode }: {initialMode?: 'histor
       handle.removeEventListener('keydown', onKeyDown);
       handle.removeEventListener('dblclick', onDoubleClick);
     };
-  }, []);
+  }, [galleryOnly, streamOnly]);
 
   const total = workspaceWidth;
   const percent = leftWidth === null || total === 0 ? 50 : Math.round((leftWidth / total) * 100);
@@ -175,18 +175,18 @@ export default function ReadingWorkspace({ initialMode }: {initialMode?: 'histor
 
   return <main
     ref={workspace}
-    className={`workspace${resizing ? ' is-resizing' : ''}${compact ? ' workspace-compact' : ''}`}
+    className={`workspace${galleryOnly ? ' workspace-gallery-only' : ''}${ideaOpen ? ' workspace-idea-split' : ''}${resizing ? ' is-resizing' : ''}${compact && !galleryOnly && !streamOnly && !ideaOpen ? ' workspace-compact' : ''}`}
     data-active-panel={activePanel}
-    style={{ '--panel-switch-ms': `${versionPanelLayout.transitionMs}ms`, '--split': leftWidth === null ? '50%' : `${leftWidth}px` } as CSSProperties}
+    style={{ '--reading-column-min': `${MIN_PANEL}px`, '--panel-switch-ms': `${versionPanelLayout.transitionMs}ms`, '--split': leftWidth === null ? '50%' : `${leftWidth}px` } as CSSProperties}
   >
-    <div className="workspace-split" style={{ gridTemplateColumns: leftWidth === null ? 'minmax(0, 1fr) minmax(0, 1fr)' : `${leftWidth}px minmax(0, 1fr)` }}>
-      <IterationGallery pushRequest={pushRequest} onSwitchPanel={compact ? () => setActivePanel('stream') : undefined}/>
-      <VersionTreePanel onSwitchPanel={compact ? () => setActivePanel('visualizer') : undefined} key={`${mode}-${mode === 'history' && historyReady}`} graph={panels[mode]}
+    <div className="workspace-split" style={{ gridTemplateColumns: galleryOnly || streamOnly ? 'minmax(0, 1fr)' : leftWidth === null ? 'minmax(0, 1fr) minmax(0, 1fr)' : `${leftWidth}px minmax(0, 1fr)` }}>
+      {!streamOnly && <IterationGallery playbackOnly={ideaOpen} pushRequest={externalPush ?? pushRequest} onToggle={onToggle} expanded={expanded} onSwitchPanel={!ideaOpen && !galleryOnly && compact ? () => setActivePanel('stream') : undefined}/>}
+      {!galleryOnly && <VersionTreePanel id={ideaOpen ? "workspace-pane-ideas" : undefined} title={ideaOpen || streamOnly ? 'Idea stream' : undefined} onSwitchPanel={!ideaOpen && !streamOnly && compact ? () => setActivePanel('visualizer') : undefined} key={`${mode}-${mode === 'history' && historyReady}`} graph={panels[mode]}
         status={mode === 'history' ? historyError || (!historyReady ? 'Reading capture history…' : !panels.history.nodes.length ? 'No saved captures found.' : '') : ''}
-        onOpenPush={version => { setPushRequest({ version }); setActivePanel('visualizer'); }} mode={mode} modeSwitchVisible={modeSwitchVisible} onModeChange={mode => dispatchPanel({ type: 'switch', mode })}
-        dispatch={action => dispatchPanel({ type: 'graph', mode, action })} />
+        onOpenPush={version => { onOpenPush?.(version); setPushRequest({ version }); setActivePanel('visualizer'); }} mode={mode} modeSwitchVisible={modeSwitchVisible} onModeChange={mode => dispatchPanel({ type: 'switch', mode })}
+        dispatch={action => dispatchPanel({ type: 'graph', mode, action })} />}
     </div>
-    <div
+    {!galleryOnly && !streamOnly && <div
       ref={divider}
       className={`panel-divider${resizing ? ' is-resizing' : ''}`}
       role="separator"
@@ -197,6 +197,6 @@ export default function ReadingWorkspace({ initialMode }: {initialMode?: 'histor
       aria-valuenow={percent}
       title="Drag to resize"
       tabIndex={0}
-    />
+    />}
   </main>;
 }

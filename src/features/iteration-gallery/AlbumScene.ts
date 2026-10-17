@@ -1,3 +1,4 @@
+import { galleryRenderRatio } from './render-quality';
 import { annotationBookmarkColor } from '../annotations/appearance';
 import { interpolateOrbit } from './camera-motion';
 import { tokenUsageArea } from './token-usage';
@@ -15,6 +16,7 @@ import { albumBlockBounds, albumFloorY, containingBlock, dateLabelPose, featured
 import { galleryTokens as t } from './tokens';
 import { axisTopBlend, mergeAxisAnchors, overheadDatePosition, projectAxisLabels, withOverheadDates } from './axis-label-layout';
 import { hoverCaptionPose } from './caption-layout';
+import { observeTheme, resolveColor } from '../../shared/theme';
 import type { AxisAnchor, AxisLabel } from './axis-label-layout';
 
 type Album = ReturnType<typeof buildAlbum>;
@@ -70,14 +72,17 @@ export class AlbumScene {
   private caption: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | null = null;
   private failedTextures = new Set<string>();
   private reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  private colors: { paper: string; ink: string; muted: string; line: string };
+  private colors!: { paper: string; ink: string; muted: string; line: string; onPale: string };
+  /** Resting capture opacity; translucency over a dark page reads as dimming, so the theme sets it. */
+  private captureOpacity: number = t.endpointOpacity;
+  private lastUpdate: Parameters<AlbumScene['update']> | null = null;
+  private stopThemeObserver: () => void;
 
   constructor(private host: HTMLDivElement, private callbacks: Callbacks) {
-    const css = getComputedStyle(host);
-    this.colors = { paper: css.getPropertyValue('--paper').trim(), ink: css.getPropertyValue('--ink').trim(), muted: css.getPropertyValue('--muted').trim(), line: css.getPropertyValue('--line-strong').trim() };
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, t.webgl.pixelRatioMax));
-    this.renderer.setClearColor(this.colors.paper);
+    this.renderer.setPixelRatio(galleryRenderRatio(host.clientWidth, host.clientHeight, devicePixelRatio, this.renderer.capabilities.maxTextureSize));
+    this.readColors();
+    this.stopThemeObserver = observeTheme(this.themeChange);
     const canvas = this.renderer.domElement;
     canvas.tabIndex = 0;
     canvas.setAttribute('aria-label', '3D iteration gallery. Drag to rotate. Scroll to zoom. Right drag to pan. Arrow keys rotate; Home resets the view; T frames the top view.');
@@ -100,7 +105,22 @@ export class AlbumScene {
     canvas.addEventListener('webglcontextlost', this.contextLost);
     this.observer = new ResizeObserver(this.resize);
     this.observer.observe(host);
+    window.addEventListener('resize', this.resize);
   }
+
+  /** WebGL and canvas textures need resolved colors, so read them from the current theme tokens. */
+  private readColors() {
+    const css = getComputedStyle(this.host);
+    const token = (name: string) => css.getPropertyValue(name).trim();
+    this.colors = { paper: token('--paper'), ink: token('--ink'), muted: token('--muted'), line: token('--line-strong'), onPale: token('--on-pale') };
+    this.captureOpacity = Number.parseFloat(token('--gallery-capture-opacity')) || t.endpointOpacity;
+    this.renderer.setClearColor(this.colors.paper);
+  }
+  private themeChange = () => {
+    this.readColors();
+    if (this.lastUpdate) this.update(...this.lastUpdate);
+    this.invalidate();
+  };
 
   private invalidate = () => { if (!this.dead && !this.tick) this.tick = requestAnimationFrame(this.render); };
   private render = (time: number) => {
@@ -296,7 +316,15 @@ export class AlbumScene {
     };
   }
 
-  private controlChange = () => { this.callbacks.zoom(this.camera.zoom); this.invalidate(); };
+  private reportedZoom = Number.NaN;
+  private controlChange = () => {
+    if (this.camera.zoom !== this.reportedZoom) {
+      this.reportedZoom = this.camera.zoom;
+      this.callbacks.zoom(this.camera.zoom);
+      if (this.hovered) this.placeCaption();
+    }
+    this.invalidate();
+  };
   private resize = () => {
     const width = this.host.clientWidth, height = this.host.clientHeight;
     if (!width || !height || this.theaterTurn) return;
@@ -307,9 +335,14 @@ export class AlbumScene {
     this.camera.top = vertical / 2;
     this.camera.bottom = -vertical / 2;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(width, height);
+    const ratio = galleryRenderRatio(width, height, devicePixelRatio, this.renderer.capabilities.maxTextureSize);
+    if (this.renderer.getPixelRatio() !== ratio) this.renderer.setPixelRatio(ratio);
+    if (this.renderer.domElement.width !== Math.floor(width * ratio) || this.renderer.domElement.height !== Math.floor(height * ratio)) this.renderer.setSize(width, height);
+    this.host.dataset.renderRatio = String(ratio);
     this.syncEdgeResolution();
     if (this.hovered) this.placeCaption();
+    // setSize clears the drawing buffer. Draw now, before the browser paints, so a resize never shows an empty frame.
+    this.renderer.render(this.scene, this.camera);
     this.invalidate();
   };
   private contextLost = (event: Event) => { event.preventDefault(); this.callbacks.error('The 3D view lost its graphics connection. Reload the page to restore it. You can still open frames below.'); };
@@ -406,7 +439,7 @@ export class AlbumScene {
         canvas.height = Math.round(canvas.width * t.annotations.bookmarkHeight / t.annotations.bookmarkWidth);
         const context = canvas.getContext('2d')!;
         context.fillStyle = color; context.fillRect(0, 0, canvas.width, canvas.height);
-        context.fillStyle = this.colors.ink;
+        context.fillStyle = this.colors.onPale;
         context.font = `600 ${canvas.height * .6}px sans-serif`;
         context.textAlign = 'center'; context.textBaseline = 'middle';
         context.fillText(String(count), canvas.width / 2, canvas.height / 2, canvas.width * .85);
@@ -489,12 +522,14 @@ export class AlbumScene {
     });
     this.featuredGuides.clear();
   }
-  setZoom(zoom: number) {
-    if (this.theaterTurn) return;
+  zoomBy(direction: -1 | 0 | 1) {
+    if (this.theaterTurn || this.topMotion) return;
+    // React only displays zoom. Applying its delayed state back here can rewind a newer wheel event.
+    const zoom = direction === 0 ? 1 : this.camera.zoom + direction * t.zoomStep;
     this.camera.zoom = THREE.MathUtils.clamp(zoom, t.zoomMin, t.zoomMax);
     this.camera.updateProjectionMatrix();
-    if (this.hovered) this.placeCaption();
-    this.invalidate();
+    this.controls.update();
+    this.controlChange();
   }
   private lookAt(point: { x: number; y: number; z: number }) {
     return new THREE.Vector3(point.x, point.y, point.z);
@@ -536,6 +571,19 @@ export class AlbumScene {
     if (!first || !this.album) return;
     this.frameView(this.lookAt(frameFocus(first)),
       Math.max(this.album.blocks[0].width, this.album.blocks[0].height) * t.webgl.frontViewPadding, 'center');
+  }
+  /** Pan through the blocks before starting the existing frame-to-playback rotation. */
+  focusFrame(id: string, complete: () => void) {
+    const frame = this.frames.get(id);
+    if (!frame) { complete(); return; }
+    const center = this.lookAt(frameFocus(frame.plane));
+    const offset = this.camera.position.clone().sub(this.controls.target);
+    this.framing = 'center';
+    this.pin(id);
+    this.animateCamera(center, center.clone().add(offset), this.span / this.camera.zoom, () => {
+      this.inspect(id);
+      complete();
+    });
   }
   /** Center all active blocks, with chronological depth running toward screen right. */
   top() {
@@ -696,11 +744,11 @@ export class AlbumScene {
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    // Transparent texture: a white halo follows only the glyphs, never a label rectangle.
-    ctx.strokeStyle = t.captionShadow.color;
+    // Transparent texture: a page-colored halo follows only the glyphs, never a label rectangle.
+    ctx.strokeStyle = resolveColor(t.captionShadow.color);
     ctx.lineWidth = t.captionShadow.stroke;
     ctx.lineJoin = 'round';
-    ctx.shadowColor = t.captionShadow.color;
+    ctx.shadowColor = resolveColor(t.captionShadow.color);
     ctx.shadowBlur = t.captionShadow.blur * scale;
     const draw = (fill: boolean) => lines.forEach((item, index) => {
       ctx.font = font;
@@ -779,6 +827,7 @@ export class AlbumScene {
 
   update(album: Album, versions: GalleryVersion[], representatives: string[]) {
     this.album = album;
+    this.lastUpdate = [album, versions, representatives];
     const previous = new Map([...this.fades].map(([material, fade]) => [material.userData.fadeKey as string, fade.opacity]));
     this.clearContent();
     this.hovered = null;
@@ -872,15 +921,15 @@ export class AlbumScene {
       this.tokenGroup.add(mesh);
     };
     for (const segment of chart.segments) {
-      const color = new THREE.Color(t.tokenUsage.areaColor);
-      if (segment.branch !== 'main') color.lerp(new THREE.Color(galleryBranchPaint(segment.branch, branches)), t.tokenUsage.branchTint);
+      const color = new THREE.Color(resolveColor(t.tokenUsage.areaColor));
+      if (segment.branch !== 'main') color.lerp(new THREE.Color(resolveColor(galleryBranchPaint(segment.branch, branches))), t.tokenUsage.branchTint);
       addShape(segment.outline, color, t.tokenUsage.areaOpacity, 0);
     }
     for (const bar of chart.bars) {
       const left = bar.plane.depth - bar.width / 2, right = bar.plane.depth + bar.width / 2;
       addShape([{ x: chart.baseline, depth: left }, { x: chart.baseline - bar.height, depth: left },
         { x: chart.baseline - bar.height, depth: right }, { x: chart.baseline, depth: right }],
-      new THREE.Color(galleryBranchPaint(bar.branch, branches)), t.tokenUsage.barOpacity, 1);
+      new THREE.Color(resolveColor(galleryBranchPaint(bar.branch, branches))), t.tokenUsage.barOpacity, 1);
     }
     const last = chart.samples.at(-1)?.plane;
     if (last) for (const fraction of t.tokenUsage.scaleTicks) {
@@ -922,18 +971,23 @@ export class AlbumScene {
     this.pickTargets = this.pickTargets.filter(mesh => mesh.userData.version !== undefined);
     for (const [id, frame] of this.frames) {
       frame.image.visible = visible.has(id);
-      frame.image.material.opacity = id === this.hovered ? 1 : t.endpointOpacity;
+      frame.image.material.opacity = id === this.hovered ? 1 : this.captureOpacity;
       frame.outline.color.set(id === this.hovered ? this.colors.ink : this.colors.line);
-      if (!frame.image.visible) { frame.image.material.map = null; continue; }
+      if (!frame.image.visible) { frame.image.material.map = null; frame.image.material.color.set(this.colors.paper); continue; }
       this.pickTargets.push(frame.image);
       const cached = this.textures.get(id);
-      if (cached) { frame.image.material.map = cached; frame.image.material.needsUpdate = true; }
+      // A mapped capture is never tinted: the material color multiplies the texture, and a dark page would dim it.
+      if (cached) { frame.image.material.map = cached; frame.image.material.color.set(0xffffff); frame.image.material.needsUpdate = true; }
       else if (!this.pending.has(id) && !this.failedTextures.has(id)) {
         this.pending.add(id);
         new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}${frame.plane.frame.url}`, texture => {
           this.pending.delete(id);
           if (this.dead || !this.frames.has(id)) { texture.dispose(); return; }
           texture.colorSpace = THREE.SRGBColorSpace;
+          // Keep original capture pixels; mipmaps and anisotropic filtering resolve the tilted planes.
+          texture.generateMipmaps = true;
+          texture.minFilter = THREE.LinearMipmapLinearFilter;
+          texture.magFilter = THREE.LinearFilter;
           texture.anisotropy = Math.min(t.webgl.anisotropyMax, this.renderer.capabilities.getMaxAnisotropy());
           this.textures.set(id, texture);
           this.updateImages();
@@ -967,6 +1021,8 @@ export class AlbumScene {
     this.dead = true;
     cancelAnimationFrame(this.tick);
     this.observer.disconnect();
+    window.removeEventListener('resize', this.resize);
+    this.stopThemeObserver();
     this.controls.removeEventListener('change', this.controlChange);
     this.controls.dispose();
     const canvas = this.renderer.domElement;

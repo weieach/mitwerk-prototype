@@ -2,6 +2,7 @@ import { activeRouteColor, branchColor } from '../version-tree/tokens.ts';
 import { galleryTokens as t } from './tokens.ts';
 
 export type Capture = {
+  fullPrompt?: string;
   tokenUsage?: { input: number; output: number; total: number; simulated: boolean };
   id: string; filename: string; url: string; width: number; height: number;
   kind: 'prompt' | 'push' | 'capture'; number: number | null; branch: string | null;
@@ -9,7 +10,7 @@ export type Capture = {
 };
 export type GalleryFrame = Capture & { version: number; position: number };
 export type GalleryVersion = { number: number; index: number; frames: GalleryFrame[] };
-export type RangeKey = 'today' | '3' | '7' | '30' | 'all';
+export type RangeKey = 'today' | '3' | '7' | '14' | '30' | 'all';
 
 /** Planning references carry a prompt prefix but do not require a capture timestamp. */
 export function visualPromptNumber(filename: string): number | null {
@@ -19,7 +20,8 @@ export function visualPromptNumber(filename: string): number | null {
 
 export const ranges: { value: RangeKey; label: string }[] = [
   { value: 'today', label: 'Today' }, { value: '3', label: 'Last 3 days' },
-  { value: '7', label: 'Last 7 days' }, { value: '30', label: 'Last 30 days' }, { value: 'all', label: 'All time' },
+  { value: '7', label: 'Last 7 days' }, { value: '14', label: 'Last 14 days' },
+  { value: '30', label: 'Last 30 days' }, { value: 'all', label: 'All time' },
 ];
 
 /** Metadata comes from capture names, never a per-image fixture or lookup table. */

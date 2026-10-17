@@ -16,7 +16,7 @@ import { VersionCard } from './VersionCard';
 import { branchName, isBranchDivergence, mergedBranchIds, presentTree } from './presentation';
 import { canEditTree, treeModes, type TreeMode } from './panel-state';
 
-type Props = { onSwitchPanel?:()=>void; onOpenPush?: (version: number) => void; status?: string; graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; modeSwitchVisible: boolean; onModeChange: (mode: TreeMode) => void };
+type Props = { id?:string; title?:string; onSwitchPanel?:()=>void; onOpenPush?: (version: number) => void; status?: string; graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; modeSwitchVisible: boolean; onModeChange: (mode: TreeMode) => void };
 
 function graphBounds(nodes: { x: number; y: number; title: string }[]) {
   const label = stationLabelOffset();
@@ -37,7 +37,7 @@ const screenshotFlags = typeof window !== 'undefined'
 const screenshotCapture = screenshotFlags.capture;
 if (screenshotFlags.countHover) document.documentElement.dataset.screenshotCountHover = '1';
 
-export function VersionTreePanel({ graph, dispatch, onSwitchPanel, onOpenPush, mode, modeSwitchVisible, onModeChange, status = '' }: Props) {
+export function VersionTreePanel({ id, title = 'Version stream', graph, dispatch, onSwitchPanel, onOpenPush, mode, modeSwitchVisible, onModeChange, status = '' }: Props) {
   const activePath = useMemo(() => branchPathIds(graph.nodes, graph.activeBranchId), [graph.nodes, graph.activeBranchId]);
   const layout = useMemo(() => mode === 'history' && graph.nodes.some(node => node.git) ? layoutGitHistory(graph.nodes) : layoutBranchView(layoutGraph(graph.nodes), graph.selectedId, activePath), [graph.nodes, graph.selectedId, activePath, mode]);
   const boundsNodes = useMemo(() => [...layout.nodes, ...(layout.mergeOrigins ?? []).map(origin => ({ ...origin, title: '' }))], [layout]);
@@ -340,7 +340,7 @@ export function VersionTreePanel({ graph, dispatch, onSwitchPanel, onOpenPush, m
   const worldWidth = Math.max(layout.width + 240, viewportSize.width / zoom) + worldShift + fitInset;
   const worldHeight = Math.max(layout.height + 240, viewportSize.height / zoom);
 
-  return <section className="tree-panel" data-tree-mode={mode} aria-labelledby="tree-title" data-selected-branch={presentation.selectedBranchId || undefined} data-active-branch={graph.activeBranchId} style={{
+  return <section id={id} className="tree-panel" data-tree-mode={mode} aria-labelledby="tree-title" data-selected-branch={presentation.selectedBranchId || undefined} data-active-branch={graph.activeBranchId} style={{
     '--card-hover-inset': `${treeTheme.cardHoverBorderInset}px`,
     '--card-hover-transition': `${treeTheme.cardHoverTransitionMs}ms`,
     '--node-card-width': `${geometry.cardWidth}px`,
@@ -373,7 +373,7 @@ export function VersionTreePanel({ graph, dispatch, onSwitchPanel, onOpenPush, m
     '--reverted-route-color': treeTheme.revertedRouteColor,
     '--merged-branch-opacity': treeTheme.mergedBranchOpacity,
   } as CSSProperties}>
-    <div className="panel-header tree-header"><div className="panel-heading"><AdaptivePanelTitle id="tree-title" full="Version stream" short="Stream"/><VersionPanelSwitch onClick={onSwitchPanel} target="Iteration Visualizer"/>
+    <div className="panel-header tree-header"><div className="panel-heading"><AdaptivePanelTitle id="tree-title" full={title} short="Stream"/><VersionPanelSwitch onClick={onSwitchPanel} target="Version blocks"/>
       {modeSwitchVisible && <RowSelect label="Version stream panel" value={mode}
         options={treeModes.map(item => ({ value: item.id, label: item.label }))} onChange={value => onModeChange(value as TreeMode)}/>}
     </div><div className="panel-header-actions">

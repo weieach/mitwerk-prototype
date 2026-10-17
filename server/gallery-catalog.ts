@@ -1,3 +1,4 @@
+import { parsePromptLog } from '../src/shared/prompt-log.mjs';
 import { readTokenUsage } from './token-usage.ts';
 import { readGitHistory } from './git-history.ts';
 import { closeSync, createReadStream, existsSync, openSync, readFileSync, readdirSync, readSync, statSync } from 'node:fs';
@@ -14,6 +15,8 @@ const referencesPath = '/gallery/references/';
 export function readCaptureCatalog(root: string) {
   const directory = join(root, captureDirectory);
   if (!existsSync(directory)) return { frames: [], ignored: 0, references: readVisualReferences(root) };
+  const promptFile = join(root, 'docs/prompt-log.md');
+  const prompts = parsePromptLog(existsSync(promptFile) ? readFileSync(promptFile, 'utf8') : '');
   let ignored = 0;
   const frames = readdirSync(directory).flatMap(filename => {
     if (!filename.toLowerCase().endsWith('.png')) return [];
@@ -27,7 +30,7 @@ export function readCaptureCatalog(root: string) {
       if (read < 24 || bytes.readUInt32BE(0) !== 0x89504e47 || bytes.readUInt32BE(4) !== 0x0d0a1a0a || bytes.toString('ascii', 12, 16) !== 'IHDR') throw new Error('Invalid PNG');
       const width = bytes.readUInt32BE(16), height = bytes.readUInt32BE(20);
       if (!width || !height) throw new Error('Empty image');
-      return [{ ...metadata, id: filename, filename, width, height, url: `gallery/images/${encodeURIComponent(filename)}` }];
+      return [{ ...metadata, fullPrompt: metadata.kind === 'prompt' ? prompts.get(metadata.number) : undefined, id: filename, filename, width, height, url: `gallery/images/${encodeURIComponent(filename)}` }];
     } catch { ignored++; return []; }
   });
   const usage = readTokenUsage(root, frames.map(frame => frame.id));
@@ -56,8 +59,9 @@ export function iterationGalleryCatalog(): Plugin {
     configResolved(config) { root = config.root; },
     configureServer(server) {
       const directory = join(root, captureDirectory);
-      server.watcher.add(directory);
-      const invalidate = (path: string) => { if (path.startsWith(directory)) cached = null; };
+      const promptFile = join(root, 'docs/prompt-log.md');
+      server.watcher.add([directory, promptFile]);
+      const invalidate = (path: string) => { if (path.startsWith(directory) || path === promptFile) cached = null; };
       server.watcher.on('all', (_event, path) => invalidate(path));
       server.middlewares.use((req, res, next) => {
         const pathname = new URL(req.url ?? '/', 'http://localhost:5173').pathname;

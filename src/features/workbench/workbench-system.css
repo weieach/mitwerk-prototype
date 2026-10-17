@@ -11,22 +11,14 @@
   --mw-accent: var(--accent);
   --mw-selection: var(--fill);
   --mw-radius: var(--surface-radius);
-  --sidebar: #fafafa;
   --todo-column: var(--sidebar);
   font-size: var(--body-font-size);
 }
+/* Dark values come from the root tokens in index.css; only roles that differ are remapped here. */
 .mw-app[data-theme=dark] {
-  --mw-ink: #fafafa;
-  --mw-muted: #b3b3b3;
-  --mw-page: #191a1b;
-  --mw-panel: #27272a;
-  --mw-line: #424247;
-  --mw-line-strong: #65676c;
-  --mw-hover: #39393e;
-  --mw-accent: var(--mw-ink);
   --mw-selection: var(--mw-hover);
-  --sidebar: #27272a;
-  --todo-column: #323236;
+  --todo-column: var(--fill);
+  --mw-shadow: 0 14px 44px var(--shadow-color);
 }
 .mw-app :is(.page-title h1, .mw-modal h2) {
   font-size: calc(var(--card-title-size) + 3px);
@@ -55,11 +47,10 @@
   font-size: var(--action-button-font-size) !important;
 }
 .mw-app .mw-button.primary { color: var(--mw-page); font-size:var(--primary-button-font-size) !important; }
-.mw-app :is(.mw-icon, .send-button) {
+.mw-app .mw-icon {
   width: var(--base-control-height);
   height: var(--base-control-height);
 }
-.mw-app .send-button:not(:disabled) { color: var(--mw-page); }
 .mw-app .mw-topbar {
   background: var(--mw-page);
   height: var(--header-row-height);

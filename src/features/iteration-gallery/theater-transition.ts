@@ -18,6 +18,9 @@ export function containedFrameTarget(rect: TheaterTarget, width: number, height:
 
 export type TheaterOrbit = { move: (dx: number, dy: number) => void; end: () => void };
 export type GalleryCamera = {
+  /** Commands use the live camera; zero resets to 100%. Zoom readouts never write back. */
+  zoom: (direction: -1 | 0 | 1) => void;
+  focus: (id: string, complete: () => void) => void;
   center: () => void; reset: () => void; top: () => void;
   orbit: (id: string, target: TheaterTarget, ready: () => void, complete: () => void) => TheaterOrbit | null;
 };

@@ -13,7 +13,7 @@
   --sans: 'Neurial Grotesk', sans-serif;
   font-family: var(--sans);
   color: var(--ink);
-  background: #fff;
+  background: var(--paper);
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
   --ink: #111;
@@ -27,7 +27,36 @@
   --fill: #f4f4f4;
   --sidebar: #fafafa;
   --fill-hover: #ececec;
+  --contrast: #000;
+  --on-pale: #111;
+  --token-area: #e5e5e5;
+  --timeline-push-hover: #c4c4c4;
+  --grid-line: #b0b0b0;
+  --shadow-color: rgb(0 0 0 / 6%);
+  --gallery-capture-opacity: .72;
   --mono: var(--sans);
+}
+/* MitWerk dark palette. Every surface derives from these root tokens. */
+:root[data-theme=dark] {
+  color-scheme: dark;
+  background: #191a1b;
+  --ink: #fafafa;
+  --muted: #a3a3a8;
+  --faint: #737378;
+  --line: #36373b;
+  --line-strong: #4f5056;
+  --accent: #fafafa;
+  --canvas-bg: #191a1b;
+  --paper: #191a1b;
+  --fill: #27272a;
+  --sidebar: #202123;
+  --fill-hover: #39393e;
+  --contrast: #fff;
+  --token-area: #3a3a3f;
+  --timeline-push-hover: #65676c;
+  --grid-line: #65676c;
+  --shadow-color: rgb(0 0 0 / 40%);
+  --gallery-capture-opacity: .94;
 }
 * { box-sizing: border-box; }
 html { line-height: 1.5; }
@@ -84,7 +113,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .card-menu { position: absolute; top: 8px; right: 8px; z-index: 6; }
 .card-menu-trigger { display: flex; padding: 2px; color: var(--muted); border-radius: 3px; }
 .card-menu-trigger:hover, .card-menu-trigger[aria-expanded="true"] { background: var(--fill); color: var(--ink); }
-.card-menu-panel { position: absolute; top: calc(100% + 4px); right: 0; min-width: 168px; margin: 0; padding: 4px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; list-style: none; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06); }
+.card-menu-panel { position: absolute; top: calc(100% + 4px); right: 0; min-width: 168px; margin: 0; padding: 4px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; list-style: none; box-shadow: 0 8px 24px var(--shadow-color); }
 .card-menu-panel button { width: 100%; justify-content: flex-start; padding: 6px 8px; font-size: 11px; color: var(--ink); text-align: left; }
 .card-menu-panel button:hover:not(:disabled) { background: var(--fill); }
 .card-menu-panel button:disabled { color: var(--faint); }
@@ -92,7 +121,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .version-card.is-selected .station span { background: var(--station-open-fill); box-shadow: none; }
 .version-card.is-active-branch { --card-border-color: var(--route-color); }
 .version-card.is-reverted { --station-color: var(--reverted-route-color); }
-.version-card.is-reverted .version-title { color: var(--reverted-title-color, #9a9a9a); text-decoration: line-through; }
+.version-card.is-reverted .version-title { color: var(--reverted-title-color, var(--faint)); text-decoration: line-through; }
 .station-label { position: absolute; z-index: 4; transform: translate(-100%, -50%) scale(var(--version-label-zoom, 1)); transform-origin: right center; display: inline-flex; align-items: center; gap: 6px; font: var(--version-label-weight, 700) var(--version-label-size) var(--sans); color: var(--version-label-color, #000); pointer-events: none; white-space: nowrap; }
 .version-heading { padding: 0 22px 0 0; width: 100%; display: block; text-align: left; }
 .version-card.is-compact .version-heading { padding-right: 0; }
@@ -140,7 +169,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .endpoint-controls .endpoint-jump,
 .branch-controls .branch-current { gap: 6px; padding: 5px 8px; font-size: 11px; color: var(--ink); white-space: nowrap; }
 .branch-controls { position: relative; }
-.branch-menu { position: absolute; bottom: calc(100% + 6px); left: 0; min-width: 100%; margin: 0; padding: 4px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; list-style: none; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06); }
+.branch-menu { position: absolute; bottom: calc(100% + 6px); left: 0; min-width: 100%; margin: 0; padding: 4px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; list-style: none; box-shadow: 0 8px 24px var(--shadow-color); }
 .branch-menu button { width: 100%; justify-content: space-between; gap: 10px; padding: 6px 8px; font-size: 11px; color: var(--ink); }
 .branch-menu button[aria-checked="true"] { background: var(--fill); }
 .branch-menu-name { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
@@ -151,7 +180,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 
 .tree-history-message { padding: 24px; font-size: 12px; color: var(--muted); }
 .capture-branches { display: flex; gap: 4px; flex-wrap: wrap; font-size: 10px; margin: 4px 0; }
-.branch-tag { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--branch-tag-color, var(--line)); background: #fff; border-radius: 4px; padding: 2px 5px; font-size: 10px; font-weight: 400; overflow-wrap: anywhere; color: var(--ink); }
+.branch-tag { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--branch-tag-color, var(--line)); background: var(--paper); border-radius: 4px; padding: 2px 5px; font-size: 10px; font-weight: 400; overflow-wrap: anywhere; color: var(--ink); }
 .branch-tag .ui-icon { flex-shrink: 0; }
 .capture-frame-link { color: inherit; }
 

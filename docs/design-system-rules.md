@@ -492,7 +492,7 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Full navigation toggle and task options — 2026-09-29
 
-- Navigation is either fully expanded, including names and project task lists, or completely hidden. A top-bar button restores hidden navigation. Narrow screens use a full sidebar drawer with a dismissible backdrop; selecting a destination closes it. Do not force an icon-only rail.
+- Navigation is either fully expanded, including names and project task lists, or completely hidden. The side-panel control on the left of the breadcrumb opens and closes it. Narrow screens use a full sidebar drawer with a dismissible backdrop; selecting a destination closes it. Do not force an icon-only rail.
 - Mit customization lives in a three-dot options menu in the Task details card header. Keep its profile destination and remove the full-width button from task metadata. Support keyboard access, Escape and focus-out dismissal.
 
 ## Sidebar search, inbox and new chat — 2026-09-29
@@ -850,3 +850,94 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Below the sidebar overlay breakpoint, the tabs row belongs to the main interface's stacking context, beneath the navigation scrim and sidebar. Preserve desktop tab-border layering.
 - The sidebar slides horizontally from the left using a shared 220ms motion token, in both opening and closing directions. Keep its contents mounted through the transition, make collapsed navigation inert, and disable motion for reduced-motion preferences.
+
+
+## Send and icon-button consolidation — 2026-10-10
+
+- Send uses the same reusable `IconButton` component and shared `.mw-icon` styling as other workspace icon actions, including sizing, corner radius, colors, hover, keyboard focus and disabled treatment. Do not maintain a separate filled send-button style.
+- Send keeps its arrow-up icon, accessible label, form submission and existing enabled conditions. The working-state Stop action uses the same component with its filled-square icon and existing stop behavior.
+- Figma uses the shared Icon button variants with swapped Send/Stop icons; Send is a usage example, not a separate component family.
+
+## Figma overlay component consolidation — 2026-10-12
+
+- Dialogs and overlay menus with a shared structural shell belong to one reusable component family, with purpose and state expressed as variants. Preserve distinct content, interaction states and existing instance links when consolidating.
+- Workspace dialogs share the Dialog family; stacked action, selection and suggestion popovers share Overlay menu. Structurally distinct annotation and fullscreen-preview surfaces retain their own families.
+
+## Figma sidebar and responsive component layout — 2026-10-12
+
+- Full UI frames use instances of the shared Sidebar component, with navigation selection expressed as a page variant.
+- Content rows and labels fill available width in their auto-layout containers. Preserve fixed icon and control geometry; keep multiline content wrapping, and use ending truncation for constrained single-line labels instead of clipping or overflowing adjacent controls.
+- User chat messages and agent replies use reusable Figma components in full UI frames. Expose message content and timestamps as text properties; agent replies support text-only and output-card variants. Message bodies wrap rather than truncate.
+- Full UI frames reference the expanded Figma component library. “MitWerk · Current design system” is a plain editable reference board, without component masters or instances; shared icon masters live in the icon library.
+
+## Dark mode switch — 2026-10-12
+
+- A dark mode switch sits beside Search in the sidebar header (and beside Search in the workspace bar when navigation is hidden). It shows a moon in light mode and a sun in dark mode, exposes its state with `aria-pressed`, and stays in sync with the Settings Appearance control.
+- The theme is one app-wide state (`src/shared/theme.ts`), stored in `localStorage` and applied as `data-theme` on the document root before first render. Light remains the default, so progress captures stay in light mode. An explicit `c dark mode` capture applies this same theme for that frame only.
+- Every surface derives from the root tokens in `src/index.css`; `:root[data-theme=dark]` supplies the MitWerk dark palette. The workbench `--mw-*` bridge and the reading panels both read those tokens, so do not add per-component dark colors. Semantic project, status and branch-route colors are unchanged.
+- Theme roles beyond surfaces are tokens too: `--contrast` (checked-out branch, stations, version labels), `--on-pale` (text on pale bookmark accents), `--token-area`, `--timeline-push-hover`, `--grid-line` and `--shadow-color`. TS design tokens reference these as `var(--token)`; WebGL and canvas code resolve them with `resolveColor` and repaint when the root theme changes. Embedded prototype frames keep their own white background.
+- Gallery captures are never tinted by the theme: a mapped capture plane renders its texture with a white material color, and only blank planes use `--paper`. Their resting translucency is the theme token `--gallery-capture-opacity` (light .72, dark .94), so captures are not dimmed against the dark page. Hovered captures remain fully opaque.
+
+## Flicker-free 3D viewport resizing — 2026-10-12
+
+- Resizing the 3D gallery (dragging the reading-window or panel divider, or any layout change) must not flash. Resizing the WebGL renderer clears its drawing buffer, so the gallery redraws synchronously inside its resize handler, before the browser paints, rather than waiting for the next animation frame. Resizing never rebuilds the scene or reloads capture textures.
+
+## Side panel toggle — 2026-10-14
+
+- The workspace bar always leads the breadcrumb with the shared side-panel icon. It opens hidden navigation and closes the open panel; its accessible name and `aria-expanded` follow that state. The brand button still collapses navigation. Narrow screens keep the drawer and backdrop.
+
+## Figma theme modes and gallery images — 2026-10-14
+
+- The expanded Figma library uses Light and Dark modes in the shared MitWerk / Foundations collection. Full UI frames and component previews inherit those semantic tokens; keep one set of component masters and state variants across both themes. Dark colors are values of the same semantic variables under the Dark mode, never separate dark component masters or theme variants. Any dark showcase contains instances of the main library and is labeled as a mode preview. Local paint and effect styles are supporting library assets, not a separate component system.
+- Bind surfaces, text, borders, selected navigation, Todos columns, pale-accent foregrounds and overlay foregrounds to their semantic roles. Pale bookmarks retain dark text and icons, and fullscreen scrims retain their translucent black treatment in both themes.
+- Insert images captured from the actual local 3D gallery into the split and fullscreen gallery viewports, with captures matched to each theme and panel width. Keep surrounding controls and labels editable, and do not tint the captured prototype textures. Version-stream connectors remain empty in these Figma screens.
+
+## Designed selection menus — 2026-10-14
+
+- Selectors never open the operating system's native picker. Every selector in the Iteration Visualizer, theater and Version stream (date range, saved frame, tracked interface, playback speed, loop mode, preview viewport and stream mode) opens the shared designed menu: `SelectMenu` in `src/components/SelectMenu.tsx`, styled once by `.select-menu` in `src/control-tokens.css`. `RowSelect` is a button trigger for that menu, not a transparent native `<select>`.
+- The menu is a listbox in the top layer (Popover API), rendered beside its trigger rather than portaled to the document body, so it escapes clipped panels and stays interactive inside modal dialogs such as fullscreen theater. It opens below its trigger and flips above when there is more room there, matches the trigger width (or a caller's minimum width) and stays inside the viewport.
+- Keyboard behavior: arrow keys on the trigger open it; arrows, Home and End move the highlight; Enter or Space chooses; Escape closes and returns focus to the trigger; Tab or an outside click closes it. The current value is bold and the highlighted row uses `--fill-hover`.
+
+
+## Dark workspace and playback — 2026-10-17
+
+- The local app follows Figma “hifi temp” (576:18134) and “hifi temp - playback” (603:8717). Dark is the default when no theme preference is saved; explicit light preferences and capture overrides still work. This supersedes the earlier light-default rule.
+- Default launch and chat navigation show chat beside Version blocks, with the sidebar collapsed and the Version stream hidden. Keep the full gallery/stream workspace accessible at `?view=history`. The brand toggles navigation; the workspace bar contains Live server, Version blocks, Idea stream and Chat actions. Counts derive from task data.
+- Remove workspace tabs and breadcrumbs. Shared `PanelHeader` renders a conversation title or a Version blocks pill with a Gallery/Playback label, header actions and per-panel fullscreen control. In playback the pill returns to the gallery. Resource readers retain a title and restore action.
+- Panel surfaces use the shared workspace background, 6px gutter, 16px radius, 44px heading and 52px footer tokens. Chat/gallery split defaults to 39/61 and remains resizable. Use the existing semantic dark palette, typography and dynamic content, never screenshot-specific assets or node exceptions.
+- Gallery date range defaults to Last 30 days and sits in its footer; playback moves it to the header beside the saved-frame picker. The tracked-interface selector uses the folder icon and homescreen label.
+- Playback has speed and loop controls at the upper right, a contiguous frame toolbar with a neutral annotation trigger and Add frame to chat, then the image, version/prompt/date, italic prompt summary, and muted branch metadata. The version badge is metadata; the old Go to commit toolbar action is omitted. Transport uses regular outline icons; timeline, annotations, frame attachment, saved prototype entry and gallery transitions preserve their behavior.
+- Below 600px, show one workspace pane at a time to keep content readable; Chat and Version blocks in the workspace bar switch the visible pane.
+- Figma files are reference-only for this update.
+
+## Chat composer and To-do drawer — 2026-10-17
+
+- Chat uses the hifi temp message layout: right-aligned rounded user messages, plain agent replies, timestamps, and reusable version-output cards with a linked preview. The bundled gallery conversation follows the reference's shorter exchange; migration preserves edited or added conversation content and drafts.
+- Every chat shares a capture-context row, collapsible To-do drawer and composer. Clicking the full To-do drawer header toggles its expanded state. The expanded list shows real saved items with completion checkboxes and local creation timestamps; no duplicated placeholder tasks.
+- The composer's bottom row has attachment, model label, keyboard-accessible Prompt / To-do switch and the shared Send action. To-do mode saves trimmed text in that chat's drawer, opens the drawer and clears the text without sending an agent prompt. Blank submissions are disabled. Prompt mode preserves normal chat submission. Switching modes preserves the draft; queued prompt attachments remain queued when text is saved as a to-do.
+- Drawer items, completion, open state, mode and capture labels persist per chat. New-chat drawer state carries over when its first prompt creates the conversation. Drawer scrolling is bounded so input remains available on short screens. Colors, sizes and radii use shared semantic composer tokens for both themes.
+- `c homescreen` aliases `c home`; `c homescreen w dark mode` captures the full default split workspace in dark mode.
+
+## Prompt source and workspace panel controls — 2026-10-17
+
+- `docs/prompt-log.md` is the designated verbatim prompt source. Numbered entries start with `## Prompt #N` and fenced plain text; preserve spelling, line breaks and links. The capture script logs the full input before shortening its filename, keyed to the same screenshot counter. The shared parser loads full text into the development and production catalogs; playback renders it without truncation. Historical entries without full text retain the filename summary, without inventing missing text.
+- The panel is named Version blocks. Gallery and Playback are buttons in a shared view switch with pressed and disabled states. Entering Playback pans to the latest visible frame by timestamp, then uses the existing frame rotation and timeline entrance; Gallery reverses the transition. Honor reduced motion and prevent repeated navigation during transition.
+- The title pill has equal 14px inline padding. Restore the pre-Figma filled playback transport icons while keeping the current layout and behavior.
+- Workspace links toggle panels on and off independently. Only the text of currently displayed panels is underlined; icons and badges are never underlined. Each button exposes `aria-pressed`. Live server uses the gridded globe; Idea stream uses a Git-branch icon and opens the existing Version stream graph (user clarification), not Todos. Live server remains explicitly unconnected until a target is configured.
+- On narrow screens, focus one enabled panel at a time and reflect its actual visibility in the workspace links. Closing the final panel leaves the workspace bar available to reopen it. Existing Todos remain accessible from navigation.
+
+## Adaptive gallery quality and single view label — 2026-10-17
+
+- Gallery captures retain their original source pixels. Drawing-buffer resolution scales with the panel's CSS width and device pixel ratio: wider panels receive up to 1.5× supersampling, capped at 3× density, 12 million pixels and hardware texture dimensions. Recalculate on panel/window resize, retain cached textures and redraw synchronously. Use up to 16× hardware-supported anisotropic filtering with mipmaps to preserve detail on tilted image planes.
+- The Version blocks view switch displays only its current Gallery or Playback label, following hifi temp: SF Mono (system monospace fallbacks), 11px, 1.45 line height, 60% ink opacity, without an underline. This supersedes the two-button switch. Clicking the label switches views with the existing camera transition and a 200ms sequential text slide/fade; the outgoing word leaves before the incoming word appears. Reserve label width to prevent header movement, preserve keyboard focus and honor reduced motion.
+
+## Gallery zoom ownership — 2026-10-17
+
+- The live gallery camera owns zoom. Wheel and pinch gestures update it directly; React receives a readout only, never echoes that delayed value into the camera. Footer zoom buttons issue commands against the live camera value, with shared limits and step tokens; reset commands return to 100%. Camera transitions retain ownership while animating. Pan/orbit changes must not republish unchanged zoom or rebuild captions unnecessarily.
+
+## Idea stream inside Version blocks — 2026-10-17
+
+- Idea stream is a right-hand column inside the Version blocks reading window, using its shared resizable split. It is no longer a separate workspace panel. Opening Idea stream also opens Version blocks when needed, preserving fullscreen state and the outer Chat/reader split. Both workspace links reflect visibility; closing Version blocks closes both columns, while closing Idea stream preserves the current playback frame.
+- While Idea stream is open, the left column is constrained to Playback. From Gallery, pan to the latest visible frame, then use the existing frame rotation and timeline transition. Opening from Playback keeps the current frame. Gallery return controls and orbit-to-gallery are unavailable until Idea stream closes. Existing graph push actions navigate the adjacent playback column.
+- Nested columns use the shared reader minimum width and draggable/keyboard-accessible divider. Below their combined minimum width, the reader scrolls horizontally rather than hiding one column; playback header controls wrap within their own column. The legacy `?view=history` compact panel behavior remains unchanged.
+- `c idea stream w playback side by side` captures the full prototype shell with the paired reader expanded, Commit history on the right, and Playback settled on the latest visible frame on the left.

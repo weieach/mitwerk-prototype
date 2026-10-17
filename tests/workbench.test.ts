@@ -104,7 +104,7 @@ test('product sample migration updates old examples once while retaining added w
   ]}:t),drafts:{panel:'Keep this unsent draft'}};
  const migrated=migrateState(old);
  const task=migrated.tasks.find(t=>t.id==='panel')!;
- assert.equal(task.title,'Implementing 3D version blocks');
+ assert.equal(task.title,'Building an iteration gallery');
  assert.equal(task.creator,'User Example');
  assert.equal(task.status,'Complete');
  assert.equal(task.messages.at(-1)?.text,'Keep this added feedback');

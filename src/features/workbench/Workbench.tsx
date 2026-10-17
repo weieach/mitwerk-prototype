@@ -1,14 +1,17 @@
+import { ComposerDrawer, ComposerModeSwitch } from './ComposerDrawer';
+import { addComposerTodo, defaultComposer, toggleComposerTodo, type ChatComposerState } from './composer-state';
+import { MessageOutput } from './MessageOutput';
+import { PanelHeader } from '../../components/PanelHeader';
+import { PhosphorIcon } from '../../components/PhosphorIcon';
 import { appendFrameContext, attachFrameEvent } from './frame-context';
 import type { FrameContext } from './frame-context';
 import { visibleMessageText } from './message-text';
 import { TodoCard } from './TodoCard';
 import { updateTodoTasks, type TodoTarget } from './todo-actions';
 import { TodoCardContent } from './TodoCardContent';
-import { TodoAttachMenu } from './TodoAttachMenu';
-import { todoChoices, attachTodoToChat, taskDetailsForChat, type TodoChoice } from './todo-context';
-import { mitRole, mitRoleTone } from './mit-role';
+import { attachTodoToChat, taskDetailsForChat, type TodoChoice } from './todo-context';
 import { SidebarResize, useSidebarWidth } from './SidebarResize';
-import { WorkspaceTabs, type WorkspacePane } from './WorkspaceTabs';
+import { type WorkspacePane } from './WorkspaceTabs';
 import { buildVersions, type Capture } from '../iteration-gallery/model';
 import { useAnnotations, updateAnnotation, seedAnnotations, putAnnotation } from '../annotations/store';
 import { annotationContext } from '../annotations/model';
@@ -16,9 +19,10 @@ import type { FrameAnnotation } from '../annotations/model';
 import '@phosphor-icons/web/regular/style.css';
 import { userName, userProfile, userInitials } from './user-profile';
 import { projectColor } from './projectColor';
+import { useTheme, type Theme } from '../../shared/theme';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, ArrowUp, ArrowUpRight, Bell, BookOpen, Check, ChevronRight, CircleCheck, Clock3, FileText, Folder, Image, Layers, LayoutGrid, ListTodo, LoaderCircle, MessageSquare, Moon, PanelLeftOpen, Paperclip, Plus, Search, Settings, Square, SquarePen, Sun, Workflow, X } from '../../components/PhosphorIcon';
+import { ArrowLeft, ArrowRight, ArrowUp, ArrowUpRight, Bell, BookOpen, Check, ChevronRight, CircleCheck, Clock3, FileText, Folder, Image, Layers, LayoutGrid, ListTodo, LoaderCircle, MessageSquare, Moon, Paperclip, Plus, Search, Settings, Square, SquarePen, Sun, Workflow, X } from '../../components/PhosphorIcon';
 import type { InterfaceIcon } from '../../components/PhosphorIcon';
 import { ConversationCards, TodoContextChip, FrameContextChip } from './ConversationCards';
 import { MentionInput } from './MentionInput';
@@ -27,6 +31,7 @@ import { HomePage, ProjectsPage } from './CollaborationPages';
 import ReadingWorkspace from '../../ReadingWorkspace';
 import { assets as initialAssets, workbenchEntry, loadState, now, saveState, statuses, uid, tasksForProject, saveMit, archiveProject, isTodoChat, todoContext } from './model';
 import mitwerkLogo from '../../assets/mitwerk-logo.png';
+import mitwerkSymbol from '../../assets/mitwerk-symbol.svg';
 import type { Asset, SavedState, Task, TaskStatus, View, Mit } from './model';
 
 type ModalState = 'search' | 'task' | 'project' | 'share' | null;
@@ -34,7 +39,8 @@ const nav: {name: View; icon:InterfaceIcon}[] = [{name:'Mits',icon:Workflow},{na
 const assetIcons = {document:FileText, image:Image, prototype:LayoutGrid};
 function Avatar({name, small=false, isMit, compact=false}:{name:string; small?:boolean;isMit?:boolean;compact?:boolean}) { const mit = isMit??name.includes('Mit'); return <span className={`mw-avatar ${mit?'is-mit':''} ${small?'small':''} ${compact?'compact':''}`} aria-hidden="true">{mit ? <Workflow size={compact?11:small?13:17}/> : name==='You' ? userInitials : name.split(' ').map(n=>n[0]).slice(0,2).join('')}</span>; }
 function Status({status}:{status:TaskStatus}) { return <span className={`mw-status status-${statuses.indexOf(status)}`}>{status==='Complete'?<CircleCheck size={13}/>:<span className="status-dot"/>}<span className="status-label">{status}</span></span>; }
-function IconButton({label, onClick, children, active=false}:{label:string;onClick:()=>void; children:ReactNode;active?:boolean}) {return <button type="button" className={`mw-icon ${active?'active':''}`} title={label} aria-label={label} onClick={onClick}>{children}</button>;}
+function IconButton({label, onClick, children, active=false, type="button", disabled=false}:{label:string;onClick?:()=>void;children:ReactNode;active?:boolean;type?:"button"|"submit";disabled?:boolean}) {return <button type={type} className={`mw-icon ${active?'active':''}`} title={label} aria-label={label} onClick={onClick} disabled={disabled}>{children}</button>;}
+function ThemeToggle({theme, onChange, size}:{theme:Theme;onChange:(theme:Theme)=>void;size:number}) {const dark=theme==='dark';const label=dark?'Switch to light mode':'Switch to dark mode';return <button type="button" className="mw-icon theme-toggle" title={label} aria-label="Dark mode" aria-pressed={dark} onClick={()=>onChange(dark?'light':'dark')}>{dark?<Sun size={size}/>:<Moon size={size}/>}</button>;}
 function Modal({title, onClose, children, className=""}:{title:string;onClose:()=>void;children:ReactNode;className?:string}) {
  const ref=useRef<HTMLDialogElement>(null);
  useEffect(()=>{ref.current?.showModal();return ()=>ref.current?.close();},[]);
@@ -77,8 +83,14 @@ export function Workbench() {
  const [showImageAlbum,setShowImageAlbum]=useState(false);
  const [expanded,setExpanded]=useState(screenshotMode && !sideBySideCapture && !capturedTask && !chatLayout && !todosCapture && !!entry.asset);
  const [selectedPane,setSelectedPane]=useState<WorkspacePane>(screenshotMode && !sideBySideCapture && !capturedTask && !chatLayout && !todosCapture ? 'version' : 'chat');
- const [readerWidth,setReaderWidth]=useState(54);
- const [collapsed,setCollapsed]=useState(()=>window.matchMedia('(max-width:850px)').matches);
+ const [readerWidth,setReaderWidth]=useState(61);
+ const [chatVisible,setChatVisible]=useState(true);
+ const [ideaOpen,setIdeaOpen]=useState(screenshotMode&&screenshotParams.get('ideaStream')==='1');
+ const [liveOpen,setLiveOpen]=useState(false);
+ const [mobile,setMobile]=useState(()=>window.matchMedia('(max-width:600px)').matches);
+ const [mobilePanel,setMobilePanel]=useState<'chat'|'version'|'live'>('version');
+ useEffect(()=>{const media=window.matchMedia('(max-width:600px)');const update=()=>setMobile(media.matches);media.addEventListener('change',update);return()=>media.removeEventListener('change',update);},[]);
+ const [collapsed,setCollapsed]=useState(true);
  const sidebarWidth=useSidebarWidth();
  const [sidebarInbox,setSidebarInbox]=useState(false);
  const [expandedProjects,setExpandedProjects]=useState<string[]>((capturedTask??entry.task)?.projectId ? [(capturedTask??entry.task)!.projectId!] : []);
@@ -92,7 +104,7 @@ export function Workbench() {
  const [assetTabs,setAssetTabs]=useState<Record<string,string[]>>({});
  const todoAttachments=state.todoAttachments || {};
  function setTodoAttachments(update:(current:NonNullable<SavedState['todoAttachments']>)=>NonNullable<SavedState['todoAttachments']>){setState(current=>({...current,todoAttachments:update(current.todoAttachments||{})}));}
- const [theme,setTheme]=useState('light');
+ const [theme,setTheme]=useTheme();
  const [instructionsDraft,setInstructionsDraft]=useState(state.instructions);
  const [mitDraft,setMitDraft]=useState<Mit|null>(null);
  const [mitDetail,setMitDetail]=useState<string|null>(null);
@@ -132,7 +144,22 @@ export function Workbench() {
  const readerImages=readerAssets.filter(a=>a.kind==='image');
  const groupedImages=readerImages.length>1;
  const openedAsset=allAssets.find(a=>a.id===reader);
+ const availablePanels=[...(chatVisible?['chat']:[]),...(openedAsset?['version']:[]),...(liveOpen?['live']:[])];
+ const mobileActive=availablePanels.includes(mobilePanel)?mobilePanel:availablePanels.at(-1);
+ const chatShown=chatVisible&&!expanded&&(!mobile||mobileActive==='chat');
+ const versionShown=!!openedAsset&&(!mobile||mobileActive==='version');
+ const ideasShown=ideaOpen&&versionShown&&reader==='prototype';
+ const liveShown=liveOpen&&!expanded&&(!mobile||mobileActive==='live');
+ function togglePanel(panel:'chat'|'version'|'ideas'|'live') {
+  if(panel==='ideas'){setIdeaOpen(!ideasShown);setSelectedPane('version');setReader('prototype');setMobilePanel('version');return;}
+  setExpanded(false);setMobilePanel(panel);
+  if(panel==='chat'){if(view!=='dialog'){setView('dialog');setChatVisible(true);}else setChatVisible(!chatShown);}
+  if(panel==='version'){setSelectedPane('version');if(versionShown&&reader==='prototype'){setReader(null);setIdeaOpen(false);}else setReader('prototype');}
+  if(panel==='live')setLiveOpen(!liveShown);
+ }
  const draft=state.drafts[task.id] || '';
+ const composer=state.chatComposers?.[task.id] ?? defaultComposer();
+ function updateComposer(update:(current:ChatComposerState)=>ChatComposerState){setState(s=>({...s,chatComposers:{...s.chatComposers,[task.id]:update(s.chatComposers?.[task.id]??defaultComposer())}}));}
  const working=pending.includes(task.id);
  const unread=state.tasks.filter(t=>t.kind==='mit'&&t.unread).length;
  const currentProject=state.projects.find(p=>p.id===selectedProject)??state.projects[0];
@@ -165,7 +192,7 @@ export function Workbench() {
   }catch{setNotice('Could not save this change. Please try again.');}
  }
  function updateTask(id:string,fn:(t:Task)=>Task){setState(s=>({...s,tasks:s.tasks.map(t=>t.id===id?fn(t):t)}));}
- function navigate(next:View){if(next==='Mits'||next==='Library'){setNotice(unavailableNotice);return;}if(window.matchMedia('(max-width:850px)').matches)setCollapsed(true);setView(next);setReader(next==='dialog'?'prototype':null);setExpanded(false);setSelectedPane('chat');}
+ function navigate(next:View){setChatVisible(true);setMobilePanel('chat');if(next==='Mits'||next==='Library'){setNotice(unavailableNotice);return;}if(window.matchMedia('(max-width:850px)').matches)setCollapsed(true);setView(next);setReader(next==='dialog'?'prototype':null);setExpanded(false);setSelectedPane('chat');}
  function openTask(id:string){recentChat.current=id;localStorage.setItem('mitwerk-recent-chat',id);const target=state.tasks.find(t=>t.id===id);if(target?.projectId)setSelectedProject(target.projectId);setActiveId(id);navigate('dialog');updateTask(id,t=>({...t,unread:false}));}
  function openAsset(id:string){
    const asset=allAssets.find(item=>item.id===id);
@@ -177,7 +204,7 @@ export function Workbench() {
    setAssetTabs(tabs=>({...tabs,[task.id]:[...new Set([...(tabs[task.id]||[]),id])]}));
    setSelectedPane(`asset:${id}`);setShowImageAlbum(false);assetTriggers.current=document.activeElement as HTMLElement;setReader(id);setExpanded(true);
  }
- function openVersionControl(){if(view!=='dialog'){const owner=state.tasks.find(t=>[...t.input,...t.output].includes('prototype'));if(owner){if(owner.projectId)setSelectedProject(owner.projectId);setActiveId(owner.id);setView('dialog');}}setSelectedPane('version');setShowImageAlbum(false);setReader('prototype');setExpanded(true);}
+
  function paneAsset(pane:WorkspacePane){return pane==='version'?'prototype':pane.startsWith('asset:')?pane.slice(6):null;}
  function selectPane(pane:WorkspacePane){
    setSelectedPane(pane);setShowImageAlbum(false);
@@ -189,7 +216,7 @@ export function Workbench() {
    setAssetTabs(tabs=>({...tabs,[task.id]:remaining}));
    if(selectedPane===`asset:${id}`){setSelectedPane('chat');setReader(expanded?null:'prototype');setExpanded(false);}
    else if(reader===id&&selectedPane==='chat')setReader('prototype');
-   requestAnimationFrame(()=>document.getElementById(`workspace-tab-${selectedPane===`asset:${id}`?'chat':selectedPane}`)?.focus());
+   requestAnimationFrame(()=>document.getElementById('navigation-toggle')?.focus());
  }
  function toggleWorkspaceFullscreen(){
    if(!reader||expanded){setReader(paneAsset(selectedPane)||'prototype');setExpanded(false);}
@@ -237,6 +264,12 @@ export function Workbench() {
    else setAnnotationChoice(note);
  }
  function send(){
+   if(composer.mode==='todo') {
+     if(!draft.trim())return;
+     setState(s=>({...s,chatComposers:{...s.chatComposers,[task.id]:addComposerTodo(s.chatComposers?.[task.id]??defaultComposer(),draft,uid(),new Date().toISOString())},drafts:{...s.drafts,[task.id]:''}}));
+     requestAnimationFrame(()=>composerRef.current?.focus());
+     return;
+   }
    if(working||(!draft.trim()&&!contextAttachment&&!attached.length&&!frameAttachments.length))return;
    const id=task.id===launchTask.id?uid():task.id;
    const linked=annotations.filter(note=>note.todo&&(contextAttachment?.annotationId===note.id||(note.chatId===task.id&&draft.includes(`[Frame annotation ${note.id}]`))));
@@ -248,7 +281,9 @@ export function Workbench() {
    setState(s=>{
      const submitted={...task,id, title:task.title==='New chat'?(draft.trim()||contextAttachment?.text||frameAttachments[0]?.label||'Shared files').slice(0,80):task.title,
        status:isTaskChat?'In progress' as const:task.status,updated:now(),input:[...new Set([...task.input,...attached])],messages:[...task.messages,message]};
-     return {...s,frameAttachments:{...s.frameAttachments,[task.id]:[]},drafts:{...s.drafts,[task.id]:''},tasks:s.tasks.some(t=>t.id===id)?s.tasks.map(t=>t.id===id?submitted:t):[...s.tasks,submitted]};
+     const chatComposers={...s.chatComposers,[id]:s.chatComposers?.[task.id]??defaultComposer()};
+     if(id!==task.id)delete chatComposers[task.id];
+     return {...s,chatComposers,frameAttachments:{...s.frameAttachments,[task.id]:[]},drafts:{...s.drafts,[task.id]:''},tasks:s.tasks.some(t=>t.id===id)?s.tasks.map(t=>t.id===id?submitted:t):[...s.tasks,submitted]};
    });
    setTodoAttachments(current=>{const next={...current};delete next[task.id];return next;});
    setQueuedFiles(current=>({...current,[task.id]:[]}));
@@ -278,7 +313,7 @@ export function Workbench() {
   {!collapsed&&<button className="navigation-backdrop" aria-label="Close navigation" onClick={()=>setCollapsed(true)}/>}
   <aside id="main-navigation" className="mw-sidebar" aria-label="Main navigation" inert={collapsed} onKeyDown={e=>{if(e.key==='Escape'){setCollapsed(true);requestAnimationFrame(()=>document.getElementById('navigation-toggle')?.focus());}}}>
    <div className="sidebar-main">
-   <div className="mw-brand"><button className="workspace-brand" title="Collapse navigation" aria-label="Collapse navigation" onClick={()=>setCollapsed(true)}><img className="workspace-logo" src={mitwerkLogo} alt="MitWerk"/></button><div className="sidebar-header-actions"><IconButton label="Search workspace" onClick={()=>{setSearch('');setModal('search');}}><Search size={18}/></IconButton><button className={`mw-icon inbox-toggle ${sidebarInbox?'active':''}`} aria-label={sidebarInbox?'Close inbox':'Open inbox'} aria-pressed={sidebarInbox} title="Inbox" onClick={toggleInbox}><Bell size={18}/>{unread>0&&<span className="unread-dot"/>}</button></div></div>
+   <div className="mw-brand"><button className="workspace-brand" title="Collapse navigation" aria-label="Collapse navigation" onClick={()=>setCollapsed(true)}><img className="workspace-logo" src={mitwerkLogo} alt="MitWerk"/></button><div className="sidebar-header-actions"><IconButton label="Search workspace" onClick={()=>{setSearch('');setModal('search');}}><Search size={18}/></IconButton><ThemeToggle theme={theme} onChange={setTheme} size={18}/><button className={`mw-icon inbox-toggle ${sidebarInbox?'active':''}`} aria-label={sidebarInbox?'Close inbox':'Open inbox'} aria-pressed={sidebarInbox} title="Inbox" onClick={toggleInbox}><Bell size={18}/>{unread>0&&<span className="unread-dot"/>}</button></div></div>
    <div className="sidebar-nav">{sidebarInbox?<button className="mw-nav-item new-chat" onClick={newChat}><SquarePen size="var(--sidebar-nav-icon-size)"/><span>New chat</span></button>:<nav><button className="mw-nav-item new-chat" onClick={newChat}><SquarePen size="var(--sidebar-nav-icon-size)"/><span>New chat</span></button>{nav.map(({name,icon:I})=><button key={name} title={name} aria-current={view===name?'page':undefined} className={`mw-nav-item ${view===name?'active':''}`} onClick={()=>navigate(name)}><I size="var(--sidebar-nav-icon-size)"/><span>{name}</span>{name==='Inbox'&&unread>0&&<b>{unread}</b>}</button>)}</nav>}</div>{sidebarInbox?<div className="sidebar-inbox" aria-label="Inbox conversations">{['Priority','Recent'].map(group=>{const items=state.tasks.filter(t=>t.kind==='mit'&&(group==='Priority'?(t.unread||t.status==='Ready for review'):(!t.unread&&t.status!=='Ready for review')));return items.length>0&&<section key={group}><h2>{group}</h2>{items.map(t=><button key={t.id} title={`${t.title} · ${state.projects.find(p=>p.id===t.projectId)?.name||t.mit}`} className={`sidebar-inbox-item ${view==='dialog'&&activeId===t.id?'current':''}`} onClick={()=>openTask(t.id)}><span className="inbox-task-title">{t.unread&&<i/>}<strong>{t.title}</strong></span><p>{t.messages.at(-1)?.text.split('\n').filter(Boolean).slice(0,2).join(' ')||(t.messages.at(-1)?.assetIds?.length?'Shared an attachment':'Start this conversation')}</p></button>)}</section>})}{!state.tasks.some(t=>t.kind==='mit')&&<p className="sidebar-inbox-empty">No conversations yet. Start a new chat.</p>}</div>:
    <div className="sidebar-section project-navigation"><button type="button" className="sidebar-label" onClick={()=>navigate('Projects')}><span className="project-section-title">Projects</span><ArrowUpRight size={12} aria-hidden="true"/></button>{state.projects.filter(p=>!p.archived).map(p=><div className="sidebar-project-group" style={projectColor(state.projects,p.id)} key={p.id}><button className={`sidebar-project ${view==='project'&&currentProject.id===p.id?'current':''}`} aria-expanded={expandedProjects.includes(p.id)} aria-controls={`project-tasks-${p.id}`} onClick={()=>{setCollapsed(false);setExpandedProjects(ids=>ids.includes(p.id)?ids.filter(id=>id!==p.id):[...ids,p.id]);}} title={p.name}><Folder size="var(--sidebar-nav-icon-size)"/><span>{p.name}</span></button>{expandedProjects.includes(p.id)&&<div id={`project-tasks-${p.id}`} className="sidebar-task-list">{tasksForProject(state.tasks,p.id).filter(t=>t.kind==='mit').map(t=><button key={t.id} className={`${view==='dialog'&&activeId===t.id?'current':''}`} onClick={()=>openTask(t.id)} title={t.title}><span>{t.title}</span>{isTodoChat(t)&&<span className={`sidebar-task-status status-${statuses.indexOf(t.status)}`} role="img" aria-label={t.status} title={t.status}>{t.status==='Complete'?<i className="ph ph-check-circle" aria-hidden="true"/>:<span className="status-dot"/>}</span>}</button>)}{!tasksForProject(state.tasks,p.id).length&&<p>No tasks yet</p>}</div>}</div>)}</div>
    }
@@ -287,21 +322,30 @@ export function Workbench() {
   </aside>
   {!collapsed&&<SidebarResize onResize={sidebarWidth.update}/>}
   <div className="mw-main">
-   <header id="workspace-bar" className="mw-topbar"><div className="workspace-navigation">{collapsed&&<button id="navigation-toggle" className="mw-icon" aria-label="Expand navigation" aria-expanded={false} aria-controls="main-navigation" onClick={()=>setCollapsed(false)}><PanelLeftOpen size={17}/></button>}<div className="mw-breadcrumb"><button onClick={()=>navigate('Projects')}>Projects</button><ChevronRight size={13}/><button onClick={()=>{if(view==='dialog'){if(dialogProject)openProject(dialogProject.id);else navigate('Inbox');}else if(view==='project')navigate('Projects');else navigate(view);}}>{view==='dialog'?(dialogProject?.name||'Inbox'):view==='project'?'Projects':view}</button>{(view==='dialog'||view==='project')&&<><ChevronRight size={13}/><span title={view==='project'?currentProject.name:task.title}>{view==='project'?currentProject.name:task.title}</span></>}</div></div><div className="topbar-right">{view!=='dialog'&&view!=='Todos'&&<button type="button" className="mw-button version-control-button" onClick={openVersionControl}>Version control</button>}<>{collapsed&&<><IconButton label="Search workspace" onClick={()=>{setSearch('');setModal('search');}}><Search size={17}/></IconButton><IconButton label="Open inbox" onClick={toggleInbox}><Bell size={17}/></IconButton></>}</></div></header>
-   {(view==='dialog'||openedAsset)&&<WorkspaceTabs assets={openAssetIds.map(id=>allAssets.find(a=>a.id===id)).filter((a):a is Asset=>!!a)} onClose={closeAssetTab} selected={selectedPane} fullscreen={!reader||expanded} onSelect={selectPane} onToggle={toggleWorkspaceFullscreen}/>}
-   <div ref={bodyRef} className={`mw-body ${reader?'reader-open':''} ${expanded?'reader-expanded':''} ${reader&&!expanded?'mw-split-view':''}`} style={{'--reader-width':`${readerWidth}%`} as CSSProperties}>
-    <main id="workspace-pane-chat" aria-labelledby={view==='dialog'?'workspace-tab-chat':undefined} className="mw-surface">
+   <header id="workspace-bar" className="mw-topbar">
+    <button id="navigation-toggle" type="button" className="workspace-brand" aria-label={collapsed?'Open side panel':'Close side panel'} aria-expanded={!collapsed} aria-controls="main-navigation" onClick={()=>setCollapsed(open=>!open)}><img className="workspace-symbol" src={mitwerkSymbol} alt=""/><strong>MitWerk</strong></button>
+    <nav className="workspace-links" aria-label="Workspace views">
+     <button aria-pressed={liveShown} aria-controls="workspace-pane-live" onClick={()=>togglePanel('live')}><PhosphorIcon name="globe" size={15}/><span className="workspace-link-label">Live server</span></button>
+     <button aria-pressed={versionShown&&reader==='prototype'} aria-controls="workspace-pane-version" onClick={()=>togglePanel('version')}><PhosphorIcon name="circuitry" size={15}/><span className="workspace-link-label">Version blocks</span></button>
+     <button aria-pressed={ideasShown} aria-controls="workspace-pane-ideas" onClick={()=>togglePanel('ideas')}><PhosphorIcon name="git-branch" size={15}/><span className="workspace-link-label">Idea stream</span></button>
+     <button aria-pressed={chatShown&&view==='dialog'} aria-controls="workspace-pane-chat" onClick={()=>togglePanel('chat')}><MessageSquare size={15}/><span className="workspace-link-label">Chat</span></button>
+     {openAssetIds.filter(id=>id!=='prototype').map(id=>{const asset=allAssets.find(a=>a.id===id);return asset&&<span className="workspace-resource" key={id}><button onClick={()=>selectPane(`asset:${id}`)}>{asset.title}</button><button aria-label={`Close ${asset.title}`} onClick={()=>closeAssetTab(id)}><X size={12}/></button></span>;})}
+    </nav>
+   </header>
+   <div ref={bodyRef} className={`mw-body ${reader?'reader-open':''} ${expanded?'reader-expanded':''} ${reader&&!expanded?'mw-split-view':''} ${liveOpen?'has-extra-panels':''} ${!chatVisible?'chat-hidden':''}`} style={{'--reader-width':`${readerWidth}%`} as CSSProperties}>
+    <main hidden={!chatShown} id="workspace-pane-chat" aria-label="Conversation" className="mw-surface">
      {view==='dialog' ? <section className={`mw-dialog ${isNewChat?'new-chat-launch':''} ${!task.messages.length?'empty-chat':''}`} aria-label={isNewChat?'New chat':isTaskChat?'Task conversation':'Chat conversation'}>
+      <PanelHeader title={isNewChat?'New chat':task.title} icon="chat" expanded={!reader} onToggle={()=>{setSelectedPane('chat');if(!reader){setReader('prototype');setExpanded(false);}else{setReader(null);setExpanded(false);}}}/>
       {!isNewChat&&(isTaskChat||task.messages.length>0)&&!reader&&<ConversationCards task={task} details={taskDetails} assets={allAssets} working={working} onStatus={setDetailsStatus} onAttachFile={()=>fileRef.current?.click()} renderAsset={asset=>assetButton(asset,true)}/>}
 
 
       <div className="conversation-scroll" ref={scrollRef}><div className="conversation-inner">{isNewChat?<div className="new-chat-welcome"><h1>What would you like to work on?</h1><p>Start with an idea, a question, or a file.</p></div>:task.messages.length===0&&isTaskChat&&<div className="conversation-empty"><Avatar isMit={task.kind==='mit'} name={task.mit}/><h2>{task.kind==='colleague'?`Say hello to ${task.mit}.`:`Work it out with ${task.mit}.`}</h2><p>{task.kind==='colleague'?'Send a message or share a file. Start a project together when you’re ready.':'Describe what you want to explore. Your inputs stay close, and each output has a place to return to.'}</p></div>}
-       {task.messages.map(m=><article className={`mw-message ${m.role==='user'?'from-user':''}`} key={m.id}>{m.role!=='user'&&<div className="message-byline"><strong>{m.role==='mit'?'Mit':m.name}</strong>{m.role==='mit'&&<span className="mit-label" style={{'--mit-role-tint':`var(--mit-role-${mitRoleTone(mitRole(m.name))}-tint)`} as CSSProperties}>{mitRole(m.name)}</span>}</div>}<div className="message-content">{(m.role==='user'?visibleMessageText(m.text):m.text).split('\n\n').map((p,i)=><p key={i}>{p}</p>)}{m.frames?.map(frame=><FrameContextChip key={frame.id} frame={frame}/>)}{m.assetIds?.map(id=>allAssets.find(a=>a.id===id)).filter((a):a is Asset=>!!a).map(a=>assetButton(a))}{m.assetId&&allAssets.find(a=>a.id===m.assetId)&&assetButton(allAssets.find(a=>a.id===m.assetId)!)}</div><time className="message-time">{m.time}</time></article>)}
+       {task.messages.map(m=><article className={`mw-message ${m.role==='user'?'from-user':''}`} key={m.id} aria-label={`${m.role==='user'?'You':m.name} at ${m.time}`}>{m.role==='colleague'&&<div className="message-byline"><strong>{m.name}</strong></div>}<div className="message-content">{(m.role==='user'?visibleMessageText(m.text):m.text).split('\n\n').map((p,i)=><p key={i}>{p}</p>)}{m.frames?.map(frame=><FrameContextChip key={frame.id} frame={frame}/>)}{m.assetIds?.map(id=>allAssets.find(a=>a.id===id)).filter((a):a is Asset=>!!a).map(a=>assetButton(a))}{m.assetId&&allAssets.find(a=>a.id===m.assetId)&&assetButton(allAssets.find(a=>a.id===m.assetId)!)}</div>{m.versionOutput&&<MessageOutput output={m.versionOutput} onOpen={()=>{setReader('prototype');setExpanded(false);setSelectedPane('version');}}/>}<time className="message-time">{m.time}</time></article>)}
        {working&&<div className="run-progress" role="status"><LoaderCircle size={15} className="spinning"/><span>{task.mit} is preparing a sample response…</span></div>}
        {isTaskChat&&task.status==='Ready for review'&&!working&&<div className="review-bar"><div className="review-heading"><strong>Ready for review</strong><small>Take a look before moving forward.</small></div><div><button className="mw-button" onClick={()=>{setStatus('In progress');composerRef.current?.focus();}}>Continue refining</button><button className="mw-button primary" onClick={()=>{setStatus('Complete');setNotice('Task marked complete. Its conversation and outputs are preserved.');}}><Check size={14}/>Mark complete</button></div></div>}
        {isTaskChat&&task.status==='Complete'&&<div className="review-bar"><div className="review-heading"><strong>Marked as complete</strong></div><div><button className="mw-button" onClick={()=>setStatus('In progress')}>Undo</button></div></div>}
       </div></div>
-      <div className="composer-area"><form className={`mw-composer ${working?'is-working':''}`} onSubmit={e=>{e.preventDefault();send();}}>{frameAttachments.map(frame=><FrameContextChip key={frame.id} frame={frame} onRemove={()=>removeFrameContext(frame.id)}/>)}{contextAttachment&&<TodoContextChip text={contextAttachment.text} onRemove={()=>setTodoAttachments(current=>{const next={...current};delete next[task.id];return next;})}/>}{attached.length>0&&<div className="queued-attachments">{attached.map(id=><span key={id}><Paperclip size={13}/>{allAssets.find(a=>a.id===id)?.title}<IconButton label={`Remove ${allAssets.find(a=>a.id===id)?.title}`} onClick={()=>setQueuedFiles(q=>({...q,[task.id]:attached.filter(x=>x!==id)}))}><X size={13}/></IconButton></span>)}</div>}<MentionInput key={task.id} inputRef={composerRef} value={draft} onChange={value=>setState(s=>({...s,drafts:{...s.drafts,[task.id]:value}}))} onSend={send} mits={state.mits} projectMitIds={dialogProject?.mitIds||[]} hasProject={!!dialogProject} enabled={task.kind==='mit'} placeholder={task.kind==='colleague'?`Message ${task.mit}…`:'Message…'}/><div className="composer-tools"><div><IconButton label="Attach file" onClick={()=>fileRef.current?.click()}><Paperclip size="var(--composer-attach-icon-size)"/></IconButton>{(isTaskChat||frameAttachments.length>0)&&!contextAttachment&&<TodoAttachMenu key={task.id} choices={todoChoices(state.tasks,annotations)} onSelect={attachTodoContext}/>}</div>{working?<button type="button" className="send-button" onClick={stop} aria-label="Stop demo run"><Square size={14} weight="fill"/></button>:<button type="submit" className="send-button" disabled={!draft.trim()&&!attached.length&&!contextAttachment&&!frameAttachments.length} aria-label="Send message"><ArrowUp size={18}/></button>}</div></form></div>
+      <div className="composer-area"><ComposerDrawer key={task.id} state={composer} onToggle={()=>updateComposer(current=>({...current,open:!current.open}))} onComplete={id=>updateComposer(current=>toggleComposerTodo(current,id))} onCapture={(key,value)=>updateComposer(current=>({...current,capture:{...current.capture,[key]:value}}))}><form className={`mw-composer ${working?'is-working':''}`} onSubmit={e=>{e.preventDefault();send();}}>{frameAttachments.map(frame=><FrameContextChip key={frame.id} frame={frame} onRemove={()=>removeFrameContext(frame.id)}/>)}{contextAttachment&&<TodoContextChip text={contextAttachment.text} onRemove={()=>setTodoAttachments(current=>{const next={...current};delete next[task.id];return next;})}/>}{attached.length>0&&<div className="queued-attachments">{attached.map(id=><span key={id}><Paperclip size={13}/>{allAssets.find(a=>a.id===id)?.title}<IconButton label={`Remove ${allAssets.find(a=>a.id===id)?.title}`} onClick={()=>setQueuedFiles(q=>({...q,[task.id]:attached.filter(x=>x!==id)}))}><X size={13}/></IconButton></span>)}</div>}<MentionInput key={task.id} inputRef={composerRef} value={draft} onChange={value=>setState(s=>({...s,drafts:{...s.drafts,[task.id]:value}}))} onSend={send} mits={state.mits} projectMitIds={dialogProject?.mitIds||[]} hasProject={!!dialogProject} enabled={task.kind==='mit'&&composer.mode==='prompt'} placeholder={task.kind==='colleague'?`Message ${task.mit}…`:'Message…'}/><div className="composer-tools"><div><IconButton label="Attach file" onClick={()=>fileRef.current?.click()}><Paperclip size="var(--composer-attach-icon-size)"/></IconButton><span className="composer-model">GPT Astra-6</span><ComposerModeSwitch mode={composer.mode} onChange={mode=>updateComposer(current=>({...current,mode}))}/></div>{working&&composer.mode==='prompt'?<IconButton label="Stop demo run" onClick={stop}><Square size={14} weight="fill"/></IconButton>:<IconButton type="submit" label={composer.mode==='todo'?'Add to to-do drawer':'Send message'} disabled={composer.mode==='todo'?!draft.trim():!draft.trim()&&!attached.length&&!contextAttachment&&!frameAttachments.length}><ArrowUp size={18}/></IconButton>}</div></form></ComposerDrawer></div>
      </section> : <div className="page-scroll">
       {view==='Home'&&<HomePage {...collaborationProps}/>}
       {view==='Projects'&&<ProjectsPage {...collaborationProps}/>}
@@ -318,13 +362,16 @@ export function Workbench() {
       {view==='Settings'&&<section className="settings-page"><div className="page-title"><div><h1>Settings</h1><p>Your personal workspace.</p></div></div><div className="setting-row"><span><strong>Appearance</strong><small>Use the MitWerk light or dark palette.</small></span><div className="mw-segmented"><button className={theme==='light'?'selected':''} onClick={()=>setTheme('light')}><Sun size={15}/>Light</button><button className={theme==='dark'?'selected':''} onClick={()=>setTheme('dark')}><Moon size={15}/>Dark</button></div></div><div className="setting-row"><span><strong>Profile</strong><small>{userName} · Designer</small></span><div className="profile-name-fields"><label className="form-label">First name<input value={userProfile.firstName} readOnly/></label><label className="form-label">Last name<input value={userProfile.lastName} readOnly/></label></div><Avatar name={userName}/></div><div className="setting-row"><span><strong>About this prototype</strong><small>Sample conversations and outputs. No live AI, colleague messaging or account connection.</small></span><span className="muted">Frontend demo</span></div></section>}
      </div>}
     </main>
-    {openedAsset&&<><div className="reader-divider" role="separator" aria-label="Resize reading window" aria-orientation="vertical" aria-valuemin={35} aria-valuemax={70} aria-valuenow={readerWidth} tabIndex={0} onPointerDown={e=>{e.preventDefault();drag.current=true;document.body.style.cursor='col-resize';}} onKeyDown={e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();setReaderWidth(w=>Math.max(35,Math.min(70,w+(e.key==='ArrowLeft'?3:-3))));}if(e.key==='Home')setReaderWidth(35);if(e.key==='End')setReaderWidth(70);}}/>
-     <aside id={`workspace-pane-${selectedPane==='chat'?'version':selectedPane}`} aria-labelledby={`workspace-tab-${selectedPane==='chat'?'version':selectedPane}`} className="mw-reader" aria-label="Reading window"><div className={`reader-content ${openedAsset.kind==='prototype'?'history-content':''}`}>
-       {openedAsset.kind==='prototype'&&<ReadingWorkspace initialMode="history"/>}
+    {openedAsset&&<><div hidden={!chatShown||!versionShown||liveOpen} className="reader-divider" role="separator" aria-label="Resize reading window" aria-orientation="vertical" aria-valuemin={35} aria-valuemax={70} aria-valuenow={readerWidth} tabIndex={0} onPointerDown={e=>{e.preventDefault();drag.current=true;document.body.style.cursor='col-resize';}} onKeyDown={e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();setReaderWidth(w=>Math.max(35,Math.min(70,w+(e.key==='ArrowLeft'?3:-3))));}if(e.key==='Home')setReaderWidth(35);if(e.key==='End')setReaderWidth(70);}}/>
+     <aside hidden={!versionShown} id={`workspace-pane-${selectedPane==='chat'?'version':selectedPane}`} className="mw-reader" aria-label="Reading window"><div className={`reader-content ${openedAsset.kind==='prototype'?'history-content':''}`}>
+       {openedAsset.kind==='prototype'&&<ReadingWorkspace initialMode="history" galleryOnly={!ideaOpen} ideaOpen={ideaOpen} expanded={expanded} onToggle={()=>{setSelectedPane('version');setExpanded(value=>!value);}}/>}
+       {openedAsset.kind!=='prototype'&&<PanelHeader title={openedAsset.title} expanded={expanded} onToggle={toggleWorkspaceFullscreen}/>}
        {openedAsset.kind==='image'&&(groupedImages&&showImageAlbum?<section className="reader-image-gallery" aria-label="Image gallery"><header><h2>Images</h2><span>{readerImages.length} images</span></header><div className="reader-image-grid">{readerImages.map(a=><button key={a.id} onClick={()=>{openAsset(a.id);}}><span className="gallery-image-frame"><img src={a.url} alt="" loading="lazy"/></span><span>{a.title}</span></button>)}</div></section>:<div className="image-reader">{groupedImages&&<button className="mw-button image-gallery-back" onClick={()=>setShowImageAlbum(true)}><ArrowLeft size={15}/>All images · {readerImages.length}</button>}<img src={openedAsset.url} alt={openedAsset.title}/><p>{openedAsset.title}</p></div>)}
        {openedAsset.kind==='document'&&<article className="document-reader"><div className="document-icon"><FileText size={24}/></div>{openedAsset.content?.split('\n\n').map((block,i)=>i===0?<h1 key={i}>{block}</h1>:<section key={i}>{block.includes('\n')?<><h2>{block.split('\n')[0]}</h2><p>{block.slice(block.indexOf('\n')+1)}</p></>:<p>{block}</p>}</section>)}</article>}
       </div>
      </aside></>}
+    {liveOpen&&<aside hidden={!liveShown} id="workspace-pane-live" className="workspace-extra-panel" aria-label="Live server"><PanelHeader title="Live server" icon="globe"/><div className="workspace-panel-empty"><p>No live server is connected to this workspace yet.</p></div></aside>}
+    {!chatShown&&!versionShown&&!ideasShown&&!liveShown&&<div className="workspace-panel-empty">Choose a panel from the workspace bar.</div>}
    </div>
   </div>
   <input ref={fileRef} className="visually-hidden" type="file" tabIndex={-1} accept="image/*,.txt,.md,.json,.csv" aria-label="Choose attachment" onChange={e=>{const f=e.target.files?.[0];if(f)void attach(f).catch(()=>setNotice('Could not read this file. Please try another.'));e.target.value='';}}/>

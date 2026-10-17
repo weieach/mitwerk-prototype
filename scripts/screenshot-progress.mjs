@@ -1,3 +1,4 @@
+import { appendPromptEntry } from '../src/shared/prompt-log.mjs';
 import { captureSummaryMaxLength } from '../src/shared/capture-format.mjs';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { appendFileSync, closeSync, constants, cpSync, existsSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -301,7 +302,7 @@ function readStash(conversationId) {
     if (!existsSync(path)) {
       continue;
     }
-    const text = readFileSync(path, 'utf8').trim();
+    const text = readFileSync(path, 'utf8');
     if (text) {
       return text;
     }
@@ -311,14 +312,14 @@ function readStash(conversationId) {
 
 function textFromUnknown(value) {
   if (typeof value === 'string') {
-    return value.trim();
+    return value;
   }
   if (Array.isArray(value)) {
-    return value.map(textFromUnknown).filter(Boolean).join(' ').trim();
+    return value.map(textFromUnknown).filter(text => text.trim()).join('\n');
   }
   if (value && typeof value === 'object') {
     if (typeof value.text === 'string') {
-      return value.text.trim();
+      return value.text;
     }
     if (value.content) {
       return textFromUnknown(value.content);
@@ -471,8 +472,16 @@ function wantsResetCapture(prompt = '') {
     || /\bcapture\b[\s\S]{0,80}\breset view\b/i.test(prompt) || /\breset view\b[\s\S]{0,40}\bcapture\b/i.test(prompt);
 }
 
+function wantsIdeaStreamCapture(prompt = '') {
+  return /\bc idea stream\b/i.test(prompt);
+}
+
 function wantsHomeCapture(prompt = '') {
-  return argValue('gallery-view') === 'home' || /\bc home\b/i.test(prompt);
+  return argValue('gallery-view') === 'home' || /\bc (?:home|homescreen)\b/i.test(prompt);
+}
+
+function wantsDarkCapture(prompt = '') {
+  return /\bc(?:\s+(?:home|homescreen|chat|gallery|theater|token|todos|to-dos))?\s+(?:w\/?\s+)?dark mode\b/i.test(prompt);
 }
 
 function chatCaptureTitle(prompt = '') {
@@ -527,9 +536,11 @@ function wantsGalleryHover(prompt = '') {
 function screenshotUrl(prompt = '') {
   const target = new URL(url);
   target.searchParams.set('screenshot', '1');
+  if (wantsDarkCapture(prompt)) target.searchParams.set('theme', 'dark');
   // Capture the complete prototype shell, retaining gallery state parameters.
   target.searchParams.delete('view');
   target.searchParams.set('treeMode', argValue('tree-mode', 'history'));
+  if (wantsIdeaStreamCapture(prompt)) { target.searchParams.set('ideaStream', '1'); target.searchParams.delete('galleryView'); return target.href; }
   if (wantsTodosCapture(prompt)) {
     target.searchParams.set('page', 'todos');
     if (/todo navigation dialog/i.test(prompt)) target.searchParams.set('todoDialog', 'navigation');
@@ -653,28 +664,34 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
     const result = await cdp('Runtime.evaluate', {
-      expression: wantsTodosCapture(prompt)
-        ? `document.documentElement.dataset.screenshotReady === "1" && !!document.querySelector(".todos-page .kanban") && !document.querySelector(".mw-reader")${/todo navigation dialog/i.test(prompt) ? ' && !!document.querySelector(".todo-navigation-dialog[open]")' : ''}`
+      expression: wantsIdeaStreamCapture(prompt)
+        ? '!!document.querySelector(".workspace-idea-split #workspace-pane-ideas .tree-viewport") && document.querySelector(".iteration-gallery")?.dataset.galleryPhase === "theater" && document.querySelector(".theater-view")?.dataset.frameReady === "true" && !!document.querySelector(".theater-screen img")?.complete'
+        : wantsTodosCapture(prompt)
+        ? `(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && !!document.querySelector(".todos-page .kanban") && !document.querySelector(".mw-reader")${/todo navigation dialog/i.test(prompt) ? ' && !!document.querySelector(".todo-navigation-dialog[open]")' : ''}`
         : wantsSideBySideCapture(prompt)
-        ? `document.documentElement.dataset.screenshotReady === "1" && !!document.querySelector(".mw-dialog") && !!document.querySelector(".mw-reader .workspace") && !document.querySelector(".reader-expanded")${/\btoast\b/i.test(prompt) ? ' && !!document.querySelector(".mw-toast")' : ''}`
+        ? `(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && !!document.querySelector(".mw-dialog") && !!document.querySelector(".mw-reader .workspace") && !document.querySelector(".reader-expanded")${/\btoast\b/i.test(prompt) ? ' && !!document.querySelector(".mw-toast")' : ''}`
         : wantsChatCapture(prompt)
-        ? `document.documentElement.dataset.screenshotReady === "1" && !!document.querySelector(".mw-dialog") && !document.querySelector(".mw-reader")${/page scrolled to top/i.test(prompt) ? ' && document.querySelector(".conversation-scroll")?.scrollTop === 0' : ''}`
+        ? `(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && !!document.querySelector(".mw-dialog") && !document.querySelector(".mw-reader")${/page scrolled to top/i.test(prompt) ? ' && document.querySelector(".conversation-scroll")?.scrollTop === 0' : ''}`
         : wantsHomeCapture(prompt)
-        ? 'document.documentElement.dataset.screenshotReady === "1"'
+        ? '(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas"))'
         : wantsTokenCapture(prompt)
-        ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.tokenUsageReady === "true"'
+        ? '(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && document.querySelector(".album-3d-viewport")?.dataset.tokenUsageReady === "true"'
         : wantsTransitionCapture(prompt)
-        ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.transitionReady === "true"'
+        ? '(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && document.querySelector(".album-3d-viewport")?.dataset.transitionReady === "true"'
         : wantsTheaterCapture(prompt)
-        ? `document.documentElement.dataset.screenshotReady === "1" && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete && (() => { const tag = document.querySelector(".annotation-tag"); return !tag || (tag.classList.contains("is-ready") && !tag.getAnimations().some(animation => animation.playState === "running")); })()${/annotation overlay|\bc theater overlay\b/i.test(prompt) ? ' && !!document.querySelector(".annotation-overlay[open][data-entered=true]")' : ''}${/overlay open/i.test(prompt) ? ' && !!document.querySelector(".theater-fullscreen") && !document.querySelector(".theater-fullscreen .is-exit")' : ''}${/mobile breakpoint|\bat mobile\b/i.test(prompt) ? ' && document.querySelector("[aria-label=\\"Preview viewport\\"]")?.value === "phone" && !!document.querySelector(".theater-frame-bed")' : ''}${/prototype (?:is )?entered|prototype mode/i.test(prompt) ? ' && !!document.querySelector("[aria-label=\\"Preview viewport\\"]")' : ''}${/playhead at last frame/i.test(prompt) ? ' && document.querySelector(".theater-view")?.dataset.rangeEdge === "end" && (() => { const head = document.querySelector(".gallery-timeline-playhead"); const scroller = document.querySelector(".gallery-timeline-scroll"); if (!head || !scroller) return false; const h = head.getBoundingClientRect(); const s = scroller.getBoundingClientRect(); return h.left >= s.left - 4 && h.right <= s.right + 4; })()' : ''}`
+        ? `(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete && (() => { const tag = document.querySelector(".annotation-tag"); return !tag || (tag.classList.contains("is-ready") && !tag.getAnimations().some(animation => animation.playState === "running")); })()${/annotation overlay|\bc theater overlay\b/i.test(prompt) ? ' && !!document.querySelector(".annotation-overlay[open][data-entered=true]")' : ''}${/overlay open/i.test(prompt) ? ' && !!document.querySelector(".theater-fullscreen") && !document.querySelector(".theater-fullscreen .is-exit")' : ''}${/mobile breakpoint|\bat mobile\b/i.test(prompt) ? ' && document.querySelector("[aria-label=\\"Preview viewport\\"]")?.value === "phone" && !!document.querySelector(".theater-frame-bed")' : ''}${/prototype (?:is )?entered|prototype mode/i.test(prompt) ? ' && !!document.querySelector("[aria-label=\\"Preview viewport\\"]")' : ''}${/playhead at last frame/i.test(prompt) ? ' && document.querySelector(".theater-view")?.dataset.rangeEdge === "end" && (() => { const head = document.querySelector(".gallery-timeline-playhead"); const scroller = document.querySelector(".gallery-timeline-scroll"); if (!head || !scroller) return false; const h = head.getBoundingClientRect(); const s = scroller.getBoundingClientRect(); return h.left >= s.left - 4 && h.right <= s.right + 4; })()' : ''}`
         : /annotation overlay|\bc theater overlay\b/i.test(prompt)
-        ? 'document.documentElement.dataset.screenshotReady === "1" && !!document.querySelector(".annotation-overlay[open][data-entered=true]") && document.querySelector(".annotation-preview")?.complete'
+        ? '(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && !!document.querySelector(".annotation-overlay[open][data-entered=true]") && document.querySelector(".annotation-preview")?.complete'
         : wantsGalleryHover(prompt)
-        ? 'document.documentElement.dataset.screenshotReady === "1" && document.querySelector(".album-3d-viewport")?.dataset.inspectionReady === "true"'
-        : 'document.documentElement.dataset.screenshotReady === "1"',
+        ? '(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && document.querySelector(".album-3d-viewport")?.dataset.inspectionReady === "true"'
+        : '(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas"))',
       returnByValue: true,
     });
     if (result.result?.value === true) {
+      if (wantsDarkCapture(prompt)) {
+        const themed = await cdp('Runtime.evaluate', { expression: 'document.documentElement.dataset.theme === "dark" && document.querySelector(".mw-app")?.dataset.theme === "dark"', returnByValue: true });
+        if (themed.result?.value !== true) { await delay(100); continue; }
+      }
       if (wantsChatCapture(prompt)||wantsTodosCapture(prompt)||wantsHomeCapture(prompt)) return;
       const shell = await cdp('Runtime.evaluate', { expression: '!!document.querySelector(".mw-reader .workspace") && !!document.querySelector("#main-navigation")', returnByValue: true });
       if (shell.result?.value === true) return;
@@ -1189,6 +1206,13 @@ async function takeScreenshot({ tag, label, sha, base }) {
     }
   }
   const count = nextTagCount(screenshotsDir, tag);
+  if (tag === 'prompt') {
+    const logPath = join(root, 'docs/prompt-log.md');
+    mkdirSync(dirname(logPath), { recursive: true });
+    const before = existsSync(logPath) ? readFileSync(logPath, 'utf8') : '# Full prompt log\n';
+    const after = appendPromptEntry(before, count, label);
+    if (after !== before) writeFileSync(logPath, after);
+  }
   const files = tag === 'push' ? countChangedFiles(tag, sha, base) : 0;
   const lines = tag === 'push' ? countLineChanges(sha, base) : countWorkingTreeLineChanges();
   const filename = `${frameStem({ tag, count, files, ...lines, message })}-${timecode()}.png`;
@@ -1277,7 +1301,7 @@ async function main() {
   const tag = argValue('tag', event === 'stop' || event === 'beforeSubmitPrompt' ? 'prompt' : 'push');
   const sha = argValue('sha', 'HEAD');
   const base = argValue('base');
-  const label = argValue('label')
+  const label = (argValue('label-file') ? readFileSync(argValue('label-file'), 'utf8') : argValue('label'))
     || (tag === 'prompt' ? labelFromHook(payload) : git(['log', '-1', '--pretty=%s', sha]));
 
   if (!hookMode && tag === 'prompt' && !hasFlag('manual-prompt')) {
@@ -1333,7 +1357,7 @@ async function main() {
     if (failOpen) {
       return;
     }
-    process.exit(1);
+    process.exitCode = 1;
   } finally {
     if (promptLock) releaseCaptureLock();
   }
