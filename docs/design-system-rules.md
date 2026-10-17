@@ -1293,3 +1293,9 @@ This file is reserved for project-wide design-system rules requested by the user
 - The message box keeps one equal inset (`--composer-inset` = panel radius − drawer radius, 10px) from the panel's sides and bottom, so its corners are concentric with the panel.
 - The to-do section above the composer is labeled “To-do” (accessible name “To-dos”); the word “drawer” is not shown.
 - Choosing “Not yet” on a milestone invitation folds the version card to `--milestone-dismiss-scale` (50%) of its height over `--motion-layout`; the preview keeps its aspect ratio, so it shrinks and slides left with the card.
+
+## System page follows the product; light-mode hierarchy — 2026-10-17
+
+- Supersedes the three-layer `src/design-system/tokens.css` and its Milestone / To-do / Bucket / Composed showcase, which the product never used; they are removed. `?view=system` is now a live reference that resolves the product's own tokens (surfaces, text, strokes, layout, motion, type) from the running stylesheet, in the current theme, so it cannot drift from the app.
+- Light mode inverts the old white-page hierarchy: panels are a soft gray (`--paper` #f5f5f3 on `--workspace-background` #e2e2df), and only what you act on is lighter — the message box and in-chat version and milestone cards are white (`--message-version-fill`), and your own sent messages are a low-contrast near-white (`--user-message-fill` #fafaf9). Control fills and the To-do section sit one step below the panel.
+- Card folds (milestone “Not yet”, the system page fold demo) use `--motion-fold` (380ms) with `--ease-fold`, which moves on the first frame and then settles; the slow-in layout curve read as a hitch after a click.

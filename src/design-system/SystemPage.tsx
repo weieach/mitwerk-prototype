@@ -1,31 +1,53 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useTheme } from '../shared/theme';
 import { PhosphorIcon } from '../components/PhosphorIcon';
-import { BucketChip, CaptureLine, ComposerTabs, MetaLabel, TodoList, bucketHues } from './components';
-import type { ComposerMode, Todo } from './components';
-import './tokens.css';
-import './components.css';
 import './system-page.css';
 
-const grays = ['0', '50', '100', '150', '200', '300', '400', '500', '600', '700', '800', '850', '900', '950'];
-const blues = ['100', '200', '300', '400', '500', '600', '800', '900'];
-const semantic: [string, string][] = [
-  ['bg-canvas', 'Page behind panels'], ['bg-surface', 'Panels'], ['bg-raised', 'Cards, composer'], ['bg-sunken', 'Inputs, wells'], ['bg-hover', 'Row hover'], ['bg-selected', 'Selected row'],
-  ['text-primary', 'Titles, body'], ['text-secondary', 'Supporting'], ['text-tertiary', 'Metadata'], ['accent', 'Milestone, focus'], ['accent-soft', 'Accent wash'], ['success', 'Done'], ['warning', 'Needs review'], ['danger', 'Error'],
+/** Live reference for the tokens the product actually uses. Every value is read from the running stylesheet, so it never drifts from the app. */
+const colorGroups: [string, [string, string][]][] = [
+  ['Surfaces', [['--workspace-background', 'Behind panels'], ['--paper', 'Panel'], ['--fill', 'Control fill'], ['--user-message-fill', 'Own message'], ['--composer-drawer-surface', 'To-do section'], ['--composer-surface', 'Message box'], ['--capture-chip-surface', 'Bucket chip'], ['--capture-edit-surface', 'Chip editing']]],
+  ['Text', [['--ink', 'Primary'], ['--muted', 'Secondary'], ['--faint', 'Tertiary'], ['--capture-detail-placeholder', 'Placeholder']]],
+  ['Lines and strokes', [['--line', 'Hairline'], ['--line-strong', 'Divider'], ['--stroke-strong', 'Emphasis stroke'], ['--inline-field-line', 'Field underline'], ['--view-tag-bg', 'View tag']]],
+  ['Branches', [['--contrast', 'Main branch']]],
 ];
-const typeScale: [string, string, string][] = [
-  ['numeral', '27', 'Counts, big stats'], ['display', 'Build the gallery', 'Milestone progress'], ['title', 'Isometric album with date ruler', 'Card titles'],
-  ['body', 'Parse capture filenames into frames and versions.', 'Messages, to-dos'], ['control', 'Add milestone', 'Buttons, tabs'], ['meta', 'v14 → v19 · 4da75ec', 'Hashes, times'], ['label', 'Milestone · 03', 'Uppercase labels'],
+const layoutTokens: [string, string][] = [
+  ['--workspace-edge', 'Panel to screen edge'], ['--workspace-gutter', 'Panel to panel'], ['--workspace-radius', 'Panel corner'],
+  ['--panel-heading-height', 'Panel title row'], ['--panel-title-inset', 'Title icon inset'], ['--panel-title-gap', 'Icon to title'],
+  ['--panel-pill-inset', 'Title pill inset'], ['--panel-pill-radius', 'Title pill corner'], ['--composer-inset', 'Message box inset'],
+  ['--composer-drawer-radius', 'To-do section corner'], ['--capture-chip-height', 'Bucket chip height'],
 ];
-const sampleTodos: Todo[] = [
-  { id: 'a', text: 'Parse capture filenames into frames', done: true, bucket: 'homescreen', owner: 'Mit' },
-  { id: 'b', text: 'Render blocks with WebGL', done: true, bucket: 'gallery', owner: 'Mit' },
-  { id: 'c', text: 'Date ruler under versions', done: false, bucket: 'gallery', owner: 'You' },
-  { id: 'd', text: 'Hover lifts frame and shows summary', done: false, bucket: 'editor overlay', owner: 'Mit' },
-  { id: 'e', text: 'Create 3D shader for capture planes', done: false, owner: 'You' },
+const motionTokens: [string, string][] = [
+  ['--motion-instant', 'Press'], ['--motion-fast', 'Hover, unhover, color'], ['--motion-base', 'Menus, fields'], ['--motion-layout', 'Panel frames'], ['--motion-fold', 'Card folds'],
+  ['--ease-standard', 'Feedback'], ['--ease-enter', 'Reveals'], ['--ease-layout', 'Layout'], ['--ease-fold', 'Folds'],
 ];
-const buckets: [string, number][] = [['homescreen', 24], ['gallery', 18], ['editor overlay', 9], ['theater', 6], ['landing', 3], ['token view', 2]];
+const typeSamples: [string, CSSProperties, string][] = [
+  ['Panel title', { font: '500 13px/1.3 var(--sans)' }, 'Building an iteration gallery'],
+  ['Message', { font: '400 13px/1.45 var(--sans)' }, 'The gallery camera now owns zoom directly.'],
+  ['Control', { font: '500 12px/1.2 var(--sans)' }, 'Add milestone'],
+  ['Chip', { font: '400 10px/1.2 var(--sans)' }, 'homescreen'],
+  ['View label', { font: '400 11px/1.45 var(--panel-view-font)' }, 'Gallery'],
+];
+
+/** Resolves each token to its final value (calc and color-mix included) by applying it to a hidden probe. */
+function useTokenValues(names: string[], theme: string) {
+  const [values, setValues] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const raw = getComputedStyle(document.documentElement);
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;height:0';
+    document.body.appendChild(probe);
+    const resolve = (name: string) => {
+      const value = raw.getPropertyValue(name).trim();
+      if (/^(\d|calc\()/.test(value) && !/(ms|s)$/.test(value)) { probe.style.width = `var(${name})`; return `${Math.round(probe.getBoundingClientRect().width * 10) / 10}px`; }
+      if (/^(#|rgb|color-mix|oklab|hsl)/.test(value)) { probe.style.color = `var(${name})`; return getComputedStyle(probe).color; }
+      return value;
+    };
+    setValues(Object.fromEntries(names.map(name => [name, resolve(name)])));
+    probe.remove();
+  }, [theme]);
+  return values;
+}
 
 function Section({ id, title, note, children }: { id: string; title: string; note?: string; children: ReactNode }) {
   return <section className="sys-section" id={id} aria-labelledby={`${id}-title`}>
@@ -34,98 +56,57 @@ function Section({ id, title, note, children }: { id: string; title: string; not
   </section>;
 }
 
-function Swatch({ token, label }: { token: string; label?: string }) {
-  return <figure className="sys-swatch">
-    <span className="sys-swatch-chip" style={{ background: `var(${token})` } as CSSProperties}/>
-    <figcaption><code>{token}</code>{label && <span>{label}</span>}</figcaption>
-  </figure>;
-}
-
 export function SystemPage() {
   const [theme, setTheme] = useTheme();
-  const [todos, setTodos] = useState(sampleTodos);
-  const [mode, setMode] = useState<ComposerMode>('todo');
-  const [activeBucket, setActiveBucket] = useState('gallery');
-  const toggle = (id: string) => setTodos(list => list.map(todo => todo.id === id ? { ...todo, done: !todo.done } : todo));
+  const names = [...colorGroups.flatMap(([, tokens]) => tokens.map(([name]) => name)), ...layoutTokens.map(([name]) => name), ...motionTokens.map(([name]) => name)];
+  const values = useTokenValues(names, theme);
+  const [folded, setFolded] = useState(false);
 
   return <div className="sys-page">
     <header className="sys-top">
-      <div className="sys-brand"><strong>MitWerk</strong><MetaLabel items={['Design system', 'v0.1', 'Dark first']}/></div>
-      <nav className="sys-nav" aria-label="Sections">{['principles', 'tokens', 'type', 'todo', 'bucket', 'composed'].map(id => <a key={id} href={`#${id}`}>{id}</a>)}</nav>
-      <button type="button" className="sys-theme" aria-pressed={theme === 'dark'} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-        <PhosphorIcon name={theme === 'dark' ? 'sun' : 'moon'} size={13}/>{theme === 'dark' ? 'Light' : 'Dark'}
-      </button>
+      <strong>MitWerk system</strong>
+      <nav className="sys-nav" aria-label="Sections">{['principles', 'color', 'layout', 'motion', 'type'].map(id => <a key={id} href={`#${id}`}>{id}</a>)}</nav>
+      <button type="button" className="sys-theme" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}><PhosphorIcon name={theme === 'dark' ? 'sun' : 'moon'} size={13}/>{theme === 'dark' ? 'Light' : 'Dark'}</button>
     </header>
-
     <main className="sys-main">
-      <Section id="principles" title="Principles">
+      <Section id="principles" title="Principles" note="Decisions taken while tuning the product itself. The full log is docs/design-system-rules.md.">
         <ol className="sys-principles">
-          <li><strong>Instrument, not decoration.</strong> Style comes from type, grid and hairlines. Effects are rare.</li>
-          <li><strong>Quiet work, loud milestones.</strong> Chat, lists and controls stay neutral. Accent, glow and grain belong to milestones.</li>
-          <li><strong>Data in mono.</strong> Hashes, versions, counts and labels use the mono face with tabular numbers.</li>
-          <li><strong>One accent.</strong> Blue means milestone or focus. Bucket hues only tag; they never fill.</li>
+          <li><strong>The tool leads.</strong> Chat, lists and controls stay quiet; the milestone invitation is the one loud moment.</li>
+          <li><strong>Frames move, content doesn't.</strong> Panels stretch, squeeze and sweep; nothing inside them scales or ghosts.</li>
+          <li><strong>No solid white strokes.</strong> Emphasis uses a soft stroke; the main branch is a light gray.</li>
+          <li><strong>Chips only for categories.</strong> Buckets and pages are chips; free text is a frameless field.</li>
+          <li><strong>Concentric corners.</strong> Anything inset in a panel takes the panel radius minus its inset.</li>
+          <li><strong>Edges reach edges.</strong> Hover fills run to the panel edge; controls never clip at narrow widths.</li>
         </ol>
       </Section>
 
-      <Section id="tokens" title="Tokens" note="Primitive → semantic → component. Components read semantic or component tokens only; themes swap the semantic layer.">
-        <h3 className="sys-sub">Primitive · gray</h3>
-        <div className="sys-ramp">{grays.map(step => <Swatch key={step} token={`--p-gray-${step}`}/>)}</div>
-        <h3 className="sys-sub">Primitive · blue</h3>
-        <div className="sys-ramp">{blues.map(step => <Swatch key={step} token={`--p-blue-${step}`}/>)}</div>
-        <h3 className="sys-sub">Primitive · bucket hues</h3>
-        <div className="sys-ramp">{bucketHues.map(hue => <Swatch key={hue} token={`--p-hue-${hue}`}/>)}</div>
-        <h3 className="sys-sub">Semantic · {theme}</h3>
-        <div className="sys-grid">{semantic.map(([name, label]) => <Swatch key={name} token={`--s-${name}`} label={label}/>)}</div>
+      <Section id="color" title="Color" note={`Live values in ${theme} mode. Dark is the default.`}>
+        {colorGroups.map(([group, tokens]) => <div key={group} className="sys-group">
+          <h3 className="sys-sub">{group}</h3>
+          <div className="sys-swatches">{tokens.map(([name, use]) => <figure key={name} className="sys-swatch">
+            <span className="sys-swatch-chip" style={{ background: `var(${name})` }}/>
+            <figcaption><span>{use}</span><code>{name}</code><code className="sys-value">{values[name]}</code></figcaption>
+          </figure>)}</div>
+        </div>)}
       </Section>
 
-      <Section id="type" title="Type" note="Neurial Grotesk for interface, mono for data.">
-        <dl className="sys-type">{typeScale.map(([name, sample, use]) => <div key={name}>
-          <dt><code>--s-text-{name}</code><span>{use}</span></dt>
-          <dd className={name === 'label' ? 'is-label' : undefined} style={{ font: `var(--s-text-${name})` }}>{sample}</dd>
+      <Section id="layout" title="Layout" note="Spacing and radius tokens, drawn at true size.">
+        <dl className="sys-rows">{layoutTokens.map(([name, use]) => <div key={name}>
+          <dt><span>{use}</span><code>{name}</code></dt>
+          <dd><i className="sys-bar" style={{ width: `var(${name})` }}/><code>{values[name]}</code></dd>
         </div>)}</dl>
       </Section>
 
-
-      <Section id="todo" title="To-do" note="Rows, not cards. Mono index, square check, bucket tag and owner on the right. Click to toggle.">
-        <div className="sys-panel"><TodoList title="To-do" todos={todos} onToggle={toggle}/></div>
-      </Section>
-
-      <Section id="bucket" title="Capture bucket" note="User-named pages for capture and self-sorting. Hue is derived from the name, so it stays stable.">
-        <h3 className="sys-sub">States</h3>
-        <div className="sys-inline">
-          <BucketChip name="homescreen"/>
-          <BucketChip name="homescreen" count={24}/>
-          <BucketChip name="homescreen" active count={24}/>
-          <BucketChip name="homescreen" editable/>
-          <BucketChip name="homescreen" size="sm"/>
-        </div>
-        <h3 className="sys-sub">In a sentence</h3>
-        <CaptureLine bucket="homescreen" detail="editor overlay"/>
-        <h3 className="sys-sub">Filter bar</h3>
-        <div className="sys-inline" role="group" aria-label="Filter by bucket">
-          {buckets.map(([name, count]) => <BucketChip key={name} name={name} count={count} active={activeBucket === name} onClick={() => setActiveBucket(name)}/>)}
-          <button type="button" className="sys-add"><PhosphorIcon name="plus" size={11}/>New bucket</button>
+      <Section id="motion" title="Motion" note="Every transition reads these tokens. Try the fold, which uses the fold timing.">
+        <dl className="sys-rows">{motionTokens.map(([name, use]) => <div key={name}><dt><span>{use}</span><code>{name}</code></dt><dd><code>{values[name]}</code></dd></div>)}</dl>
+        <div className="sys-motion-demo">
+          <button type="button" className="sys-theme" onClick={() => setFolded(value => !value)}>{folded ? 'Unfold' : 'Fold'}</button>
+          <div className={`sys-fold${folded ? ' is-folded' : ''}`}><span className="sys-fold-preview"/><span>Version block #41, Prompt #320</span></div>
         </div>
       </Section>
 
-      <Section id="composed" title="Composed" note="How the parts sit together in the composer and a to-do group.">
-        <div className="sys-row is-2">
-          <div className="sys-composer">
-            <ComposerTabs value={mode} onChange={setMode}/>
-            <div className={`sys-composer-body is-${mode}`}>
-              {mode === 'todo' ? <TodoList todos={todos.slice(2)} onToggle={toggle}/> : <p className="sys-placeholder">{mode === 'prompt' ? 'Message…' : 'Name the milestone…'}</p>}
-              <footer className="sys-composer-foot">
-                <span><PhosphorIcon name="plus" size={14}/></span>
-                <span className="sys-model">Sonnet 5</span>
-                <CaptureLine bucket="homescreen" detail="details"/>
-                <button type="button" className="sys-send" aria-label="Send"><PhosphorIcon name="arrow-up" size={14}/></button>
-              </footer>
-            </div>
-          </div>
-          <div className="sys-group">
-            <TodoList todos={todos} onToggle={toggle}/>
-          </div>
-        </div>
+      <Section id="type" title="Type" note="Neurial Grotesk for the interface; mono only for the view label.">
+        <dl className="sys-rows">{typeSamples.map(([use, style, sample]) => <div key={use}><dt><span>{use}</span></dt><dd style={style}>{sample}</dd></div>)}</dl>
       </Section>
     </main>
   </div>;

@@ -539,7 +539,22 @@
 
 /* "Not yet" folds the version card to half its height; the preview keeps its aspect ratio, so it shrinks and slides left with the card. */
 :root { --milestone-dismiss-scale:.5; }
-.mw-app .message-version-card { transition:min-height var(--motion-layout) var(--ease-layout), background-color var(--motion-base) var(--ease-standard); }
-.message-version-preview { transition:flex-basis var(--motion-layout) var(--ease-layout); }
+.mw-app .message-version-card { transition:min-height var(--motion-fold) var(--ease-fold), background-color var(--motion-base) var(--ease-standard); }
+.message-version-preview { transition:flex-basis var(--motion-fold) var(--ease-fold); }
 .mw-app .message-version-output.is-milestone-dismissed .message-version-card { min-height:calc(var(--message-preview-height) * var(--milestone-dismiss-scale)); }
 .message-version-output.is-milestone-dismissed .message-version-preview { flex-basis:calc(min(var(--message-preview-width), var(--message-preview-max-width)) * var(--milestone-dismiss-scale)); }
+
+/* Light mode hierarchy is inverted from a white page: panels sit on a soft gray, and only the things you act on are white —
+   the message box, in-chat version and milestone cards, and your own messages. */
+:root[data-theme=light] {
+  --paper:#f5f5f3;
+  --canvas-bg:#f5f5f3;
+  --workspace-background:#e2e2df;
+  --fill:#e7e7e4;
+  --fill-hover:#dddcd9;
+  --user-message-fill:#fafaf9;
+  --composer-surface:#fff;
+  --composer-drawer-surface:#e7e7e4;
+  --composer-drawer-hover:#dfdfdc;
+  --message-version-fill:#fff;
+}
