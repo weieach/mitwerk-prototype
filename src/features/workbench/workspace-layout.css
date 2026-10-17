@@ -529,3 +529,6 @@
 .workspace .gallery-footer > .panel-header-actions { align-items:stretch; align-self:stretch; }
 .workspace .gallery-footer > .panel-header-actions > :is(button, .gallery-range) { height:auto; min-height:0; align-self:stretch; }
 .workspace .gallery-footer > .tracked-interface { align-self:stretch; }
+
+/* The drawer count is a plain number; no ring around it. */
+.composer-drawer-count { border:0; border-radius:0; padding:0; min-width:0; font-variant-numeric:tabular-nums; }

@@ -1289,3 +1289,4 @@ This file is reserved for project-wide design-system rules requested by the user
 - The To-do drawer heading is both a click toggle and a drag handle: drag up past 24px to open, down to close; while dragging the drawer follows the pointer lightly. A press without movement stays a click.
 - To-dos can be typed straight into the drawer (“Add a to-do”), no mode switch needed; the Prompt / To-do switch still works. Each to-do can carry a page tag (`ComposerTodo.page`), picked from the capture buckets or created inline through a compact page chip; an empty page chip is a quiet outlined ghost. The add row keeps the chosen page for the next entry.
 - `?demo=milestone` appends one sample Mit reply with a version output (never persisted) to preview the milestone invitation without captures or a live server.
+- The To-do drawer count is a plain number with tabular figures, never ringed.
