@@ -663,9 +663,9 @@
 .workspace :is(.gallery-footer, .canvas-controls) { --control-font-size:var(--panel-footer-font-size); --control-icon-size:var(--panel-footer-icon-size); --zoom-icon-size:var(--panel-footer-icon-size); }
 .workspace :is(.gallery-footer, .canvas-controls) .ui-icon:not([class*=ph-caret]) { --icon-size:var(--panel-footer-icon-size); width:var(--panel-footer-icon-size); height:var(--panel-footer-icon-size); font-size:var(--panel-footer-icon-size); }
 
-/* Ported from design-system: chat keeps a fixed width beside other panels, never more than 30% of the screen; the other panels share the rest.
+/* Ported from design-system: chat keeps a fixed width beside other panels, never more than 35% of the screen; the other panels share the rest.
    With a fixed chat width there is nothing to drag, so the reader resize handle is hidden. Chat alone still fills the body. */
-:root { --chat-panel-width:min(440px, 30vw); }
+:root { --chat-panel-width:min(440px, 35vw); }
 @media (min-width:851px) {
   .mw-app .mw-body:is(.mw-split-view, .has-extra-panels) > .mw-surface:not([hidden]) { flex:0 0 var(--chat-panel-width); width:var(--chat-panel-width); }
   .mw-app .mw-body:is(.mw-split-view, .has-extra-panels) > .mw-reader { flex:1 1 0; }
@@ -701,3 +701,25 @@
   .workspace .gallery-footer > .panel-header-actions { flex:1 1 100%; min-width:0; min-height:var(--panel-footer-height); justify-content:flex-end; border-top:1px solid var(--row-divider, var(--line)); }
   .workspace .gallery-footer .gallery-range, .workspace .gallery-footer .gallery-range > .row-select { flex:1 1 auto; width:auto; min-width:0; }
 }
+
+/* Global spacing scale (2026-10-18): every layout padding and gap is 120% of its base value. Change --space-scale to retune the whole layout.
+   The To-do section's radius follows the scaled inset so its corners stay concentric with the panel. */
+:root {
+  --space-scale:1.2;
+  --workspace-gutter:calc(7px * var(--space-scale));
+  --workspace-panel-gap:calc(5px * var(--space-scale));
+  --workspace-bar-padding-inline:calc(10px * var(--space-scale));
+  --panel-title-inset:calc(6px * var(--space-scale));
+  --panel-title-padding-inline:calc(14px * var(--space-scale));
+  --panel-heading-padding:calc(20px * var(--space-scale));
+  --composer-inset:calc(4px * var(--space-scale));
+  --composer-drawer-radius:calc(var(--workspace-radius) - var(--composer-inset));
+  --composer-tool-inset:calc(8px * var(--space-scale));
+}
+
+/* Chat: upper and lower elements share two edges. Frames (your message bubble, the To-do section, the message box) sit at --composer-inset;
+   text (replies, bubble text, capture line, To-do heading, message box text) starts at --panel-title-text-inset. */
+.mw-app .conversation-inner { padding-inline:var(--composer-inset); }
+.mw-app .mw-message:not(.from-user) { padding-inline:calc(var(--panel-title-text-inset) - var(--composer-inset)); }
+.mw-app .from-user .message-content { padding-inline:calc(var(--panel-title-text-inset) - var(--composer-inset) - 1px); border:1px solid transparent; }
+.mw-app .from-user .message-time { padding-right:calc(var(--panel-title-text-inset) - var(--composer-inset)); }

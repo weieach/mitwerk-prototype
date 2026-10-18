@@ -1580,3 +1580,9 @@ This file is reserved for project-wide design-system rules requested by the user
 - Below 620px of panel width the gallery footer wraps into two rows (frame picker, then time range and zoom) with a `--row-divider` between them, instead of clipping.
 - `?view=system` is a live token reference that hides tokens the stylesheet does not define. `docs/design-system.md` names this branch's system canonical and gives the merge procedure into `main`.
 - In light mode the line under panel titles (`--panel-heading-divider`) uses the workspace background tone (#e2e2df), not black.
+
+## Global spacing at 120% and aligned chat edges — 2026-10-18
+
+- Layout paddings and gaps scale through `--space-scale` (1.2): page edge `--workspace-gutter` 8.4px, panel seam `--workspace-panel-gap` 6px, top-bar inline padding 12px, panel title inset and padding (text inset 24px), `--panel-heading-padding` 24px, `--composer-inset` 4.8px, `--composer-tool-inset` 9.6px. The To-do section radius is `--workspace-radius` − `--composer-inset`, so its corners stay concentric.
+- Chat's maximum width beside other panels is 35% of the screen: `--chat-panel-width` = min(440px, 35vw).
+- Chat uses two shared edges. Frames (your message bubble, the To-do section, the message box) sit at `--composer-inset` from the panel edge; text (replies, bubble text, capture line, To-do heading, message box text, panel title) starts at `--panel-title-text-inset`.

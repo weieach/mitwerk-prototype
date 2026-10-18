@@ -22,8 +22,8 @@
 1. **The tool leads.** Chat, lists and controls stay quiet; the milestone invitation is the one loud moment.
 2. **Dark first, each mode its own palette.** Dark is the default (Cursor Dark grounds). Light mode is not a white page: panels are soft gray and only the message box, in-chat cards and sent messages are near-white.
 3. **No solid white strokes, no black dividers.** Footer and title dividers use `--row-divider` / `--panel-heading-divider`; popovers use `--popover-border`.
-4. **Chat holds its width.** Beside other panels chat is a fixed column, `--chat-panel-width` = min(440px, 30vw). Chat alone fills the body.
-5. **One text inset.** Panel titles, messages, the capture line, the To-do heading and the composer text start at `--panel-title-text-inset` (20px) at every width.
+4. **Chat holds its width.** Beside other panels chat is a fixed column, `--chat-panel-width` = min(440px, 35vw). Chat alone fills the body.
+5. **Two chat edges.** Frames (message bubble, To-do section, message box) sit at `--composer-inset`; all text starts at `--panel-title-text-inset` (24px). Layout spacing scales through `--space-scale` (1.2).
 6. **Chips only for categories.** Buckets and pages are chips; free text is a frameless field with an underline.
 7. **Concentric corners, equal insets.** An inset element's radius is the parent radius minus the inset.
 8. **Edges reach edges.** Hover fills run to panel edges; narrow panels wrap (gallery footer) or condense in tiers (Idea stream footer) instead of clipping.

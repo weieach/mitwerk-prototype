@@ -13,7 +13,7 @@ const colorGroups: [string, [string, string][]][] = [
   ['Branches and milestone', [['--contrast', 'Main branch'], ['--milestone-invite-a', 'Milestone A'], ['--milestone-invite-b', 'Milestone B'], ['--milestone-invite-c', 'Milestone C'], ['--milestone-invite-ink', 'Milestone ink']]],
 ];
 const layoutTokens: [string, string][] = [
-  ['--workspace-gutter', 'Panel to screen edge'], ['--workspace-edge', 'Panel to screen edge'], ['--workspace-panel-gap', 'Panel to panel'], ['--workspace-radius', 'Panel corner'],
+  ['--space-scale', 'Spacing scale'], ['--workspace-gutter', 'Panel to screen edge'], ['--workspace-edge', 'Panel to screen edge'], ['--workspace-panel-gap', 'Panel to panel'], ['--workspace-radius', 'Panel corner'],
   ['--chat-panel-width', 'Chat width beside panels'], ['--panel-heading-height', 'Panel title row'], ['--panel-title-text-inset', 'Title and chat text inset'],
   ['--panel-footer-height', 'Panel footer row'], ['--composer-inset', 'Message box inset'], ['--composer-drawer-radius', 'To-do section corner'],
   ['--composer-tool-inset', 'Composer tool inset'], ['--capture-chip-height', 'Every chip and capsule'], ['--capture-row-height', 'Capturing row'], ['--popover-radius', 'Popover corner'],
@@ -41,7 +41,8 @@ function useTokenValues(names: string[], theme: string) {
     document.body.appendChild(probe);
     const resolve = (name: string) => {
       const value = raw.getPropertyValue(name).trim();
-      if (/^(\d|calc\()/.test(value) && !/(ms|s)$/.test(value)) { probe.style.width = `var(${name})`; return `${Math.round(probe.getBoundingClientRect().width * 10) / 10}px`; }
+      if (/^-?[\d.]+$/.test(value)) return value;
+      if (/^(\d|calc\(|min\(|max\(|clamp\()/.test(value) && !/(ms|s)$/.test(value)) { probe.style.width = `var(${name})`; return `${Math.round(probe.getBoundingClientRect().width * 10) / 10}px`; }
       if (/^(#|rgb|color-mix|oklab|hsl)/.test(value)) { probe.style.color = `var(${name})`; return getComputedStyle(probe).color; }
       return value;
     };
@@ -74,12 +75,12 @@ export function SystemPage() {
       <Section id="principles" title="Principles" note="The canonical MitWerk design system, taken from the product itself. Summary: docs/design-system.md · restyle guide: docs/ui-restyle-guide.md · full log: docs/design-system-rules.md.">
         <ol className="sys-principles">
           <li><strong>The tool leads.</strong> Chat, lists and controls stay quiet; the milestone invitation is the one loud moment.</li>
-          <li><strong>Chat holds its width.</strong> Beside other panels chat is a fixed column, at most 30% of the screen; the rest goes to the work.</li>
+          <li><strong>Chat holds its width.</strong> Beside other panels chat is a fixed column, at most 35% of the screen; the rest goes to the work.</li>
           <li><strong>No solid white strokes.</strong> Emphasis uses a soft stroke; the main branch is a light gray.</li>
           <li><strong>Chips only for categories.</strong> Buckets and pages are chips; free text is a frameless field.</li>
           <li><strong>Concentric corners.</strong> Anything inset in a panel takes the panel radius minus its inset.</li>
           <li><strong>Edges reach edges.</strong> Hover fills run to the panel edge; controls never clip at narrow widths.</li>
-          <li><strong>One text inset.</strong> Titles, messages and the composer's text all start at the panel title's text inset.</li>
+          <li><strong>Two chat edges.</strong> Frames line up with frames and text with text, from the title down to the message box.</li>
           <li><strong>Each mode its own palette.</strong> Dark mode deepens colors instead of reusing light values; dividers are dark gray, never black.</li>
         </ol>
       </Section>
