@@ -87,12 +87,16 @@
 ## Sans serif is Waldenburg — 2026-10-18
 
 - Every sans-serif text uses Waldenburg through the shared `--sans` token (`'Waldenburg', 'KMR Waldenburg', 'KMR-Waldenburg', 'Helvetica Neue', Helvetica, Arial, sans-serif`). This replaces the Helvetica Neue rule below. Canvas-drawn labels read the same token. Mono stays on `--font-code`.
-- Waldenburg (Kimera, Michael Clasen and Marcel Saidov) is not bundled. It renders where that family is installed. Otherwise the stack falls back to Helvetica Neue, then Helvetica, then Arial.
+- Waldenburg (Kimera, Michael Clasen and Marcel Saidov) is bundled as WOFF2 in `src/fonts/kmr-waldenburg-*.woff2`, with `@font-face` rules at the top of `src/index.css`. Each face's CSS weight is the file's OS/2 weight class: Thin 100, Light 300, Book 375, Regular 400, Medium 500, Bold 700, Heavy 800, Black 900. Every weight except Thin also has an italic.
+- There is no 600 cut, so 600 would render as Bold (700).
+- Medium (500) is the heaviest weight in the interface. Emphasis (the wordmark, panel and page titles, card titles, version numbers, fold counts, the work state title and readout, theater tags and push leads, and the canvas count badges) uses the shared `--strong-font-weight` token (500), and `treeTheme.versionLabelFontWeight` is 500. Do not use 600 or 700 in new styles. Where an earlier rule says "bold", read it as this emphasis weight.
+- Helvetica Neue, Helvetica and Arial remain the fallback while the font loads (`font-display: swap`).
 
 ## Live type editor — 2026-10-18
 
 - The MitWerk logo menu offers **Type editor** (Close type editor when open). It floats over the current page and does not change layout.
 - Text is adjusted by shared role, not by one message, card, or screenshot. Roles and their selectors live in `src/shared/type-studio.ts`. Each role exposes size, weight, line height, letter spacing, color, Waldenburg or mono, and italic.
+- Chat messages use `--message-line-height` (1.6, 19.2px at 12px). The Message type role's default leading matches it, because the role rule overrides the CSS token.
 - Built-in values stay in the role stylesheet. An edit sets the same variable on the document root and is stored in `localStorage` under `mitwerk-type-studio`. Reset restores the built-in value. Copy CSS exports only the variables that differ, so a chosen scale can be locked into the role defaults later.
 - Progress captures (`screenshot=1`) ignore stored edits and do not show the editor. `?type=1` opens it for a working session.
 - Selecting a role outlines every element that uses it. Gallery axis labels stay on their camera-driven size. Branch colors, role tags, and capture textures are not type colors.

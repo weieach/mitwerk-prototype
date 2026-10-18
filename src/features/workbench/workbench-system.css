@@ -64,7 +64,7 @@
 }
 .mw-app .mw-nav-item { padding-block: var(--row-size-unit); }
 .mw-app .mw-nav-item.new-chat { font-size: var(--sidebar-section-size); }
-.mw-app .workspace-brand strong { font-weight: 700; }
+.mw-app .workspace-brand strong { font-weight: var(--strong-font-weight); }
 .mw-app .page-scroll { padding: var(--row-padding-inline); }
 .mw-app .page-title { margin-bottom: var(--row-padding-inline); }
 .mw-app :is(.form-label input, .form-label select, .directory-search, .search-field input) {

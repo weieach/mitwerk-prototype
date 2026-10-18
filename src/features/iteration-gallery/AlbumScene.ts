@@ -469,7 +469,8 @@ export class AlbumScene {
         const context = canvas.getContext('2d')!;
         context.fillStyle = color; context.fillRect(0, 0, canvas.width, canvas.height);
         context.fillStyle = this.colors.onPale;
-        context.font = `600 ${canvas.height * .6}px ${getComputedStyle(document.documentElement).getPropertyValue('--sans') || 'sans-serif'}`;
+        const rootStyle = getComputedStyle(document.documentElement);
+        context.font = `${rootStyle.getPropertyValue('--strong-font-weight').trim() || 500} ${canvas.height * .6}px ${rootStyle.getPropertyValue('--sans') || 'sans-serif'}`;
         context.textAlign = 'center'; context.textBaseline = 'middle';
         context.fillText(String(count), canvas.width / 2, canvas.height / 2, canvas.width * .85);
         map = new THREE.CanvasTexture(canvas); map.colorSpace = THREE.SRGBColorSpace;

@@ -2507,3 +2507,39 @@ Clarification: Git branch names cannot contain spaces, so the branch is `echo-10
 ```text
 最新的改动可以commit
 ```
+
+## Prompt #411
+
+```text
+字体的话用哪个格式
+```
+
+## Prompt #412
+
+```text
+KMRWaldenburg-Medium.woff2 KMRWaldenburg-MediumItalic.woff2 KMRWaldenburg-Regular.woff2  其他的你可以自己去文件夹里挑选然后上传，使用吗？
+```
+
+## Prompt #413
+
+```text
+那我继续发给你
+```
+
+## Prompt #414
+
+```text
+KMRWaldenburg-Thin.woff2 KMRWaldenburg-Bold.woff2 KMRWaldenburg-Black.woff2 KMRWaldenburg-BlackItalic.woff2 KMRWaldenburg-BoldItalic.woff2 KMRWaldenburg-Book.woff2 KMRWaldenburg-BookItalic.woff2 KMRWaldenburg-Italic.woff2 KMRWaldenburg-Light.woff2 KMRWaldenburg-LightItalic.woff2 KMRWaldenburg-HeavyItalic.woff2 KMRWaldenburg-Heavy.woff2
+```
+
+## Prompt #415
+
+```text
+我发现粗体不是很好看，可以告诉我哪里的字是beyond medium的吗，我们可以把已经粗体的字重调小一号？
+```
+
+## Prompt #416
+
+```text
+调整一下行间距，目前是多少，可以适当增加5-10%
+```

@@ -33,10 +33,11 @@
   --control-radius: 4px;
   --card-padding: 11px 13px 12px;
   --card-title-size: 17px;
-  --card-title-weight: 700;
+  --strong-font-weight: 500;
+  --card-title-weight: var(--strong-font-weight);
   --body-font-size: 12px;
   --message-font-size: var(--body-font-size);
-  --message-line-height: 1.45;
+  --message-line-height: 1.6;
   --message-output-gap: calc(var(--row-padding-inline) * 1.5);
   --message-time-gap: 8px;
   --outline-orbit-duration: 1600ms;
@@ -304,7 +305,7 @@
 .workspace .panel-header > .panel-heading,
 .workspace .panel-header > .panel-header-actions { flex-shrink: 0; }
 .workspace .adaptive-panel-title { position: relative; flex-shrink: 0; white-space: nowrap; }
-.panel-title-measure { position: absolute; visibility: hidden; pointer-events: none; width: max-content; font-weight: 700; }
+.panel-title-measure { position: absolute; visibility: hidden; pointer-events: none; width: max-content; font-weight: var(--strong-font-weight); }
 .panel-title-visible.is-compact { font-weight: var(--compact-title-weight); }
 /* Once the title is compact, let the file selector give up remaining width. */
 .workspace .panel-header > .panel-heading:has(.panel-title-visible.is-compact) { flex-shrink: 1; }

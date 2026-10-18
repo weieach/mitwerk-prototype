@@ -75,7 +75,7 @@ export const treeTheme = {
   countHintFadeMs: 160,
   versionLabelFontSize: 11,
   branchLabelFontSize: 10,
-  versionLabelFontWeight: 700,
+  versionLabelFontWeight: 500,
   versionLabelColor: 'var(--contrast)',
   /** How much label size ignores canvas zoom. 0 follows the board; 1 stays constant on screen. */
   versionLabelZoomCompensation: 0.85,

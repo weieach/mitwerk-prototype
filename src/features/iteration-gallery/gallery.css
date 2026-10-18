@@ -76,14 +76,14 @@
 .theater-frame-actions { width: 100%; flex-shrink: 0; display: flex; justify-content: flex-end; gap: 12px; flex-wrap: wrap; font-size: 11px; }
 .theater-text-action.is-exit { margin-right: auto; }
 .theater-text-action { display: inline-flex; align-items: center; gap: var(--text-action-icon-gap); border: 0; background: transparent; padding: 0; color: var(--ink); font: inherit; cursor: pointer; }
-.theater-text-action.is-bold { font-weight: 700; }
+.theater-text-action.is-bold { font-weight: var(--strong-font-weight); }
 .theater-text-action:disabled { color: var(--muted); cursor: default; }
 .theater-loading { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; background: color-mix(in srgb, var(--paper) 72%, transparent); color: var(--ink); font-size: 12px; font-weight: 500; }
 .theater-metadata { height: fit-content; max-height: clamp(20px, var(--theater-metadata-max, 20vh), var(--theater-metadata-height)); overflow: auto; width: 100%; flex-shrink: 0; display: flex; flex-direction: column; gap: var(--theater-row-gap, 4px); font-size: 11px; }
 .theater-metadata p { line-height: 1.5; overflow-wrap: anywhere; }
 .theater-version { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: var(--theater-summary-gap, 2px); }
 .theater-version-group { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-width: 0; flex-wrap: wrap; }
-.theater-version-tag { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 4px; padding: 2px 5px; font-size: 10px; font-weight: 700; color: var(--ink); }
+.theater-version-tag { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 4px; padding: 2px 5px; font-size: 10px; font-weight: var(--strong-font-weight); color: var(--ink); }
 .theater-version time { color: var(--muted); font-size: 10px; }
 .gallery-file { color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 4px 7px; text-decoration: none; }
 .gallery-file:hover { background: var(--fill); }
@@ -180,7 +180,7 @@
 
 .theater-summary { font-style: normal; min-height:1.5em; overflow:auto; flex:0 1 auto; }
 .theater-version, .theater-branch-row { flex-shrink:0; }
-.theater-summary strong { font-weight: 700; }
+.theater-summary strong { font-weight: var(--strong-font-weight); }
 .theater-lines .is-added { color: var(--line-added); }
 .theater-lines .is-removed { color: var(--line-removed); }
 

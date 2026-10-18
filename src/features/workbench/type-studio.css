@@ -16,7 +16,7 @@
   font: 400 12px/1.4 var(--sans);
 }
 .type-studio header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
-.type-studio header strong { font-size: 13px; font-weight: 700; }
+.type-studio header strong { font-size: 13px; font-weight: var(--strong-font-weight); }
 .type-studio header span { color: var(--muted); margin-right: auto; }
 .type-studio header button, .type-text, .type-role {
   height: auto;

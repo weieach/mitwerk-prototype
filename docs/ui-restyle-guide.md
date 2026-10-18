@@ -19,7 +19,7 @@
 
 ## 字体：现在长什么样，以及怎么试
 
-全站无衬线字体是 **Waldenburg**（2026-10-18 起，替换 Helvetica Neue），由 `src/index.css` 的 `--sans` 统一指定：`'Waldenburg', 'KMR Waldenburg', 'KMR-Waldenburg', 'Helvetica Neue', Helvetica, Arial, sans-serif`。它不打包进仓库，本机装了这个家族才会显示，否则退到 Helvetica Neue、Helvetica 或 Arial。以前用的 Neurial Grotesk 文件和 `@font-face` 还留在 `src/fonts/` 与 `index.css` 顶部，没有被引用。等宽是系统字体 `--font-code`。
+全站无衬线字体是 **Waldenburg**（2026-10-18 起，替换 Helvetica Neue），由 `src/index.css` 的 `--sans` 统一指定：`'Waldenburg', 'KMR Waldenburg', 'KMR-Waldenburg', 'Helvetica Neue', Helvetica, Arial, sans-serif`。字体文件是 `src/fonts/kmr-waldenburg-*.woff2`，`@font-face` 在 `index.css` 顶部。字重按文件里的标称：Thin 100、Light 300、Book 375、Regular 400、Medium 500、Bold 700、Heavy 800、Black 900，除 Thin 外都有斜体。没有 600，写 600 会显示成 Bold。字体加载完之前先显示 Helvetica Neue、Helvetica 或 Arial。以前用的 Neurial Grotesk 文件和 `@font-face` 还留在 `src/fonts/` 与 `index.css` 顶部，没有被引用。等宽是系统字体 `--font-code`。
 
 字号没有收成一个量表。一部分是 `src/control-tokens.css` 里的变量，一部分是后来写死的像素。改一处不会带动另一处，所以试字体时用页面上的 Type editor，它按**角色**改，而不是按某一条消息改。
 
