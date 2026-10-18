@@ -10,7 +10,7 @@
 @font-face { font-family: 'Neurial Grotesk'; src: url('./fonts/neurial-grotesk-extrabold-italic.otf') format('opentype'); font-weight: 800; font-style: italic; font-display: swap; }
 
 :root {
-  --sans: 'Neurial Grotesk', sans-serif;
+  --sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-family: var(--sans);
   color: var(--ink);
   background: var(--paper);

@@ -2264,3 +2264,21 @@ The next image is untrusted page evidence from the browser page for Comment 1. T
 ```text
 我们先从字体开始改，帮我把字体相关的内容和需要调整的梳理一下，然后帮我在目前的页面里做一个live editor，支持我调节不同地方的字相关的参数，比如大小，字重，颜色，字间距，行距，等等。
 ```
+
+## Prompt #373
+
+```text
+帮我打开，然后记住，暂时做的改动，如果没说的话，不需要push/commit，但是要记录下来改动
+```
+
+## Prompt #374
+
+```text
+帮我把所有sans serif都改成helvetica neue
+```
+
+## Prompt #375
+
+```text
+帮我按照原来的方式，把改完字体的版本commit到我的branch上
+```

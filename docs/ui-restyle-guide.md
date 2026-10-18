@@ -19,13 +19,13 @@
 
 ## 字体：现在长什么样，以及怎么试
 
-全站只有一套已加载的字：**Neurial Grotesk**。文件在 `src/fonts/`，`src/index.css` 的 `@font-face` 注册了 Light 300、Regular 400、Medium 500、Bold 700、ExtraBold 800，各有 italic。`--sans` 指向它。等宽是系统字体 `--font-code`，没有单独的字文件。
+全站无衬线字体是 **Helvetica Neue**（2026-10-18 起），由 `src/index.css` 的 `--sans` 统一指定：`'Helvetica Neue', Helvetica, Arial, sans-serif`。它是系统字体，不打包进仓库；Mac 上有 300、400、500、700，没有 800（会显示成 Bold）。没有 Helvetica Neue 的机器（多数 Linux、Windows，以及云端截图用的浏览器）会退到 Helvetica 或 Arial。以前用的 Neurial Grotesk 文件和 `@font-face` 还留在 `src/fonts/` 与 `index.css` 顶部，没有被引用，要换回只改 `--sans`。等宽是系统字体 `--font-code`。
 
 字号没有收成一个量表。一部分是 `src/control-tokens.css` 里的变量，一部分是后来写死的像素。改一处不会带动另一处，所以试字体时用页面上的 Type editor，它按**角色**改，而不是按某一条消息改。
 
 打开方式：顶栏 MitWerk 菜单里的 **Type editor**。选中一个角色时，页面上所有用到它的文字会出现虚线框。滑块立刻生效，并记在这个浏览器的 `localStorage`（`mitwerk-type-studio`）。**Copy CSS** 只导出改过的变量。**Reset** 回到现在的默认。带 `screenshot=1` 的进度截图不读取这些改动，也不显示编辑器。
 
-每个角色都能调：大小、字重、行距、字间距、颜色、Neurial / Mono、斜体。颜色优先用 Ink、Muted、Faint、Accent、Contrast，这样换 dark mode 时还会跟着主题走。
+每个角色都能调：大小、字重、行距、字间距、颜色、Helvetica Neue / Mono、斜体。颜色优先用 Ink、Muted、Faint、Accent、Contrast，这样换 dark mode 时还会跟着主题走。
 
 | 角色 | 现在的默认 | 出现在 |
 | --- | --- | --- |
@@ -104,7 +104,7 @@
 - 行内边距：`--row-padding-inline`。
 - 动效：侧栏 220ms，抽屉开 440–520ms，关 300–380ms。`prefers-reduced-motion` 会关掉过渡。
 
-字体是 Neurial Grotesk，`src/index.css` 顶部的 `@font-face`，文件在 `src/fonts/neurial-grotesk-*.otf`（Light 300、Regular 400、Medium 500、Bold 700、ExtraBold 800，各有 italic）。`--sans` 指向它。代码字体 `--font-code` 用系统等宽，不在仓库里。
+字体是 Helvetica Neue，只在 `src/index.css` 的 `--sans` 里指定，见上面「字体」一节。代码字体 `--font-code` 用系统等宽，不在仓库里。
 
 ### 3. 工作台把语义色映射成 `--mw-*`
 

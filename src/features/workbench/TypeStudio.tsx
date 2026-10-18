@@ -62,7 +62,7 @@ function RoleControls({ role }: { role: TypeRole }) {
     </label>}
     <label className="type-field">Family
       <select aria-label={`${role.label} family`} value={edit.family ?? role.defaults.family} onChange={event => typeStudio.update(role.id, { family: event.target.value as 'sans' | 'mono' })}>
-        <option value="sans">Neurial Grotesk</option>
+        <option value="sans">Helvetica Neue</option>
         <option value="mono">Mono</option>
       </select>
     </label>
