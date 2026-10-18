@@ -415,7 +415,7 @@
 .workspace .tracked-interface > .row-select { height:100%; }
 
 /* Every selector opens this designed menu in the top layer, never the OS picker. */
-.select-menu { position:fixed; inset:auto; margin:0; width:max-content; overflow:auto; padding:var(--dropdown-panel-padding); background:var(--paper); border:1px solid var(--line-strong); box-shadow:0 4px 16px var(--shadow-color); font:var(--control-font-size)/1.4 var(--sans); color:var(--ink); }
+.select-menu { position:fixed; inset:auto; margin:0; width:max-content; overflow:auto; padding:var(--dropdown-panel-padding); background:var(--paper); border:1px solid var(--popover-border); border-radius:var(--popover-radius); box-shadow:var(--popover-shadow); font:var(--control-font-size)/1.4 var(--sans); color:var(--ink); }
 .select-menu:not(:popover-open) { display:none; }
 .select-menu:focus { outline:none; }
 .select-menu [role=option] { display:flex; align-items:center; justify-content:space-between; gap:var(--row-padding-inline); min-height:var(--base-control-height); padding:6px var(--row-padding-inline); cursor:pointer; }
@@ -440,8 +440,9 @@
 :root { --workspace-brand-gap:4px; }
 
 /* Site header view tags (from mavix237's design-system branch). */
-:root { --view-tag-slant:4px; --view-tag-fade:.15s; --view-tag-bg:rgb(0 0 0 / 8%); --view-tag-ink:var(--ink); }
-:root[data-theme=dark] { --view-tag-bg:rgb(255 255 255 / 14%); }
+:root { --view-tag-fade:.15s; --view-tag-radius:6px; --view-tag-tint:10%; --view-tag-ink:var(--accent); }
+.mw-app { --view-tag-ink:var(--mw-blue); }
+.mw-app[data-theme=dark] { --view-tag-ink:var(--cursor-blue); --view-tag-tint:18%; }
 
 /* Capture detail field, matching design-system 8eb969a. */
 :root {

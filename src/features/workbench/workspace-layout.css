@@ -11,7 +11,7 @@
   --workspace-bar-gap: var(--workspace-gutter);
   --panel-title-inset:6px;
   --panel-title-padding-inline:14px;
-  --panel-title-border-width:1px;
+  --panel-title-border-width:0px;
   --panel-title-text-inset:calc(var(--panel-title-inset) + var(--panel-title-padding-inline) + var(--panel-title-border-width));
   --panel-expand-width:60px;
   --panel-expand-compact-width:40px;
@@ -24,7 +24,7 @@
   --playback-annotation-fill: var(--line-strong);
   --playback-annotation-ink: var(--ink);
 }
-:root[data-theme=dark] { --workspace-background: #000; }
+:root[data-theme=dark] { --workspace-background: var(--chrome); --panel-heading-divider: var(--line); }
 .mw-app { background: var(--workspace-background); }
 .mw-app .mw-topbar { margin-block:var(--workspace-bar-gap); height:var(--workspace-bar-height); min-height:var(--workspace-bar-height); padding:0 var(--workspace-bar-padding-inline); background:var(--workspace-background); gap:16px; }
 .mw-topbar .workspace-brand { display:flex; align-items:center; gap:var(--workspace-brand-gap); flex-shrink:0; }
@@ -80,6 +80,7 @@
 .workspace .gallery-footer { height:var(--panel-footer-height); min-height:var(--panel-footer-height); border-color:var(--workspace-background); }
 .workspace .gallery-footer .gallery-range { border:0; flex:none; }
 .workspace .gallery-footer .gallery-range > .row-select { flex:1; padding-inline:22px; }
+.workspace .gallery-footer :is(.gallery-range > .row-select, .panel-header-actions > button) { height:100%; }
 .workspace .gallery-footer :is(.panel-header-actions > button + button, .album-camera-actions) { border:0; }
 .workspace .theater-stage > .theater-frame-actions { margin-bottom:var(--playback-action-row-gap); min-height:0; border:0; align-items:center; gap:0; padding-right:0; flex-wrap:wrap; }
 .workspace .theater-frame-actions .frame-annotation-bookmark { align-self:center; margin:0 auto 0 0; display:flex; }
@@ -149,11 +150,6 @@
   --bucket-tag-text-gap: 6px;
   --capture-chip-ink: #36373b;
   --message-gap: 40px;
-}
-:root[data-theme=dark] {
-  --composer-surface: var(--faint);
-  --composer-selected: #7e7e7e;
-  --composer-placeholder: #c4c4c7;
 }
 .mw-app .conversation-inner { width:100%; max-width:686px; margin:0 auto; padding:20px 23px; }
 .mw-app .mw-message { margin-bottom:var(--message-gap); }
@@ -238,7 +234,7 @@
 
 /* Workspace links expose panel visibility (mavix237's design-system header). On = ink icon and label over a light parallelogram tag (horizontal top and bottom, sides leaning like the logo); off = plain muted icon and label, never underlined. */
 .workspace-links > button, .workspace-links > button:not(:first-child) { position:relative; isolation:isolate; text-decoration:none; }
-.workspace-links > button::before { content:''; position:absolute; inset:0; z-index:-1; background:var(--view-tag-bg); clip-path:polygon(var(--view-tag-slant) 0, 100% 0, calc(100% - var(--view-tag-slant)) 100%, 0 100%); opacity:0; transition:opacity var(--view-tag-fade); }
+.workspace-links > button::before { content:''; position:absolute; inset:0; z-index:-1; border-radius:var(--view-tag-radius); background:color-mix(in srgb, var(--view-tag-ink) var(--view-tag-tint), transparent); opacity:0; transition:opacity var(--view-tag-fade); }
 .workspace-links > button[aria-pressed=true] { color:var(--view-tag-ink); }
 .workspace-links > button[aria-pressed=true]::before { opacity:1; }
 .workspace-links > button[aria-pressed=true]:hover { color:var(--view-tag-ink); }
@@ -323,7 +319,7 @@
 .workspace-panel-header .panel-expand .ui-icon,
 .workspace .workspace-panel-header .panel-expand .ui-icon { color:inherit; opacity:1; }
 .composer-drawer-count { margin-left:auto; display:inline-flex; align-items:center; justify-content:center; min-width:var(--drawer-count-size); height:var(--drawer-count-size); padding:0 3px; border:1px solid currentColor; border-radius:999px; font:var(--drawer-count-font-size)/1 var(--mono); }
-.select-menu.composer-model-menu { padding:var(--dropdown-panel-padding); border-radius:var(--surface-radius); }
+.select-menu.composer-model-menu { padding:var(--dropdown-panel-padding); }
 .composer-model-menu [role=option] { border-radius:var(--control-radius); padding:8px 10px; }
 
 .composer-drawer .composer-tools .mw-icon[aria-label="Attach file"] { color:var(--composer-placeholder); opacity:1; }
@@ -510,14 +506,14 @@
 }
 :root[data-theme=dark] {
   --composer-surface:var(--user-message-fill);
-  --composer-drawer-surface:#21201f;
-  --composer-drawer-hover:#292827;
-  --composer-border:rgb(255 255 255 / 16%);
-  --composer-selected:#454442;
-  --composer-placeholder:#8b8d93;
-  --composer-drawer-glow:#2e2b2f;
-  --composer-drawer-glow-end:rgb(37 39 46 / 0%);
-  --composer-mode-track:#383735;
+  --composer-drawer-surface:var(--fill);
+  --composer-drawer-hover:var(--fill-hover);
+  --composer-border:var(--line-strong);
+  --composer-selected:var(--selection);
+  --composer-placeholder:var(--faint);
+  --composer-drawer-glow:var(--fill);
+  --composer-drawer-glow-end:transparent;
+  --composer-mode-track:var(--line);
 }
 .mw-app .composer-area { width:100%; max-width:none; margin:0; padding:8px var(--composer-inset) var(--composer-inset); }
 .mw-app .capture-settings, .mw-app .composer-drawer-heading, .composer-drawer-content { padding-inline:calc(var(--composer-text-inset) - var(--composer-inset)); }

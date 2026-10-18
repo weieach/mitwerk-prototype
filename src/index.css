@@ -33,29 +33,40 @@
   --timeline-push-hover: #c4c4c4;
   --grid-line: #b0b0b0;
   --shadow-color: rgb(0 0 0 / 6%);
+  --popover-radius: 8px;
+  --popover-border: var(--line-strong);
+  --popover-shadow: 0 4px 16px var(--shadow-color);
   --gallery-capture-opacity: .72;
   --mono: var(--sans);
 }
 /* MitWerk dark palette. Every surface derives from these root tokens. */
+/* Cursor Dark: two opaque grounds, and every other neutral is #e4e4e4 at a fixed alpha,
+   pre-mixed over the #181818 canvas so WebGL surfaces can resolve them as solid colors. */
 :root[data-theme=dark] {
   color-scheme: dark;
-  background: #191a1b;
-  --ink: #fafafa;
-  --muted: #a3a3a8;
-  --faint: #737378;
-  --line: #36373b;
-  --line-strong: #4f5056;
-  --accent: #fafafa;
-  --canvas-bg: #191a1b;
-  --paper: #191a1b;
-  --fill: #27272a;
-  --sidebar: #202123;
-  --fill-hover: #39393e;
-  --contrast: #fff;
-  --token-area: #3a3a3f;
-  --timeline-push-hover: #65676c;
-  --grid-line: #65676c;
+  background: #181818;
+  --cursor-base: #e4e4e4;
+  --cursor-blue: #3a96dd;
+  --chrome: #141414;
+  --ink: #d4d4d4;
+  --muted: #888;
+  --faint: #646464;
+  --line: #262626;
+  --line-strong: #373737;
+  --accent: var(--cursor-base);
+  --canvas-bg: #181818;
+  --paper: #181818;
+  --fill: #202020;
+  --sidebar: var(--chrome);
+  --fill-hover: #262626;
+  --selection: #303030;
+  --contrast: var(--cursor-base);
+  --token-area: #303030;
+  --timeline-push-hover: #4b4b4b;
+  --grid-line: #4b4b4b;
   --shadow-color: rgb(0 0 0 / 40%);
+  --popover-border: rgb(228 228 228 / 10%);
+  --popover-shadow: 0 0 0 1px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 24%);
   --gallery-capture-opacity: .94;
 }
 * { box-sizing: border-box; }
@@ -136,7 +147,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .card-menu { position: absolute; top: 8px; right: 8px; z-index: 6; }
 .card-menu-trigger { display: flex; padding: 2px; color: var(--muted); border-radius: 3px; }
 .card-menu-trigger:hover, .card-menu-trigger[aria-expanded="true"] { background: var(--fill); color: var(--ink); }
-.card-menu-panel { position: absolute; top: calc(100% + 4px); right: 0; min-width: 168px; margin: 0; padding:var(--dropdown-panel-padding); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; list-style: none; box-shadow: 0 8px 24px var(--shadow-color); }
+.card-menu-panel { position: absolute; top: calc(100% + 4px); right: 0; min-width: 168px; margin: 0; padding:var(--dropdown-panel-padding); background: var(--paper); border: 1px solid var(--popover-border); border-radius: var(--popover-radius); list-style: none; box-shadow: var(--popover-shadow); overflow: hidden; }
 .card-menu-panel button { width: 100%; justify-content: flex-start; padding: 6px 8px; font-size: 11px; color: var(--ink); text-align: left; }
 .card-menu-panel button:hover:not(:disabled) { background: var(--fill); }
 .card-menu-panel button:disabled { color: var(--faint); }
@@ -192,7 +203,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .endpoint-controls .endpoint-jump,
 .branch-controls .branch-current { gap: 6px; padding: 5px 8px; font-size: 11px; color: var(--ink); white-space: nowrap; }
 .branch-controls { position: relative; }
-.branch-menu { position: absolute; bottom: calc(100% + 6px); left: 0; min-width: 100%; margin: 0; padding:var(--dropdown-panel-padding); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; list-style: none; box-shadow: 0 8px 24px var(--shadow-color); }
+.branch-menu { position: absolute; bottom: calc(100% + 6px); left: 0; min-width: 100%; margin: 0; padding:var(--dropdown-panel-padding); background: var(--paper); border: 1px solid var(--popover-border); border-radius: var(--popover-radius); list-style: none; box-shadow: var(--popover-shadow); overflow: hidden; }
 .branch-menu button { width: 100%; justify-content: space-between; gap: 10px; padding: 6px 8px; font-size: 11px; color: var(--ink); }
 .branch-menu button[aria-checked="true"] { background: var(--fill); }
 .branch-menu-name { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }

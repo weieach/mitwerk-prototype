@@ -72,27 +72,32 @@
 
 `src/index.css` 的 `:root` 是浅色，`:root[data-theme=dark]` 是暗色。界面大面积的字、底、线、悬停都从这里来。改暗色风格，先只改下面这一组。
 
+暗色从 2026-10-18 起按 Cursor Dark（Anysphere）：两层不透明底色，画布 `#181818`、更深的外框 `#141414`；其余中性色都是 `#e4e4e4` 按固定透明度预先叠在 `#181818` 上得到的实色，方便 WebGL 直接读取。
+
 | Token | 浅色 | 暗色 | 用来做什么 |
 | --- | --- | --- | --- |
-| `--ink` | `#111` | `#fafafa` | 正文、图标 |
-| `--muted` | `#737373` | `#a3a3a8` | 次要文字 |
-| `--faint` | `#9a9a9a` | `#737378` | 更弱的文字、占位 |
-| `--line` | `#e6e6e6` | `#36373b` | 分割线、浅边 |
-| `--line-strong` | `#cfcfcf` | `#4f5056` | 更清楚的边 |
-| `--accent` | `#111` | `#fafafa` | 选中、强调（中性，不是蓝） |
-| `--paper` / `--canvas-bg` | `#fff` | `#191a1b` | 面板、卡片、画布底 |
-| `--fill` | `#f4f4f4` | `#27272a` | 控件、芯片底 |
-| `--sidebar` | `#fafafa` | `#202123` | 侧栏 |
-| `--fill-hover` | `#ececec` | `#39393e` | 悬停 |
-| `--contrast` | `#000` | `#fff` | 当前分支、站点、版本号 |
+| `--ink` | `#111` | `#d4d4d4`（92%） | 正文、图标 |
+| `--muted` | `#737373` | `#888`（55%） | 次要文字 |
+| `--faint` | `#9a9a9a` | `#646464`（37%） | 更弱的文字、占位 |
+| `--line` | `#e6e6e6` | `#262626`（7%） | 分割线、浅边 |
+| `--line-strong` | `#cfcfcf` | `#373737`（15%） | 更清楚的边、焦点边 |
+| `--accent` | `#111` | `#e4e4e4` | 选中、强调（中性，不是蓝） |
+| `--paper` / `--canvas-bg` | `#fff` | `#181818` | 面板、卡片、画布底 |
+| `--fill` | `#f4f4f4` | `#202020`（4%） | 控件、芯片底 |
+| `--sidebar` | `#fafafa` | `#141414`（`--chrome`） | 侧栏 |
+| `--fill-hover` | `#ececec` | `#262626`（7%） | 悬停 |
+| `--selection` | 未定义 | `#303030`（12%） | 选中行、composer 选中模式 |
+| `--contrast` | `#000` | `#e4e4e4` | 当前分支、站点、版本号 |
 | `--on-pale` | `#111` | 未覆盖，仍是 `#111` | 浅色书签上的字。暗色里故意保持深色字 |
-| `--token-area` | `#e5e5e5` | `#3a3a3f` | Token 用量的面积 |
-| `--timeline-push-hover` | `#c4c4c4` | `#65676c` | 时间轴 push 悬停 |
-| `--grid-line` | `#b0b0b0` | `#65676c` | 网格 |
-| `--shadow-color` | `rgb(0 0 0 / 6%)` | `rgb(0 0 0 / 40%)` | 菜单阴影 |
+| `--token-area` | `#e5e5e5` | `#303030` | Token 用量的面积 |
+| `--timeline-push-hover` | `#c4c4c4` | `#4b4b4b` | 时间轴 push 悬停 |
+| `--grid-line` | `#b0b0b0` | `#4b4b4b` | 网格 |
+| `--shadow-color` | `rgb(0 0 0 / 6%)` | `rgb(0 0 0 / 40%)` | 通用阴影 |
+| `--popover-border` / `--popover-shadow` | `--line-strong` / `0 4px 16px` | `#e4e4e4` 10% / 黑环 30% + `0 8px 24px` 24% | 所有下拉和小菜单，圆角 `--popover-radius` 8px |
+| `--cursor-blue` | 未定义 | `#3a96dd` | 顶栏选中视图（浅色用 `--mw-blue`） |
 | `--gallery-capture-opacity` | `.72` | `.94` | 相册里截图的静止透明度。截图本身不染色 |
 
-`--workspace-background` 不在这张表里。浅色它等于 `--line`，暗色在 `workspace-layout.css` 里被写成 `#000`。面板之间的缝是这条颜色。
+`--workspace-background` 不在这张表里。浅色它等于 `--line`，暗色是 `--chrome`（`#141414`）。面板之间的缝是这条颜色。
 
 ### 2. 尺寸、圆角、字号：先别为了配色去改
 

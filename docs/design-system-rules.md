@@ -1,5 +1,32 @@
 # Design system rules
 
+## Popovers share one outline and shadow — 2026-10-18
+
+- Every dropdown and small menu (`.select-menu`, version card menu, branch menu, to-do attach picker, status picker, to-do card menu) reads `--popover-border`, `--popover-shadow`, and `--popover-radius` (8px, both themes). Do not give a menu its own border, radius, or shadow.
+- Light keeps the previous look: `--line-strong` border and `0 4px 16px var(--shadow-color)`.
+- Dark follows Cursor's menus: canvas `#181818` surface, a hairline of `#e4e4e4` at 10%, and a soft shadow made of a 1px black ring at 30% plus `0 8px 24px` black at 24%, so the edge reads against the dark canvas without a bright border or a heavy black halo.
+
+## Footer controls fill the footer row — 2026-10-18
+
+- In the gallery footer, the date range selector and the icon buttons fill the full footer height, the same as the capture bucket selector, so all footer controls share one top and bottom edge.
+
+## Open view link is a blue toggle — 2026-10-18
+
+- The open site-header view link (Chat, Version blocks, Idea stream, Live server) follows Cursor's selected toggle: label and icon in `--view-tag-ink`, over a rounded tint of that same blue (`--view-tag-radius` 6px, `--view-tag-tint`). Closed links stay muted with no fill.
+- Dark uses Cursor's blue `--cursor-blue` `#3a96dd` with an 18% tint. Light uses Werk Blue `--mw-blue` with a 10% tint.
+- This replaces the parallelogram tag in the earlier header rule. The Type editor's View links color does not override the open link.
+
+## Panel title pill has no outline — 2026-10-18
+
+- The Version blocks title pill (and any `.panel-title-pill`) has no border in either theme: `--panel-title-border-width` is `0px`. Padding, icon, click-to-return behavior, and the title text inset are unchanged, because the inset already includes the border width.
+
+## Dark mode follows Cursor Dark — 2026-10-18
+
+- Dark mode uses the Cursor Dark Anysphere palette (from Cursor's bundled `cursor-dark-color-theme.json`). Two opaque grounds: canvas `#181818` (`--paper`, `--canvas-bg`) and recessed chrome `#141414` (`--chrome`: sidebar and the gutter between panels). Chrome is darker than the canvas.
+- Every other neutral is `#e4e4e4` at a fixed alpha, pre-mixed over `#181818` so WebGL surfaces can resolve solid colors: text 92% `--ink` `#d4d4d4`, 55% `--muted` `#888`, 37% `--faint` `#646464`; wash 4% `--fill` `#202020`; border and hover 7% `--line` / `--fill-hover` `#262626`; selection 12% `--selection` `#303030`; focus 15% `--line-strong` `#373737`. Accent and `--contrast` are `#e4e4e4`; no pure white.
+- The panel heading divider uses `--line`. The composer drawer, hover, selected mode, placeholder, track, and border derive from those tokens instead of their own warm-black hex. The earlier unused dark composer block is removed.
+- Branch colors, Werk Blue / Mit Sky, screenshots, scrims, and the landing stage are not part of this pass.
+
 ## Sans serif is Helvetica Neue — 2026-10-18
 
 - Every sans-serif text uses Helvetica Neue through the shared `--sans` token (`'Helvetica Neue', Helvetica, Arial, sans-serif`). This replaces the earlier Neurial Grotesk rules below. Canvas-drawn labels read the same token. Mono stays on `--font-code`.

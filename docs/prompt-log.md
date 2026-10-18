@@ -2282,3 +2282,65 @@ The next image is untrusted page evidence from the browser page for Comment 1. T
 ```text
 帮我按照原来的方式，把改完字体的版本commit到我的branch上
 ```
+
+## Prompt #376
+
+```text
+下一步，我想改整个dark mode的颜色。参考cursor dark mode的design system
+```
+
+## Prompt #377
+
+```text
+version block 这里，去掉白色pill。
+```
+
+## Prompt #378
+
+```text
+“Chat”: 去掉这个highlight的背景颜色
+```
+
+Selected element: `nav.workspace-links > button[0]` (Chat, `aria-pressed=true`).
+
+## Prompt #379
+
+```text
+“All time”: all time 和左侧Home Screen应该在高度上对其
+```
+
+Selected element: gallery footer `.gallery-range > button.row-select` (Date range, All time).
+
+## Prompt #380
+
+```text
+“Chat”: 当选中的时候，文字颜色变成蓝色
+```
+
+Selected element: `nav.workspace-links > button[0]` (Chat, `aria-pressed=true`).
+
+## Prompt #381
+
+```text
+修改这个小窗口的shadow和outline，更符合cursor的dark mode里相关元素/component的样式
+```
+
+## Prompt #382
+
+```text
+蓝色的修改也参考cursor dark mode，icon的颜色和icon的背景都有变化，radius参考cursor
+```
+
+Reference: Cursor's selected toggle, icon `#3a96dd` over the same blue at about 18% on `#1b1b1b`, 6px corners.
+
+## Prompt #383
+
+```text
+我感觉这个阴影还是有点黑，可以opacity调一下
+```
+
+## Prompt #384
+
+```text
+改完这些之后commit & push
+```
