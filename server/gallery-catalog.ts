@@ -127,7 +127,7 @@ export function iterationGalleryCatalog(): Plugin {
         catalog = await response.json();
         if (!Array.isArray(catalog.frames) || !Array.isArray(catalog.references)) this.error('Invalid Blob gallery catalog');
       }
-      if (!catalog.frames.length) this.error('No saved frames found. Capture images are Git-ignored: build on the machine containing [frame capture] screenshots, then deploy with npm run deploy:vercel.');
+      if (!catalog.frames.length) this.error('No saved frames found. Capture images are stored in Git LFS: run git lfs pull (they may still be pointer files), or build with MITWERK_GALLERY_SOURCE=blob.');
       this.emitFile({ type: 'asset', fileName: 'gallery/git-history.json', source: JSON.stringify(readGitHistory(root)) });
       this.emitFile({ type: 'asset', fileName: 'gallery/manifest.json', source: JSON.stringify(catalog) });
       if (useBlob) return; // Vercel routes serve immutable image objects from Blob.

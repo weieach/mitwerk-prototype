@@ -68,3 +68,19 @@ test('new demo frames each get two annotations and one todo without duplicating 
  const removed=removeAnnotation(seeded,seeded.items[0].id);
  assert.equal(seedAnnotationSamples(removed,frames),removed);
 });
+
+test('reload clears browser milestones and annotation copies while preserving notes, todos and seeding', async () => {
+ const { resetPrototypeMilestones } = await import('../src/shared/reset-prototype-milestones.ts');
+ const { annotationStorageKey } = await import('../src/features/annotations/model.ts');
+ const { milestoneStorageKey } = await import('../src/features/version-tree/idea-stream.ts');
+ const annotations = { items:[note, {...note,id:'milestone',kind:'milestone',todo:false}, {...note,id:'plain',kind:'note',todo:false}], seeded:['sample'] };
+ const values = new Map([[milestoneStorageKey, JSON.stringify({'capture-version-26':'Browser milestone'})], [annotationStorageKey, JSON.stringify(annotations)], ['theme','dark']]);
+ const storage = {getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>{values.set(key,value);},removeItem:(key:string)=>{values.delete(key);}};
+ resetPrototypeMilestones(storage);
+ assert.equal(values.has(milestoneStorageKey),false);
+ assert.deepEqual(JSON.parse(values.get(annotationStorageKey)!),{...annotations,items:[annotations.items[0],annotations.items[2]]});
+ assert.equal(values.get('theme'),'dark');
+ const preserved=values.get(annotationStorageKey);
+ resetPrototypeMilestones(storage);
+ assert.equal(values.get(annotationStorageKey),preserved);
+});

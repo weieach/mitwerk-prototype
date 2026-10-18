@@ -48,6 +48,7 @@ export function AnnotationOverlay({ frame, container, onClose, onReturn = onClos
   const [savedTodo, setSavedTodo] = useState(false);
   const [entered, setEntered] = useState(false);
   const [exiting, setExiting] = useState(false);
+  const title = milestoneOnly ? "What's your new milestone?" : savedTodo ? 'To-do saved' : editing === 'new' ? `New ${todo ? 'to-do' : kind}` : editing ? 'Edit annotation' : 'Annotations';
   const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (exitTimer.current) clearTimeout(exitTimer.current); }, []);
   function close(after = onClose) {
@@ -97,7 +98,7 @@ export function AnnotationOverlay({ frame, container, onClose, onReturn = onClos
     try { deleteAnnotation(editing.id); setEditing(null); setError(''); }
     catch { setError('Could not delete this annotation. Please try again.'); }
   }
-  return createPortal(<dialog ref={dialog} className={`annotation-overlay${milestoneOnly ? ' milestone-overlay' : ''}`} data-entered={entered} data-exiting={exiting} aria-label={milestoneOnly ? "What's your new milestone?" : savedTodo ? 'To-do saved' : editing ? editing === 'new' ? 'New milestone / to-do' : 'Edit annotation' : 'Annotations'}
+  return createPortal(<dialog ref={dialog} className={`annotation-overlay${milestoneOnly ? ' milestone-overlay' : ''}`} data-entered={entered} data-exiting={exiting} aria-label={title}
     style={{ '--annotation-exit-ms': `${galleryTokens.annotations.exitMs}ms`, '--annotation-blur': `${galleryTokens.annotations.blur}px`, '--annotation-blur-ms': `${galleryTokens.annotations.blurMs}ms`, '--annotation-frame-delay': `${galleryTokens.annotations.frameDelayMs}ms`, '--annotation-ui-delay': `${galleryTokens.annotations.uiDelayMs}ms`, '--annotation-enter-ms': `${galleryTokens.annotations.enterMs}ms`, '--annotation-message-stagger': `${galleryTokens.annotations.messageStaggerMs}ms`, '--annotation-message-enter': `${galleryTokens.annotations.messageEnterMs}ms` } as CSSProperties}
     onKeyDown={event => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
@@ -113,14 +114,15 @@ export function AnnotationOverlay({ frame, container, onClose, onReturn = onClos
       <p id="annotation-todo-confirmation-copy">Your annotation is on the Todos dashboard. View all tasks there, or stay here to keep reviewing this frame.</p>
       <div className="modal-actions"><button className="mw-button" onClick={() => setSavedTodo(false)}>Stay here</button><button className="mw-button primary" onClick={() => close(() => { onClose(); window.dispatchEvent(new Event('mitwerk-open-todos')); })}><PhosphorIcon name="list-checks"/>View all tasks</button></div>
     </section> : <section className="annotation-sheet">
-      <header><h2><PhosphorIcon name="chat-circle-dots" size="var(--row-title-size)"/>{milestoneOnly ? "What's your new milestone?" : editing ? editing === 'new' ? 'New milestone / to-do' : 'Edit annotation' : 'Annotations'}</h2><button className="icon-button" aria-label="Close annotations and return to theater" onClick={() => close(onReturn)}><PhosphorIcon name="x" size="var(--row-title-size)"/></button></header>
+      <header><h2><PhosphorIcon name="chat-circle-dots" size="var(--row-title-size)"/>{title}</h2><button className="icon-button" aria-label="Close annotations and return to theater" onClick={() => close(onReturn)}><PhosphorIcon name="x" size="var(--row-title-size)"/></button></header>
       <img className="annotation-preview" src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`Frame ${frame.number}: ${frame.summary}`}/>
       {editing ? <form onSubmit={event => { event.preventDefault(); save(); }}>
         <textarea ref={textarea} aria-label={milestoneOnly ? 'Milestone' : 'Annotation'} value={text} onChange={event => setText(event.target.value)} placeholder={milestoneOnly ? 'Describe your milestone…' : 'Write a note or a prompt for your agent to work on later…'} required/>
         <div className="annotation-form-actions">{milestoneOnly ? <MilestoneCommitOption/> : <fieldset className="annotation-kind-select"><legend className="visually-hidden">Annotation type</legend>
           {(['todo', 'milestone'] as const).map(option => <label key={option}><input type="radio" name="annotation-kind" checked={kind === option} onChange={() => setKind(option)}/>{option === 'todo' ? 'To-do' : 'Milestone'}</label>)}
           {editing !== 'new' && !editing.todo && (!editing.kind || editing.kind === 'note') && <label><input type="radio" name="annotation-kind" checked={kind === 'note'} onChange={() => setKind('note')}/>Note</label>}
-        </fieldset>}<div>
+        </fieldset>}<div className="annotation-submit-actions">
+          {!milestoneOnly && kind === 'milestone' && <MilestoneCommitOption/>}
           {milestoneOnly && <button type="button" className="mw-button" onClick={() => close()}>Cancel</button>}
           {!milestoneOnly && editing !== 'new' && <button type="button" className="annotation-delete" onClick={remove}>Delete</button>}
           <button type="submit" className="mw-button primary annotation-save" disabled={!text.trim()}>{kind === 'milestone' ? 'Save milestone' : todo ? 'Save as to-do' : 'Save as note'}</button>

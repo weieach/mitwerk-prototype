@@ -20,8 +20,10 @@ build/
 # Saved version-stream graph used by local screenshots
 .mitwerk-graph.json
 
-# Local progress captures — never commit
-\[frame capture\] screenshots/
+# Progress captures are tracked through Git LFS; the capture script's local state is not
+\[frame capture\] screenshots/.*
+!\[frame capture\] screenshots/.gitattributes
+# Retired push-tree copies (pushes now load from Git via data/push-shas.json)
 \[ver capture\] codebase/
 
 dist/

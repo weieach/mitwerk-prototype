@@ -1,6 +1,8 @@
 import { geometry } from './layout.ts';
+import { featurePalette } from '../../shared/palette.ts';
 
 export const ideaTheme = {
+  todoStationScale: 0.8,
   fitMinZoom: 0.05,
   nodeGap: 140,
   todoGap: 10,
@@ -27,9 +29,9 @@ export const treeTheme = {
   mergeOriginLandingRows: 2,
   cardHoverBorderInset: 1,
   cardHoverTransitionMs: 180,
-  debugBorderColor: '#00A66A',
+  debugBorderColor: featurePalette.assemble,
   debugBorderWidth: 2,
-  routes: ['#7A9EF7', '#FFC629', '#00A66A', '#EA66B7', '#ED6A2C', '#9A85F0'],
+  routes: Object.values(featurePalette),
   stationDiameter,
   stationRadius: stationDiameter / 2,
   stationInnerDiameter,

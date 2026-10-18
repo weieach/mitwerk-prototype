@@ -1,3 +1,8 @@
+import { useWorkspaceViewport } from './useWorkspaceViewport';
+import { singleReaderRequired } from './workspace-responsive';
+import { PanelIcon } from '../../components/PanelIcon';
+import { useFirstPanelEntry } from './useFirstPanelEntry';
+import { useChatPanelWidth } from './useChatPanelWidth';
 import type { RuntimeMode } from '../iteration-gallery/EmbeddedPrototype';
 import { DrawerTodosContext } from './DrawerTodosContext';
 import { BrandMenu } from './BrandMenu';
@@ -6,7 +11,6 @@ import { editComposerTodo, addComposerTodo, orderedComposerTodos, hydrateCompose
 import { MessageOutput } from './MessageOutput';
 import { milestonePreviewSample } from './milestone-invite';
 import { PanelHeader } from '../../components/PanelHeader';
-import { PhosphorIcon } from '../../components/PhosphorIcon';
 import { appendFrameContext, attachFrame, attachFrameEvent, hasFrameDrag, readFrameDrag } from './frame-context';
 import type { FrameContext } from './frame-context';
 import { visibleMessageText } from './message-text';
@@ -101,7 +105,6 @@ export function Workbench() {
  const [showImageAlbum,setShowImageAlbum]=useState(false);
  const [expanded,setExpanded]=useState(screenshotMode && !sideBySideCapture && !capturedTask && !chatLayout && !todosCapture && !!entry.asset);
  const [selectedPane,setSelectedPane]=useState<WorkspacePane>(screenshotMode && !sideBySideCapture && !capturedTask && !chatLayout && !todosCapture ? 'version' : 'chat');
- const [readerWidth,setReaderWidth]=useState(61);
  const [chatVisible,setChatVisible]=useState(true);
  const [ideaOpen,setIdeaOpen]=useState(screenshotMode&&screenshotParams.get('ideaStream')==='1');
  const [runtimeMode,setRuntimeMode]=useState<RuntimeMode|null>(null);
@@ -131,7 +134,8 @@ export function Workbench() {
  const composerRef=useRef<HTMLTextAreaElement>(null);
  const fileRef=useRef<HTMLInputElement>(null);
  const bodyRef=useRef<HTMLDivElement>(null);
- const drag=useRef(false);
+ const viewportWidth=useWorkspaceViewport();
+ const chatPanel=useChatPanelWidth(bodyRef,viewportWidth);
  const boardDrag=useRef<string|null>(null);
  const boardClickSuppressed=useRef(false);
  const [boardTarget,setBoardTarget]=useState<TaskStatus|null>(null);
@@ -173,10 +177,13 @@ export function Workbench() {
  const chatShown=chatVisible&&!expanded&&(!mobile||mobileActive==='chat');
  const versionShown=!!openedAsset&&(!mobile||mobileActive==='version');
  const ideasShown=ideaOpen&&versionShown&&reader==='prototype';
- const liveShown=runtimeMode==='live'&&versionShown;
+ const singleReader=singleReaderRequired(viewportWidth,chatShown&&view==='dialog');
+ const liveShown=runtimeMode==='live'&&versionShown&&!(singleReader&&ideaOpen);
+ useEffect(()=>{if(singleReader&&ideaOpen&&runtimeMode==='live')setIdeaOpen(false);},[singleReader]);
+ useFirstPanelEntry({chat:chatShown&&view==='dialog',version:versionShown&&reader==='prototype',ideas:ideasShown,live:liveShown});
  function togglePanel(panel:'chat'|'version'|'ideas'|'live') {
-  if(panel==='live'){setView('dialog');setReader('prototype');setSelectedPane('version');setMobilePanel('version');setExpanded(false);setFrameRequest({live:true});return;}
-  if(panel==='ideas'){setIdeaOpen(!ideasShown);setSelectedPane('version');setReader('prototype');setMobilePanel('version');return;}
+  if(panel==='live'){if(singleReader)setIdeaOpen(false);setView('dialog');setReader('prototype');setSelectedPane('version');setMobilePanel('version');setExpanded(false);setFrameRequest({live:true});return;}
+  if(panel==='ideas'){if(singleReader&&!ideasShown){setFrameRequest({live:false});setRuntimeMode(null);}setIdeaOpen(!ideasShown);setSelectedPane('version');setReader('prototype');setMobilePanel('version');return;}
   setExpanded(false);setMobilePanel(panel);
   if(panel==='chat'){if(view!=='dialog'){setView('dialog');setChatVisible(true);}else setChatVisible(!chatShown);}
   if(panel==='version'){setSelectedPane('version');if(versionShown&&reader==='prototype'){setReader(null);setIdeaOpen(false);}else setReader('prototype');}
@@ -222,7 +229,6 @@ export function Workbench() {
  useEffect(()=>()=>{timers.current.forEach(clearTimeout);},[]);
  useEffect(()=>{const open=()=>{setView('Todos');setReader(null);setExpanded(false);setSelectedPane('chat');};window.addEventListener('mitwerk-open-todos',open);return()=>window.removeEventListener('mitwerk-open-todos',open);},[]);
  useEffect(()=>{const key=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();setModal('search');}if(e.key==='Escape'&&!document.querySelector('dialog[open]')){setReader(null);setExpanded(false);setSelectedPane('chat');}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[]);
- useEffect(()=>{const move=(e:PointerEvent)=>{if(!drag.current||!bodyRef.current)return;const r=bodyRef.current.getBoundingClientRect();setReaderWidth(Math.max(35,Math.min(70,(r.right-e.clientX)/r.width*100)));};const stop=()=>{drag.current=false;document.body.style.cursor='';};window.addEventListener('pointermove',move);window.addEventListener('pointerup',stop);window.addEventListener('pointercancel',stop);return()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',stop);window.removeEventListener('pointercancel',stop);};},[]);
  function openTodoAction(target:TodoTarget,mode:'edit'|'delete',text:string){setTodoText(text);setTodoAction({target,mode});}
  function saveTodoAction(){
   if(!todoAction)return;
@@ -367,14 +373,14 @@ export function Workbench() {
     <BrandMenu theme={theme} onTheme={setTheme}/>
     <nav className="workspace-links" aria-label="Workspace views">
      {/* View links follow the panels' left-to-right order: chat, reader (Version blocks, Idea stream), then Live server. */}
-     <button aria-pressed={chatShown&&view==='dialog'} aria-controls="workspace-pane-chat" onClick={()=>togglePanel('chat')}><PhosphorIcon name={panelIcons.chat} size={15}/><span className="workspace-link-label">Chat</span></button>
-     <button aria-pressed={versionShown&&reader==='prototype'} aria-controls="workspace-pane-version" onClick={()=>togglePanel('version')}><PhosphorIcon name={panelIcons.versionBlocks} size={15}/><span className="workspace-link-label">Version blocks</span></button>
-     <button aria-pressed={ideasShown} aria-controls="workspace-pane-ideas" onClick={()=>togglePanel('ideas')}><PhosphorIcon name={panelIcons.ideaStream} size={15}/><span className="workspace-link-label">Idea stream</span></button>
-     <button aria-pressed={liveShown} aria-controls="workspace-pane-version" onClick={()=>togglePanel('live')}><PhosphorIcon name={panelIcons.liveServer} size={15}/><span className="workspace-link-label">Live server</span></button>
+     <button aria-pressed={chatShown&&view==='dialog'} aria-controls="workspace-pane-chat" onClick={()=>togglePanel('chat')}><PanelIcon name={panelIcons.chat} size={15}/><span className="workspace-link-label">Chat</span></button>
+     <button aria-pressed={versionShown&&reader==='prototype'} aria-controls="workspace-pane-version" onClick={()=>togglePanel('version')}><PanelIcon name={panelIcons.versionBlocks} size={15}/><span className="workspace-link-label">Version blocks</span></button>
+     <button aria-pressed={ideasShown} aria-controls="workspace-pane-ideas" onClick={()=>togglePanel('ideas')}><PanelIcon name={panelIcons.ideaStream} size={15}/><span className="workspace-link-label">Idea stream</span></button>
+     <button aria-pressed={liveShown} aria-controls="workspace-pane-version" onClick={()=>togglePanel('live')}><PanelIcon name={panelIcons.liveServer} size={15}/><span className="workspace-link-label">Live server</span></button>
      {openAssetIds.filter(id=>id!=='prototype').map(id=>{const asset=allAssets.find(a=>a.id===id);return asset&&<span className="workspace-resource" key={id}><button onClick={()=>selectPane(`asset:${id}`)}>{asset.title}</button><button aria-label={`Close ${asset.title}`} onClick={()=>closeAssetTab(id)}><X size={12}/></button></span>;})}
     </nav>
    </header>
-   <div ref={bodyRef} className={`mw-body ${reader?'reader-open':''} ${expanded?'reader-expanded':''} ${reader&&!expanded?'mw-split-view':''} ${!chatVisible?'chat-hidden':''}`} style={{'--reader-width':`${readerWidth}%`} as CSSProperties}>
+   <div ref={bodyRef} className={`mw-body ${reader?'reader-open':''} ${expanded?'reader-expanded':''} ${reader&&!expanded?'mw-split-view':''} ${!chatVisible?'chat-hidden':''} ${chatPanel.resizing?'is-chat-resizing':''}`} style={{'--chat-panel-width':`${chatPanel.width}px`} as CSSProperties}>
     <main hidden={!chatShown} id="workspace-pane-chat" aria-label="Conversation" className="mw-surface">
      {view==='dialog' ? <section className={`mw-dialog ${isNewChat?'new-chat-launch':''} ${!task.messages.length?'empty-chat':''}`} aria-label={isNewChat?'New chat':isTaskChat?'Task conversation':'Chat conversation'}>
       <PanelHeader title={isNewChat?'New chat':task.title} icon={panelIcons.chat} expanded={!reader} onToggle={()=>{setSelectedPane('chat');if(!reader){setReader('prototype');setExpanded(false);}else{setReader(null);setExpanded(false);}}}/>
@@ -404,9 +410,9 @@ export function Workbench() {
       {view==='Settings'&&<section className="settings-page"><div className="page-title"><div><h1>Settings</h1><p>Your personal workspace.</p></div></div><div className="setting-row"><span><strong>Appearance</strong><small>Use the MitWerk light or dark palette.</small></span><div className="mw-segmented"><button className={theme==='light'?'selected':''} onClick={()=>setTheme('light')}><Sun size={15}/>Light</button><button className={theme==='dark'?'selected':''} onClick={()=>setTheme('dark')}><Moon size={15}/>Dark</button></div></div><div className="setting-row"><span><strong>Profile</strong><small>{userName} · Designer</small></span><div className="profile-name-fields"><label className="form-label">First name<input value={userProfile.firstName} readOnly/></label><label className="form-label">Last name<input value={userProfile.lastName} readOnly/></label></div><Avatar name={userName}/></div><div className="setting-row"><span><strong>About this prototype</strong><small>Sample conversations and outputs. No live AI, colleague messaging or account connection.</small></span><span className="muted">Frontend demo</span></div></section>}
      </div>}
     </main>
-    {openedAsset&&<><div hidden={!chatShown||!versionShown} className="reader-divider" role="separator" aria-label="Resize reading window" aria-orientation="vertical" aria-valuemin={35} aria-valuemax={70} aria-valuenow={readerWidth} tabIndex={0} onPointerDown={e=>{e.preventDefault();drag.current=true;document.body.style.cursor='col-resize';}} onKeyDown={e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();setReaderWidth(w=>Math.max(35,Math.min(70,w+(e.key==='ArrowLeft'?3:-3))));}if(e.key==='Home')setReaderWidth(35);if(e.key==='End')setReaderWidth(70);}}/>
+    {openedAsset&&<><div hidden={!chatShown||!versionShown} className="reader-divider" role="separator" aria-label="Resize chat column" aria-controls="workspace-pane-chat" aria-orientation="vertical" aria-valuemin={chatPanel.min} aria-valuemax={chatPanel.max} aria-valuenow={chatPanel.width} aria-valuetext={`${chatPanel.width}px`} tabIndex={0} {...chatPanel.separator}/>
      <aside hidden={!versionShown} id={`workspace-pane-${selectedPane==='chat'?'version':selectedPane}`} className="mw-reader" aria-label="Reading window"><div className={`reader-content ${openedAsset.kind==='prototype'?'history-content':''}`}>
-       {openedAsset.kind==='prototype'&&<ReadingWorkspace onRuntimeChange={setRuntimeMode} externalPush={frameRequest} initialMode="history" galleryOnly={!ideaOpen} ideaOpen={ideaOpen} onCloseIdeas={()=>setIdeaOpen(false)} expanded={expanded} onToggle={()=>{setSelectedPane('version');setExpanded(value=>!value);}}/>}
+       {openedAsset.kind==='prototype'&&<ReadingWorkspace singlePanel={singleReader} onOpenPush={singleReader ? version=>{setIdeaOpen(false);setFrameRequest({version});} : undefined} onRuntimeChange={setRuntimeMode} externalPush={frameRequest} initialMode="history" galleryOnly={!ideaOpen} ideaOpen={ideaOpen} onCloseIdeas={()=>setIdeaOpen(false)} expanded={expanded} onToggle={()=>{setSelectedPane('version');setExpanded(value=>!value);}}/>}
        {openedAsset.kind!=='prototype'&&<PanelHeader title={openedAsset.title} icon={panelIcons[openedAsset.kind]} expanded={expanded} onToggle={toggleWorkspaceFullscreen}/>}
        {openedAsset.kind==='image'&&(groupedImages&&showImageAlbum?<section className="reader-image-gallery" aria-label="Image gallery"><header><h2>Images</h2><span>{readerImages.length} images</span></header><div className="reader-image-grid">{readerImages.map(a=><button key={a.id} onClick={()=>{openAsset(a.id);}}><span className="gallery-image-frame"><img src={a.url} alt="" loading="lazy"/></span><span>{a.title}</span></button>)}</div></section>:<div className="image-reader">{groupedImages&&<button className="mw-button image-gallery-back" onClick={()=>setShowImageAlbum(true)}><ArrowLeft size={15}/>All images · {readerImages.length}</button>}<img src={openedAsset.url} alt={openedAsset.title}/><p>{openedAsset.title}</p></div>)}
        {openedAsset.kind==='document'&&<article className="document-reader"><div className="document-icon"><FileText size={24}/></div>{openedAsset.content?.split('\n\n').map((block,i)=>i===0?<h1 key={i}>{block}</h1>:<section key={i}>{block.includes('\n')?<><h2>{block.split('\n')[0]}</h2><p>{block.slice(block.indexOf('\n')+1)}</p></>:<p>{block}</p>}</section>)}</article>}

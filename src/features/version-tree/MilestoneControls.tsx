@@ -2,8 +2,8 @@ import { PhosphorIcon } from '../../components/PhosphorIcon';
 import { useId, useState } from 'react';
 import type { ReactNode, Ref } from 'react';
 
-export function MilestoneButton({ onClick, editing = false, disabled = false, buttonRef }: { onClick: () => void; editing?: boolean; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement> }) {
-  return <button ref={buttonRef} type="button" className="idea-add" disabled={disabled} onClick={onClick}><i className="ph ph-plus" aria-hidden="true"/>{editing ? 'Edit milestone' : 'Add milestone'}</button>;
+export function MilestoneButton({ onClick, editing = false, disabled = false, buttonRef, saved = false, savePulse = 0 }: { onClick: () => void; editing?: boolean; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement>; saved?: boolean; savePulse?: number }) {
+  return <button ref={buttonRef} type="button" className={`idea-add${editing ? ' is-editing' : ''}`} title={saved ? 'Edit milestone' : undefined} disabled={disabled} onClick={onClick}><i key={saved ? `saved-${savePulse}` : 'add'} className={`ph ph-${saved ? 'check milestone-saved-check' : 'plus'}${saved && savePulse ? ' is-celebrating' : ''}`} aria-hidden="true"/><span className="milestone-action-label">{saved ? 'Milestone added' : editing ? 'Edit milestone' : 'Add milestone'}</span></button>;
 }
 
 export function MilestoneEditor({ value, onSave, onCancel, children, compactFooter = false }: { value: string; onSave: (text: string) => void; onCancel: () => void; children?: ReactNode; compactFooter?: boolean }) {

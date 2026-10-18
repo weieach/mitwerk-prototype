@@ -16,7 +16,7 @@ import { albumAxisContent, albumBlockBounds, albumFloorY, containingBlock, dateL
 import { galleryTokens as t } from './tokens';
 import { workStateTokens } from '../../shared/work-state';
 import { prefetchedCaptures } from './capture-cache';
-import { axisTopBlend, mergeAxisAnchors, overheadDatePosition, projectAxisLabels, withOverheadDates } from './axis-label-layout';
+import { axisSlotKey, axisTopBlend, mergeAxisAnchors, overheadDatePosition, projectAxisLabels, withOverheadDates } from './axis-label-layout';
 import { observeTheme, resolveColor } from '../../shared/theme';
 import type { AxisAnchor, AxisLabel } from './axis-label-layout';
 
@@ -63,6 +63,7 @@ export class AlbumScene {
   private growing = false;
   private retired: THREE.Object3D[] = [];
   private ticks = new Map<string, THREE.Line>();
+  private rulerGuides: { slot: string; lines: THREE.Line[] }[] = [];
   private observer: ResizeObserver;
   private raycaster = new THREE.Raycaster();
   private hovered: string | null = null;
@@ -527,6 +528,7 @@ export class AlbumScene {
   }
   private syncFeaturedLabels() {
     this.clearFeaturedGuides();
+    this.rulerGuides.forEach(guide => guide.lines.forEach(line => { line.visible = true; }));
     this.featuredAnchors = [];
     this.featuredGuides.visible = !this.theaterTurn;
     const frame = this.featuredId() ? this.frames.get(this.featuredId()!) : undefined;
@@ -536,6 +538,8 @@ export class AlbumScene {
       { id: 'featured:date', text: pair.date.text, position: new THREE.Vector3(pair.date.x, pair.date.y, pair.date.z), face: pair.date.face, timestamp: frame.plane.frame.timestamp, featured: true },
       { id: 'featured:version', text: pair.version.text, position: new THREE.Vector3(pair.version.x, pair.version.y, pair.version.z), face: pair.version.face, timestamp: frame.plane.frame.timestamp, featured: true },
     ];
+    const occupied = new Set(this.featuredAnchors.map(anchor => axisSlotKey(anchor.face, anchor.position.z)));
+    this.rulerGuides.forEach(guide => guide.lines.forEach(line => { line.visible = !occupied.has(guide.slot); }));
     const floor = albumFloorY(this.album);
     const tick = featuredTickLength();
     this.line([new THREE.Vector3(this.album.width, 0, pair.date.z), new THREE.Vector3(this.album.width, tick, pair.date.z)], 'wall', this.featuredGuides);
@@ -815,6 +819,7 @@ export class AlbumScene {
   /** A ruler tick runs from the album out to its label; new ticks extend outward while simulating. */
   private rulerTick(key: string, points: THREE.Vector3[], face: LabelFace, placed: Map<string, THREE.Vector3> | null) {
     const lines = this.line(points, face);
+    this.rulerGuides.push({ slot: axisSlotKey(face, points[0].z), lines });
     this.ticks.set(key, lines[0]);
     this.grow(`tick:${key}`, lines, placed, tickGrowthScale);
   }
@@ -1048,6 +1053,7 @@ export class AlbumScene {
     this.axisAnchors = [];
     this.featuredAnchors = [];
     this.ticks.clear();
+    this.rulerGuides = [];
     this.content.clear(); this.bookmarks = []; this.frames.clear(); this.blockEdges.clear(); this.pickTargets = []; this.fades.clear();
     this.featuredGuides = new THREE.Group();
   }

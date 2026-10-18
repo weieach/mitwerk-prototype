@@ -1,3 +1,4 @@
+import { PanelIcon } from '../../components/PanelIcon';
 import { attachFrame, writeFrameDrag } from '../workbench/frame-context';
 import { annotationBookmarkColor } from '../annotations/appearance';
 import { FrameAnnotations } from '../annotations/FrameAnnotations';
@@ -342,7 +343,7 @@ export function TheaterView({ runtimeCatalog, liveRequestKey = 0, onRuntimeChang
 
         <button className="theater-text-action frame-chat-action" onClick={event => { event.stopPropagation(); attachFrame(frameContext()); }}><Icon name="plus"/>Add frame to chat</button>
         {(frame.kind === 'push' || liveTarget) && <button ref={entryButton} className="theater-text-action frame-chat-action is-enter" disabled={!active || (!liveTarget && (prototype.loading || prototype.available === null))} onClick={enterPrototype}>
-          <Icon name={liveTarget ? 'globe' : 'play'}/>{liveTarget ? 'Live server' : 'Enter prototype'}
+          {liveTarget ? <PanelIcon name="globe"/> : <Icon name="play"/>}{liveTarget ? 'Live server' : 'Enter prototype'}
         </button>}
         </div>
       </div>

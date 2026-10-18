@@ -63,10 +63,14 @@ export function axisLabelScreenPosition(anchor: AxisAnchor, camera: THREE.Orthog
 }
 
 /** Keep static titles; replace a tick that already sits at a featured depth. */
+export function axisSlotKey(face: AxisAnchor['face'], depth: number) {
+  return `${face}:${depth.toFixed(3)}`;
+}
+
 export function mergeAxisAnchors(anchors: AxisAnchor[], featured: AxisAnchor[]) {
-  const occupied = new Set(featured.map(anchor => `${anchor.face}:${anchor.position.z.toFixed(3)}`));
+  const occupied = new Set(featured.map(anchor => axisSlotKey(anchor.face, anchor.position.z)));
   return [
-    ...anchors.filter(anchor => AXIS_TITLES.has(anchor.text) || !occupied.has(`${anchor.face}:${anchor.position.z.toFixed(3)}`)),
+    ...anchors.filter(anchor => AXIS_TITLES.has(anchor.text) || !occupied.has(axisSlotKey(anchor.face, anchor.position.z))),
     ...featured,
   ];
 }

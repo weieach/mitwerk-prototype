@@ -62,3 +62,28 @@ test('pill reaches the floor tilted beside the edge instead of landing flat then
     assert.ok(contacts>0);
   }
 });
+
+test('responsive releases are covered by the preview and settle in the paired pose', async()=>{
+  const {invitationReleasePose,invitationRestPose,guideInvitation,guidePillDescent}=await import('../src/features/workbench/invitation-physics.ts');
+  for(const [width,height,coverWidth,coverHeight] of [[270,268,270,112],[350,236,350,146],[710,88,211,88]]){
+    const bodies=[makeInvitationBody(73,73,0,0,0,3.5),makeInvitationBody(73,32,0,0,0,0)];
+    const targets=invitationRestPose(width,height,bodies[0],bodies[1]);
+    const cover={x:0,y:0,width:coverWidth,height:coverHeight};
+    bodies.forEach((body,i)=>{
+      Object.assign(body,invitationReleasePose(cover,body,targets[i]));
+      body.vx=(targets[i].x-body.x)/.45;
+      for(const p of body.hull){
+        const x=body.x+p.x*Math.cos(body.angle)-p.y*Math.sin(body.angle);
+        const y=body.y+p.x*Math.sin(body.angle)+p.y*Math.cos(body.angle);
+        assert.ok(x>=0&&x<=coverWidth&&y>=0&&y<=coverHeight,'entire shape starts under image');
+      }
+    });
+    for(let i=0;i<720;i++){
+      const t=i*invitationPhysics.step,landing=Math.max(0,Math.min(1,(t-1.3)/.8));
+      guidePillDescent(bodies[1],targets[1],1-landing);
+      if(landing>0)guideInvitation(bodies,targets,landing);
+      stepInvitation(t<invitationPhysics.arrowDelay?[bodies[1]]:bodies,width,height);
+    }
+    bodies.forEach((b,i)=>assert.ok(Math.hypot(b.x-targets[i].x,b.y-targets[i].y)<.5,'settles into paired pose'));
+  }
+});

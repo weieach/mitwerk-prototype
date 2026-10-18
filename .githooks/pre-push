@@ -1,12 +1,29 @@
 #!/bin/sh
-# Capture the running app on git push and include the PNG in that push.
+# Upload Git LFS objects (progress captures), then capture the running app.
+# The PNG is saved locally and is committed with a later commit.
 set -e
+
+export PATH="/usr/local/bin:/opt/homebrew/bin:${HOME}/.local/bin:${PATH}"
+
+# Both Git LFS and the capture below read the pushed refs from stdin.
+refs=""
+if [ ! -t 0 ]; then
+  refs="$(cat)"
+fi
+
+command -v git-lfs >/dev/null 2>&1 || {
+  printf >&2 "\n%s\n\n" "pre-push: this repository stores [frame capture] screenshots in Git LFS, but 'git-lfs' was not found on your path. Install it (brew install git-lfs) or remove this hook."
+  exit 2
+}
+if [ -n "$refs" ]; then
+  printf '%s\n' "$refs" | git lfs pre-push "$@"
+else
+  git lfs push "$1" HEAD
+fi
 
 if [ "${MITWERK_SCREENSHOT_HOOK:-}" = "1" ] || [ "${MITWERK_SCREENSHOT_SKIP:-}" = "1" ]; then
   exit 0
 fi
-
-export PATH="/usr/local/bin:/opt/homebrew/bin:${HOME}/.local/bin:${PATH}"
 
 remote="$1"
 root="$(git rev-parse --show-toplevel)"
@@ -24,7 +41,7 @@ remote_ref=""
 has_update=0
 
 # GUI clients (Cursor / VS Code) often invoke pre-push with empty stdin.
-if [ ! -t 0 ]; then
+if [ -n "$refs" ]; then
   while read -r _local_ref _local_sha _remote_ref _remote_sha; do
     if [ -z "$_local_sha" ] || [ "$_local_sha" = "$zeros" ]; then
       continue
@@ -37,7 +54,9 @@ if [ ! -t 0 ]; then
     remote_sha="$_remote_sha"
     remote_ref="$_remote_ref"
     break
-  done
+  done <<REFS
+$refs
+REFS
 fi
 
 if [ "$has_update" -eq 0 ]; then

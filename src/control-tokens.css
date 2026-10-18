@@ -1,7 +1,10 @@
 /* Shared chrome sizing, based on the date-range selector's 29px height.
    Diagram nodes, timeline geometry and resize handles retain spatial sizing. */
 :root {
+  font-size:16px;
   --milestone-grain-opacity:.18;
+  --milestone-grain-size:160px;
+  --milestone-stacked-grain-size:80px;
   --milestone-grain:url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Cpath fill='%23fff' filter='url(%23n)' d='M0 0h160v160H0z'/%3E%3C/svg%3E");
   --focus-ring-width:1px;
   --focus-ring-offset:-1px;
@@ -18,7 +21,7 @@
   --runtime-panel-duration:320ms;
   --runtime-panel-easing:cubic-bezier(.22,.61,.36,1);
   --timeline-overview-track:#000;
-  --timeline-overview-thumb:#fff;
+  --timeline-overview-thumb:var(--muted);
   --timeline-range-hint-width:170px;
   --reader-title-gap:10px;
   --milestone-invite-color-strength:64%;
@@ -35,10 +38,10 @@
   --card-title-size: 17px;
   --strong-font-weight: 500;
   --card-title-weight: var(--strong-font-weight);
-  --body-font-size: 12px;
-  --chat-meta-size: 11px;
-  --chat-body-size: 13px;
-  --chat-title-size: 14px;
+  --body-font-size: 0.75rem;
+  --chat-meta-size: 0.6875rem;
+  --chat-body-size: 0.8125rem;
+  --chat-title-size: 0.875rem;
   --message-font-size: var(--chat-body-size);
   --message-max-width: 36em;
   --message-line-height: 1.6;
@@ -59,6 +62,20 @@
   --drawer-close-ease: cubic-bezier(.4, 0, .2, 1);
   --drawer-count-size: 16px;
   --drawer-count-font-size: var(--chat-meta-size);
+  --composer-model-font-size: 0.75rem;
+  --message-preview-aspect: 12 / 5;
+  --message-version-content-gap: 12px;
+  --message-default-label-padding: 16px;
+  --message-resize-fade: 160ms;
+  --message-resize-settle: 120ms;
+  --message-resize-placeholder: #303030;
+  --message-resize-highlight: #414141;
+  --message-resize-flow: 1800ms;
+  --gallery-prompt-number-gap: 4px;
+  --frame-placeholder-ink: var(--muted);
+  --feature-entry-duration: 220ms;
+  --message-stacked-action-height: 88px;
+  --gallery-prompt-padding: 8px 12px;
   --composer-model-padding: 7px 10px;
   --composer-mode-padding: 5px 10px;
   --dropdown-panel-padding: 0;
@@ -78,7 +95,7 @@
   --drawer-editing-fade: 240ms;
   --capture-pill-radius: 999px;
   --reference-thumbnail-size: 84px;
-  --message-preview-width: 144px;
+  --message-preview-width: calc((var(--message-preview-height) - 2px) * 12 / 5);
   --message-preview-max-width: 45%;
   --message-preview-height: 90px;
   --message-version-gap: 20px;
@@ -400,7 +417,7 @@
   height: var(--zoom-icon-size);
   font-size: var(--zoom-icon-size);
 }
-.workspace .album-saved-frame .row-select.is-placeholder { color: var(--muted); }
+.workspace .album-saved-frame .row-select.is-placeholder { color: var(--frame-placeholder-ink); }
 .workspace .tree-header .zoom-controls:not(.endpoint-controls) button {
   color: var(--muted);
 }
@@ -417,7 +434,7 @@
 /* Shared visualizer/stream control colors and neighboring title switch. */
 .workspace .panel-header > .panel-heading:has(> .version-panel-switch) > .adaptive-panel-title { flex:0 1 auto; padding-right:var(--panel-title-switch-gap); }
 .workspace .panel-header .panel-heading > .version-panel-switch { border:0; padding-inline:var(--panel-title-switch-gap); }
-.workspace :is(.panel-header, .canvas-controls, .gallery-footer) :is(.ui-icon, .ph),
+.workspace :is(.panel-header, .canvas-controls, .gallery-footer) :is(.ui-icon, .ph):not(.panel-feature-icon),
 .workspace .version-panel-switch { color:var(--panel-control-icon-color); }
 .workspace .row-select :is(.ph-caret-right, .ph-caret-down) { width:var(--selector-caret-size);height:var(--selector-caret-size);font-size:var(--selector-caret-size); }
 
@@ -469,4 +486,7 @@
 
 :root { --drawer-heading-padding-top:14px; --drawer-heading-padding-bottom:8px; --drawer-content-top-padding:4px; --drawer-row-height:24px; --drawer-row-gap:6px; --drawer-row-inline-gap:12px; --drawer-check-gap:10px; --drawer-content-bottom-padding:16px; --capture-detail-line:color-mix(in srgb,var(--ink) 65%,transparent); --capture-detail-line-active:color-mix(in srgb,var(--ink) 85%,transparent); }
 
-:root { --milestone-control-extra-padding:4px; --milestone-control-base-size:calc(var(--message-preview-height) * .72); --milestone-ball-size:calc(var(--milestone-control-base-size) + 2 * var(--milestone-control-extra-padding)); --milestone-pill-width:var(--milestone-ball-size); --milestone-pill-height:calc(var(--milestone-control-base-size) * .37 + 2 * var(--milestone-control-extra-padding)); --milestone-chip-fill:color-mix(in srgb,var(--ink) 16%,var(--paper)); --milestone-chip-border:color-mix(in srgb,var(--ink) 55%,transparent); --milestone-control-fill:transparent; --milestone-control-hover:rgb(255 255 255 / 10%); --milestone-control-ink:#fff; --milestone-control-border:rgb(255 255 255 / 70%); }
+:root { --milestone-control-extra-padding:clamp(3px, calc(100vw * 4 / 1876), 4.5px); --milestone-control-base-size:clamp(46px, calc(100vw * 64.8 / 1876), 73px); --milestone-arrow-size:clamp(20px, calc(100vw * 28 / 1876), 32px); --milestone-ball-size:calc(var(--milestone-control-base-size) + 2 * var(--milestone-control-extra-padding)); --milestone-pill-width:var(--milestone-ball-size); --milestone-pill-height:calc(var(--milestone-control-base-size) * .37 + 2 * var(--milestone-control-extra-padding)); --milestone-chip-fill:color-mix(in srgb,var(--ink) 16%,var(--paper)); --milestone-chip-border:color-mix(in srgb,var(--ink) 55%,transparent); --milestone-control-fill:transparent; --milestone-control-hover:rgb(255 255 255 / 10%); --milestone-control-ink:#fff; --milestone-control-border:rgb(255 255 255 / 70%); }
+
+:root[data-small-workspace=true] { font-size:15px; }
+:root { --milestone-edit-border:color-mix(in srgb,var(--ink) 24%,var(--paper)); }

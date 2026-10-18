@@ -26,6 +26,7 @@
 @font-face { font-family: 'Neurial Grotesk'; src: url('./fonts/neurial-grotesk-extrabold-italic.otf') format('opentype'); font-weight: 800; font-style: italic; font-display: swap; }
 
 :root {
+  --werk-blue: #2563eb;
   --sans: 'Waldenburg', 'KMR Waldenburg', 'KMR-Waldenburg', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-family: var(--sans);
   color: var(--ink);
@@ -62,7 +63,7 @@
   color-scheme: dark;
   background: #181818;
   --cursor-base: #e4e4e4;
-  --cursor-blue: #2f7fe9;
+  --cursor-blue: #499cff;
   --chrome: #141414;
   --ink: #d4d4d4;
   --muted: #888;
@@ -254,7 +255,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 
 .node-actions button { font-size:calc(11px + var(--action-button-font-increase)); }
 
-.idea-card .station.is-todo { width:var(--idea-todo-station-size); height:var(--idea-todo-station-size); left:calc(var(--station-center-x) - var(--idea-todo-station-size) / 2); top:calc(var(--station-center-y) - var(--idea-todo-station-size) / 2); border:0; border-radius:0; background:var(--route-color); color:var(--canvas-bg); box-shadow:none; }
+.idea-card .station.is-todo { --station-inner-size:calc(var(--idea-todo-station-size) - 2 * var(--station-border-width)); width:var(--idea-todo-station-size); height:var(--idea-todo-station-size); left:calc(var(--station-center-x) - var(--idea-todo-station-size) / 2); top:calc(var(--station-center-y) - var(--idea-todo-station-size) / 2); border:var(--station-border-width) solid var(--station-color, var(--route-color)); border-radius:0; background:var(--station-open-fill); color:var(--station-color, var(--route-color)); box-shadow:0 0 0 var(--station-clearance) var(--canvas-bg); }
 .idea-todos { display:flex; flex-direction:column; gap:var(--idea-todo-gap);  box-sizing:border-box; list-style:none; margin:0 0 var(--idea-todo-gap); padding:var(--milestone-padding); background:var(--paper); border:1px solid var(--line); border-radius:var(--surface-radius); font:var(--milestone-font-size)/1.35 var(--sans); }
 .idea-todos li { display:flex; align-items:flex-start; gap:8px; }
 .idea-todos .ui-icon { flex:none; margin-top:3px; }
@@ -271,5 +272,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .idea-todo-copy time { font-size:var(--idea-todo-time-size); opacity:var(--drawer-time-opacity); text-decoration:none; }
 
 /* Keep the WIP action centered on its graph station; details grow below it. */
-.idea-wip-action { display:flex; align-items:center; min-height:calc(var(--station-center-y) * 2); margin-bottom:var(--idea-todo-gap); }
+.idea-wip-action { display:flex; align-items:center; flex-wrap:wrap; gap:var(--selector-content-gap); min-height:calc(var(--station-center-y) * 2); margin-bottom:var(--idea-todo-gap); }
 .idea-wip-action > .idea-editor { width:100%; }
+
+.idea-wip-action > .idea-wip-prompts { margin:0; white-space:nowrap; }

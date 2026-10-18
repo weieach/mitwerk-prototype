@@ -104,7 +104,8 @@ export function AlbumView({ simulating = false, extent, framePickerSlot, onSelec
       <AxisLabels ref={axisLabels} animateEntry={simulating && new URLSearchParams(location.search).get('screenshot') !== '1'}/>
       {hovered && !tokenView && !turning && !returning && !hidden && <div className="album-prompt-label"
         style={{top:`${t.promptLabel.topPercent}%`,fontSize:t.promptLabel.fontSize,maxWidth:`calc(100% - ${t.promptLabel.edgeGap * 2}px)`}}>
-        {galleryPromptLabel(hovered.frame.fullPrompt ?? hovered.frame.summary)}
+        {hovered.frame.number !== null && <div className="album-prompt-number">{hovered.frame.kind === 'push' ? 'Push' : 'Prompt'} #{hovered.frame.number}</div>}
+        <div>{galleryPromptLabel(hovered.frame.fullPrompt ?? hovered.frame.summary)}</div>
       </div>}
       {rangeStats && <span className="album-range-stats" title={rangeStats}>{rangeStats}</span>}
       <div className="album-navigation-help"><InfoTooltip label="Gallery navigation help">{tokenView ? 'Drag to pan, Scroll to zoom, Exit to rotate the gallery' : 'Drag to rotate, Scroll to zoom, Right-drag to pan, Click a frame to play'}</InfoTooltip></div>

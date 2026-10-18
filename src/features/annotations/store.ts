@@ -1,9 +1,8 @@
 import { useSyncExternalStore } from 'react';
-import { annotationMilestones, emptyAnnotations, removeAnnotation, saveAnnotation } from './model';
+import { annotationMilestones, annotationStorageKey as key, emptyAnnotations, removeAnnotation, saveAnnotation } from './model';
 import { milestoneStorageKey, milestonesChangedEvent, parseMilestones } from '../version-tree/idea-stream';
 import type { AnnotationState, FrameAnnotation, AnnotationFrame } from './model';
 import { seedAnnotationSamples } from './samples';
-const key = 'mitwerk-frame-annotations-v1';
 function read(): AnnotationState {
   try {
     const value = JSON.parse(localStorage.getItem(key) || 'null');

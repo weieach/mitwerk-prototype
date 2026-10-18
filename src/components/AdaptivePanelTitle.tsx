@@ -1,5 +1,5 @@
+import { PanelIcon } from './PanelIcon';
 import { useLayoutEffect, useRef, useState } from 'react';
-import { PhosphorIcon } from './PhosphorIcon';
 
 /** Shorten only when the full title and its sibling controls cannot fit. */
 export function AdaptivePanelTitle({ full, short, id, icon }: { full: string; short: string; id?: string; icon?: string }) {
@@ -57,7 +57,7 @@ export function AdaptivePanelTitle({ full, short, id, icon }: { full: string; sh
   return <h2 ref={title} id={id} className="adaptive-panel-title" aria-label={full} title={full}>
     <span className="panel-title-measure" aria-hidden="true">{full}</span>
     <span className="panel-title-short-measure" aria-hidden="true">{short}</span>
-    {icon && <PhosphorIcon name={icon} size={15}/>}
+    {icon && <PanelIcon name={icon} size={15}/>}
     <span className={`panel-title-visible${compact ? ' is-compact' : ''}`} aria-hidden="true">{compact ? short : full}</span>
   </h2>;
 }

@@ -234,7 +234,7 @@
 .workspace .saved-frame-trigger { height:100%; }
 
 /* Prompt previews stay in screen space, independent of the WebGL camera. */
-.album-prompt-label { position:absolute; left:50%; transform:translate(-50%,-50%); z-index:4; width:max-content; pointer-events:none; text-align:center; line-height:1.25; color:var(--ink); background:color-mix(in srgb, var(--gallery-label-background) var(--gallery-label-opacity), transparent); padding:var(--gallery-label-padding); overflow-wrap:anywhere; text-shadow:none; }
+.album-prompt-label { position:absolute; left:50%; transform:translate(-50%,-50%); z-index:4; width:max-content; pointer-events:none; text-align:center; line-height:1.25; color:var(--ink); background:color-mix(in srgb, var(--gallery-label-background) var(--gallery-label-opacity), transparent); padding:var(--gallery-prompt-padding); overflow-wrap:anywhere; text-shadow:none; }
 
 .album-axis-label:hover { z-index:var(--axis-front-layer) !important; }
 
@@ -276,3 +276,5 @@
 .iteration-gallery.gallery-runtime-active > .gallery-footer > * { filter:blur(var(--annotation-blur)); }
 .iteration-gallery.gallery-runtime-active:has(.theater-view[data-runtime-exiting="true"]) > .gallery-footer > * { filter:blur(0); transition-duration:var(--annotation-exit-ms); }
 @media (prefers-reduced-motion:reduce) { .iteration-gallery > .gallery-footer > * { transition:none; } }
+
+.album-prompt-number { color:var(--frame-placeholder-ink); margin-bottom:var(--gallery-prompt-number-gap); }

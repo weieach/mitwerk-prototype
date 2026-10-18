@@ -711,7 +711,7 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
         : wantsPrototypeCapture(prompt)
         ? 'document.querySelector(".theater-runtime")?.dataset.runtimeReady === "true" && !!document.querySelector(".theater-runtime iframe") && !document.querySelector(".runtime-status")'
         : wantsIdeaStreamCapture(prompt)
-        ? '!!document.querySelector(".workspace-idea-split #workspace-pane-ideas .tree-viewport") && document.querySelector(".iteration-gallery")?.dataset.galleryPhase === "theater" && document.querySelector(".theater-view")?.dataset.frameReady === "true" && !!document.querySelector(".theater-screen img")?.complete'
+        ? '!!document.querySelector("#workspace-pane-ideas .tree-viewport") && (document.querySelector(".iteration-gallery") ? document.querySelector(".iteration-gallery").dataset.galleryPhase === "theater" && document.querySelector(".theater-view")?.dataset.frameReady === "true" && !!document.querySelector(".theater-screen img")?.complete : document.documentElement.dataset.screenshotReady === "1")'
         : wantsTodosCapture(prompt)
         ? `(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && !!document.querySelector(".todos-page .kanban") && !document.querySelector(".mw-reader")${/todo navigation dialog/i.test(prompt) ? ' && !!document.querySelector(".todo-navigation-dialog[open]")' : ''}`
         : wantsSideBySideCapture(prompt)
@@ -787,7 +787,7 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
         if (!draft.result?.value) { await delay(100); continue; }
       }
       if (hasFlag('milestone-invite')) {
-        const invitation = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.message-version-output.is-milestone-ready:not(.is-milestone-jumping) .milestone-falling-controls[data-settled=true]')`, returnByValue: true });
+        const invitation = await cdp('Runtime.evaluate', { expression: `(() => { document.querySelector('.message-version-card')?.scrollIntoView({block:'nearest',behavior:'instant'}); return !!document.querySelector('.message-version-output.is-milestone-ready:not(.is-milestone-jumping) .milestone-falling-controls[data-settled=true]'); })()`, returnByValue: true });
         if (!invitation.result?.value) { await delay(100); continue; }
       }
       if (hasFlag('expanded-versions')) {

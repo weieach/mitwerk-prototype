@@ -167,7 +167,8 @@
 .message-version-output { margin-top:18px; }
 .mw-app .message-version-card { display:flex; align-items:center; width:100%; height:auto; gap:var(--message-version-gap); background:var(--message-version-fill); border:1px solid var(--line-strong); border-radius:8px; padding:0 12px 0 0; min-height:var(--message-preview-height); overflow:hidden; text-align:left; font-size:12px; }
 .message-version-label { display:flex; flex:1; align-items:center; min-width:0; gap:8px; }
-.message-version-preview { display:block; position:relative; align-self:stretch; flex:0 0 min(var(--message-preview-width),var(--message-preview-max-width)); min-width:0; overflow:hidden; }
+.message-version-label > .ui-icon { flex:none; margin-left:auto; }
+.message-version-preview { display:block; position:relative; align-self:stretch; flex:0 0 min(var(--message-preview-width),var(--message-preview-max-width)); min-width:0; overflow:hidden; z-index:2; background:var(--message-version-fill); aspect-ratio:var(--message-preview-aspect); }
 .message-version-preview img { display:block; position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .message-version-card > .phosphor-icon { flex:none; }
 .theater-branch-row { display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
@@ -226,7 +227,7 @@
 .mw-app .composer-drawer textarea::placeholder { color:var(--composer-placeholder); }
 .composer-drawer .composer-tools { gap:8px; margin-top:12px; }
 .composer-drawer .composer-tools > div { gap:var(--composer-controls-gap); }
-.mw-app .composer-model { display:inline-flex; align-items:center; gap:5px; padding:var(--composer-model-padding); border-radius:var(--capture-pill-radius); font-size:var(--composer-control-font-size); line-height:1.2; white-space:nowrap; }
+.mw-app .composer-model { display:inline-flex; align-items:center; gap:var(--selector-content-gap); padding:var(--composer-model-padding); border-radius:var(--capture-pill-radius); font-size:var(--composer-model-font-size); line-height:1.2; white-space:nowrap; }
 .mw-app .composer-model[aria-expanded=true] { background:var(--composer-selected); }
 .composer-mode-switch { display:flex; flex:none; border:0; border-radius:26px; padding:2px; margin:0; background:var(--line-strong); }
 .composer-mode-switch legend { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
@@ -440,16 +441,22 @@
 .message-version-output.is-milestone-jumping > .idea-add { animation:milestone-button-bump var(--milestone-bump-duration) cubic-bezier(.3,0,.2,1); }
 .mw-app .message-version-output.is-milestone-ready .message-version-card { background:var(--paper); color:var(--milestone-invite-ink); }
 @keyframes milestone-button-bump { 0%,100% { transform:translateY(0); } 37% { transform:translateY(calc(-1 * var(--message-milestone-action-gap))); } 62% { transform:translateY(2px); } 80% { transform:translateY(-3px); } }
-/* Breathing branch-color field inspired by 21st.dev's Animated Gradient Background. */
-.mw-app .message-version-output.is-milestone-ready .message-version-card::after { content:''; position:absolute; inset:-35%; z-index:-2; pointer-events:none; background:var(--milestone-invite-gradient); animation:milestone-gradient-flow var(--milestone-invite-flow) ease-in-out infinite alternate; }
+/* Paint the field through the transparent border so its rim shares the moving colors. */
+.mw-app .message-version-output.is-milestone-ready .message-version-card { border-color:transparent; background:var(--milestone-invite-gradient); background-origin:border-box; background-size:170% 170%; animation:milestone-gradient-flow var(--milestone-invite-flow) ease-in-out infinite alternate; }
 @keyframes milestone-gradient-flow {
-  0% { transform:translate(-6%, -8%) scale(1); }
-  50% { transform:translate(5%, 4%) scale(1.12); }
-  100% { transform:translate(8%, -3%) scale(1.04); }
+  0% { background-position:0% 20%; }
+  50% { background-position:65% 80%; }
+  100% { background-position:100% 35%; }
 }
+.message-version-output .milestone-saved-check { display:inline-block; }
+.message-version-output .milestone-saved-check::before { background:var(--milestone-invite-gradient); background-size:170% 170%; background-clip:text; -webkit-background-clip:text; color:transparent; animation:milestone-gradient-flow var(--milestone-invite-flow) ease-in-out infinite alternate; }
+.message-version-output .milestone-saved-check.is-celebrating { animation:milestone-check-pop 320ms cubic-bezier(.2,0,.2,1); }
+@keyframes milestone-check-pop { 0% { transform:scale(.65); } 55% { transform:scale(1.45); } 100% { transform:scale(1); } }
 @media (prefers-reduced-motion:reduce) {
+  .message-version-output .milestone-saved-check.is-celebrating,
+  .message-version-output .milestone-saved-check::before,
   .message-version-output.is-milestone-jumping > .idea-add,
-  .mw-app .message-version-output.is-milestone-ready .message-version-card::after { animation:none; }
+  .mw-app .message-version-output.is-milestone-ready .message-version-card { animation:none; }
 }
 
 .chat-milestone-dialog .milestone-editor-footer { align-items:center; justify-content:space-between; gap:12px; }
@@ -460,7 +467,7 @@
 
 /* Static grain sits over the invitation gradient without intercepting clicks. */
 .mw-app .message-version-output.is-milestone-ready .message-version-card { position:relative; isolation:isolate; overflow:hidden; }
-.message-version-output.is-milestone-ready .message-version-card::before { content:''; position:absolute; inset:0; z-index:-1; pointer-events:none; opacity:var(--milestone-grain-opacity); background-image:var(--milestone-grain); }
+.message-version-output.is-milestone-ready .message-version-card::before { content:''; position:absolute; inset:0; z-index:-1; pointer-events:none; opacity:var(--milestone-grain-opacity); background-image:var(--milestone-grain); background-size:var(--milestone-grain-size) var(--milestone-grain-size); }
 .mw-app .message-version-output .milestone-not-yet { width:fit-content; background:transparent; color:var(--muted); }
 .mw-app .message-version-output .milestone-not-yet:hover { background:transparent; color:var(--ink); }
 
@@ -631,15 +638,17 @@
 @media(prefers-reduced-motion:reduce) { .capture-bucket-stack :is(.capture-bucket-option,.capture-bucket-new), .capture-bucket-stack.is-closing :is(.capture-bucket-option,.capture-bucket-new) { transition:none; } }
 
 /* Invitation controls fall as separate rigid bodies inside the card's mask. */
-.mw-app .message-version-card { position:relative; padding:0; }
-.mw-app .message-version-main { position:absolute; inset:0; width:100%; height:100%; display:flex; align-items:center; gap:var(--message-version-gap); padding:0 12px 0 0; border:0; border-radius:inherit; background:transparent; color:inherit; text-align:left; font:inherit; }
+.mw-app .message-version-card { position:relative; padding:0; align-items:flex-start; }
+.mw-app .message-version-main { position:relative; width:100%; height:calc(var(--message-preview-height) - 2px); display:flex; align-items:center; gap:var(--message-version-content-gap); padding:0 12px 0 0; border:0; border-radius:inherit; background:transparent; color:inherit; text-align:left; font:inherit; }
 .message-version-main > .phosphor-icon { flex:none; }
 .mw-app .message-version-output > .idea-add { color:var(--ink); border-color:var(--milestone-chip-border); background:var(--milestone-chip-fill); }
-.is-milestone-ready .message-version-label { padding-right:calc(var(--milestone-ball-size) + 12px); }
+.mw-app .message-version-output > .idea-add.is-editing { background:transparent; border-color:var(--milestone-edit-border); }
+.mw-app .message-version-output > .idea-add.is-editing .milestone-action-label { color:var(--muted); }
+.is-milestone-ready .message-version-label { padding-right:calc(var(--milestone-controls-width, var(--milestone-ball-size)) - 4px); }
 .milestone-label-swap { display:grid; overflow:hidden; }
 .milestone-label-swap > span { grid-area:1/1; }
 .milestone-invite-word { animation-delay:var(--panel-label-motion); }
-.milestone-falling-controls { position:absolute; top:0; bottom:0; left:calc(min(var(--message-preview-width), var(--message-preview-max-width)) + var(--message-version-gap)); right:0; pointer-events:none; }
+.milestone-falling-controls { position:absolute; top:0; bottom:0; left:0; right:0; z-index:1; pointer-events:none; }
 .mw-app .milestone-falling-controls > button { position:absolute; top:0; left:0; display:flex; align-items:center; justify-content:center; margin:0; padding:0; border:1px solid var(--milestone-control-border); background:var(--milestone-control-fill); color:var(--milestone-control-ink); pointer-events:auto; transform-origin:center; will-change:transform; }
 .mw-app .milestone-falling-controls > .milestone-open { width:var(--milestone-ball-size); height:var(--milestone-ball-size); border-radius:50%; }
 .mw-app .milestone-falling-controls > .milestone-not-yet { width:var(--milestone-pill-width); height:var(--milestone-pill-height); border-radius:999px; font:var(--control-font-size)/1 var(--sans); }
@@ -663,13 +672,11 @@
 .workspace :is(.gallery-footer, .canvas-controls) { --control-font-size:var(--panel-footer-font-size); --control-icon-size:var(--panel-footer-icon-size); --zoom-icon-size:var(--panel-footer-icon-size); }
 .workspace :is(.gallery-footer, .canvas-controls) .ui-icon:not([class*=ph-caret]) { --icon-size:var(--panel-footer-icon-size); width:var(--panel-footer-icon-size); height:var(--panel-footer-icon-size); font-size:var(--panel-footer-icon-size); }
 
-/* Ported from design-system: chat keeps a fixed width beside other panels, never more than 35% of the screen; the other panels share the rest.
-   With a fixed chat width there is nothing to drag, so the reader resize handle is hidden. Chat alone still fills the body. */
-:root { --chat-panel-width:min(440px, 35vw); }
+/* Chat width and responsive limits come from useChatPanelWidth; Chat alone fills the body. */
 @media (min-width:851px) {
   .mw-app .mw-body:is(.mw-split-view, .has-extra-panels) > .mw-surface:not([hidden]) { flex:0 0 var(--chat-panel-width); width:var(--chat-panel-width); }
   .mw-app .mw-body:is(.mw-split-view, .has-extra-panels) > .mw-reader { flex:1 1 0; }
-  .mw-app .mw-body > .reader-divider { display:none; }
+  .mw-app .mw-body:not(.reader-expanded) > .reader-divider:not([hidden]) { display:block; touch-action:none; }
 }
 
 /* Ported from design-system: chat text follows the panel title's text inset at every width; no centered max-width column. */
@@ -730,10 +737,7 @@
 .mw-app .composer-drawer-heading::before { content:''; position:absolute; top:var(--drawer-handle-top); left:50%; width:var(--drawer-handle-width); height:var(--drawer-handle-height); translate:-50% 0; border-radius:var(--drawer-handle-height); background:var(--drawer-handle-color); pointer-events:none; transition:background-color var(--drawer-hover-duration, .18s) ease; }
 .mw-app .composer-drawer-heading:hover::before, .mw-app .composer-drawer.is-dragging .composer-drawer-heading::before { background:var(--drawer-handle-active); }
 
-/* View link fills (2026-10-18): the selected view sits on --view-tag-fill and shifts to --view-tag-hover-fill on hover; an unselected view only changes its text color on hover.
-   Dark mode uses solid navy fills under the #2f7fe9 text; light mode keeps the tinted Werk Blue mix. */
-.mw-app { --view-tag-fill:color-mix(in srgb, var(--view-tag-ink) var(--view-tag-tint), transparent); --view-tag-hover-fill:color-mix(in srgb, var(--view-tag-ink) calc(var(--view-tag-tint) / 2), transparent); }
-.mw-app[data-theme=dark] { --view-tag-fill:#1f2d47; --view-tag-hover-fill:#182234; }
+/* Active view links share the panel surface; inactive links only change text on hover. */
 .mw-app .workspace-links > button::before { background:var(--view-tag-fill); }
 .mw-app .workspace-links > button:not([aria-pressed=true]):hover::before { opacity:0; }
 .mw-app .workspace-links > button[aria-pressed=true]:hover::before { background:var(--view-tag-hover-fill); }
@@ -765,6 +769,60 @@
 .mw-app .workspace-links > button::before { transition:opacity var(--view-tag-fade) var(--view-tag-hover-ease), background-color var(--view-tag-fade) var(--view-tag-hover-ease); }
 
 /* Date range: the label sits right beside its caret, centered in the control; its menu is only as wide as its options, centered under the control. */
-.workspace .row-select.is-centered { justify-content:center; gap:6px; }
+.workspace .row-select.is-centered { justify-content:center; gap:var(--selector-content-gap); }
 .workspace .row-select.is-centered > .row-select-value { flex:0 1 auto; }
 .select-menu.is-centered [role=option] { justify-content:center; padding-inline:20px; }
+
+.mw-body.is-chat-resizing, .mw-body.is-chat-resizing * { cursor:col-resize!important; user-select:none!important; }
+.mw-app .reader-divider:is(:hover,:focus-visible)::before, .is-chat-resizing > .reader-divider::before { background:var(--mw-blue); opacity:.65; border-radius:2px; }
+
+/* Stack the preview, copy and action area before a narrow chat card can collide. */
+.mw-surface { container:chat-panel / inline-size; }
+.message-version-output { container:message-output / inline-size; }
+/* Keep a readable copy column beside the cover and physical controls. */
+@container chat-panel (width < max(640px, calc(100vw * 650 / 1876))) {
+  .mw-app .message-version-main { position:relative; inset:auto; height:auto; flex-direction:column; align-items:stretch; gap:12px; padding:0 16px var(--message-stacked-action-height); }
+  .message-version-main .message-version-preview { flex:none; align-self:stretch; height:auto; aspect-ratio:var(--message-preview-aspect); margin-inline:-16px; }
+  .message-version-main .message-version-label { flex:none; min-height:54px; padding:0; }
+  .message-version-card { --milestone-grain-size:var(--milestone-stacked-grain-size); }
+}
+
+/* Medium cards keep their text and falling actions in a single 90px band. */
+@container chat-panel (min-width:400px) {
+@container chat-panel (width < max(640px, calc(100vw * 650 / 1876))) {
+  .mw-app .message-version-main { gap:0; padding-bottom:0; }
+  .message-version-main .message-version-label { min-height:var(--message-preview-height); }
+  .is-milestone-ready .message-version-main .message-version-label { padding-right:calc(var(--milestone-controls-width, var(--milestone-ball-size)) - 8px); }
+}
+}
+
+@container chat-panel (width >= max(640px, calc(100vw * 650 / 1876))) {
+  .milestone-label-swap { line-height:inherit; }
+}
+
+/* Ordinary stacked cards fit the label; invitation mode owns its extra action space. */
+@container chat-panel (width < max(640px, calc(100vw * 650 / 1876))) {
+  .mw-app .message-version-output:not(.is-milestone-ready) .message-version-main { gap:0; padding-bottom:0; }
+  .message-version-output:not(.is-milestone-ready) .message-version-label { min-height:0; padding-block:var(--message-default-label-padding); }
+}
+.milestone-falling-controls:not([data-positioned=true]) { visibility:hidden; }
+
+/* The placeholder shares the card's real layout box, including responsive changes. */
+.message-version-placeholder { position:absolute; inset:0; z-index:5; background:linear-gradient(110deg,var(--message-resize-placeholder) 20%,var(--message-resize-highlight) 50%,var(--message-resize-placeholder) 80%); background-size:250% 100%; opacity:0; pointer-events:none; transition:opacity var(--message-resize-fade) ease var(--message-resize-settle); }
+.message-version-card > :not(.message-version-placeholder) { transition:opacity var(--message-resize-fade) ease var(--message-resize-settle); }
+.mw-app .is-chat-resizing .message-version-card { pointer-events:none; }
+.mw-app .is-chat-resizing .message-version-output.is-milestone-ready .message-version-card { background:var(--message-resize-placeholder); border-color:var(--message-resize-placeholder); animation:none; }
+.is-chat-resizing .message-version-output.is-milestone-ready .message-version-card::before { opacity:0; }
+.is-chat-resizing .message-version-card > :not(.message-version-placeholder) { opacity:0; transition-delay:0ms; }
+.is-chat-resizing .message-version-placeholder { opacity:1; transition-delay:0ms; animation:message-resize-flow var(--message-resize-flow) linear infinite; }
+@keyframes message-resize-flow { from { background-position:150% 0; } to { background-position:-150% 0; } }
+@media(prefers-reduced-motion:reduce) { .is-chat-resizing .message-version-placeholder { animation:none; } }
+@media(prefers-reduced-motion:reduce) { .message-version-placeholder, .message-version-card > :not(.message-version-placeholder) { transition:none; } }
+
+/* Feature color belongs to the icon; active labels and fills remain neutral. */
+.mw-app { --feature-chat:var(--mw-assemble); --feature-version:var(--mw-blue); --feature-ideas:var(--mw-handoff); --feature-live:var(--mw-pulse); }
+.mw-app, .mw-app[data-theme=dark] { --view-tag-fill:var(--paper); --view-tag-hover-fill:var(--paper); }
+.panel-feature-icon { color:var(--panel-feature-color); }
+.mw-app .workspace-links > button[aria-pressed=true], .mw-app .workspace-links > button[aria-pressed=true]:hover { color:var(--ink); }
+.workspace-links > button .panel-feature-icon { color:inherit; transition:color var(--view-tag-fade); }
+.workspace-links > button[aria-pressed=true] .panel-feature-icon { color:var(--panel-feature-color); }

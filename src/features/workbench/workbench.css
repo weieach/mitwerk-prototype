@@ -1,6 +1,6 @@
 /* Palette from #mitwerk-overview in the approved MitWerk design system. */
-.mw-app { --mw-blue:#1d4ab9; --mw-sky:#e4ecff; --mw-ink:#191a1b; --mw-muted:#65676c; --mw-page:#fff; --mw-panel:#fafafa; --mw-line:#e7e7e7; --mw-line-strong:#cfcfd2; --mw-hover:#f1f1f2; --mw-dock:#7a9ef7; --mw-route:#ffc629; --mw-assemble:#00a66a; --mw-handoff:#ea66b7; --mw-pulse:#ed6a2c; --mw-misregister:#9a85f0; --mw-radius:6px; --mw-sidebar-width:220px; --mw-shadow:0 14px 44px rgb(25 26 27 / 12%); display:flex; height:100dvh; overflow:hidden; color:var(--mw-ink); background:var(--mw-page); font:400 13px/1.5 var(--sans); }
-.mw-app[data-theme=dark] { color-scheme:dark; --mw-sky:#26334e; --mw-blue:#7a9ef7; }
+.mw-app { --mw-blue:var(--werk-blue); --mw-sky:#e4ecff; --mw-ink:#191a1b; --mw-muted:#65676c; --mw-page:#fff; --mw-panel:#fafafa; --mw-line:#e7e7e7; --mw-line-strong:#cfcfd2; --mw-hover:#f1f1f2; --mw-radius:6px; --mw-sidebar-width:220px; --mw-shadow:0 14px 44px rgb(25 26 27 / 12%); display:flex; height:100dvh; overflow:hidden; color:var(--mw-ink); background:var(--mw-page); font:400 13px/1.5 var(--sans); }
+.mw-app[data-theme=dark] { color-scheme:dark; --mw-sky:#26334e; --mw-blue:var(--cursor-blue); }
 .mw-app *, .mw-modal * { box-sizing:border-box; }
 .mw-app ::selection { color:var(--mw-ink); background:var(--mw-selection); }
 .mw-app * { scrollbar-width:thin; scrollbar-color:var(--mw-line-strong) transparent; }

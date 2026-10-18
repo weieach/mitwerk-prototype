@@ -1605,3 +1605,79 @@ This file is reserved for project-wide design-system rules requested by the user
 - View link hover cross-fades over `--view-tag-fade` (.15s): the selected fill (#1f2d47 → #182234 in dark) and every label color ease instead of snapping.
 - Your message bubble shrinks to its longest rendered line (`useShrinkWrap`), never wider than CSS allows, so its padding reads equal on all sides and its right edge stays on the frame line.
 - The date range control centers its label with the caret right beside it; its menu (`align="center"` on `RowSelect` / `SelectMenu`) is only as wide as its options, centered under the control, with centered labels.
+
+## Brighter blue and resizable Chat — 2026-10-18
+
+- Brighten the shared theme blue to `--cursor-blue` #499cff in dark mode and `--werk-blue` #2563eb in light mode. `--mw-blue` aliases these theme tokens; retain existing selected-tag fills.
+- Replace the fixed 440px Chat column with a 560px default, 320px minimum and maximum of 760px or 55% of the available workspace width, whichever is smaller. `chatPanelSizing` is the sizing source; clamp against actual available space on resize. Restore the divider for pointer dragging and keyboard resizing (arrows, Home, End). Preserve the chosen width when hiding/showing panes and keep existing mobile/fullscreen layouts.
+
+## Compact Chat, card stacking and aligned controls — 2026-10-18
+
+- Reduce the Chat default to 500px; keep its drag limits. Below 480px of available card width, conversation version cards stack the preview, text and action area vertically. Reserve the action area in both ordinary and invitation states, keeping falling controls separate from the copy.
+- Gallery prompt hover labels use 8px vertical and 12px horizontal padding; axis/date label padding is unchanged.
+- Date range and composer model dropdowns share the homescreen dropdown's 8px label-to-caret gap via `--selector-content-gap`. Model text is 12px.
+- A WIP node shows its prompt count immediately to the right of Add/Edit milestone, with other details below. To-do stations derive their square size from the same 28px diameter as circular version stations, superseding route-width sizing.
+
+## Node outlines and responsive frame details — 2026-10-18
+
+- Square to-do stations use the circular station's 28px border box, 5px route-colored border and 3px canvas-colored outer outline: 34px total extent including the outline. Draw the square in CSS, avoiding icon-internal margins; completed nodes add a check inside the same geometry.
+- Conversation version covers retain an 8:5 aspect ratio in horizontal and stacked layouts. In horizontal cards, the cover and content share the card height. Covers paint above falling invitation actions, masking any overlap. During pointer resizing, cards fade out over 160ms, then fade in on release; reduced motion changes opacity immediately.
+- Gallery hover labels place the capture's prompt number above its summary, with both lines centered. Push captures use their actual Push number rather than a fabricated prompt number.
+
+## Feature identity and compact card resizing — 2026-10-18
+
+- Navigation's active state uses neutral ink text and a neutral gray fill. Only its icon takes the feature accent: Chat = Assemble green, Version blocks = theme blue, Idea stream = Misregister purple, Live server = Pulse orange. Panel headings and live-preview actions use the same shared `PanelIcon` mapping. Inactive navigation stays neutral.
+- Each feature's panel fades and moves up 6px over 220ms on its first activation per workspace session, including initially active panels. Reopening does not replay it; reduced motion skips entry motion.
+- Version covers use a shallower 12:5 ratio. Cards at least 640px wide fit cover, copy and controls in 90px total height. Below that they stack; at 400–639px the copy and controls share a 90px band below the cover, while narrower cards reserve a separate control area to prevent collisions. The 640px threshold accounts for cover width, two-line copy and both physical controls.
+- During Chat dragging, preserve the live card layout and cover it with a dark-gray placeholder. It tracks the card's responsive size continuously; after release, wait 120ms for sizing to settle and cross-fade the content back over 160ms. Reduced motion switches immediately.
+
+## Invitation field and masked release — 2026-10-18
+
+- Prompt-number headings use the same placeholder-ink token as Select frame, with 4px before the centered summary.
+- Paint the invitation gradient through a transparent 1px border so the visible rim and inner field share their moving colors. Stacked cards tile grain at 80px instead of scaling noise across the whole card.
+- Resize placeholders animate a low-contrast gray linear gradient over 1800ms; reduced motion freezes the field.
+- Falling controls use the whole card as their physical scene. Derive initial positions from the measured preview rectangle and each body's rotated bounds so both begin hidden behind the image at every responsive width. Keep the pill-first release, collisions and paired resting positions.
+- The stacked card's compact 90px bottom band starts at a 400px Chat column width, accounting for surrounding conversation padding. Below that, retain the separate action area. This replaces using the inner card width for that threshold.
+
+## Smaller workspaces and reader exclusivity — 2026-10-18
+
+- Idea stream uses Handoff pink (`--mw-handoff`), replacing purple. Active navigation fills use 6% neutral ink (9% on hover), keeping feature color on icons only.
+- Use 1512 CSS pixels as the 14-inch laptop reference; physical screen size is not detectable. At or below that width, default Chat to Mavix's `min(440px, 35vw)` from `e24ca1c` / `fc97187`. Above it retain the 500px default. Explicit drag/keyboard sizes remain preferred and are clamped to existing limits.
+- Below 1512px, reduce the root size from 16px to 15px. Shared default typography roles and core text tokens use rem units so text follows the root; explicit Type editor pixel overrides retain their requested size.
+- When Chat is visible beside the reader below 1512px, Idea stream occupies the reader alone instead of sharing with Playback. Opening it exits/hides Live server and clears Live server's active navigation state; opening Live server closes Idea stream. On narrowing with Live server active, retain Live server. Hiding Chat or expanding the reader restores the existing multi-panel layout. Opening a version from the sole Idea stream returns to Playback.
+
+## Viewport-relative version cards — 2026-10-18
+
+- Conversation version cards switch to horizontal when their Chat panel reaches `550 / 1876` of the CSS viewport width (about 29.32vw); this supersedes the fixed 640px card breakpoint. Keep a 400px minimum panel threshold so the text and buttons remain usable on smaller screens. Smaller panels retain the existing stacked and 400px compact-band states.
+- The default card arrow shares the label's flex row, vertically centered with the text in every layout. Horizontal cards use a 12px cover-to-label gap and compact 1.15 invitation leading; reserve action space from the measured rigid-body resting geometry rather than the sum of button widths.
+- While resizing Chat, the entire card rim and fill use the neutral resize-placeholder tone; the colorful gradient and grain are hidden until resizing ends.
+- Milestone circle/pill geometry and arrow glyph scale with viewport width relative to 1876px, with bounded sizes for usability. At the reference width the circle/pill width remains 72.8px. Preserve the existing Not yet text size; observe control size changes so physics uses their actual dimensions.
+
+## Brighter accents and content-safe invitations — 2026-10-18
+
+- Non-blue feature and route accents share `src/shared/palette.ts`: Assemble green #25D895, Route yellow #FFD65A, Handoff pink #FF89CF, Pulse orange #FF9558 and Misregister purple #B39AFF. Keep both existing blues unchanged. Navigation, panels, graph routes and invitation gradients derive from this palette.
+- Raise the horizontal conversation-card threshold to `max(640px, 650 / 1876 × viewport width)`. The 640px floor reserves readable copy beside the cover and physical buttons on smaller screens. Restore normal invitation line spacing; this supersedes the earlier 550px ratio and compressed leading.
+- Default stacked cards size their bottom band to the label plus 16px padding above and below. Animate the resulting card-height change over 280ms when entering/leaving invitation mode; skip motion for reduced-motion preferences and while dragging the Chat divider.
+- Start invitation timing only after the cover image has decoded. Mount the falling controls after the height transition settles, and reveal them only after their initial masked transforms are applied. Image failure leaves the ordinary card available.
+- Gallery labels and ruler guides share a face/depth slot key. A featured frame replaces both the standing label and its wall/overhead guides at that slot; clearing hover/pin restores the standing guides. Apply this to any frame, including the latest.
+
+## Milestone invitation completion — 2026-10-18
+
+- New annotation headings follow the selected kind: “New to-do” or “New milestone”, including the dialog's accessible name. The generic milestone form reuses the milestone-only form's optional commit control, aligned with the save actions on the right and wrapping at narrow widths.
+- Opening a conversation card's milestone invitation dismisses the invitation immediately and animates the card back to its ordinary content-sized state. Cancelling keeps the ordinary state; it does not indicate a save.
+- Saved milestones use a check in the conversation card's milestone action, derived from the existing per-version milestone store. A successful change immediately replaces the plus and gives the check one quick scale pop; its color flows through the shared invitation gradient. Existing saved milestones show the check without a new pop; failed saves leave the plus. Reduced motion disables both animations.
+
+## Reload-scoped prototype milestones — 2026-10-18
+
+- Browser-created milestones last only until the next page load. Reset the saved milestone map and milestone-kind annotation copies before initializing application stores. Preserve notes, to-dos, sample-seeding metadata, preferences and built-in graph milestones. This supersedes persistence of browser milestone edits across reloads; live save/check feedback within the page remains unchanged.
+- The conversation card's Edit milestone action has no fill and uses the shared `--milestone-edit-border` token (24% ink mixed with paper), darker than the Add milestone outline. Preserve its moving gradient check.
+
+## Active navigation and milestone status labels — 2026-10-18
+
+- Active site-navigation fills match the panel surface (`--paper`) in both themes, including hover. This supersedes the 6%/9% translucent ink fills. Preserve the assigned feature icon colors and inactive appearance.
+- A saved conversation milestone action reads “Milestone added” in the shared muted text color. Retain the gradient check, transparent fill and darker outline. It remains an enabled button that opens the existing milestone in the editing overlay; the status label does not disable editing.
+
+## Compact checkbox stations and quieter timeline — 2026-10-18
+
+- Idea stream checkbox stations use 80% of the ordinary station diameter, derived through `ideaTheme.todoStationScale`. Keep their shared light border width, dark clearance outline and graph-centered alignment. Fit the completed check to the reduced inner area. This supersedes matching checkbox and circular station widths.
+- Playback's existing timeline overview thumb uses the shared `--muted` gray instead of white. Reuse the current scroller and its overflow visibility, geometry and interactions; do not introduce another control or gray palette value.

@@ -76,3 +76,16 @@ export function guideInvitation(bodies:InvitationBody[],targets:{x:number;y:numb
     if(i===1){const error=Math.atan2(Math.sin(target.angle-b.angle),Math.cos(target.angle-b.angle));b.spin+=(error*180-b.spin*25)*strength*dt;}
   });
 }
+
+/** Release each shape wholly behind the measured cover, independent of card layout. */
+export function invitationReleasePose(cover:{x:number;y:number;width:number;height:number},body:InvitationBody,target:{x:number;angle:number}) {
+  const radius=body.height/2, half=(body.width-body.height)/2;
+  const extentX=radius+half*Math.abs(Math.cos(target.angle));
+  const extentY=radius+half*Math.abs(Math.sin(target.angle));
+  const inset=2;
+  return {
+    x:Math.max(cover.x+extentX+inset,Math.min(target.x,cover.x+cover.width-extentX-inset)),
+    y:cover.y+cover.height-extentY-inset,
+    angle:target.angle,
+  };
+}

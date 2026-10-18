@@ -137,7 +137,13 @@ The publisher uses SHA-256 object keys, reuses existing identical images, verifi
 
 Image URLs retain their same-origin `gallery/images/` and `gallery/references/` shape. Vercel proxies these requests to Blob, preserving historical WebGL loaders and reference classification. This uses both Blob delivery and Vercel's delivery layer. A small read-only function serves the current catalog with browser and edge caching disabled; Blob itself retains its one-minute catalog cache. Legacy filename URLs are mapped from the build's catalog; new catalogs use content-hash URLs. Archived previews keep their frozen manifests while sharing immutable Blob images.
 
-On another machine, link the same Vercel project and run `npx vercel env pull .env.local` to obtain the uploader credentials. Publishing still requires the local image sources. The production app only needs public Blob URLs to read the gallery; ordinary development continues to read local images. Keep a separate backup of originals: Git deliberately excludes captures, and a Blob store is not a second Git repository.
+On another machine, link the same Vercel project and run `npx vercel env pull .env.local` to obtain the uploader credentials. Publishing still requires the local image sources. The production app only needs public Blob URLs to read the gallery; ordinary development continues to read local images. Originals are also tracked in Git through Git LFS (see below), so the GitHub repository is their durable copy; the Blob store serves the live app.
+
+### Saved frames in Git (LFS)
+
+`[frame capture] screenshots/` is committed to GitHub through Git LFS (`[frame capture] screenshots/.gitattributes` routes its PNG and GIF files to LFS). New captures stay as ordinary working-tree files until you commit them, like any other change. The capture script's own state files in that folder (`.capture.log`, locks, `.last-*`) remain ignored.
+
+After cloning, run `git lfs install` once per machine, then `git lfs pull` if the images arrived as small pointer files; the gallery skips pointer files and a build reports no saved frames. The `pre-push` hook (`npm run hooks:install`) uploads LFS objects before taking the push capture. GitHub Free includes 10 GiB of LFS storage and 10 GiB of monthly download bandwidth; each full clone downloads the whole folder. Vercel's Git builds read the Blob catalog and do not need LFS enabled.
 
 Run `npm run verify:gallery` to check the prepared deployment's catalog and its Blob images, or pass the production URL to verify the same-origin live image routes, archived images and legacy links. Add `--published` to compare with the last successful publication when other chats are still capturing new frames; deployment uses that fixed publication snapshot. Empty production catalogs and unreadable captures fail instead of silently removing frames.
 

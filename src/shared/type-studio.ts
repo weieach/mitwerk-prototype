@@ -128,7 +128,7 @@ export function typeRoleStylesheet() {
   const root = typeRoles.flatMap(role => {
     const id = role.id;
     const lines = [
-      role.deferSize ? null : `--type-${id}-size: ${role.defaults.size};`,
+      role.deferSize ? null : `--type-${id}-size: ${role.defaults.size.replace(/(\d+(?:\.\d+)?)px/g, (_, px) => `${Number(px) / 16}rem`)};`,
       `--type-${id}-weight: ${role.defaults.weight};`,
       `--type-${id}-leading: ${role.defaults.leading};`,
       `--type-${id}-tracking: ${role.defaults.tracking};`,

@@ -8,6 +8,7 @@ export type FrameAnnotation = {
   createdAt: string; updatedAt: string; chatId?: string; projectId?: string;
 };
 export type AnnotationState = { items: FrameAnnotation[]; seeded: string[] };
+export const annotationStorageKey = 'mitwerk-frame-annotations-v1';
 export const emptyAnnotations: AnnotationState = { items: [], seeded: [] };
 /** Only clear a linked milestone if it still contains this annotation's text. */
 export function annotationMilestones(previous: AnnotationState, next: AnnotationState, saved: Record<string, string>) {
