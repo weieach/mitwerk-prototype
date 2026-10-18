@@ -19,13 +19,13 @@
 
 ## 字体：现在长什么样，以及怎么试
 
-全站无衬线字体是 **Helvetica Neue**（2026-10-18 起），由 `src/index.css` 的 `--sans` 统一指定：`'Helvetica Neue', Helvetica, Arial, sans-serif`。它是系统字体，不打包进仓库；Mac 上有 300、400、500、700，没有 800（会显示成 Bold）。没有 Helvetica Neue 的机器（多数 Linux、Windows，以及云端截图用的浏览器）会退到 Helvetica 或 Arial。以前用的 Neurial Grotesk 文件和 `@font-face` 还留在 `src/fonts/` 与 `index.css` 顶部，没有被引用，要换回只改 `--sans`。等宽是系统字体 `--font-code`。
+全站无衬线字体是 **Waldenburg**（2026-10-18 起，替换 Helvetica Neue），由 `src/index.css` 的 `--sans` 统一指定：`'Waldenburg', 'KMR Waldenburg', 'KMR-Waldenburg', 'Helvetica Neue', Helvetica, Arial, sans-serif`。它不打包进仓库，本机装了这个家族才会显示，否则退到 Helvetica Neue、Helvetica 或 Arial。以前用的 Neurial Grotesk 文件和 `@font-face` 还留在 `src/fonts/` 与 `index.css` 顶部，没有被引用。等宽是系统字体 `--font-code`。
 
 字号没有收成一个量表。一部分是 `src/control-tokens.css` 里的变量，一部分是后来写死的像素。改一处不会带动另一处，所以试字体时用页面上的 Type editor，它按**角色**改，而不是按某一条消息改。
 
 打开方式：顶栏 MitWerk 菜单里的 **Type editor**。选中一个角色时，页面上所有用到它的文字会出现虚线框。滑块立刻生效，并记在这个浏览器的 `localStorage`（`mitwerk-type-studio`）。**Copy CSS** 只导出改过的变量。**Reset** 回到现在的默认。带 `screenshot=1` 的进度截图不读取这些改动，也不显示编辑器。
 
-每个角色都能调：大小、字重、行距、字间距、颜色、Helvetica Neue / Mono、斜体。颜色优先用 Ink、Muted、Faint、Accent、Contrast，这样换 dark mode 时还会跟着主题走。
+每个角色都能调：大小、字重、行距、字间距、颜色、Waldenburg / Mono、斜体。颜色优先用 Ink、Muted、Faint、Accent、Contrast，这样换 dark mode 时还会跟着主题走。
 
 | 角色 | 现在的默认 | 出现在 |
 | --- | --- | --- |
@@ -36,12 +36,12 @@
 | Page title | 卡片标题 + 3px / 700 | Settings 等页标题 |
 | Welcome title | 24–32px 流动 / 500，行距 1.25 | 空对话的大标题 |
 | Welcome text | 13px / Muted | 大标题下面那一行 |
-| Message | 12px，跟 `--body-font-size` / 400，行距 1.5 | 用户和 Mit 的正文。布局文件里的 13px 和 `--message-line-height: 1.45` 目前都没有赢过这条 |
+| Message | 12px，跟 `--message-font-size`（等于 `--body-font-size`）/ 400，行距 1.5 | 用户和 Mit 的正文。`--message-line-height: 1.45` 目前没有用上 |
 | Byline | 12px / 500 | Mit 名字。角色色标不在这里改 |
 | Timestamp | 10px / Muted | 每条消息下面的时间 |
 | Version card | 12px | 回复里的版本输出条 |
 | Composer | 12px，行距 1.5 | 输入框。占位符颜色是另一条 token |
-| To-do heading | 12px / 700 | 待办抽屉标题 |
+| To-do heading | 12px / 400 | 待办抽屉标题 |
 | To-do item | 12px，行距 1.4 | 抽屉里的每一行 |
 | Capture chip | 0.6875rem（11px）/ Chip ink | 捕获胶囊。Chip ink 目前是固定的深色，不跟主题 |
 | Controls | 约 10–12px 流动，行距 1.25 | 按钮、下拉和由此推出来的行标题 |
@@ -109,7 +109,7 @@
 - 行内边距：`--row-padding-inline`。
 - 动效：侧栏 220ms，抽屉开 440–520ms，关 300–380ms。`prefers-reduced-motion` 会关掉过渡。
 
-字体是 Helvetica Neue，只在 `src/index.css` 的 `--sans` 里指定，见上面「字体」一节。代码字体 `--font-code` 用系统等宽，不在仓库里。
+字体是 Waldenburg，只在 `src/index.css` 的 `--sans` 里指定，见上面「字体」一节。代码字体 `--font-code` 用系统等宽，不在仓库里。
 
 ### 3. 工作台把语义色映射成 `--mw-*`
 

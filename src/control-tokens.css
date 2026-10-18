@@ -35,6 +35,7 @@
   --card-title-size: 17px;
   --card-title-weight: 700;
   --body-font-size: 12px;
+  --message-font-size: var(--body-font-size);
   --message-line-height: 1.45;
   --message-output-gap: calc(var(--row-padding-inline) * 1.5);
   --message-time-gap: 8px;
@@ -66,6 +67,10 @@
   --drawer-heading-opacity: .65;
   --drawer-heading-expanded-opacity: .5;
   --drawer-time-opacity: .5;
+  --drawer-meta-scale: .9;
+  --drawer-run-icon-size: calc(12px * var(--drawer-meta-scale));
+  --drawer-editing-meta-opacity: 0;
+  --drawer-editing-fade: 240ms;
   --capture-pill-radius: 999px;
   --reference-thumbnail-size: 84px;
   --message-preview-width: 144px;
@@ -427,11 +432,11 @@
 
 .workspace.workspace-compact .panel-header > .panel-heading { padding-right:var(--header-padding-left); }
 
-:root { --capture-settings-font-size:.8125rem; --capture-chip-font-size:.6875rem; --capture-chip-padding-inline:8px; }
+:root { --capture-settings-font-size:var(--body-font-size); --capture-chip-font-size:.6875rem; --capture-chip-padding-inline:8px; --capture-chip-icon-gap:5px; --capture-row-height:20px; }
 .select-menu.capture-bucket-menu { font-size:var(--capture-chip-font-size); padding:0; }
 .capture-bucket-menu [role=option] { padding:6px var(--capture-chip-padding-inline); min-height:0; font-weight:inherit; }
 
-:root { --idea-footer-control-min-width:52px; }
+:root { --idea-footer-control-min-width:52px; --idea-footer-compact-control:40px; --idea-footer-compact-scale:52px; --idea-footer-tight-control:32px; --idea-footer-tight-scale:44px; }
 
 :root { --message-milestone-action-gap:10px; --message-milestone-action-width:116px; --idea-todo-time-size:12px; --idea-todo-time-gap:4px; }
 
@@ -446,7 +451,7 @@
 
 /* Capture detail field, matching design-system 8eb969a. */
 :root {
-  --capture-detail-height:22px;
+  --capture-detail-height:var(--capture-row-height);
   --capture-detail-min-width:7ch;
   --capture-detail-placeholder:color-mix(in srgb, var(--ink) 38%, transparent);
   --inline-field-line-hover:color-mix(in srgb, var(--ink) 42%, transparent);
@@ -457,6 +462,6 @@
 /* Drawer entry affordance. */
 :root { --drawer-placeholder-opacity:.38; }
 
-:root { --drawer-row-height:20px; --drawer-row-gap:7px; --drawer-content-bottom-padding:16px; --capture-detail-line:color-mix(in srgb,var(--ink) 65%,transparent); --capture-detail-line-active:color-mix(in srgb,var(--ink) 85%,transparent); }
+:root { --drawer-heading-padding-top:14px; --drawer-heading-padding-bottom:8px; --drawer-content-top-padding:4px; --drawer-row-height:24px; --drawer-row-gap:6px; --drawer-row-inline-gap:12px; --drawer-check-gap:10px; --drawer-content-bottom-padding:16px; --capture-detail-line:color-mix(in srgb,var(--ink) 65%,transparent); --capture-detail-line-active:color-mix(in srgb,var(--ink) 85%,transparent); }
 
 :root { --milestone-control-extra-padding:4px; --milestone-control-base-size:calc(var(--message-preview-height) * .72); --milestone-ball-size:calc(var(--milestone-control-base-size) + 2 * var(--milestone-control-extra-padding)); --milestone-pill-width:var(--milestone-ball-size); --milestone-pill-height:calc(var(--milestone-control-base-size) * .37 + 2 * var(--milestone-control-extra-padding)); --milestone-chip-fill:color-mix(in srgb,var(--ink) 16%,var(--paper)); --milestone-chip-border:color-mix(in srgb,var(--ink) 55%,transparent); --milestone-control-fill:transparent; --milestone-control-hover:rgb(255 255 255 / 10%); --milestone-control-ink:#fff; --milestone-control-border:rgb(255 255 255 / 70%); }

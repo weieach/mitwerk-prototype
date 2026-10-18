@@ -83,7 +83,7 @@ export function ComposerDrawer({ state, onToggle, onComplete, onUseTodo, onEdit,
       <div id={id} className="composer-drawer-reveal" inert={!state.open} aria-hidden={!state.open} role="region" aria-label="Chat to-dos"><div className="composer-drawer-clip"><div className="composer-drawer-content">
         <ul ref={listRef}>{todos.map(todo => <li key={todo.id} data-reorder-id={todo.id} className={todo.complete ? 'is-complete' : ''}>
           <input type="checkbox" aria-label={`Complete to-do: ${todo.text}`} checked={todo.complete} onChange={() => { capturePositions(); onComplete(todo.id); }}/><EditableTodoText text={todo.text} editText={todoEditText(todo)} suffix={todo.version !== undefined ? <span className="composer-todo-version">{` (v${todo.version})`}</span> : undefined} prefix={todo.bucket && <BucketTag bucket={todo.bucket}/>} onSave={text => { capturePositions(); onEdit(todo.id, text); }}/>
-          <time dateTime={todo.created}>{todoTimestamp(todo.created, clock)}</time><button type="button" className="composer-todo-add" aria-label={`Add to-do to prompt: ${todo.text}`} onClick={() => onUseTodo(todo.id)}><PhosphorIcon name="play" weight="fill" size={12}/></button>
+          <span className="composer-todo-meta"><time dateTime={todo.created}>{todoTimestamp(todo.created, clock)}</time><button type="button" className="composer-todo-add" aria-label={`Add to-do to prompt: ${todo.text}`} onClick={() => onUseTodo(todo.id)}><PhosphorIcon name="play" weight="fill" size="var(--drawer-run-icon-size)"/></button></span>
         </li>)}<TodoComposerRow onAdd={onAdd}/></ul>
       </div></div></div>
       {children}

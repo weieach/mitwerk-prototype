@@ -2344,3 +2344,154 @@ Reference: Cursor's selected toggle, icon `#3a96dd` over the same blue at about 
 ```text
 改完这些之后commit & push
 ```
+
+## Prompt #385
+
+```text
+目前chat里的文本大小多少？可以稍微调大1-2号
+```
+
+## Prompt #386
+
+```text
+为什么左侧这里的分割线是深色，右侧是浅灰色？这两个在设计上有区别吗？如果没有的话，按照cursor dark mode的设计系统来统一
+```
+
+## Prompt #387
+
+```text
+“Today 23:25”: today和对应的文字缩小10%左右 & 右侧的run的图标
+```
+
+Selected element: to-do drawer `li.is-complete > time` (Today 23:25).
+
+## Prompt #388
+
+```text
+给我讲一下这个功能是做什么的，怎么使用和交互
+```
+
+About the composer's “Capturing [homescreen] with [editor overlay]” row. No code change.
+
+## Prompt #389
+
+```text
+这里的高度需要对其吗，如果需要保持他们的高度统一，这两个底部的bar
+```
+
+## Prompt #390
+
+```text
+当我把这个idea stream的宽度缩小，底部的bar变成了两行的文字，这里可以还是保持原来的高度吗（或者你改完的高度），然后做一下空间变小后的适配，看看是让ui更condense还是如何排列
+```
+
+## Prompt #391
+
+```text
+todo整个区域的内部spacing有点混乱、拥挤，看看有什么可以改的，调整一下。比如todo这行字和上方的距离，目前有点小
+```
+
+## Prompt #392
+
+```text
+这里的字的大小让我看起来觉得不太和谐，有点跳脱，看看怎么调整大小，高度来保证这里视觉的稳定和统一性
+```
+
+## Prompt #393
+
+```text
+当我在todo下面这里打字的时候，可以变为更ambient 沉浸的模式，比如后面的时间和箭头可以fade/消失
+```
+
+## Prompt #394
+
+```text
+我想把helvetica的部分都换成这个字体 Waldenburg
+```
+
+## Prompt #395
+
+```text
+这里时间fade后，这个线可以自动延长 fill up整个长度？
+```
+
+## Prompt #396
+
+```text
+这两个panel之间的距离有点多，稍微缩小20-30%
+```
+
+## Prompt #397
+
+```text
+Home Screen后面这个icon，是做什么的？能不能等用户hover的时候再出现？
+```
+
+## Prompt #398
+
+```text
+帮我看一下左右两个panel分别距离页边的距离是什么？
+```
+
+## Prompt #399
+
+```text
+这里的字号分别是什么
+```
+
+## Prompt #400
+
+```text
+两个看板之间的距离可以改为5px吗，对应的，页边距改为7px？
+```
+
+## Prompt #401
+
+```text
+todo标题不需要加粗。
+用户和正文也都改成12，和底部输入框文字保持一致
+```
+
+## Prompt #402
+
+```text
+现在字体是什么
+```
+
+## Prompt #403
+
+```text
+把这个区域的菱形背景改为点点组成的点阵
+```
+
+## Prompt #404
+
+```text
+这里的文本多大，是否有必要调大一个字号，参考cursor的设计的话
+```
+
+## Prompt #405
+
+```text
+12吧，然后图标可以都统一一下，15px？
+```
+
+## Prompt #406
+
+```text
+我这里能预览一下milestone那个卡片的样式吗？
+```
+
+## Prompt #407
+
+```text
+帮我commit & push目前的改动
+```
+
+## Prompt #408
+
+```text
+然后帮我改个名字，这个branch的名字可以改成 echo 1017
+```
+
+Clarification: Git branch names cannot contain spaces, so the branch is `echo-1017`.

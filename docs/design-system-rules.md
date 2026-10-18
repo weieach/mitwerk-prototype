@@ -1,5 +1,62 @@
 # Design system rules
 
+## Panel footer text and icons — 2026-10-18
+
+- Both panel footers (the Version blocks gallery footer and the Idea stream controls) use a fixed `--panel-footer-font-size` (12px) for their labels, not the fluid `--control-font-size`, following Cursor's 12px status bar.
+- Every footer icon is `--panel-footer-icon-size` (15px). Dropdown carets keep their own smaller size, because they mark a menu rather than act as icons.
+
+## Milestone card preview — 2026-10-18
+
+- `?milestone=1` shows chat version cards, and their milestone invitation, even when the capture manifest has no frames (for example on a machine without `[frame capture] screenshots/`). Missing values fall back to `milestonePreviewSample` (version 40 and the bundled `examples/iteration-preview.png`). Without the parameter, a card still needs a real capture frame.
+
+## Idea stream background is a dot lattice — 2026-10-18
+
+- The version-stream canvas background (`IsometricGrid`) draws dots instead of diamond lines. The dots sit on the same isometric lattice intersections (`gridUnit` 24px across, `gridRise` about 13.9px down, with alternate rows offset by half a unit), so stations and routes still land on the grid.
+- Dots use `--grid-line` with `treeTheme.gridDotRadius` (0.9) and `treeTheme.gridDotOpacity` (0.6). This replaces the 0.55px line pattern at 0.32 opacity. Visibility rules are unchanged: always on in Idea stream, toggled by the Grid control in the Test diagram.
+
+## Capture chip edit mark shows on hover — 2026-10-18
+
+- The pencil after a capture bucket name is a hint, not its own control. The whole pill opens the location list.
+- The pencil stays collapsed (`max-width: 0`, opacity 0) until the pill is hovered, keyboard-focused, or the location list is open. Its leading margin cancels `--capture-chip-icon-gap`, so the pill does not keep an empty gap.
+
+## Side-by-side panels share one seam — 2026-10-18
+
+- The visible distance between workspace panels (Chat and the reading window) is `--workspace-panel-gap` (5px). The page edge is `--workspace-gutter` (7px): left, right and bottom of the panels, and above and below the site header. The seam is narrower than the edge on purpose.
+- The resize handle is a flex item of width 0, so a plain flex gap would count twice. Its negative inline margin cancels one of those gaps, and the reading window's flex basis subtracts `--workspace-panel-gap` once.
+
+## Capturing row sits on one line box — 2026-10-18
+
+- The composer's “Capturing [bucket] with [details]” row uses one line height, `--capture-row-height` (20px). The words, the bucket pill (`--capture-chip-height`), the pill text, and the details field (`--capture-detail-height`) all read it, so every piece shares one vertical center and no box is taller than the others.
+- The words and the details field use `--body-font-size` (12px). The pill text stays one step down at `--capture-chip-font-size` (11px). Do not set the row's words larger than the body size.
+
+## Editing a to-do quiets its row — 2026-10-18
+
+- While a to-do is being edited, its timestamp and run button fade to `--drawer-editing-meta-opacity` (0) over `--drawer-editing-fade` (240ms) and stop taking clicks. Their group (`.composer-todo-meta`) also collapses to zero width, and its leading margin cancels `--drawer-row-inline-gap`, so the edit underline grows to the row's right edge. They return when editing ends.
+
+## To-do drawer spacing — 2026-10-18
+
+- The to-do drawer heading has `--drawer-heading-padding-top` (14px) above and `--drawer-heading-padding-bottom` (8px) below. The list starts `--drawer-content-top-padding` (4px) under it.
+- Rows are `--drawer-row-height` (24px) tall with `--drawer-row-gap` (6px) between them. The checkbox sits `--drawer-check-gap` (10px) from its text.
+
+## Idea stream footer stays one row when narrow — 2026-10-18
+
+- The Idea stream footer never wraps. It is a size container (`idea-footer`), and it condenses in tiers:
+  - At 520px wide or less, controls shrink to `--idea-footer-compact-control` and the zoom scale to `--idea-footer-compact-scale`.
+  - At 400px or less, they shrink to the tight tokens and the jump button drops its word, so it shows only the count (“3/12”).
+  - At 280px or less, the zoom controls hide.
+
+## Panel footers share one divider and height — 2026-10-18
+
+- Panel footers side by side keep the same height: the gallery footer and the Idea stream controls both use `--panel-footer-height` (52px) as their row height, so their top edges line up.
+- To-do drawer timestamps and run icons are 90% of the row text (`--drawer-meta-scale`).
+
+- Every panel footer (Version blocks gallery footer, Idea stream controls) draws its top edge with `--row-divider` (`--line`): `#262626` in dark, following Cursor's 7% border, and `#e6e6e6` in light. Footers do not borrow `--workspace-background` (the chrome behind panels) as a divider.
+
+## Chat message size — 2026-10-18
+
+- User and Mit message text uses `--message-font-size` through the Message type role. It equals `--body-font-size` (12px), the same size as the composer field, so chat and input read as one text size. Line height stays 1.5 (18px). This replaces the earlier 13px message size.
+- The to-do drawer heading is regular weight (400), not bold, both in CSS and in the To-do heading type role.
+
 ## Popovers share one outline and shadow — 2026-10-18
 
 - Every dropdown and small menu (`.select-menu`, version card menu, branch menu, to-do attach picker, status picker, to-do card menu) reads `--popover-border`, `--popover-shadow`, and `--popover-radius` (8px, both themes). Do not give a menu its own border, radius, or shadow.
@@ -27,15 +84,15 @@
 - The panel heading divider uses `--line`. The composer drawer, hover, selected mode, placeholder, track, and border derive from those tokens instead of their own warm-black hex. The earlier unused dark composer block is removed.
 - Branch colors, Werk Blue / Mit Sky, screenshots, scrims, and the landing stage are not part of this pass.
 
-## Sans serif is Helvetica Neue — 2026-10-18
+## Sans serif is Waldenburg — 2026-10-18
 
-- Every sans-serif text uses Helvetica Neue through the shared `--sans` token (`'Helvetica Neue', Helvetica, Arial, sans-serif`). This replaces the earlier Neurial Grotesk rules below. Canvas-drawn labels read the same token. Mono stays on `--font-code`.
-- Helvetica Neue is a system font, not bundled. Where it is missing (most Linux and Windows machines, including the cloud capture browser), Helvetica or Arial render instead. It has no 800 weight, so 800 renders as Bold.
+- Every sans-serif text uses Waldenburg through the shared `--sans` token (`'Waldenburg', 'KMR Waldenburg', 'KMR-Waldenburg', 'Helvetica Neue', Helvetica, Arial, sans-serif`). This replaces the Helvetica Neue rule below. Canvas-drawn labels read the same token. Mono stays on `--font-code`.
+- Waldenburg (Kimera, Michael Clasen and Marcel Saidov) is not bundled. It renders where that family is installed. Otherwise the stack falls back to Helvetica Neue, then Helvetica, then Arial.
 
 ## Live type editor — 2026-10-18
 
 - The MitWerk logo menu offers **Type editor** (Close type editor when open). It floats over the current page and does not change layout.
-- Text is adjusted by shared role, not by one message, card, or screenshot. Roles and their selectors live in `src/shared/type-studio.ts`. Each role exposes size, weight, line height, letter spacing, color, Helvetica Neue or mono, and italic.
+- Text is adjusted by shared role, not by one message, card, or screenshot. Roles and their selectors live in `src/shared/type-studio.ts`. Each role exposes size, weight, line height, letter spacing, color, Waldenburg or mono, and italic.
 - Built-in values stay in the role stylesheet. An edit sets the same variable on the document root and is stored in `localStorage` under `mitwerk-type-studio`. Reset restores the built-in value. Copy CSS exports only the variables that differ, so a chosen scale can be locked into the role defaults later.
 - Progress captures (`screenshot=1`) ignore stored edits and do not show the editor. `?type=1` opens it for a working session.
 - Selecting a role outlines every element that uses it. Gallery axis labels stay on their camera-driven size. Branch colors, role tags, and capture textures are not type colors.

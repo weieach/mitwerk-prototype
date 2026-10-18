@@ -4,6 +4,7 @@ import { BrandMenu } from './BrandMenu';
 import { ComposerDrawer, ComposerModelSelect } from './ComposerDrawer';
 import { editComposerTodo, addComposerTodo, orderedComposerTodos, hydrateComposerTodos, todoVersionAt, type TodoVersion, defaultComposer, toggleComposerTodo, useTodoAsPrompt, type ChatComposerState } from './composer-state';
 import { MessageOutput } from './MessageOutput';
+import { milestonePreviewSample } from './milestone-invite';
 import { PanelHeader } from '../../components/PanelHeader';
 import { PhosphorIcon } from '../../components/PhosphorIcon';
 import { appendFrameContext, attachFrame, attachFrameEvent, hasFrameDrag, readFrameDrag } from './frame-context';
@@ -39,7 +40,7 @@ import { chatSlide, effectiveProgress, isSimulating, existedAt, simulateCaptures
 import { useSlideTransition, usePanelWorkState } from '../../shared/useWorkState';
 import { assets as initialAssets, hydratePromptMessages, workbenchEntry, loadState, now, saveState, statuses, uid, tasksForProject, saveMit, archiveProject, isTodoChat, todoContext } from './model';
 import mitwerkLogo from '../../assets/mitwerk-logo.png';
-import type { Asset, SavedState, Task, TaskStatus, View, Mit } from './model';
+import type { Asset, Message, SavedState, Task, TaskStatus, View, Mit } from './model';
 
 type ModalState = 'search' | 'task' | 'project' | 'share' | null;
 const nav: {name: View; icon:InterfaceIcon}[] = [{name:'Mits',icon:Workflow},{name:'Todos',icon:ListTodo},{name:'Library',icon:BookOpen}];
@@ -63,6 +64,9 @@ export function Workbench() {
  const todosCapture=screenshotMode&&screenshotParams.get('page')==='todos';
  const sideBySideCapture=screenshotMode&&screenshotParams.get('layout')==='side-by-side';
  const pinnedToast=screenshotMode&&screenshotParams.get('toast')==='1';
+ /** `?milestone=1` shows a version card and its milestone invitation even when no capture frames are available locally. */
+ const milestonePreview=screenshotParams.get('milestone')==='1';
+ const shownOutput=(output:NonNullable<Message['versionOutput']>)=>output.frameId?output:milestonePreview?{...output,version:output.version??milestonePreviewSample.version,imageUrl:output.imageUrl??milestonePreviewSample.imageUrl}:null;
  const unavailableNotice="This isn't available yet.";
  const [state,setState] = useState<SavedState>(loadState);
  const [todoVersions, setTodoVersions] = useState<TodoVersion[]>([]);
@@ -376,7 +380,7 @@ export function Workbench() {
 
 
       <div className="conversation-scroll" ref={scrollRef}><div className="conversation-inner" ref={conversationRef} data-chat-slide={isSimulating(work)?slide.key:undefined}>{isNewChat||(isSimulating(work)&&!shownMessages.length)?<div className="new-chat-welcome"><h1>What would you like to work on?</h1><p>Start with an idea, a question, or a file.</p></div>:task.messages.length===0&&isTaskChat&&<div className="conversation-empty"><Avatar isMit={task.kind==='mit'} name={task.mit}/><h2>{task.kind==='colleague'?`Say hello to ${task.mit}.`:`Work it out with ${task.mit}.`}</h2><p>{task.kind==='colleague'?'Send a message or share a file. Start a project together when you’re ready.':'Describe what you want to explore. Your inputs stay close, and each output has a place to return to.'}</p></div>}
-       {shownMessages.map(m=><article className={`mw-message ${m.role==='user'?'from-user':''}`} key={m.id} aria-label={`${m.role==='user'?'You':m.name} at ${m.time}`}>{m.role==='colleague'&&<div className="message-byline"><strong>{m.name}</strong></div>}<div className="message-content">{(m.role==='user'?visibleMessageText(m.text):m.text).split('\n\n').map((p,i)=><p key={i}>{p}</p>)}{m.frames?.map(frame=><FrameContextChip key={frame.id} frame={frame}/>)}{m.assetIds?.map(id=>allAssets.find(a=>a.id===id)).filter((a):a is Asset=>!!a).map(a=>assetButton(a))}{m.assetId&&allAssets.find(a=>a.id===m.assetId)&&assetButton(allAssets.find(a=>a.id===m.assetId)!)}</div>{m.versionOutput?.frameId&&<MessageOutput output={m.versionOutput} onOpen={milestone=>{setFrameRequest({frameId:m.versionOutput!.frameId!,milestone});if(milestone)setIdeaOpen(false);setReader('prototype');setExpanded(false);setSelectedPane('version');setMobilePanel('version');}}/>}<time className="message-time">{m.time}</time></article>)}
+       {shownMessages.map(m=><article className={`mw-message ${m.role==='user'?'from-user':''}`} key={m.id} aria-label={`${m.role==='user'?'You':m.name} at ${m.time}`}>{m.role==='colleague'&&<div className="message-byline"><strong>{m.name}</strong></div>}<div className="message-content">{(m.role==='user'?visibleMessageText(m.text):m.text).split('\n\n').map((p,i)=><p key={i}>{p}</p>)}{m.frames?.map(frame=><FrameContextChip key={frame.id} frame={frame}/>)}{m.assetIds?.map(id=>allAssets.find(a=>a.id===id)).filter((a):a is Asset=>!!a).map(a=>assetButton(a))}{m.assetId&&allAssets.find(a=>a.id===m.assetId)&&assetButton(allAssets.find(a=>a.id===m.assetId)!)}</div>{m.versionOutput&&shownOutput(m.versionOutput)&&<MessageOutput output={shownOutput(m.versionOutput)!} onOpen={milestone=>{if(m.versionOutput!.frameId)setFrameRequest({frameId:m.versionOutput!.frameId,milestone});if(milestone)setIdeaOpen(false);setReader('prototype');setExpanded(false);setSelectedPane('version');setMobilePanel('version');}}/>}<time className="message-time">{m.time}</time></article>)}
        {working&&<div className="run-progress" role="status"><LoaderCircle size={15} className="spinning"/><span>{task.mit} is preparing a sample response…</span></div>}
        {isTaskChat&&task.status==='Ready for review'&&!working&&<div className="review-bar"><div className="review-heading"><strong>Ready for review</strong><small>Take a look before moving forward.</small></div><div><button className="mw-button" onClick={()=>{setStatus('In progress');composerRef.current?.focus();}}>Continue refining</button><button className="mw-button primary" onClick={()=>{setStatus('Complete');setNotice('Task marked complete. Its conversation and outputs are preserved.');}}><Check size={14}/>Mark complete</button></div></div>}
        {isTaskChat&&task.status==='Complete'&&<div className="review-bar"><div className="review-heading"><strong>Marked as complete</strong></div><div><button className="mw-button" onClick={()=>setStatus('In progress')}>Undo</button></div></div>}

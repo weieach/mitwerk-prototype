@@ -38,6 +38,8 @@ export const treeTheme = {
   routeStripeWidth: 2,
   routeStripeOpacity: 0.25,
   routeStripeColor: '#ffffff',
+  gridDotRadius: 0.9,
+  gridDotOpacity: 0.6,
   /** Grayed look for the horizontal connector across a selected level. */
   levelConnectorColor: '#b9bdba',
   levelConnectorOpacity: 0.4,
