@@ -10,10 +10,10 @@ import { ideaTheme } from './tokens';
 import { MilestoneButton, MilestoneEditor } from './MilestoneControls';
 import { BucketTag } from '../workbench/BucketTag';
 
-type Props = { onTodoHeight: (id: string, height: number) => void; onToggleTodo: (id: string) => void; todos: IdeaTodo[]; children: ReactNode; node: VersionNode; milestone: string; open: boolean; currentWip: boolean; color: string; hasDescendants: boolean;
+type Props = { onTodoHeight: (id: string, height: number) => void; onToggleTodo: (id: string) => void; todos: IdeaTodo[]; children: ReactNode; node: VersionNode; milestone: string; open: boolean; currentWip: boolean; live: boolean; color: string; hasDescendants: boolean;
   onSelect: () => void; onSave: (text: string) => void };
 
-export function IdeaCard({ onTodoHeight, onToggleTodo, todos, node, milestone, open, currentWip, color, hasDescendants, onSelect, onSave, children }: Props) {
+export function IdeaCard({ onTodoHeight, onToggleTodo, todos, node, milestone, open, currentWip, live, color, hasDescendants, onSelect, onSave, children }: Props) {
   const clock = useMinuteClock(todos.length > 0);
   const todoList = useRef<HTMLUListElement>(null);
   useLayoutEffect(() => {
@@ -53,7 +53,7 @@ export function IdeaCard({ onTodoHeight, onToggleTodo, todos, node, milestone, o
     : (currentWip || near || focused) && (currentWip || !milestone) && <MilestoneButton buttonRef={add} editing={!!milestone} onClick={edit}/>;
   return <article className={`idea-card ${open ? 'is-open' : ''}`} data-node-id={node.id} style={{ '--route-color': color } as CSSProperties}
     onFocus={() => setFocused(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
-    <button ref={station} onPointerEnter={() => setNear(true)} className={`station ${todos.length ? 'is-todo' : milestone ? 'is-milestone' : hasDescendants ? 'has-descendants' : 'is-terminal'}`} aria-label={`Select ${node.label}${todos.length ? ` · ${todos.filter(todo => todo.complete).length}/${todos.length} to-dos complete` : ''}`} aria-expanded={open} onClick={onSelect}>{todos.length ? (todos.every(todo => todo.complete) ? <PhosphorIcon name="check" size="var(--station-inner-size)"/> : null) : milestone ? <PhosphorIcon name="trophy" weight="fill" size="var(--station-size)"/> : <span/>}</button>
+    <button ref={station} onPointerEnter={() => setNear(true)} className={`station ${live ? 'is-live' : ''} ${todos.length ? 'is-todo' : milestone ? 'is-milestone' : hasDescendants ? 'has-descendants' : 'is-terminal'}`} aria-label={`Select ${node.label}${todos.length ? ` · ${todos.filter(todo => todo.complete).length}/${todos.length} to-dos complete` : ''}`} aria-expanded={open} onClick={onSelect}>{todos.length ? (todos.every(todo => todo.complete) ? <PhosphorIcon name="check" size="var(--station-inner-size)"/> : null) : milestone ? <PhosphorIcon name="trophy" weight="fill" size="var(--milestone-icon-size)"/> : <span/>}</button>
     {currentWip && <div className="idea-wip-action">{action}<div className="version-stats idea-wip-prompts"><span>{node.prompts.length} {node.prompts.length === 1 ? 'prompt' : 'prompts'}</span></div></div>}
     {!currentWip && todoContent}
     {milestone && !editing && <button className="idea-milestone" aria-label={`Edit milestone for ${node.label}`} onClick={edit}>{milestone}</button>}

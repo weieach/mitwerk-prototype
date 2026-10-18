@@ -33,7 +33,7 @@
 
 - Chat beside other panels (now resizable; see the current sizing rule above).
 - Chat messages use the panel title's text inset, with no centered max-width column.
-- Idea stream connectors are 12px, slimmer than the 28px stations.
+- Test diagram connectors are 12px, slimmer than the 28px stations. Idea stream uses a 1px hairline; see the 2026-10-18 rule.
 - Light-mode surface hierarchy (soft gray panels; white message box and in-chat cards; near-white sent messages).
 - Gallery footer wraps into two rows below 620px of panel width instead of clipping.
 - `?view=system` and this document.

@@ -15,10 +15,10 @@ export function MilestoneEditor({ value, onSave, onCancel, children, compactFoot
   }
   return <form className="idea-editor" onSubmit={event => { event.preventDefault(); if (draft.trim()) save(draft.trim()); }}>
     <label htmlFor={id} className="visually-hidden">Milestone</label>
-    <textarea id={id} autoFocus rows={3} value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); onCancel(); } }}/>
+    <textarea id={id} autoFocus rows={3} placeholder="Write a milestone" value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); onCancel(); } if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && draft.trim()) { event.preventDefault(); save(draft.trim()); } }}/>
     <div className={compactFooter ? 'milestone-editor-footer' : undefined}>
       {children}
-      <div className="milestone-editor-actions">{value && <button type="button" className="milestone-remove" aria-label="Remove milestone" title="Remove milestone" onClick={() => save('')}><PhosphorIcon name="trash"/></button>}<button type="button" onClick={onCancel}>Cancel</button><button type="submit" disabled={!draft.trim()}>Save milestone</button></div>
+      <div className="milestone-editor-actions">{value && <button type="button" className="milestone-remove" aria-label="Remove milestone" title="Remove milestone" onClick={() => save('')}><PhosphorIcon name="trash"/></button>}<button type="button" onClick={onCancel}>Cancel</button><button type="submit" disabled={!draft.trim()} title="Save milestone (⌘↩)">Save milestone</button></div>
     </div>
     {error && <p role="alert">{error}</p>}
   </form>;

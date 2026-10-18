@@ -1,5 +1,16 @@
 # Design system rules
 
+## Idea stream is a hairline — 2026-10-18
+
+- Idea stream draws its graph as a fine instrument line, in the spirit of a surveyed trace: a 1px spine (`ideaTheme.lineWidth`), open 9px rings on terminal stations, and 5px filled points where the line continues. Folded runs stay an outlined count (`foldCountSize` 22px, 1px border) with the “versions” label tracked out. To-do stations are 13px squares with a 1px route-colored border and no clearance halo. Milestones are 16px open rings with a 10px trophy, not filled discs. The selected station takes `--mw-dock`; every other mark keeps its branch color, and `main` stays `--contrast`.
+- There is no erased channel under the line, no center stripe, and no endpoint triangle. Chronology stays a short dash of the same 1px stroke. Re-merge stems use the same small points instead of grid squares. Labels sit one version-label gap off the mark and use weight 400 in `--muted`. Hit targets stay 28px around each station.
+- This is Idea stream only (`data-tree-mode="history"`). The Test diagram keeps the 12px bead, 28px station, stripe, clearance and endpoint triangle. This supersedes the 12px Idea stream connector, the 36px filled milestone disc, the 26px fold circle, and the 80% / 2px to-do station.
+
+## Milestone editor is a quiet field — 2026-10-18
+
+- The shared milestone editor has no box and no focus rectangle. The field is transparent, does not resize, and ends in one `--line` baseline, so the corner grip is gone. Keyboard focus brightens that baseline. Its placeholder reads “Write a milestone”; the accessible name stays “Milestone”.
+- Cancel and Save milestone are text, with no fill or border. Save stays faint until there is text, then uses `--ink`. Escape cancels. Command or Control plus Enter saves. An existing note still offers the trash icon at the left of that row.
+
 ## Panel footer text and icons — 2026-10-18
 
 - Both panel footers (the Version blocks gallery footer and the Idea stream controls) use a fixed `--panel-footer-font-size` (12px) for their labels, not the fluid `--control-font-size`, following Cursor's 12px status bar.

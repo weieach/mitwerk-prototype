@@ -2,19 +2,30 @@ import { geometry } from './layout.ts';
 import { featurePalette } from '../../shared/palette.ts';
 
 export const ideaTheme = {
-  todoStationScale: 0.8,
-  /** Route-colored ring on square to-do stations. Thinner than the circular station border. */
-  todoStationBorderWidth: 2,
+  /** Screen-space hairline for the chronological spine. Test diagram keeps the bead stroke. */
+  lineWidth: 1,
+  /** Open ring on a terminal station. The line shows through the hole. */
+  markDiameter: 9,
+  markBorder: 1,
+  /** Filled point on a station that continues. */
+  markInner: 5,
+  todoStationSize: 13,
+  /** Route-colored ring on square to-do stations. */
+  todoStationBorderWidth: 1,
   fitMinZoom: 0.05,
   nodeGap: 140,
   todoGap: 10,
   milestoneGap: 190,
   openGap: 390,
   foldedGap: 80,
-  foldCountSize: 26,
-  milestoneDiameter: 36,
-  milestoneBorderWidth: 2,
+  foldCountSize: 22,
+  foldBorderWidth: 1,
+  milestoneDiameter: 16,
+  milestoneBorderWidth: 1,
+  milestoneIconSize: 10,
   milestoneBorderColor: '#000',
+  /** The one instrument accent: the selected station. Branch colors stay on the line. */
+  liveColor: 'var(--mw-dock)',
   hoverRadiusViewport: .05,
   actionFadeMs: 180,
   milestoneFontSize: 17,
@@ -163,9 +174,9 @@ export function versionLabelZoomScale(zoom: number) {
 }
 
 /** Label sits to the left of the station, vertically centered on it. */
-export function stationLabelOffset() {
+export function stationLabelOffset(radius = treeTheme.stationRadius) {
   return {
-    x: -(treeTheme.stationRadius + treeTheme.versionLabelGap),
+    x: -(radius + treeTheme.versionLabelGap),
     y: 0,
   };
 }

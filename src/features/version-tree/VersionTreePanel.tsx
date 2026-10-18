@@ -519,19 +519,22 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
     '--milestone-font-size': `${ideaTheme.milestoneFontSize}px`,
     '--milestone-padding': `${ideaTheme.milestonePaddingBlock}px ${ideaTheme.milestonePaddingInline}px`,
     '--idea-fold-count-size': `${ideaTheme.foldCountSize}px`,
+    '--idea-fold-border': `${ideaTheme.foldBorderWidth}px`,
+    '--idea-live-color': ideaTheme.liveColor,
+    '--milestone-icon-size': `${ideaTheme.milestoneIconSize}px`,
     '--card-hover-inset': `${treeTheme.cardHoverBorderInset}px`,
     '--card-hover-transition': `${treeTheme.cardHoverTransitionMs}ms`,
     '--node-card-width': `${geometry.cardWidth}px`,
     '--merge-origin-tag-gap': `${geometry.cardOffsetX}px`,
-    '--station-size': `${treeTheme.stationDiameter}px`,
-    '--idea-todo-station-size': `${treeTheme.stationDiameter * ideaTheme.todoStationScale}px`,
+    '--station-size': `${ideaMode ? ideaTheme.markDiameter : treeTheme.stationDiameter}px`,
+    '--idea-todo-station-size': `${ideaTheme.todoStationSize}px`,
     '--idea-todo-station-border': `${ideaTheme.todoStationBorderWidth}px`,
     '--milestone-size': `${ideaTheme.milestoneDiameter}px`,
     '--milestone-border-width': `${ideaTheme.milestoneBorderWidth}px`,
     '--milestone-border-color': ideaTheme.milestoneBorderColor,
-    '--station-border-width': `${treeTheme.stationBorderWidth}px`,
-    '--station-inner-size': `${treeTheme.stationInnerDiameter}px`,
-    '--station-clearance': `${treeTheme.stationClearance}px`,
+    '--station-border-width': `${ideaMode ? ideaTheme.markBorder : treeTheme.stationBorderWidth}px`,
+    '--station-inner-size': `${ideaMode ? ideaTheme.markInner : treeTheme.stationInnerDiameter}px`,
+    '--station-clearance': `${ideaMode ? 0 : treeTheme.stationClearance}px`,
     '--station-selected-ring': `${treeTheme.stationSelectedBorderWidth}px`,
     '--branch-count-size': `${treeTheme.branchCountDiameter}px`,
     '--branch-count-font-size': `${treeTheme.branchCountFontSize}px`,
@@ -545,8 +548,8 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
     '--debug-border-width': `${treeTheme.debugBorderWidth}px`,
     '--active-branch-color': treeTheme.activeBranchColor,
     '--version-label-size': `${treeTheme.versionLabelFontSize}px`,
-    '--version-label-weight': treeTheme.versionLabelFontWeight,
-    '--version-label-color': treeTheme.versionLabelColor,
+    '--version-label-weight': ideaMode ? 400 : treeTheme.versionLabelFontWeight,
+    '--version-label-color': ideaMode ? 'var(--muted)' : treeTheme.versionLabelColor,
     '--version-label-zoom': versionLabelZoomScale(zoom),
     '--station-center-x': `${-geometry.cardOffsetX}px`,
     '--station-center-y': `${-geometry.cardOffsetY}px`,
@@ -565,8 +568,8 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
           <div className="canvas-world" style={{ width: worldWidth, height: worldHeight, transform: `scale(${zoom}) translate(${worldShift + fitInset}px, 0)` }}>
             <svg className="route-layer" width={worldWidth} height={worldHeight} style={{ overflow: 'visible' }} aria-hidden="true">
               <IsometricGrid x={-(worldShift + fitInset)} width={worldWidth + worldShift + fitInset} height={worldHeight} visible={ideaMode || grid}/>
-              {/* Paint clearance first so connected segments do not erase each other's junctions. */}
-              {presentation.routes.filter(route => !route.dashed).map(route => <path key={`clearance:${route.id}`} d={route.path} fill="none" stroke="var(--canvas-bg)" strokeWidth={treeTheme.routeWidth + treeTheme.routeClearance * 2} strokeLinejoin="round" strokeLinecap="round"/>)}
+              {/* Paint clearance first so connected segments do not erase each other's junctions. Idea stream stays a hairline, so it has no erased channel. */}
+              {!ideaMode && presentation.routes.filter(route => !route.dashed).map(route => <path key={`clearance:${route.id}`} d={route.path} fill="none" stroke="var(--canvas-bg)" strokeWidth={treeTheme.routeWidth + treeTheme.routeClearance * 2} strokeLinejoin="round" strokeLinecap="round"/>)}
               {/* Routes arrive pre-sorted: later versions, Vx.1, then the checked-out branch on top. */}
               {presentation.routes.map(route => {
                 const routeReverted = isRevertedRoute(graph.revertedIds, route.targetId);
@@ -584,13 +587,13 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
                 return <g key={route.id} data-growth-key={route.id} className="route" data-route-kind={route.kind} data-active={route.active} data-spine={route.spine || undefined} data-reverted={routeReverted || undefined} data-merged={routeMerged || undefined} data-dashed={route.dashed || undefined}
                   opacity={ideaMode ? 1 : route.kind === 'horizontal-branch' ? treeTheme.levelConnectorOpacity : routeReverted ? treeTheme.revertedRouteOpacity : routeMerged ? treeTheme.mergedBranchOpacity : 1}>
                   {route.id.startsWith('chronology:') && <title>Chronological sequence · not a Git parent</title>}
-                  {route.id.startsWith('chronology:') ? <path d={route.path} fill="none" stroke={stroke} strokeWidth={treeTheme.chronologyWidth} strokeDasharray={`${treeTheme.chronologyDash} ${treeTheme.chronologyDash}`} /> : route.dashed && from ? dots.map(y => <rect key={y} x={from.x - dot / 2} y={y - dot / 2} width={dot} height={dot} fill={stroke}/>) : <>
-                  <path d={route.path} fill="none" stroke={stroke} strokeWidth={treeTheme.routeWidth} strokeLinejoin="round" strokeLinecap="round"/>
-                  <path d={route.path} fill="none" stroke={treeTheme.routeStripeColor} strokeWidth={treeTheme.routeStripeWidth} opacity={treeTheme.routeStripeOpacity} strokeLinejoin="round" strokeLinecap="round"/>
+                  {route.id.startsWith('chronology:') ? <path d={route.path} fill="none" stroke={stroke} strokeWidth={ideaMode ? ideaTheme.lineWidth : treeTheme.chronologyWidth} strokeDasharray={ideaMode ? '2 6' : `${treeTheme.chronologyDash} ${treeTheme.chronologyDash}`} strokeLinecap="round" /> : route.dashed && from ? (ideaMode ? dots.map(y => <circle key={y} cx={from.x} cy={y} r={ideaTheme.markInner / 2} fill={stroke}/>) : dots.map(y => <rect key={y} x={from.x - dot / 2} y={y - dot / 2} width={dot} height={dot} fill={stroke}/>)) : <>
+                  <path d={route.path} fill="none" stroke={stroke} strokeWidth={ideaMode ? ideaTheme.lineWidth : treeTheme.routeWidth} strokeLinejoin="round" strokeLinecap="round"/>
+                  {!ideaMode && <path d={route.path} fill="none" stroke={treeTheme.routeStripeColor} strokeWidth={treeTheme.routeStripeWidth} opacity={treeTheme.routeStripeOpacity} strokeLinejoin="round" strokeLinecap="round"/>}
                   </>}
                 </g>;
               })}
-              {presentation.tip && <path data-branch-end={presentation.tip.id} fill={isReverted(graph.revertedIds, presentation.tip.id) ? treeTheme.revertedRouteColor : treeTheme.stationFill}
+              {presentation.tip && !ideaMode && <path data-branch-end={presentation.tip.id} fill={isReverted(graph.revertedIds, presentation.tip.id) ? treeTheme.revertedRouteColor : treeTheme.stationFill}
                 d={`M ${presentation.tip.x} ${presentation.tip.y + treeTheme.stationRadius + treeTheme.endpointTriangleGap}
                   l ${treeTheme.endpointTriangleWidth / 2} ${treeTheme.endpointTriangleHeight}
                   h ${-treeTheme.endpointTriangleWidth} Z`}/>}
@@ -624,13 +627,13 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
               const reverted = isReverted(graph.revertedIds, node.id);
               const merged = mergedBranches.has(node.branchId);
               const color = ideaMode ? ideaBranchColor(node.branchId, levelColor(node.branchId, node.row)) : merged ? palerAccent(levelColor(node.branchId, node.row)) : activeRouteColor(levelColor(node.branchId, node.row), onSpine);
-              const label = stationLabelOffset();
+              const label = stationLabelOffset(ideaMode ? ideaTheme.markDiameter / 2 : undefined);
               const expandedGroup = ideaMode ? expandedGroups.find(run => run.nodeIds[0] === node.id) : undefined;
               const folded = ideaMode ? ideas.folded.get(node.id) : undefined;
               if (folded) return <button key={node.id} data-growth-key={node.id} className="idea-fold" style={{ left: node.x, top: node.y }}
                 aria-label={`Expand ${folded.nodeIds.length} versions, ${folded.firstLabel} through ${folded.lastLabel}`} aria-expanded={false}
                 onClick={() => setExpandedRuns(current => new Set([...current, folded.id]))}>
-                {branchLabels.get(node.branchId) === node.id && <span className="station-label" data-graph-label={node.id} style={{left: ideaTheme.foldCountSize / 2 + label.x, top: ideaTheme.foldCountSize / 2 + label.y}}><BranchTag name={node.branchId} color={color}/></span>}<span className="idea-fold-count"><span>{folded.nodeIds.length}</span></span><span className="idea-fold-label">versions</span>
+                {branchLabels.get(node.branchId) === node.id && <span className="station-label" data-graph-label={node.id} style={{left: ideaTheme.foldCountSize / 2 + treeTheme.versionLabelGap, top: ideaTheme.foldCountSize / 2 + label.y}}><BranchTag name={node.branchId} color={color}/></span>}<span className="idea-fold-count"><span>{folded.nodeIds.length}</span></span><span className="idea-fold-label">versions</span>
               </button>;
               const commitCard = <VersionCard ideaMode={ideaMode} onOpenPush={onOpenPush} hideStation={ideaMode} node={node} selected={ideaMode || node.id === graph.selectedId}
                   hasDescendants={presentation.nodesWithChildren.has(node.id)}
@@ -666,7 +669,7 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
                     if (openCommand && expandedGroup.nodeIds.includes(openCommand)) setOpenCommand(null);
                     setPendingFocus(expandedGroup.id);
                   }}>Fold<Icon name="play" size={10}/></button>}{(ideaMode ? branchLabels.get(node.branchId) === node.id : isBranchDivergence(node, graph.nodes)) && <BranchTag name={node.branchId} color={color}/>}<span className="version-header">{node.label.toLowerCase()}</span></span>
-                {ideaMode ? <IdeaCard onTodoHeight={onTodoHeight} onToggleTodo={toggleTodo} todos={todosByNode.get(node.id) ?? []} currentWip={node.id === currentWipId} node={node} milestone={milestones[node.id] ?? ''} open={displayedCommand === node.id} color={color}
+                {ideaMode ? <IdeaCard onTodoHeight={onTodoHeight} onToggleTodo={toggleTodo} todos={todosByNode.get(node.id) ?? []} currentWip={node.id === currentWipId} live={node.id === (selectedDisplayId || displayedCommand)} node={node} milestone={milestones[node.id] ?? ''} open={displayedCommand === node.id} color={color}
                   hasDescendants={presentation.nodesWithChildren.has(node.id)}
                   onSelect={() => { setOpenCommand(current => current === node.id ? null : node.id); dispatch({ type: 'select', id: node.id }); if (node.capture?.pushed) onOpenPush?.(node.capture.version); }}
                   onSave={text => setSavedMilestones(saveMilestone(milestones, node, text))}>{commitCard}</IdeaCard>

@@ -3,7 +3,7 @@ import test from 'node:test';
 import { branchPathIds, createInitialGraphState, graphReducer, isEmptyVersion, longestBranchId, parseStoredGraphState } from '../src/features/version-tree/model.ts';
 import { compareVersionLabels, frameScreenshotTargets, frameVersionLevel, layoutGraph as logicalLayout, layoutBranchView, geometry, screenshotNodeTargets } from '../src/features/version-tree/layout.ts';
 import { branchName, getBranchState, presentTree } from '../src/features/version-tree/presentation.ts';
-import { levelColorLookup, stationLabelOffset, treeTheme, versionLabelZoomScale } from '../src/features/version-tree/tokens.ts';
+import { ideaTheme, levelColorLookup, stationLabelOffset, treeTheme, versionLabelZoomScale } from '../src/features/version-tree/tokens.ts';
 import { createTestGraphState } from './graph-fixture.ts';
 
 const layoutGraph = (nodes, selectedId = null) => layoutBranchView(logicalLayout(nodes), selectedId);
@@ -391,6 +391,9 @@ test('the checked-out branch stays on a straight vertical spine through a fork',
 
 test('connectors are slimmer than stations and cards clear both routing levels', () => {
   assert.ok(treeTheme.routeWidth < treeTheme.stationDiameter);
+  assert.ok(ideaTheme.lineWidth < ideaTheme.markDiameter);
+  assert.ok(ideaTheme.lineWidth < treeTheme.routeWidth);
+  assert.ok(ideaTheme.markInner < ideaTheme.markDiameter);
   assert.equal(treeTheme.stationInnerDiameter, treeTheme.stationDiameter - treeTheme.stationBorderWidth * 2);
   const strokeRadius = treeTheme.routeWidth / 2 + treeTheme.routeClearance;
   assert.ok(geometry.horizontalCardOffsetY > strokeRadius);

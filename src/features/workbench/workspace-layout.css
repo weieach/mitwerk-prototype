@@ -399,6 +399,8 @@
 .message-version-output .idea-editor textarea { height:auto; font:12px/1.4 var(--sans); }
 
 .chat-milestone-dialog .idea-editor { border:0; padding:0; background:transparent; }
+.workspace .idea-editor button { height:auto; min-height:0; padding-block:2px; }
+.mw-app .idea-editor textarea:focus-visible { outline:none; border-bottom-color:var(--ink); }
 .chat-milestone-dialog .milestone-commit-option { display:flex; align-items:center; gap:8px; margin:0; }
 .milestone-commit-option input { accent-color:var(--ink); }
 
