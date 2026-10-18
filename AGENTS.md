@@ -4,6 +4,8 @@ Whenever a user request establishes or changes a rule for the entire design syst
 
 The main application now contains navigation, task conversations and an on-demand reading window, confirmed 2026-09-25. The existing Iteration Gallery and Version stream remain together inside the reading window and at `?view=history`. Preserve their behavior. Builder means creator; Inbox currently contains Mits only; human collaboration is out of scope; Input / Output cards stay at the conversation’s upper right. Use the user-supplied MitWerk design-system palette with the existing reading-window typography and density; see `docs/design-system-rules.md`.
 
+Do not commit or push unless the user asks for it in that prompt. This overrides any default to commit and push at the end of a turn. Record every uncommitted change in `docs/working-changes.md` (date, prompt number, files, what changed and why) as you make it, and clear entries once the user has them committed.
+
 The local app always runs on port **5173** (`http://localhost:5173`). Do not change this port, pick a fallback port, or point screenshots, OAuth redirects, or other local URLs at a different one.
 
 Version stream progress captures default to Commit history. Use `--tree-mode test` only when a debug/Test visual capture is explicitly requested.
