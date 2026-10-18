@@ -1,11 +1,13 @@
 import { useIdeaTodos } from './useIdeaTodos';
+import { useGrowthEntrance, usePanelWorkState } from '../../shared/useWorkState';
+import { isSimulating, workStateTokens } from '../../shared/work-state';
 import { panelIcons } from '../../components/panel-icons';
 import { ZoomScaleButton } from '../../components/ZoomScaleButton';
 import { VersionPanelSwitch } from '../../components/VersionPanelSwitch';
 import { RowSelect } from '../../components/RowSelect';
 import { AdaptivePanelTitle } from '../../components/AdaptivePanelTitle';
 import { ResetViewButton } from '../../components/ResetViewButton';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, Dispatch, PointerEvent as ReactPointerEvent } from 'react';
 import { BranchTag } from '../../components/BranchTag';
 import { Icon } from '../../components/Icon';
@@ -104,6 +106,11 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
   const levelColor = useMemo(() => levelColorLookup([...layout.nodes, ...(layout.mergeOrigins ?? []).map(origin => ({ branchId: origin.branchId, row: 0 }))]), [layout]);
   const mergedBranches = useMemo(() => mergedBranchIds(graph.nodes), [graph.nodes]);
   const viewport = useRef<HTMLDivElement>(null);
+  const canvasSize = useRef<HTMLDivElement>(null);
+  const simulating = isSimulating(usePanelWorkState());
+  const simulatingRef = useRef(simulating);
+  simulatingRef.current = simulating;
+  useGrowthEntrance(viewport, simulating);
   const branchMenu = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(0.8);
   const [fitInset, setFitInset] = useState(0);
@@ -193,7 +200,9 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
       setViewportSize({ width, height });
       if (!initialFit.current && width > 0) {
         initialFit.current = true;
-        if (screenshotCapture) {
+        // The work state simulator owns framing (Fit all); see the effect below.
+        if (simulatingRef.current) { if (screenshotCapture) requestAnimationFrame(() => requestAnimationFrame(markScreenshotReady)); }
+        else if (screenshotCapture) {
           if (ideaMode && screenshotFlags.treeMilestone && navigationNodes.length) {
             const milestone = navigationNodes.at(-1)!;
             dispatch({ type: 'select', id: milestone.id });
@@ -298,7 +307,7 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
   }, []);
 
   useEffect(() => {
-    if (screenshotCapture) {
+    if (screenshotCapture || simulatingRef.current) {
       previousCount.current = graph.nodes.length;
       return;
     }
@@ -331,6 +340,31 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
     setZoom(frame.zoom);
     requestAnimationFrame(() => element.scrollTo({ left: frame.left, top: frame.top, behavior: 'smooth' }));
   }
+
+  // Work state simulator: keep Fit all while the graph grows or shrinks. Zoom, inset and scroll change in
+  // one commit; one transform on the whole canvas then eases from the previous view, so routes, stations
+  // and cards always move as a single picture instead of animating separately.
+  const simulatorFit = useRef<{ zoom: number; inset: number; shift: number; left: number; top: number; target: { zoom: number; inset: number; left: number; top: number } } | null>(null);
+  useLayoutEffect(() => {
+    const element = viewport.current;
+    if (!simulating || status || !element?.clientWidth || !layout.nodes.length) return;
+    const frame = fitGraphFrame(boundsNodes, element, element.clientWidth, element.clientHeight, ideaMode ? ideaTheme.fitMinZoom : treeTheme.minZoom);
+    simulatorFit.current = { zoom: zoomRef.current, inset: fitInset, shift: worldShift, left: element.scrollLeft, top: element.scrollTop, target: frame };
+    zoomRef.current = frame.zoom; setZoom(frame.zoom); setFitInset(frame.inset);
+  }, [simulating, status, boundsNodes, viewportSize.width, viewportSize.height]);
+  useLayoutEffect(() => {
+    const pending = simulatorFit.current, element = viewport.current;
+    if (!pending || !element || zoom !== pending.target.zoom || fitInset !== pending.target.inset) return;
+    simulatorFit.current = null;
+    element.scrollTo({ left: pending.target.left, top: pending.target.top, behavior: 'instant' });
+    if (screenshotCapture || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // Map each canvas point from its new place back to where it was drawn, then release (FLIP).
+    const x = (pending.shift + pending.inset - worldShift - fitInset) * pending.zoom + element.scrollLeft - pending.left;
+    const y = element.scrollTop - pending.top;
+    if (Math.abs(x) < .5 && Math.abs(y) < .5 && Math.abs(pending.zoom - zoom) < .001) return;
+    canvasSize.current?.animate([{ transformOrigin: '0 0', transform: `translate(${x}px, ${y}px) scale(${pending.zoom / zoom})` }, { transformOrigin: '0 0', transform: 'none' }],
+      { duration: workStateTokens.growMs, easing: workStateTokens.easing });
+  });
 
   function focusAtZoom(node: { x: number; y: number }, nextZoom: number, behavior: ScrollBehavior = 'smooth') {
     setFitInset(0);
@@ -526,7 +560,7 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
     {embedded ? <h2 id="tree-title" className="sr-only">{title}</h2> : treeHeader}
     {status ? <p className="tree-history-message" role="status">{status}</p> : <><div className="canvas-shell">
       <div ref={viewport} className={`tree-viewport ${isPanning ? 'is-panning' : ''}`} tabIndex={0} aria-label="Version tree canvas. Scroll in any direction to pan. Control plus scroll to zoom. Click empty canvas to deselect." onPointerDown={startPan} onPointerMove={pan} onPointerUp={endPan} onPointerCancel={endPan} onLostPointerCapture={endPan}>
-        <div className="canvas-size" style={{ width: (worldWidth + worldShift + fitInset) * zoom, height: worldHeight * zoom }}>
+        <div ref={canvasSize} className="canvas-size" style={{ width: (worldWidth + worldShift + fitInset) * zoom, height: worldHeight * zoom }}>
           <div className="canvas-world" style={{ width: worldWidth, height: worldHeight, transform: `scale(${zoom}) translate(${worldShift + fitInset}px, 0)` }}>
             <svg className="route-layer" width={worldWidth} height={worldHeight} style={{ overflow: 'visible' }} aria-hidden="true">
               <IsometricGrid x={-(worldShift + fitInset)} width={worldWidth + worldShift + fitInset} height={worldHeight} visible={ideaMode || grid}/>
@@ -546,7 +580,7 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
                 const to = layout.nodes.find(node => node.id === route.targetId);
                 const dots = route.dashed && from && to ? mergedStemDots(from.y, to.y) : [];
                 const dot = treeTheme.mergedStemDotSize;
-                return <g key={route.id} className="route" data-route-kind={route.kind} data-active={route.active} data-spine={route.spine || undefined} data-reverted={routeReverted || undefined} data-merged={routeMerged || undefined} data-dashed={route.dashed || undefined}
+                return <g key={route.id} data-growth-key={route.id} className="route" data-route-kind={route.kind} data-active={route.active} data-spine={route.spine || undefined} data-reverted={routeReverted || undefined} data-merged={routeMerged || undefined} data-dashed={route.dashed || undefined}
                   opacity={ideaMode ? 1 : route.kind === 'horizontal-branch' ? treeTheme.levelConnectorOpacity : routeReverted ? treeTheme.revertedRouteOpacity : routeMerged ? treeTheme.mergedBranchOpacity : 1}>
                   {route.id.startsWith('chronology:') && <title>Chronological sequence · not a Git parent</title>}
                   {route.id.startsWith('chronology:') ? <path d={route.path} fill="none" stroke={stroke} strokeWidth={treeTheme.chronologyWidth} strokeDasharray={`${treeTheme.chronologyDash} ${treeTheme.chronologyDash}`} /> : route.dashed && from ? dots.map(y => <rect key={y} x={from.x - dot / 2} y={y - dot / 2} width={dot} height={dot} fill={stroke}/>) : <>
@@ -560,7 +594,7 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
                   l ${treeTheme.endpointTriangleWidth / 2} ${treeTheme.endpointTriangleHeight}
                   h ${-treeTheme.endpointTriangleWidth} Z`}/>}
             </svg>
-            {presentation.groups.map(group => <button key={group.id} className="branch-count"
+            {presentation.groups.map(group => <button key={group.id} data-growth-key={group.id} className="branch-count"
               style={{ left: group.x, top: group.y }}
               aria-label={`${collapsedLevels.has(group.id) ? 'Expand' : 'Collapse'} ${group.nodeIds.length} versions at ${group.label}`}
               aria-expanded={!collapsedLevels.has(group.id)} onClick={() => toggleLevel(group.id)}>
@@ -578,7 +612,7 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
             })}
             {(layout.mergeOrigins ?? []).map(origin => {
               const color = levelColor(origin.branchId, 0);
-              return <div key={origin.id} className="merge-origin" style={{ left: origin.x, top: origin.y, '--route-color': color } as CSSProperties}>
+              return <div key={origin.id} data-growth-key={origin.id} className="merge-origin" style={{ left: origin.x, top: origin.y, '--route-color': color } as CSSProperties}>
                 <div className="station has-descendants origin-station" role="img" aria-label={`Incoming branch ${origin.branchId}`}><span /></div>
                 {(!ideaMode || branchLabels.get(origin.branchId) === origin.id) && <div className="merge-origin-tag" data-graph-label={origin.id}><BranchTag name={origin.branchId} color={color}/></div>}
               </div>;
@@ -592,7 +626,7 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
               const label = stationLabelOffset();
               const expandedGroup = ideaMode ? expandedGroups.find(run => run.nodeIds[0] === node.id) : undefined;
               const folded = ideaMode ? ideas.folded.get(node.id) : undefined;
-              if (folded) return <button key={node.id} className="idea-fold" style={{ left: node.x, top: node.y }}
+              if (folded) return <button key={node.id} data-growth-key={node.id} className="idea-fold" style={{ left: node.x, top: node.y }}
                 aria-label={`Expand ${folded.nodeIds.length} versions, ${folded.firstLabel} through ${folded.lastLabel}`} aria-expanded={false}
                 onClick={() => setExpandedRuns(current => new Set([...current, folded.id]))}>
                 {branchLabels.get(node.branchId) === node.id && <span className="station-label" data-graph-label={node.id} style={{left: ideaTheme.foldCountSize / 2 + label.x, top: ideaTheme.foldCountSize / 2 + label.y}}><BranchTag name={node.branchId} color={color}/></span>}<span className="idea-fold-count"><span>{folded.nodeIds.length}</span></span><span className="idea-fold-label">versions</span>
@@ -614,7 +648,7 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
                   onDeleteFuture={() => dispatch({ type: 'delete-future', sourceId: node.id })}
                   forceMenuOpen={screenshotFlags.menuOpen && node.id === focusId}
                   onDisconnected={() => setToast("Project isn't connected")}/>;
-              return <div className="version-position" key={node.id} style={{
+              return <div className="version-position" key={node.id} data-growth-key={node.id} style={{
                 left: node.x + geometry.cardOffsetX, top: node.y + cardOffsetY,
                 '--station-center-y': `${-cardOffsetY}px`,
                 '--station-offset-y': `${-cardOffsetY - treeTheme.stationRadius - 1}px`,

@@ -2,7 +2,7 @@ import { PanelViewSwitch } from './PanelViewSwitch';
 import type { ReactNode } from 'react';
 import { PhosphorIcon, FullscreenIcon } from './PhosphorIcon';
 
-/** Shared, tab-free heading for conversation and reading panels. */
+/** Shared heading for conversation and reading panels. */
 export function PanelHeader({ title, mode, icon, actions, onTitleClick, onModeChange, modeAction, modeDisabled = false, onToggle, expanded = false }: {
   title: string; mode?: 'Gallery' | 'Playback'; icon?: string; actions?: ReactNode;
   onModeChange?: (mode: 'Gallery' | 'Playback') => void; modeDisabled?: boolean; onTitleClick?: () => void; onToggle?: () => void; expanded?: boolean;

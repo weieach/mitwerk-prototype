@@ -1,3 +1,4 @@
+import { MilestoneInvitationControls } from './MilestoneInvitationControls';
 import { ArrowUpRight } from '../../components/PhosphorIcon';
 import { milestoneInviteGradient, milestoneInviteMotion } from './milestone-invite';
 import type { CSSProperties } from 'react';
@@ -48,11 +49,16 @@ export function MessageOutput({ output, onOpen }: { output: NonNullable<Message[
     return () => { window.removeEventListener('storage', sync); window.removeEventListener(milestonesChangedEvent, sync); };
   }, [key]);
   return <div ref={root} className={`message-version-output${jumping ? ' is-milestone-jumping' : ''}${invited ? ' is-milestone-ready' : ''}`} style={{'--milestone-invite-gradient':milestoneInviteGradient, '--milestone-bump-duration':`${milestoneInviteMotion.duration}ms`} as CSSProperties}>
-    <button type="button" className="message-version-card" aria-label={invited ? 'Ready to mark a new milestone?' : `Version block #${output.version}, Prompt #${output.prompt}`} onClick={invited ? openMilestone : () => onOpen()}>
-      <span className="message-version-preview"><img src={`${import.meta.env.BASE_URL}${output.imageUrl}`} alt="Preview of the generated interface"/></span>
-      <span className="message-version-label"><span>{invited ? 'Ready to mark a new milestone?' : `Version block #${output.version}, Prompt #${output.prompt}`}</span></span>
-      <ArrowUpRight size={14}/>
-    </button>
-    {invited ? <button type="button" className="milestone-not-yet" onClick={() => { setDismissedKey(key); setInvited(false); setJumping(false); }}>Not yet</button> : <MilestoneButton disabled={!key} editing={Boolean(milestone)} onClick={openMilestone}/>}
+    <div className="message-version-card">
+      <button type="button" className="message-version-main" aria-label={invited ? "You've accomplished a lot! Ready to mark a new milestone?" : `Version block #${output.version}, Prompt #${output.prompt}`} onClick={invited ? openMilestone : () => onOpen()}>
+        <span className="message-version-preview"><img src={`${import.meta.env.BASE_URL}${output.imageUrl}`} alt="Preview of the generated interface"/></span>
+        <span className="message-version-label">
+          {invited ? <span className="milestone-label-swap"><span aria-hidden="true" className="panel-view-word is-leaving">{`Version block #${output.version}, Prompt #${output.prompt}`}</span><span className="panel-view-word milestone-invite-word">You've accomplished a lot!<br/>Ready to mark a new milestone?</span></span> : <span>{`Version block #${output.version}, Prompt #${output.prompt}`}</span>}
+        </span>
+        {!invited && <ArrowUpRight size={14}/>}
+      </button>
+      {invited && <MilestoneInvitationControls onOpen={openMilestone} onDismiss={() => { setDismissedKey(key); setInvited(false); setJumping(false); }}/>}
+    </div>
+    {!invited && <MilestoneButton disabled={!key} editing={Boolean(milestone)} onClick={openMilestone}/>}
   </div>;
 }

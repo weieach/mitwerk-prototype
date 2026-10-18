@@ -9,6 +9,9 @@
   --font-code:"SF Mono", SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
   --playback-end-gap:clamp(14px, 2cqw, 32px);
   --text-action-icon-gap:6px;
+  --workspace-links-gap:6px;
+  --work-state-readout-size:12px;
+  --work-state-title-motion:240ms;
   --timeline-overview-height:4px;
   --timeline-overview-thumb-height:2.5px;
   --timeline-overview-radius:999px;
@@ -34,7 +37,10 @@
   --body-font-size: 12px;
   --message-line-height: 1.45;
   --message-output-gap: calc(var(--row-padding-inline) * 1.5);
-  --message-time-gap: calc(var(--row-size-unit) * 3);
+  --message-time-gap: 8px;
+  --outline-orbit-duration: 1600ms;
+  --outline-orbit-width: 1px;
+  --outline-orbit-light: #fff;
   --context-list-max-height: 180px;
   --context-count-gap: calc(var(--row-size-unit) * 2);
   --composer-control-font-size: 11px;
@@ -442,7 +448,14 @@
   --capture-detail-height:22px;
   --capture-detail-min-width:7ch;
   --capture-detail-placeholder:color-mix(in srgb, var(--ink) 38%, transparent);
-  --inline-field-line-hover:color-mix(in srgb, var(--ink) 28%, transparent);
+  --inline-field-line-hover:color-mix(in srgb, var(--ink) 42%, transparent);
   --inline-field-line-focus:color-mix(in srgb, var(--ink) 60%, transparent);
   --inline-field-fade:150ms;
 }
+
+/* Drawer entry affordance. */
+:root { --drawer-placeholder-opacity:.38; }
+
+:root { --drawer-row-height:20px; --drawer-row-gap:7px; --drawer-content-bottom-padding:16px; --capture-detail-line:color-mix(in srgb,var(--ink) 65%,transparent); --capture-detail-line-active:color-mix(in srgb,var(--ink) 85%,transparent); }
+
+:root { --milestone-control-extra-padding:4px; --milestone-control-base-size:calc(var(--message-preview-height) * .72); --milestone-ball-size:calc(var(--milestone-control-base-size) + 2 * var(--milestone-control-extra-padding)); --milestone-pill-width:var(--milestone-ball-size); --milestone-pill-height:calc(var(--milestone-control-base-size) * .37 + 2 * var(--milestone-control-extra-padding)); --milestone-chip-fill:color-mix(in srgb,var(--ink) 16%,var(--paper)); --milestone-chip-border:color-mix(in srgb,var(--ink) 55%,transparent); --milestone-control-fill:transparent; --milestone-control-hover:rgb(255 255 255 / 10%); --milestone-control-ink:#fff; --milestone-control-border:rgb(255 255 255 / 70%); }

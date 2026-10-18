@@ -1,5 +1,20 @@
 # Design system rules
 
+## Work state simulator — 2026-10-17
+
+- The MitWerk logo menu offers **Open work state simulator** (Close when open). It opens a bottom sheet below the panels; the panels compress above it and the site header keeps its height.
+- The sheet is one full-height slider modeled on the iOS Control Center brightness control: ink fills from the left across the whole sheet, dragging anywhere moves the value by the distance travelled (a tap does not jump), and arrow/Home/End keys step it. Only the title, moment, percent and close float above the fill, in white with `mix-blend-mode: difference`; it shows no prompt or version counts and no ruler marks.
+- Leftmost is the empty project (no versions, prompts or chat); rightmost is the current workspace, the 100% benchmark. The first open of a session starts at 100% and warms the gallery images for evenly spaced work states (`workStateTokens.preload*`); the fill shows that loading progress and the slider stays locked until it finishes or times out.
+- Closing the sheet does not reset to 100%: a state left below 100% stays applied to the panels (Fit all, All time and anchored growth included) and is kept in session storage, so reloads in the same tab and the next open resume it. Dragging back to 100% returns the workspace to its current state.
+- Every open panel derives from one chronological capture cutoff (`src/shared/work-state.ts`): Version blocks and Playback replay the first N captures, Commit history replays Git commits before the next excluded capture with branch tips rewound, and dated to-dos, frame annotations and task to-dos hide until their creation time. The simulated clock is the newest capture shown.
+- While dragging, panels take the slider value after it settles (`settleMs`, at most `maxWaitMs` apart) and apply immediately on release. Version blocks additionally waits up to `imageWaitMs` for the next state's sampled frames to decode before redrawing. Only the sheet follows the live value; panels subscribe to the applied state (`usePanelWorkState`) so pointer moves never re-render them.
+- While simulating, Version blocks and Idea stream stay in Fit all view and the date range is All time. Version blocks frames the Reset view of the complete history once and then holds the camera still; the album is laid out inside that full extent (`buildAlbum(..., extent)`), so the earliest versions stay fixed and the album grows from its far end. Sampled frames are start-anchored (`representativeFrames(..., 'start')`) so earlier samples persist as versions are added. Frames and blocks ease from their previous placement and new ones grow in.
+- While simulating, the date axis has no tick for the newest prompt (it would change every step); each day keeps its first-capture tick.
+- New axis labels (version and date values) enter with a masked slide-in: each label's own box clips its text, which rises into place after `labelDelay` of `growMs`. Their ruler ticks extend from the album out to the label over `growMs`. Entry is keyed by label text, so labels that only shift position neither slide again nor re-extend; still captures render settled.
+- Gallery redraws must stay cheap: cached capture textures are never disposed with their materials, previous scene content is released only after the next frame renders (so shader programs are reused), and date formatters are created once. Idea stream changes zoom, inset and scroll in one commit and eases the whole canvas with a single transform (FLIP); only newly added nodes and routes fade in. Individual nodes and SVG routes must not animate separately: route `d` values interpolate only between matching path commands, so separate transitions tear branches from their stations mid-drag.
+- Chat is a slideshow, not an accumulation: intermediate states show a short window of exchanges (`chatSlides`, `chatExchanges`) cross-fading between variations; 0% shows the empty-chat welcome and 100% the full conversation. The cross-fade is keyed by the messages shown, so a step that shows the same messages does not replay it.
+- `c slider` captures the home layout with the simulator open at 60%; `c … w simulator` adds it to other captures and `at N%` sets the value.
+
 ## Embedded prototypes and live server — 2026-10-17
 
 - Enter prototype replaces the captured image inside its existing playback frame with the interactive saved codebase. It does not open a fullscreen dialog. Chat and Idea stream retain their positions.
@@ -1373,3 +1388,70 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - To-do stations use filled square icons (filled check-square when all tasks are complete), retaining their route-width outer size and branch-colored backing. The individual task checkboxes retain their interactive empty/checked treatment.
 - A WIP card always leads with its milestone action, vertically centered on its graph station using the shared station-center coordinate. Milestone text, to-dos and prompt count flow below; adding tasks never pushes the action away from the node. An existing WIP milestone uses the same aligned Edit milestone action.
+
+## Latest gallery date and imported drawer design — 2026-10-17
+
+- Gallery date ticks always include the latest eligible prompt frame, alongside the first frame of each day. Derive it by timestamp from range-filtered gallery frames and avoid duplicate ticks at that frame. Keep date collision handling stable during panning. The prompt hover caption sits at 15% of panel height, lowered from 12%.
+- Saved-frame metadata reads `#<capture number> - v<version> - <local date/time>`; unnumbered captures omit the number prefix. This supersedes date-before-version formatting.
+- The to-do drawer adopts Mavix237's `design-system` design at `8eb969a`: dark elevated surfaces, subtle cool top glow, whole-drawer hover, a plain “To-do” heading, concentric composer insets, underlined inline edits, an inline new-task row, drag-to-open/close and calm 520ms/380ms reveal motion. Keep the existing bucket dropdown and `/bucket` parsing, shared task dataset, immediate completion/edit synchronization, version suffix after task text and hidden zero count. Inline additions use the same shared task state and version assignment; chosen buckets remain available for the next inline entry. Preserve the existing workspace pane sizing.
+
+## Prompt-only chat and location controls — 2026-10-17
+
+- Chat's message field always sends prompts, including when older saved state had To-do mode selected. Remove its Prompt/To-do switch; new tasks are entered in the drawer. Task-to-prompt actions use filled play icons without changing their behavior.
+- The inline task entry starts without a location chip. A completed `/location ` token creates a chip with an × removal action; removing it returns focus to the field. Saving clears both text and location. Placeholder: “Add a to-do — type /location to choose where it belongs”. User-facing copy says “location”; “bucket” remains an internal term.
+- Capture location menus follow Mavix237's `design-system` capsule-stack design (8eb969a), with the unchanged pill above separate pale rounded options and a text-sized new-location input. Preserve ephemeral custom locations and a first “Create location \"name\"” option for a nonempty new name; Enter creates it. Options inherit the pill's typography, inline padding and minimum width, with no bold hover.
+- Gallery and Playback remain simultaneously visible as Mavix's compact two-option view switch, with a filled active state and muted inactive state. Keep main's runtime behavior: Playback exits prototype/live server and restores the prior layout; Gallery is unavailable until runtime exits.
+
+## Drawer alignment and reader type — 2026-10-17
+
+- The inline new-to-do row begins with the same empty checkbox as saved tasks, disabled and excluded from focus and accessibility navigation, at 38% opacity. Its width and spacing come from the existing checkbox/list rules so text aligns with task rows.
+- Drawer version suffixes retain their position after the task text and share the timestamp opacity token.
+- Capture-detail underlines use 42% ink at rest (increased from 28%); preserve the stronger hover/focus treatment.
+- Gallery/Playback view options use the shared monospace view-font token in every reader header, preserving their existing size and active-state styling.
+
+## Consistent compact drawer rows — 2026-10-17
+
+- Drawer tasks and the new-task entry share a 20px minimum row height, centered controls and a 6px gap (reduced from 10px). Location chips must not change single-line row spacing; wrapped tasks can grow naturally.
+- Capture details use a full 1px underline at 65% ink, increasing to 85% on hover/focus. This supersedes the half-pixel underline, whose antialiasing made its prior opacity increase too subtle.
+
+## Milestone invitation physics and composer surface — 2026-10-17
+
+- Chat composers use the same shared surface token as sent user messages in both themes.
+- The milestone chip has a brighter fill and border. Its upward bump meets the card edge and disappears at impact. The card text uses the former Gallery/Playback vertical slide-and-fade exit/entry motion.
+- An invitation replaces the fixed arrow with a large circular arrow action and a separate pill-shaped Not yet action. Both start above the clipped card, fall, collide, rotate and settle against its bottom edge as independent rigid bodies. Size the scene from the actual card; preserve both actions and keyboard access. Reduced motion places both controls at rest immediately, without bounce or text movement. Not yet dismisses the invitation; the arrow opens the existing milestone editor.
+
+## Stable invitation layout and compact brand menu — 2026-10-17
+
+- Entering the milestone gradient state preserves the card's original height and text anchor. The invitation reads “You've accomplished a lot!” followed by a line break and “Ready to mark a new milestone?”. Keep the vertical text transition within the existing centered label area.
+- Both falling controls are transparent with white outlines and white text/icons. Not yet releases first; the arrow releases 450ms later. Counter-rotate the arrow icon continuously so it always points diagonally upward while its circular body rolls.
+- The brand menu uses a compact 190px minimum width and leading icons. Its rows are “Light mode” (or “Dark mode” when light is active), “Work state simulator”, and “Exit to splash screen”. Preserve theme, simulator-toggle and landing navigation behavior.
+
+## Paired invitation landing — 2026-10-17
+
+- Match the supplied composition with a circle on the left and a capsule tilted upward 26 degrees on the right, grouped at the card's lower-right corner. The circle is 63% of the unchanged card height; the pill is the same width as the circle and 37% as tall. Preserve the existing Not yet font size.
+- Derive landing anchors from the shapes' radii and capsule angle, with a 2px edge inset and separation. Damped landing constraints guide the existing falling rigid bodies into that compact arrangement; reduced motion uses the same final geometry immediately. Keep the arrow counter-rotated, the outlines white, and the pill-first release order.
+
+## Drawer breathing room and invitation edge — 2026-10-17
+
+- Drawer rows keep their shared height and use a 7px gap, increased slightly from 6px. The drawer content has 16px bottom padding, increased from 12px.
+- Falling invitation controls use the card's right edge as their scene boundary, independent of the text's 12px right padding. Increase the circle and pill width to 72% of card height, retaining their relative proportions, close paired landing, 2px physical edge clearance and unchanged Not yet font size.
+
+## Message time spacing and invitation hover — 2026-10-17
+
+- User messages and assistant output cards share the same 8px gap before their timecode, through `--message-time-gap`.
+- Both invitation actions show a white light circulating within their outline on hover or keyboard focus. Use the shared `outline-orbit` treatment and motion tokens; preserve the transparent center, shape, size and text. Reduced motion shows a stationary highlight.
+
+## Workspace links and simulator title — 2026-10-17
+
+- Workspace navigation links use a 6px gap (down from 8px), preserving compact-screen spacing.
+- The simulator has no leading icon and uses a 12px percentage readout. At an untouched 100%, its title is “Work state simulator”. The first drag or keyboard adjustment slides “simulator” upward through a mask, then collapses its width so the status label moves beside “Work state”. Keep the shortened title after returning to 100%; a restored past state starts shortened. Reduced motion applies the final layout immediately.
+
+## Roomier invitation actions and sans-serif view tabs — 2026-10-17
+
+- Add 4px of space on every side of each falling invitation action, growing their physical outlines by 8px in each dimension while preserving the arrow and Not yet text sizes. Use the shared extra-padding token and derive collision/landing geometry from the resulting button dimensions. Keep the paired landing and card size unchanged.
+- Gallery/Playback tabs use the shared sans-serif family through `--panel-view-font`, superseding their monospace treatment.
+
+## Edge-first pill drop and conditional timeline overview — 2026-10-17
+
+- Release the Not yet capsule already tilted beside the right wall, using its shape-derived landing x coordinate. Guide its horizontal position and angle during the gravity-driven descent so it does not land flat and then slide sideways into place. Preserve the staggered release, collisions and final paired pose.
+- Show the timeline overview only while its measured content width exceeds its viewport width. Reevaluate on content changes and resizing; hide it entirely, including its keyboard stop, when all blocks fit. This supersedes the always-visible overview rule.

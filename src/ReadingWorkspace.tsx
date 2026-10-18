@@ -11,6 +11,8 @@ import { buildGitCaptureHistory } from './features/version-tree/capture-history'
 import type { GitHistory } from './features/version-tree/git-history';
 import type { Capture, FrameRequest } from './features/iteration-gallery/model';
 import { galleryTokens } from './features/iteration-gallery/tokens';
+import { effectiveProgress, isSimulating, simulateCaptures, simulateGitHistory, simulatedCount } from './shared/work-state';
+import { usePanelWorkState } from './shared/useWorkState';
 
 import { versionPanelLayout } from './components/VersionPanelSwitch';
 
@@ -46,6 +48,15 @@ export default function ReadingWorkspace({ onRuntimeChange, initialMode, gallery
     return () => window.removeEventListener('keydown', revealTestVisual);
   }, []);
   const [historyError, setHistoryError] = useState('');
+  const [historySource, setHistorySource] = useState<{ frames: Capture[]; git: GitHistory; references?: VisualReference[] } | null>(null);
+  const work = usePanelWorkState();
+  const shownCaptures = historySource ? simulatedCount(historySource.frames.length, effectiveProgress(work)) : 0;
+  // The simulator replays history up to a capture count; Git commits follow the same cutoff.
+  useEffect(() => {
+    if (!historySource) return;
+    const simulated = simulateCaptures(historySource.frames, shownCaptures);
+    dispatchPanel({ type: 'history', graph: buildGitCaptureHistory(simulated.captures, simulateGitHistory(historySource.git, simulated.cutoff), historySource.references), follow: isSimulating(work) });
+  }, [historySource, shownCaptures]);
   useEffect(() => {
     const abort = new AbortController();
     async function refresh() {
@@ -59,7 +70,7 @@ export default function ReadingWorkspace({ onRuntimeChange, initialMode, gallery
         const git = await gitResponse.json() as GitHistory;
         if (!Array.isArray(catalog.frames)) throw new Error('The capture catalog is invalid.');
         if (!abort.signal.aborted) {
-          dispatchPanel({ type: 'history', graph: buildGitCaptureHistory(catalog.frames, git, catalog.references) });
+          setHistorySource({ frames: catalog.frames, git, references: catalog.references });
           setHistoryReady(true); setHistoryError('');
         }
       } catch (error) { if (!abort.signal.aborted) setHistoryError(error instanceof Error ? error.message : 'Could not load history.'); }
@@ -200,7 +211,7 @@ export default function ReadingWorkspace({ onRuntimeChange, initialMode, gallery
     <div className="workspace-split" style={{ gridTemplateColumns: galleryOnly || streamOnly ? 'minmax(0, 1fr)' : `minmax(0, ${runtimeMode ? '100%' : leftWidth === null ? '50%' : `${leftWidth}px`}) minmax(0, 1fr)` }}>
       {!streamOnly && <IterationGallery onRuntimeChange={runtimeChanged} onPlaybackVersion={setPlaybackVersion} headerTarget={ideaOpen ? headerTarget : null} playbackOnly={ideaOpen} onExitPlayback={onCloseIdeas} pushRequest={pushRequest} onToggle={onToggle} expanded={expanded} onSwitchPanel={!ideaOpen && !galleryOnly && compact ? () => setActivePanel('stream') : undefined}/>}
       {!galleryOnly && <VersionTreePanel playbackVersion={playbackVersion} embedded={ideaOpen} id={ideaOpen ? "workspace-pane-ideas" : undefined} title={ideaOpen || streamOnly ? 'Idea stream' : undefined} onSwitchPanel={!ideaOpen && !streamOnly && compact ? () => setActivePanel('visualizer') : undefined} key={`${mode}-${mode === 'history' && historyReady}`} graph={panels[mode]}
-        status={mode === 'history' ? historyError || (!historyReady ? 'Reading capture history…' : !panels.history.nodes.length ? 'No saved captures found.' : '') : ''}
+        status={mode === 'history' ? historyError || (!historyReady ? 'Reading capture history…' : !panels.history.nodes.length ? (isSimulating(work) ? 'No versions yet.' : 'No saved captures found.') : '') : ''}
         onOpenPush={version => { onOpenPush?.(version); setPushRequest({ version }); setActivePanel('visualizer'); }} mode={mode} modeSwitchVisible={modeSwitchVisible} onModeChange={mode => dispatchPanel({ type: 'switch', mode })}
         dispatch={action => dispatchPanel({ type: 'graph', mode, action })} />}
     </div>

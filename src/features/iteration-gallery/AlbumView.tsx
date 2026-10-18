@@ -15,9 +15,9 @@ import { galleryTokens as t } from './tokens';
 import { AxisLabels } from './AxisLabels';
 import type { AxisLabelsHandle } from './AxisLabels';
 
-export function AlbumView({ framePickerSlot, onSelectFrame, rangeStats, versions, range, now, onOpen, onZoom, onCamera, turning, returning, hidden, focusing, onReturnStarted, theaterTarget, theaterId, onTurnComplete, onMotion }: {
+export function AlbumView({ simulating = false, extent, framePickerSlot, onSelectFrame, rangeStats, versions, range, now, onOpen, onZoom, onCamera, turning, returning, hidden, focusing, onReturnStarted, theaterTarget, theaterId, onTurnComplete, onMotion }: {
   focusing?: boolean; onMotion: (progress: number) => void; returning: boolean; hidden: boolean; onReturnStarted: () => void; turning: boolean; theaterTarget: TheaterTarget | null; theaterId: string; onTurnComplete: () => void;
-  framePickerSlot: HTMLDivElement | null; onSelectFrame: (id: string) => void; rangeStats: string;
+  simulating?: boolean; extent?: GalleryVersion[]; framePickerSlot: HTMLDivElement | null; onSelectFrame: (id: string) => void; rangeStats: string;
   versions: GalleryVersion[]; range: RangeKey; now: number;
   onOpen: (id: string) => void; onZoom: (zoom: number) => void;
   onCamera?: (camera: GalleryCamera | null) => void;
@@ -30,7 +30,9 @@ export function AlbumView({ framePickerSlot, onSelectFrame, rangeStats, versions
   }, [annotations]);
   const [annotationId, setAnnotationId] = useState<string | null>(null);
   const annotationFrame = versions.flatMap(version => version.frames).find(frame => frame.id === annotationId);
-  const album = useMemo(() => buildAlbum(versions, range, now), [versions, range, now]);
+  const album = useMemo(() => buildAlbum(versions, range, now, extent), [versions, range, now, extent]);
+  // The simulator frames the complete history once; the camera then holds still while the album grows into it.
+  const frameAlbum = useMemo(() => extent ? buildAlbum(extent, 'all', Date.now()) : null, [extent]);
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<AlbumScene | null>(null);
   const axisLabels = useRef<AxisLabelsHandle>(null);
@@ -59,9 +61,12 @@ export function AlbumView({ framePickerSlot, onSelectFrame, rangeStats, versions
   }, []);
   useEffect(() => {
     if (hidden || returning || (turning && host.current?.dataset.transitionProgress)) return;
-    scene.current?.update(album, versions, representativeFrames(versions, range, now).map(frame => frame.id));
     const params = new URLSearchParams(location.search);
-    if (params.get('screenshot') === '1' && params.get('galleryView') === 'tokens') scene.current?.top();
+    const still = params.get('screenshot') === '1';
+    // Still captures show the settled state; interactive simulation animates added and moved frames.
+    scene.current?.update(album, versions, representativeFrames(versions, range, now, simulating ? 'start' : 'spread').map(frame => frame.id), simulating && !still, simulating);
+    if (simulating) { /* Framed by the effect below. */ }
+    else if (still && params.get('galleryView') === 'tokens') scene.current?.top();
     else if (params.get('screenshot') === '1' && ['reset', 'transition', 'timeline-transition'].includes(params.get('galleryView') ?? '')) scene.current?.reset();
     else if (params.get('screenshot') === '1' && params.get('galleryView') !== 'theater') scene.current?.center();
     if (params.get('screenshot') === '1' && params.get('galleryHover') === '1') {
@@ -70,7 +75,12 @@ export function AlbumView({ framePickerSlot, onSelectFrame, rangeStats, versions
         !nearest || Math.abs(plane.depth - album.depth / 2) < Math.abs(nearest.depth - album.depth / 2) ? plane : nearest, undefined);
       if (middle) { setKeyboardId(middle.frame.id); scene.current?.pin(middle.frame.id); scene.current?.inspect(middle.frame.id); }
     } else if (keyboardIdRef.current) scene.current?.pin(keyboardIdRef.current);
-  }, [album, versions, range, now]);
+  }, [album, versions, range, now, simulating]);
+  useEffect(() => {
+    // Never during a frame focus or turn: those own the camera until Playback opens.
+    if (!simulating || !frameAlbum || hidden || returning || focusing || turning) return;
+    scene.current?.fit(frameAlbum, new URLSearchParams(location.search).get('screenshot') !== '1');
+  }, [simulating, frameAlbum, hidden, returning, focusing, turning]);
   useEffect(() => { scene.current?.setAnnotations(annotationCounts); }, [annotationCounts, album]);
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -91,7 +101,7 @@ export function AlbumView({ framePickerSlot, onSelectFrame, rangeStats, versions
     {annotationFrame && host.current && <AnnotationOverlay frame={annotationFrame} container={host.current.closest<HTMLElement>('.iteration-gallery')!}
       onClose={() => setAnnotationId(null)} onReturn={() => { setAnnotationId(null); onOpen(annotationFrame.id); }}/>}
     <div ref={host} className="album-3d-viewport" aria-label="Interactive 3D album">
-      <AxisLabels ref={axisLabels}/>
+      <AxisLabels ref={axisLabels} animateEntry={simulating && new URLSearchParams(location.search).get('screenshot') !== '1'}/>
       {hovered && !tokenView && !turning && !returning && !hidden && <div className="album-prompt-label"
         style={{top:`${t.promptLabel.topPercent}%`,fontSize:t.promptLabel.fontSize,maxWidth:`calc(100% - ${t.promptLabel.edgeGap * 2}px)`}}>
         {galleryPromptLabel(hovered.frame.fullPrompt ?? hovered.frame.summary)}

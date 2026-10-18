@@ -8,7 +8,7 @@ export const treeModes = [
 export type TreeMode = typeof treeModes[number]['id'];
 export const panelStorageKey = 'mitwerk.version-tree.panels.v1';
 export type TreePanels = { mode: TreeMode; test: GraphState; history: GraphState };
-export type PanelAction = { type: 'history'; graph: GraphState } | { type: 'switch'; mode: TreeMode } | { type: 'graph'; mode: TreeMode; action: GraphAction };
+export type PanelAction = { type: 'history'; graph: GraphState; follow?: boolean } | { type: 'switch'; mode: TreeMode } | { type: 'graph'; mode: TreeMode; action: GraphAction };
 
 /** One-time migration: both views start from independent copies of the saved tree. */
 export function createTreePanels(seed: GraphState): TreePanels {
@@ -19,7 +19,8 @@ export function canEditTree(mode: TreeMode) { return mode === 'test'; }
 
 export function panelReducer(state: TreePanels, event: PanelAction): TreePanels {
   if (event.type === 'history') {
-    const history = refreshCaptureHistory(state.history, event.graph);
+    // The work state simulator follows the newest version instead of keeping an older selection.
+    const history = event.follow ? event.graph : refreshCaptureHistory(state.history, event.graph);
     return JSON.stringify(history) === JSON.stringify(state.history) ? state : { ...state, history };
   }
   if (event.type === 'switch') return { ...state, mode: event.mode };

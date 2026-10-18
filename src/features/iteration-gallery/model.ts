@@ -131,21 +131,32 @@ export function rangeCounts(versions: GalleryVersion[], range: RangeKey, now: nu
     versionTotal: versions.length,
   };
 }
-export function dateTicks(frames: GalleryFrame[]) {
+/** One tick per day, plus the newest prompt unless `latestPrompt` is off (the work state simulator, where it changes every step). */
+export function dateTicks(frames: GalleryFrame[], { latestPrompt: markLatest = true } = {}) {
   const days = new Map<string, GalleryFrame>();
   for (const frame of frames) {
     const day = new Date(frame.timestamp).toLocaleDateString('en-CA');
-    if (!days.has(day)) days.set(day, frame);
+    if (!days.has(day) || frame.timestamp < days.get(day)!.timestamp) days.set(day, frame);
   }
-  return [...days.values()].map(frame => ({ id: frame.id, timestamp: frame.timestamp, position: frame.position }));
+  const ticks = [...days.values()];
+  const latestPrompt = frames.filter(frame => frame.kind === 'prompt').reduce<GalleryFrame | undefined>((latest, frame) => !latest || frame.timestamp >= latest.timestamp ? frame : latest, undefined);
+  if (markLatest && latestPrompt && !ticks.some(frame => frame.id === latestPrompt.id)) ticks.push(latestPrompt);
+  return ticks.sort((a, b) => a.timestamp - b.timestamp).map(frame => ({ id: frame.id, timestamp: frame.timestamp, position: frame.position }));
 }
 
 /** Sample versions, not captures, so busy versions cannot dominate the album. */
-export function representativeFrames(versions: GalleryVersion[], range: RangeKey, now: number) {
+/**
+ * Sampled versions whose frames carry images. `spread` spaces samples from first to last; `start` keeps
+ * every stride-th version from the first plus the newest, so a growing album (the work state
+ * simulator) keeps its earlier samples and only adds new ones.
+ */
+export function representativeFrames(versions: GalleryVersion[], range: RangeKey, now: number, anchor: 'spread' | 'start' = 'spread') {
   const eligible = versions.map(version => version.frames.filter(frame => inRange(frame, range, now))).filter(frames => frames.length);
-  const count = Math.ceil(eligible.length / t.representativeVersionStride);
-  return Array.from({ length: count }, (_, i) => {
-    const frames = eligible[count === 1 ? eligible.length - 1 : Math.floor(i * (eligible.length - 1) / (count - 1))];
+  const stride = t.representativeVersionStride;
+  const picks = anchor === 'start'
+    ? eligible.flatMap((frames, i) => i % stride === 0 || i === eligible.length - 1 ? [frames] : [])
+    : (() => { const count = Math.ceil(eligible.length / stride); return Array.from({ length: count }, (_, i) => eligible[count === 1 ? eligible.length - 1 : Math.floor(i * (eligible.length - 1) / (count - 1))]); })();
+  return picks.map(frames => {
     const gallery = versionKeepsPush(frames) ? frames : frames.filter(frame => frame.kind !== 'push');
     return gallery.filter(frame => frame.kind === 'push').at(-1) ?? gallery.at(-1)!;
   });
@@ -177,8 +188,10 @@ export const formatDate = (timestamp: number) => new Date(timestamp).toLocaleDat
 export const formatTime = (timestamp: number) => new Date(timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 /** Compact local date used by featured date-axis labels and saved-frame names. */
+// Constructing a formatter is costly; menus and labels format hundreds of frames per render.
+const frameDateFormat = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
 export function formatFrameDate(timestamp: number) {
-  const parts = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }).formatToParts(timestamp);
+  const parts = frameDateFormat.formatToParts(timestamp);
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(value => value.type === type)?.value ?? '';
   return `${part('month')} ${part('day')}, ${part('hour')}:${part('minute')}`;
 }
@@ -187,7 +200,7 @@ export function formatVersion(number: number) { return `v${number}`; }
 
 /** Compact local timestamp shared by the saved-frame menu. */
 export function formatFrameLabel(frame: Pick<GalleryFrame, 'version' | 'timestamp' | 'number'>) {
-  return `${frame.number === null ? "" : `#${frame.number} - `}${formatFrameDate(frame.timestamp)}, ${formatVersion(frame.version)}`;
+  return `${frame.number === null ? "" : `#${frame.number} - `}${formatVersion(frame.version)} - ${formatFrameDate(frame.timestamp)}`;
 }
 
 /** Hover captions contain only the quoted summary; metadata stays on the axis rulers. */

@@ -41,9 +41,9 @@ export function TodoContextChip({text,onRemove}:{text:string;onRemove:()=>void})
 }
 
 export function BucketContextChip({bucket,onRemove}:{bucket:string;onRemove:()=>void}) {
- return <div className="composer-context"><div className="todo-context-chip bucket-context-chip" title={`Capture bucket: ${bucket}`}>
+ return <div className="composer-context"><div className="todo-context-chip bucket-context-chip" title={`Capture location: ${bucket}`}>
   <PhosphorIcon name="folder" size={13}/><span>{bucket}</span>
-  <button type="button" className="mw-icon" aria-label={`Remove capture bucket ${bucket}`} onClick={onRemove}><X size={13}/></button>
+  <button type="button" className="mw-icon" aria-label={`Remove capture location ${bucket}`} onClick={onRemove}><X size={13}/></button>
  </div></div>;
 }
 

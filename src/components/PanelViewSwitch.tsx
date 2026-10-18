@@ -1,31 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-
 type Mode = 'Gallery' | 'Playback';
 
-/** One Figma-style label; the old word leaves before the new word enters. */
+/** How Version blocks shows its frames: Gallery is the 3D album of every version, Playback steps through frames like a timelapse. Both options stay visible; the active one reads as the current view. */
 export function PanelViewSwitch({ mode, disabled, onChange, action }: { mode: Mode; disabled: boolean; onChange?: (mode: Mode) => void; action?: { label: string; onClick: () => void } }) {
-  const [label, setLabel] = useState(mode);
-  const [leaving, setLeaving] = useState(false);
-  const labelRef = useRef(mode);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const pending = useRef(false);
-  const button = useRef<HTMLButtonElement>(null);
-  function transition(next: Mode) {
-    if (labelRef.current === next) return;
-    labelRef.current = next;
-    clearTimeout(timer.current);
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { setLabel(next); setLeaving(false); pending.current=false; return; }
-    pending.current=true;
-    setLeaving(true);
-    const duration = parseFloat(getComputedStyle(button.current!).getPropertyValue('--panel-label-half-ms')) || 100;
-    timer.current = setTimeout(() => { setLabel(next); setLeaving(false); pending.current=false; }, duration);
-  }
-  useEffect(() => { transition(mode); }, [mode]);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  return <button ref={button} type="button" className="panel-view-label" disabled={disabled}
-    aria-label={action?.label ?? `${label} view. Switch to ${label === 'Gallery' ? 'Playback' : 'Gallery'}`}
-    title={action?.label ?? `Switch to ${label === 'Gallery' ? 'Playback' : 'Gallery'}`}
-    onClick={() => { if (action) { action.onClick(); return; } if (pending.current) return; const next = mode === 'Gallery' ? 'Playback' : 'Gallery'; transition(next); onChange?.(next); }}>
-    <span key={label} className={leaving ? 'panel-view-word is-leaving' : 'panel-view-word'}>{label}</span>
-  </button>;
+  const options: [Mode, string][] = [['Gallery', '3D album of every version'], ['Playback', 'Step through frames as a timelapse']];
+  return <div className="panel-view-switch" role="group" aria-label="Version blocks view">
+    {options.map(([value, hint]) => <button key={value} type="button" className="panel-view-option" aria-pressed={mode === value} disabled={disabled || (!!action && value !== 'Playback')} aria-label={action && value === 'Playback' ? action.label : undefined} title={hint} onClick={() => { if (action) { action.onClick(); return; } if (mode !== value) onChange?.(value); }}>{value}</button>)}
+  </div>;
 }

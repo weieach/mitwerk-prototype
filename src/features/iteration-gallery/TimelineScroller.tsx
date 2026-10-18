@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { timelineScrollWindow } from './timeline';
 
-/** A persistent overview of the native scroll viewport, independent of the playhead. */
+/** An overflow overview of the native scroll viewport, independent of the playhead. */
 export function TimelineScroller({ viewportRef, contentKey }: { viewportRef: RefObject<HTMLDivElement | null>; contentKey: number }) {
   const [window, setWindow] = useState({ start: 0, size: 1, maxScroll: 0 });
   const drag = useRef<{ id: number; x: number; left: number; scale: number } | null>(null);
@@ -16,6 +16,7 @@ export function TimelineScroller({ viewportRef, contentKey }: { viewportRef: Ref
     update();
     return () => { observer.disconnect(); viewport.removeEventListener('scroll', update); };
   }, [viewportRef, contentKey]);
+  if (window.maxScroll <= 0) return null;
   return <div className="timeline-scroll-overview" role="slider" tabIndex={0} aria-label="Timeline visible portion"
     aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(window.start / Math.max(1 - window.size, .0001) * 100)}
     aria-valuetext={`${Math.round(window.start * 100)}–${Math.round((window.start + window.size) * 100)}% of sequence visible`}

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactNode, RefObject } from 'react';
 
-export type SelectMenuOption = { value: string; label: string; detail?: string; trailing?: ReactNode; ariaLabel?: string };
+export type SelectMenuOption = { value: string; label: string; detail?: string; leading?: ReactNode; trailing?: ReactNode; ariaLabel?: string };
 
 const viewportGap = 8;
 const preferredHeight = 360;
@@ -56,7 +56,7 @@ export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, ga
     }}>
     {options.map((option, index) => <div id={`${id}-${index}`} key={option.value} role="option" aria-selected={value === option.value} aria-label={option.ariaLabel}
       className={cursor === index ? 'is-highlighted' : ''} onPointerMove={() => setCursor(index)} onClick={() => onChoose(option.value)}>
-      <span>{option.label}{option.detail && <span className="row-select-detail"> · {option.detail}</span>}</span>{option.trailing}
+      {option.leading}<span>{option.label}{option.detail && <span className="row-select-detail"> · {option.detail}</span>}</span>{option.trailing}
     </div>)}
   </div>;
 }

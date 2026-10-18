@@ -113,8 +113,8 @@ test('version depth stays equal for unequal frame counts; day ticks follow first
   assert.equal(album.blocks[0].start - album.blocks[1].start, t.versionDepth);
   assert.equal(album.blocks[0].end - album.blocks[0].start, album.blocks[1].end - album.blocks[1].start);
   const ticks = dateTicks(versions.flatMap(v => v.frames));
-  assert.deepEqual(ticks.map(tick => tick.id), ['a', 'p1', 'p2']);
-  assert.notEqual(ticks[1].position - ticks[0].position, ticks[2].position - ticks[1].position);
+  assert.deepEqual(ticks.map(tick => tick.id), ['a', 'b', 'p1', 'p2']);
+  assert.notEqual(ticks[2].position - ticks[0].position, ticks[3].position - ticks[2].position);
 });
 
 test('an omitted push does not park its day label on the first block', () => {
@@ -125,6 +125,18 @@ test('an omitted push does not park its day label on the first block', () => {
   assert.equal(shown.some(frame => frame.id === 'push14'), false);
   assert.equal(dateTicks(shown).some(tick => tick.id === 'push14'), false);
   assert.notEqual(album.planes.find(plane => plane.frame.id === 'day24')?.depth, album.planes[0]?.depth);
+});
+
+test('date ticks retain the latest prompt independently of daily ticks and later pushes', () => {
+  const frames = buildVersions([
+    { ...capture('morning', 22), timestamp: date(22, 8) },
+    { ...capture('latest-prompt', 22), timestamp: date(22, 12) },
+    { ...capture('later-push', 22, 'push', 1), timestamp: date(22, 16) },
+  ]).flatMap(version => version.frames);
+  assert.deepEqual(dateTicks([...frames].reverse()).map(tick => tick.id).sort(), ['latest-prompt', 'morning']);
+  assert.deepEqual(dateTicks(frames).map(tick => tick.id), ['morning', 'latest-prompt']);
+  assert.deepEqual(dateTicks(frames.filter(frame => frame.id === 'latest-prompt')).map(tick => tick.id), ['latest-prompt']);
+  assert.deepEqual(dateTicks([]), []);
 });
 
 test('playback wraps, stops and bounces without duplicate endpoints', () => {
@@ -227,11 +239,11 @@ test('edge travel ramps toward the border and waits for the dwell delay', () => 
   assert.equal(edgePanArmed(t.edgePan.delayMs), true);
 });
 
-test('saved-frame labels lead with capture number and end with version', () => {
+test('saved-frame labels use number, version and date separated by dashes', () => {
   assert.equal(formatFrameDate(new Date(2026, 8, 17, 16, 41).getTime()), 'Sep 17, 4:41');
-  assert.equal(formatFrameLabel({ number: 347, version: 10, timestamp: new Date(2026, 8, 17, 16, 41).getTime() }), '#347 - Sep 17, 4:41, v10');
-  assert.equal(formatFrameLabel({ number: 36, version: 11, timestamp: new Date(2026, 8, 22, 10, 7).getTime() }), '#36 - Sep 22, 10:07, v11');
-  assert.equal(formatFrameLabel({ number: null, version: 2, timestamp: new Date(2026, 8, 17, 0, 5).getTime() }), 'Sep 17, 12:05, v2');
+  assert.equal(formatFrameLabel({ number: 347, version: 10, timestamp: new Date(2026, 8, 17, 16, 41).getTime() }), '#347 - v10 - Sep 17, 4:41');
+  assert.equal(formatFrameLabel({ number: 36, version: 11, timestamp: new Date(2026, 8, 22, 10, 7).getTime() }), '#36 - v11 - Sep 22, 10:07');
+  assert.equal(formatFrameLabel({ number: null, version: 2, timestamp: new Date(2026, 8, 17, 0, 5).getTime() }), 'v2 - Sep 17, 12:05');
 });
 
 test('hover captions contain only the quoted summary', () => {

@@ -14,6 +14,8 @@ import { galleryBranchPaint, dateTicks, edgePanArmed, edgePanStrength, formatDat
 import type { buildAlbum, FramePlane, LabelFace } from './geometry';
 import { albumAxisContent, albumBlockBounds, albumFloorY, containingBlock, dateLabelPose, featuredFrameAxis, featuredTickLength, defaultFrameFocus, frameFocus, resetCameraDestination, versionLabelPose } from './geometry';
 import { galleryTokens as t } from './tokens';
+import { workStateTokens } from '../../shared/work-state';
+import { prefetchedCaptures } from './capture-cache';
 import { axisTopBlend, mergeAxisAnchors, overheadDatePosition, projectAxisLabels, withOverheadDates } from './axis-label-layout';
 import { observeTheme, resolveColor } from '../../shared/theme';
 import type { AxisAnchor, AxisLabel } from './axis-label-layout';
@@ -23,8 +25,12 @@ type FrameObject = { plane: FramePlane; group: THREE.Group; image: THREE.Mesh<TH
 type Callbacks = { annotate: (id: string) => void; tokenView: (active: boolean) => void; motion: (progress: number) => void; hover: (id: string | null) => void; open: (id: string) => void; zoom: (value: number) => void; error: (message: string) => void; labels: (labels: AxisLabel[]) => void };
 
 /** Owns GPU resources and controls; React owns the data, filters and theater selection. */
-/** Decoded captures survive gallery remounts; filenames are immutable, so URLs key them safely. */
-const prefetchedCaptures = new Map<string, HTMLImageElement>();
+const unitScale = new THREE.Vector3(1, 1, 1);
+/** New version blocks grow along the date axis; new frames grow from their centers. */
+const blockGrowthScale = new THREE.Vector3(1, 1, .001);
+const frameGrowthScale = new THREE.Vector3(.6, .6, 1);
+/** Ruler ticks start as a point at the album and extend to full length. */
+const tickGrowthScale = new THREE.Vector3(.001, .001, .001);
 
 export class AlbumScene {
   private renderer: THREE.WebGLRenderer;
@@ -52,6 +58,11 @@ export class AlbumScene {
   private prefetchQueue: { id: string; url: string }[] = [];
   private prefetching = 0;
   private fades = new Map<THREE.Material, { opacity: number; target: number }>();
+  /** Frames and blocks easing from their previous placement (or from nothing) after a data change. */
+  private growth: { object: THREE.Object3D; base: THREE.Vector3; offset: THREE.Vector3; scaleFrom: THREE.Vector3; start: number }[] = [];
+  private growing = false;
+  private retired: THREE.Object3D[] = [];
+  private ticks = new Map<string, THREE.Line>();
   private observer: ResizeObserver;
   private raycaster = new THREE.Raycaster();
   private hovered: string | null = null;
@@ -161,6 +172,16 @@ export class AlbumScene {
       if (Math.abs(fade.target - fade.opacity) < .002) fade.opacity = fade.target; else moving = true;
       material.opacity = fade.opacity;
     }
+    if (this.growth.length) {
+      const clock = performance.now();
+      this.growth = this.growth.filter(item => {
+        const { eased, complete } = transitionProgress(clock - item.start, this.reducedMotion ? 0 : workStateTokens.growMs);
+        item.object.position.copy(item.base).addScaledVector(item.offset, 1 - eased);
+        item.object.scale.lerpVectors(item.scaleFrom, unitScale, eased);
+        return !complete;
+      });
+      moving = true;
+    }
     for (const [id, frame] of this.frames) {
       const target = id === this.hovered ? t.hoverLift : 0;
       frame.group.position.y += (target - frame.group.position.y) * blend;
@@ -174,6 +195,7 @@ export class AlbumScene {
     if (this.syncTopView(dt)) moving = true;
     if (this.syncTokenUsage(dt)) moving = true;
     this.renderer.render(this.scene, this.camera);
+    if (this.retired.length) this.release(this.retired.splice(0));
     this.host.dataset.imagesReady = String([...this.frames.values()].filter(frame => frame.image.visible).every(frame => !!frame.image.material.map));
     const axisFamily = getComputedStyle(this.host).fontFamily;
     const measureAxisText = (text: string, size: number) => {
@@ -648,14 +670,24 @@ export class AlbumScene {
     } else { this.applyResetCamera(); this.resize(); }
   }
 
-  private resetDestination() {
-    if (!this.album) return null;
-    const dest = resetCameraDestination(this.album);
+  /** Fit all: glide to the Reset view of `frame` (default: the current album), or jump there for still captures. */
+  fit(frame?: Album, animate = true) {
+    const dest = this.resetDestination(frame);
+    if (!dest || this.theaterTurn || this.tokenActive) return;
+    this.controls.enabled = true;
+    if (!animate) { this.topMotion = null; this.applyResetCamera(frame); this.resize(); return; }
+    this.framing = 'reset';
+    this.animateCamera(dest.center, dest.position, dest.span);
+  }
+
+  private resetDestination(frame = this.album) {
+    if (!frame) return null;
+    const dest = resetCameraDestination(frame);
     return { center: this.lookAt(dest.center), position: this.lookAt(dest.position), span: dest.span };
   }
 
-  private applyResetCamera() {
-    const dest = this.resetDestination();
+  private applyResetCamera(frame = this.album) {
+    const dest = this.resetDestination(frame);
     if (!dest) return;
     this.framing = 'reset';
     this.span = dest.span;
@@ -710,10 +742,32 @@ export class AlbumScene {
     this.invalidate();
   }
 
+  /** Where frames and blocks sit now, including mid-motion, so a new layout eases from there. */
+  private placements() {
+    const placed = new Map<string, THREE.Vector3>();
+    for (const [id, frame] of this.frames) placed.set(`frame:${id}`, frame.image.position.clone());
+    for (const [key, { edges }] of this.blockEdges) placed.set(`box:${key}`, edges.position.clone());
+    for (const [key, line] of this.ticks) placed.set(`tick:${key}`, line.position.clone());
+    return placed;
+  }
+  private grow(key: string, objects: THREE.Object3D[], placed: Map<string, THREE.Vector3> | null, scaleFrom: THREE.Vector3) {
+    if (!placed) return;
+    const before = placed.get(key);
+    const base = objects[0].position;
+    if (before && before.distanceToSquared(base) < 1e-4) return;
+    const offset = before ? before.clone().sub(base) : new THREE.Vector3();
+    const from = before ? unitScale : scaleFrom;
+    const start = performance.now();
+    for (const object of objects) {
+      this.growth.push({ object, base: object.position.clone(), offset, scaleFrom: from, start });
+      object.position.add(offset);
+      object.scale.copy(from);
+    }
+  }
   private fade(material: THREE.Material, opacity: number, old?: Map<string, number>, key = '') {
     material.transparent = true;
     material.depthWrite = false;
-    const start = old?.get(key) ?? opacity;
+    const start = old?.get(key) ?? (this.growing ? 0 : opacity);
     material.opacity = start;
     this.fades.set(material, { opacity: start, target: opacity });
     material.userData.fadeKey = key;
@@ -738,23 +792,40 @@ export class AlbumScene {
     });
     return moving;
   }
+  /** Lines are anchored at their first point, so scaling one extends it from that end (see ruler ticks). */
   private line(points: THREE.Vector3[], face: LabelFace, parent = this.content) {
+    const anchored = (material: THREE.LineBasicMaterial, line: THREE.Vector3[]) => {
+      const object = new THREE.Line(new THREE.BufferGeometry().setFromPoints(line.map(point => point.clone().sub(line[0]))), material);
+      object.position.copy(line[0]);
+      parent.add(object);
+      return object;
+    };
     const material = new THREE.LineBasicMaterial({ color: this.colors.line });
     material.userData.axisFace = face;
-    parent.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material));
+    const lines = [anchored(material, points)];
     if (face === 'wall' && this.album) {
       const topMaterial = new THREE.LineBasicMaterial({ color: this.colors.line, transparent: true, opacity: this.overheadBlend });
       topMaterial.userData.axisFace = 'overhead-date';
       const floor = albumFloorY(this.album);
-      parent.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points.map(point => overheadDatePosition(point, floor))), topMaterial));
+      lines.push(anchored(topMaterial, points.map(point => overheadDatePosition(point, floor))));
     }
+    return lines;
+  }
+  /** A ruler tick runs from the album out to its label; new ticks extend outward while simulating. */
+  private rulerTick(key: string, points: THREE.Vector3[], face: LabelFace, placed: Map<string, THREE.Vector3> | null) {
+    const lines = this.line(points, face);
+    this.ticks.set(key, lines[0]);
+    this.grow(`tick:${key}`, lines, placed, tickGrowthScale);
   }
 
-  update(album: Album, versions: GalleryVersion[], representatives: string[]) {
+  update(album: Album, versions: GalleryVersion[], representatives: string[], grow = false, simulating = false) {
     this.album = album;
-    this.lastUpdate = [album, versions, representatives];
+    this.lastUpdate = [album, versions, representatives, grow, simulating];
     const previous = new Map([...this.fades].map(([material, fade]) => [material.userData.fadeKey as string, fade.opacity]));
-    this.clearContent();
+    const placed = grow ? this.placements() : null;
+    this.clearContent(true);
+    this.growth = [];
+    this.growing = !!placed;
     this.hovered = null;
     this.callbacks.hover(null);
     this.representatives = new Set(representatives);
@@ -781,6 +852,7 @@ export class AlbumScene {
       edges.position.copy(box.position);
       this.content.add(edges);
       this.blockEdges.set(block.key, { block, material: edgeMaterial, edges });
+      this.grow(`box:${block.key}`, [box, edges], placed, blockGrowthScale);
     }
     for (const plane of album.planes) {
       const group = new THREE.Group();
@@ -797,7 +869,9 @@ export class AlbumScene {
       group.add(image, edges);
       this.content.add(group);
       this.frames.set(plane.frame.id, { plane, group, image, outline });
+      this.grow(`frame:${plane.frame.id}`, [image, edges], placed, frameGrowthScale);
     }
+    this.growing = false;
     this.syncBookmarks();
     this.syncBlockStrokes();
     this.updateImages();
@@ -806,7 +880,8 @@ export class AlbumScene {
       this.initialized = true;
     }
     this.resize();
-    this.paintGuides(versions);
+    this.paintGuides(versions, placed, simulating);
+    if (this.growth.length) this.invalidate();
     this.paintTokenUsage();
     this.featuredGuides = new THREE.Group();
     this.content.add(this.featuredGuides);
@@ -814,23 +889,23 @@ export class AlbumScene {
     this.syncFeaturedLabels();
   }
 
-  private paintGuides(versions: GalleryVersion[]) {
+  private paintGuides(versions: GalleryVersion[], placed: Map<string, THREE.Vector3> | null = null, simulating = false) {
     if (!this.album) return;
     const album = this.album;
     const floor = albumFloorY(album);
     this.axisLabel('Date', album.width, t.rulerTickLength + t.rulerLabelGap + t.axisTitle.dateValueGap, -album.depth / 2, 'wall', new THREE.Vector3(album.width, t.rulerTickLength + t.rulerLabelGap, -album.depth / 2));
     this.axisLabel('Version', -t.rulerTickLength - t.rulerLabelGap - t.axisTitle.valueGap, floor, -album.depth / 2, 'ground', new THREE.Vector3(-t.rulerTickLength - t.rulerLabelGap, floor, -album.depth / 2));
     const axis = albumAxisContent(album, versions);
-    for (const tick of dateTicks(axis.frames)) {
+    for (const tick of dateTicks(axis.frames, { latestPrompt: !simulating })) {
       const depth = this.frames.get(tick.id)?.plane.depth;
       if (depth === undefined) continue;
-      this.line([new THREE.Vector3(album.width, 0, -depth), new THREE.Vector3(album.width, t.rulerTickLength, -depth)], 'wall');
+      this.rulerTick(`date:${formatDate(tick.timestamp)}`, [new THREE.Vector3(album.width, 0, -depth), new THREE.Vector3(album.width, t.rulerTickLength, -depth)], 'wall', placed);
       const pose = dateLabelPose(depth, album);
       this.axisLabel(formatDate(tick.timestamp), pose.x, pose.y, pose.z, pose.face, undefined, tick.timestamp);
     }
     for (const version of axis.versions) {
       const pose = versionLabelPose(album, version.index);
-      this.line([new THREE.Vector3(0, floor, pose.z), new THREE.Vector3(-t.rulerTickLength, floor, pose.z)], 'ground');
+      this.rulerTick(`version:${version.number}`, [new THREE.Vector3(0, floor, pose.z), new THREE.Vector3(-t.rulerTickLength, floor, pose.z)], 'ground', placed);
       this.axisLabel(formatVersion(version.number), pose.x, pose.y, pose.z, pose.face, undefined, Math.max(...version.frames.map(frame => frame.timestamp)));
     }
   }
@@ -961,24 +1036,36 @@ export class AlbumScene {
     }
   }
 
-  private clearContent() {
-    this.content.traverse(object => {
+  /**
+   * Updates retire the previous content and free it only after the next frame has rendered, so the new
+   * materials reuse its compiled shader programs. Cached capture textures belong to `textures` and are
+   * never freed with a material, or every redraw would upload the captures to the GPU again.
+   */
+  private clearContent(retire = false) {
+    const previous = [...this.content.children];
+    if (retire) { this.retired.push(...previous); this.invalidate(); } else this.release(previous);
+    this.axisAnchors = [];
+    this.featuredAnchors = [];
+    this.ticks.clear();
+    this.content.clear(); this.bookmarks = []; this.frames.clear(); this.blockEdges.clear(); this.pickTargets = []; this.fades.clear();
+    this.featuredGuides = new THREE.Group();
+  }
+  private release(objects: THREE.Object3D[]) {
+    const cached = new Set<THREE.Texture>(this.textures.values());
+    for (const root of objects) root.traverse(object => {
       if (object instanceof THREE.Mesh || object instanceof THREE.Line) {
         object.geometry.dispose();
         const materials = Array.isArray(object.material) ? object.material : [object.material];
         materials.forEach(material => {
-          if ('map' in material && material.map) material.map.dispose();
+          if ('map' in material && material.map && !cached.has(material.map)) material.map.dispose();
           material.dispose();
         });
       }
     });
-    this.axisAnchors = [];
-    this.featuredAnchors = [];
-    this.content.clear(); this.bookmarks = []; this.frames.clear(); this.blockEdges.clear(); this.pickTargets = []; this.fades.clear();
-    this.featuredGuides = new THREE.Group();
   }
   dispose() {
     this.dead = true;
+    this.release(this.retired.splice(0));
     cancelAnimationFrame(this.tick);
     this.observer.disconnect();
     window.removeEventListener('resize', this.resize);

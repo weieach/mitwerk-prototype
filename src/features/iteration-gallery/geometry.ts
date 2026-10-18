@@ -20,9 +20,13 @@ export function albumEnvelope(versions: GalleryVersion[]) {
 /** Chronological depth mapped to the newest-first gallery's physical depth. */
 export function galleryDepth(depth: number, total: number) { return total - t.blockGap - depth; }
 
-export function buildAlbum(versions: GalleryVersion[], range: RangeKey, now: number) {
+/**
+ * `extent` lays the album out inside a larger history (the work state simulator's full catalog): block
+ * size and depth come from it, so the earliest versions keep their place while newer ones extend the far end.
+ */
+export function buildAlbum(versions: GalleryVersion[], range: RangeKey, now: number, extent?: GalleryVersion[]) {
   const blocks: AlbumBlock[] = [], planes: FramePlane[] = [];
-  const { width, height } = albumEnvelope(versions);
+  const { width, height } = albumEnvelope(extent ?? versions);
   for (const version of versions) {
     const start = version.index * t.versionDepth;
     const end = start + t.versionDepth - t.blockGap;
@@ -46,7 +50,7 @@ export function buildAlbum(versions: GalleryVersion[], range: RangeKey, now: num
     });
     blocks.push({ key: `${version.number}:${chunkIndex}`, version: version.number, width, height, start: chunkStart, end, active: chunkActive });
   }
-  const depth = versions.length * t.versionDepth;
+  const depth = Math.max(versions.length, extent?.length ?? 0) * t.versionDepth;
   // Preserve chronological array order; reflect only spatial coordinates so the latest frame is nearest +Z.
   for (const block of blocks) [block.start, block.end] = [galleryDepth(block.end, depth), galleryDepth(block.start, depth)];
   for (const plane of planes) {

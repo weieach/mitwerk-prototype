@@ -9,6 +9,9 @@
 .album-axis-label-featured { color: var(--ink); }
 .album-axis-label-featured > span { background:color-mix(in srgb, var(--gallery-label-background) var(--gallery-label-opacity), transparent); padding:var(--gallery-label-padding); text-shadow:none; }
 .album-axis-label > span { display: block; transform: translate(-50%, -50%); }
+/* The label box masks its text, so the simulator's entry slide reveals text from the box's lower edge. */
+.album-axis-label > span { overflow: clip; overflow-clip-margin: 0; }
+.album-axis-label-ink { display: block; }
 .gallery-toolbar.album-frame-bar { position: relative; z-index: 2; container-type: inline-size; flex-wrap: nowrap; flex-shrink: 0; padding: 8px 24px; border: none; background: none; }
 .iteration-gallery .panel-heading { gap: var(--gallery-header-gap); }
 .gallery-back { flex-shrink: 0; display: inline-flex; align-items: center; gap: var(--row-size-unit); padding-inline: calc(var(--row-padding-inline) / 2); border: 1px solid var(--line-strong); border-radius: var(--surface-radius); color: var(--ink); background: var(--paper); cursor: pointer; }

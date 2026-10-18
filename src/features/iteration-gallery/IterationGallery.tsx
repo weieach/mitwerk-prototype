@@ -22,6 +22,9 @@ import { TheaterView } from './TheaterView';
 import { resolveFrameRequest, buildVersions, versionsForScreen, defaultVersionRange, inRange, rangeCounts, ranges, versionKeepsPush } from './model';
 import type { Capture, GalleryFrame, RangeKey, FrameRequest } from './model';
 import { galleryTokens as t } from './tokens';
+import { effectiveProgress, isSimulating, simulateCaptures, simulatedCount, workStateTokens } from '../../shared/work-state';
+import { simulatedGalleryUrls, warmCaptures } from './capture-cache';
+import { usePanelWorkState } from '../../shared/useWorkState';
 import './gallery.css';
 
 type Catalog = { frames: Capture[]; ignored: number; references?: VisualReference[] };
@@ -89,12 +92,33 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
     return () => { abort.abort(); window.clearInterval(timer); };
   }, [retry]);
 
-  const allVersions = useMemo(() => buildVersions(catalog?.frames ?? []), [catalog]);
+  const work = usePanelWorkState();
+  const simulating = isSimulating(work);
+  const targetCaptures = simulatedCount(catalog?.frames.length ?? 0, effectiveProgress(work));
+  const [shownCaptures, setShownCaptures] = useState(targetCaptures);
+  // While simulating, redraw only once the next state's sampled images are decoded (or the wait runs out).
+  useEffect(() => {
+    if (targetCaptures === shownCaptures) return;
+    if (!simulating || !catalog) { setShownCaptures(targetCaptures); return; }
+    let done = false;
+    const apply = () => { if (!done) { done = true; setShownCaptures(targetCaptures); } };
+    const timer = window.setTimeout(apply, workStateTokens.imageWaitMs);
+    void warmCaptures(simulatedGalleryUrls(catalog.frames, targetCaptures, interfaceId)).then(apply);
+    return () => { done = true; window.clearTimeout(timer); };
+  }, [targetCaptures, shownCaptures, simulating, catalog, interfaceId]);
+  // The work state simulator replays the catalog chronologically; its clock is the newest capture shown.
+  const displayedCaptures = simulating ? shownCaptures : targetCaptures;
+  const simulated = useMemo(() => simulateCaptures(catalog?.frames ?? [], displayedCaptures), [catalog, displayedCaptures]);
+  const allVersions = useMemo(() => buildVersions(simulated.captures), [simulated]);
   const versions = useMemo(() => versionsForScreen(allVersions, interfaceId), [allVersions, interfaceId]);
-  const range = chosenRange ?? defaultVersionRange(versions, now);
+  // The complete history the simulated album grows into, so its first versions stay in place.
+  const extent = useMemo(() => simulating && catalog ? versionsForScreen(buildVersions(catalog.frames), interfaceId) : undefined, [simulating, catalog, interfaceId]);
+  const clock = simulated.now ?? now;
+  // The simulator always shows all time, so earlier work never falls outside the range.
+  const range = simulating ? 'all' : chosenRange ?? defaultVersionRange(versions, clock);
   const baseline = useMemo(() => referenceCapture(versions.flatMap(version => version.frames), t.theaterReference), [versions]);
-  const visibleFrames = useMemo(() => versions.flatMap(version => (versionKeepsPush(version.frames) ? version.frames : version.frames.filter(frame => frame.kind !== 'push')).filter(frame => inRange(frame, range, now))), [versions, range, now]);
-  const counts = useMemo(() => rangeCounts(versions, range, now), [versions, range, now]);
+  const visibleFrames = useMemo(() => versions.flatMap(version => (versionKeepsPush(version.frames) ? version.frames : version.frames.filter(frame => frame.kind !== 'push')).filter(frame => inRange(frame, range, clock))), [versions, range, clock]);
+  const counts = useMemo(() => rangeCounts(versions, range, clock), [versions, range, clock]);
   const rangePrompts = visibleFrames.filter(frame => frame.kind === 'prompt').length;
   const rangePromptLabel = ` (${rangePrompts} ${rangePrompts === 1 ? 'prompt' : 'prompts'})`;
   const select = useCallback((id: string, animate = false) => { setSelectedId(id); if (animate) setNavigationKey(key => key + 1); }, []);
@@ -106,12 +130,12 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
     if (!push) return;
     if (captureScreen(push) !== interfaceId) { setInterfaceId(captureScreen(push)); return; }
     handledPush.current = pushRequest;
-    if (!inRange(push, range, now)) setRange('all');
+    if (!inRange(push, range, clock)) setRange('all');
     select(push.id, true);
     if ('live' in pushRequest) setLiveRequestKey(key => Math.abs(key) + 1);
     setMilestoneFrame(pushRequest.milestone ? push : null);
     if (view === 'album') { updateTimelineMotion(0); setView('turning'); }
-  }, [pushRequest, versions, view, select, updateTimelineMotion, range, now]);
+  }, [pushRequest, versions, view, select, updateTimelineMotion, range, clock]);
   const enterPlayback = useCallback(() => {
     if (view !== 'album' || !visibleFrames.length) return;
     const latest = visibleFrames.reduce((last, frame) => frame.timestamp >= last.timestamp ? frame : last);
@@ -146,23 +170,29 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
     if (params.get('screenshot') !== '1' || !['theater', 'transition', 'timeline-transition'].includes(params.get('galleryView') ?? '')) return;
     const frames = versions.flatMap(version => version.frames);
     const pushVersion = Number(params.get('pushVersion')) || t.capturePushVersion;
-    const ranged = frames.filter(frame => inRange(frame, range, now));
+    const ranged = frames.filter(frame => inRange(frame, range, clock));
     const featured = params.get('frameNumber') ? frames.find(frame => frame.kind === 'prompt' && frame.number === Number(params.get('frameNumber')))
       : params.get('playhead') === 'end' ? ranged.at(-1)
       : params.get('frameKind') === 'prototype' ? frames.filter(frame => frame.kind === 'push').sort((a,b) => a.timestamp - b.timestamp).at(-2)
       : params.get('frameKind') === 'push'
       ? frames.find(frame => frame.kind === 'push' && (frame.version === pushVersion || frame.number === pushVersion)) ?? frames.find(frame => frame.kind === 'push')
       : referenceCapture(frames, t.theaterReference);
-    if (featured && !inRange(featured, range, now)) { setRange('all'); return; }
+    if (featured && !inRange(featured, range, clock)) { setRange('all'); return; }
     const id = featured?.id;
     if (id) {
       setSelectedId(id);
       if (params.get('playhead') === 'end') setNavigationKey(key => key + 1);
       setView(params.get('galleryView') === 'theater' ? 'theater' : 'turning');
     }
-  }, [versions, range, now]);
+  }, [versions, range, clock]);
 
-  useEffect(() => { try { seedAnnotations(versions.flatMap(version => version.frames)); } catch { /* Demo seeds can be retried after storage is available. */ } }, [versions]);
+  // While simulating, Playback keeps its playhead on the newest frame as work is added or removed.
+  const latestVisible = visibleFrames.reduce<GalleryFrame | undefined>((last, frame) => !last || frame.timestamp >= last.timestamp ? frame : last, undefined);
+  useEffect(() => {
+    if (simulating && view === 'theater' && latestVisible && latestVisible.id !== selectedId) select(latestVisible.id);
+  }, [simulating, view, latestVisible?.id]);
+
+  useEffect(() => { if (simulating) return; try { seedAnnotations(versions.flatMap(version => version.frames)); } catch { /* Demo seeds can be retried after storage is available. */ } }, [versions, simulating]);
 
   const header = <PanelHeader title="Version blocks" icon={panelIcons.versionBlocks} mode={view === 'album' || view === 'focusing' || view === 'returning' ? 'Gallery' : 'Playback'} onModeChange={switchView} modeAction={runtimeMode ? { label: 'Return to Playback', onClick: () => setLiveRequestKey(key => -Math.abs(key) - 1) } : undefined} modeDisabled={!visibleFrames.length || !['album','theater'].includes(view)} onTitleClick={!runtimeMode && view === 'theater' ? exit : undefined} onToggle={onToggle} expanded={expanded} actions={<>
       <span className="gallery-header-runtime-controls" inert={!!runtimeMode} aria-hidden={!!runtimeMode}><VersionPanelSwitch onClick={onSwitchPanel} target="Version stream"/>
@@ -175,10 +205,10 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
     {headerTarget ? createPortal(header, headerTarget) : header}
     {error && <div className="gallery-message" role="alert">{error} <button onClick={() => setRetry(value => value + 1)}>Retry</button></div>}
     {!catalog ? <div className="gallery-empty">{error ? 'Screenshot catalog unavailable.' : 'Reading saved frames…'}</div>
-      : !versions.length ? <div className="gallery-empty">No saved frames found.</div>
+      : !versions.length ? <div className="gallery-empty">{simulating ? 'No versions yet.' : 'No saved frames found.'}</div>
       : <div className="gallery-view-stack" ref={viewStack}>
-      {<><AlbumView focusing={view === 'focusing'} onSelectFrame={id => select(id, true)} framePickerSlot={framePickerSlot} rangeStats={catalog ? `${counts.versions}/${counts.versionTotal} versions${rangePromptLabel}` : 'Loading frames…'} onMotion={updateTimelineMotion} turning={view === 'turning'} returning={view === 'returning'} hidden={view === 'theater' || view === 'orbiting'} onReturnStarted={startReturn} theaterTarget={target} theaterId={selectedId} onTurnComplete={finishTurn} versions={versions} range={range} now={now} onOpen={open} onZoom={setZoom} onCamera={api => { camera.current = api; }}/>{!visibleFrames.length && <div className="gallery-message">No frames in this range. Earlier versions remain visible in gray.</div>}</>}
-      {view !== 'album' && view !== 'focusing' && <div className="gallery-theater-layer" inert={view === 'turning' || view === 'returning'} aria-hidden={view === 'turning' || view === 'returning'}><TheaterView runtimeCatalog={allVersions.flatMap(version => version.frames)} liveRequestKey={liveRequestKey} onRuntimeChange={runtimeChanged} onPlaybackVersion={onPlaybackVersion} navigationKey={navigationKey} references={catalog?.references ?? []} baseline={baseline ?? t.viewportPresets[1]} frames={visibleFrames} catalog={versions.flatMap(version => version.frames)} range={range} now={now} selectedId={selectedId} onSelect={select} onOrbit={(id, rect) => playbackOnly ? null : camera.current?.orbit(id, rect, () => { setSelectedId(id); setView('orbiting'); }, () => { setView('album'); setTarget(null); }) ?? null} onDismiss={exit} active={view === 'theater'}/></div>}
+      {<><AlbumView focusing={view === 'focusing'} onSelectFrame={id => select(id, true)} framePickerSlot={framePickerSlot} rangeStats={catalog ? `${counts.versions}/${counts.versionTotal} versions${rangePromptLabel}` : 'Loading frames…'} onMotion={updateTimelineMotion} turning={view === 'turning'} returning={view === 'returning'} hidden={view === 'theater' || view === 'orbiting'} onReturnStarted={startReturn} theaterTarget={target} theaterId={selectedId} onTurnComplete={finishTurn} versions={versions} range={range} now={clock} simulating={simulating} extent={extent} onOpen={open} onZoom={setZoom} onCamera={api => { camera.current = api; }}/>{!visibleFrames.length && <div className="gallery-message">No frames in this range. Earlier versions remain visible in gray.</div>}</>}
+      {view !== 'album' && view !== 'focusing' && <div className="gallery-theater-layer" inert={view === 'turning' || view === 'returning'} aria-hidden={view === 'turning' || view === 'returning'}><TheaterView runtimeCatalog={allVersions.flatMap(version => version.frames)} liveRequestKey={liveRequestKey} onRuntimeChange={runtimeChanged} onPlaybackVersion={onPlaybackVersion} navigationKey={navigationKey} references={catalog?.references ?? []} baseline={baseline ?? t.viewportPresets[1]} frames={visibleFrames} catalog={versions.flatMap(version => version.frames)} range={range} now={clock} selectedId={selectedId} onSelect={select} onOrbit={(id, rect) => playbackOnly ? null : camera.current?.orbit(id, rect, () => { setSelectedId(id); setView('orbiting'); }, () => { setView('album'); setTarget(null); }) ?? null} onDismiss={exit} active={view === 'theater'}/></div>}
       </div>}
     <footer className="gallery-footer" aria-hidden={!!runtimeMode} inert={!!runtimeMode || view === 'turning' || view === 'returning' || view === 'orbiting'}>
       <TrackedInterface value={interfaceId} onChange={value => { setInterfaceId(value); setSelectedId(''); setView('album'); setTarget(null); }}/>

@@ -30,7 +30,7 @@
 .mw-topbar .workspace-brand { display:flex; align-items:center; gap:var(--workspace-brand-gap); flex-shrink:0; }
 .mw-topbar .workspace-brand .workspace-logo { width:25px; height:25px; object-fit:contain; }
 .mw-topbar .workspace-brand strong { font-size:14px; font-weight:700; }
-.workspace-links { display:flex; align-items:center; min-width:0; gap:8px; overflow:auto; scrollbar-width:none; }
+.workspace-links { display:flex; align-items:center; min-width:0; gap:var(--workspace-links-gap); overflow:auto; scrollbar-width:none; }
 .workspace-links > button, .workspace-resource { display:flex; align-items:center; gap:6px; padding:6px 12px; white-space:nowrap; font-size:12px; color:var(--muted); }
 .workspace-links > button:hover { color:var(--ink); }
 .workspace-links > button:not(:first-child) { text-decoration:underline; text-underline-offset:2px; }
@@ -161,7 +161,7 @@
 .mw-app .from-user { max-width:min(340px,85%); }
 .mw-app .message-content { padding-left:0; font-size:13px; }
 .mw-app .from-user .message-content { border-radius:10px; padding:16px 18px; }
-.mw-app .mw-message .message-time { padding-left:0; margin-top:8px; font-size:10px; }
+.mw-app .mw-message .message-time { padding-left:0; margin-top:var(--message-time-gap); font-size:10px; }
 .message-version-output { margin-top:18px; }
 .mw-app .message-version-card { display:flex; align-items:center; width:100%; height:auto; gap:var(--message-version-gap); background:var(--message-version-fill); border:1px solid var(--line-strong); border-radius:8px; padding:0 12px 0 0; min-height:var(--message-preview-height); overflow:hidden; text-align:left; font-size:12px; }
 .message-version-label { display:flex; flex:1; align-items:center; min-width:0; gap:8px; }
@@ -184,7 +184,7 @@
 .mw-app .composer-drawer-heading:is(:hover,:focus-visible) { background:var(--fill-hover); }
 .composer-drawer-heading > span { opacity:var(--drawer-heading-opacity); transition:opacity var(--drawer-hover-duration) ease; }
 .composer-drawer-heading:is(:hover,:focus-visible) > span { opacity:1; transition-delay:0s; }
-.composer-drawer-content { max-height: min(30vh,260px); overflow:auto; padding:4px 12px 12px; }
+.composer-drawer-content { max-height: min(30vh,260px); overflow:auto; padding:4px 12px var(--drawer-content-bottom-padding); }
 /* Grid tracks interpolate intrinsic content height and reverse without unmounting. */
 .composer-drawer-reveal { display:grid; grid-template-rows:0fr; opacity:0; transition:grid-template-rows var(--drawer-close-duration) var(--drawer-close-ease), opacity var(--drawer-close-duration) ease; }
 .composer-drawer-clip { min-height:0; overflow:hidden; }
@@ -193,14 +193,16 @@
 @media (prefers-reduced-motion: reduce) {
   .composer-drawer .composer-drawer-reveal, .composer-drawer .composer-drawer-heading, .composer-drawer .composer-drawer-heading > span { transition:none; }
 }
-.composer-drawer-content ul { list-style:none; padding:0; margin:0; display:grid; gap:10px; }
-.composer-drawer-content li { display:flex; align-items:flex-start; gap:12px; font-size:12px; line-height:1.4; }
+.composer-drawer-content ul { list-style:none; padding:0; margin:0; display:grid; gap:var(--drawer-row-gap); }
+.composer-drawer-content li { display:flex; min-height:var(--drawer-row-height); align-items:center; gap:12px; font-size:12px; line-height:1.4; }
 .composer-drawer-content label { flex:1; min-width:0; display:flex; align-items:flex-start; gap:8px; cursor:pointer; }
 .composer-drawer-content label span { white-space:pre-wrap; overflow-wrap:anywhere; }
-.composer-drawer-content input { appearance:none; width:13px; height:13px; flex:none; margin:2px 0 0; border:1px solid var(--ink); border-radius:2px; background:transparent; display:grid; place-content:center; }
-.composer-drawer-content input:checked::after { content:'✓'; font-size:11px; color:var(--ink); line-height:1; }
+.composer-drawer-content input[type=checkbox] { appearance:none; width:13px; height:13px; flex:none; margin:0; border:1px solid var(--ink); border-radius:2px; background:transparent; display:grid; place-content:center; }
+.composer-drawer-content input[type=checkbox]:checked::after { content:'✓'; font-size:11px; color:var(--ink); line-height:1; }
 .composer-drawer-content .is-complete span { text-decoration:line-through; color:var(--muted); }
-.composer-drawer-content time { white-space:nowrap; flex:none; opacity:var(--drawer-time-opacity); }
+.composer-drawer-content time { white-space:nowrap; flex:none; }
+.composer-drawer-content time, .composer-todo-version { opacity:var(--drawer-time-opacity); }
+.composer-drawer-content .composer-todo-placeholder { opacity:var(--drawer-placeholder-opacity); pointer-events:none; }
 .composer-drawer-empty { margin:2px 0; font-size:12px; color:var(--muted); }
 .mw-app .composer-drawer .mw-composer { background:var(--composer-surface); border:1px solid var(--line-strong); border-radius:var(--composer-radius); padding:12px 12px 8px; }
 .mw-app .composer-drawer .mw-composer:focus-within { border-color:var(--ink); }
@@ -209,7 +211,7 @@
 .mw-app .mw-composer .todo-context-chip > .mw-icon { color:var(--ink); }
 /* Chip remove controls are bare icons: no fill at rest or on hover. */
 .mw-app .todo-context-chip > .mw-icon:is(:hover, .active) { background:transparent; opacity:var(--chip-remove-hover-opacity); }
-.composer-todo-line { flex:1; min-width:0; display:flex; align-items:flex-start; gap:var(--bucket-tag-text-gap); }
+.composer-todo-line { flex:1; min-width:0; display:flex; align-items:center; gap:var(--bucket-tag-text-gap); }
 .composer-todo-line > .bucket-tag { margin-top:var(--bucket-tag-drawer-offset); }
 .mw-app .mw-composer:has(> .composer-context:first-child) { padding-top:var(--composer-chip-top-padding); }
 .mw-app .composer-drawer .mw-composer.is-frame-drop { border-color:var(--ink); outline:var(--focus-ring-width) dashed var(--focus-ring-color); outline-offset:var(--focus-ring-offset); }
@@ -255,7 +257,7 @@
 .workspace .workspace-panel-header .panel-heading > .panel-title-pill:first-child { padding-inline:var(--panel-title-padding-inline); }
 
 :root {
-  --panel-view-font: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+  --panel-view-font: var(--sans);
   --panel-view-inline-padding: 6px;
   --panel-label-half-ms: 100;
   --panel-label-motion: 100ms;
@@ -419,7 +421,7 @@
 
 .message-version-output.is-milestone-jumping > .idea-add { animation:milestone-button-bump var(--milestone-bump-duration) cubic-bezier(.3,0,.2,1); }
 .mw-app .message-version-output.is-milestone-ready .message-version-card { background:var(--paper); color:var(--milestone-invite-ink); }
-@keyframes milestone-button-bump { 0%,100% { transform:translateY(0); } 37% { transform:translateY(-14px); } 62% { transform:translateY(2px); } 80% { transform:translateY(-3px); } }
+@keyframes milestone-button-bump { 0%,100% { transform:translateY(0); } 37% { transform:translateY(calc(-1 * var(--message-milestone-action-gap))); } 62% { transform:translateY(2px); } 80% { transform:translateY(-3px); } }
 /* Breathing branch-color field inspired by 21st.dev's Animated Gradient Background. */
 .mw-app .message-version-output.is-milestone-ready .message-version-card::after { content:''; position:absolute; inset:-35%; z-index:-2; pointer-events:none; background:var(--milestone-invite-gradient); animation:milestone-gradient-flow var(--milestone-invite-flow) ease-in-out infinite alternate; }
 @keyframes milestone-gradient-flow {
@@ -480,8 +482,159 @@
 .workspace .workspace-panel-header .panel-title-pill, .adaptive-panel-title { display:inline-flex; align-items:center; gap:var(--panel-title-icon-gap); }
 
 /* Capture details are free text with a persistent hairline, not a category pill. */
-.mw-app .capture-detail-field { field-sizing:content; min-width:var(--capture-detail-min-width); max-width:100%; height:var(--capture-detail-height); padding:0; border:0; border-radius:0; outline:none; background:transparent; color:var(--ink); caret-color:var(--ink); font:inherit; box-shadow:inset 0 -0.5px 0 var(--inline-field-line-hover); transition:box-shadow var(--inline-field-fade) ease; }
+.mw-app .capture-detail-field { field-sizing:content; min-width:var(--capture-detail-min-width); max-width:100%; height:var(--capture-detail-height); padding:0; border:0; border-radius:0; outline:none; background:transparent; color:var(--ink); caret-color:var(--ink); font:inherit; box-shadow:inset 0 -1px 0 var(--capture-detail-line); transition:box-shadow var(--inline-field-fade) ease; }
 .mw-app .capture-detail-field::placeholder { color:var(--capture-detail-placeholder); opacity:1; }
-.mw-app .capture-detail-field:hover { box-shadow:inset 0 -0.5px 0 var(--inline-field-line-focus); }
-.mw-app .capture-detail-field:is(:focus,:focus-visible) { outline:none; box-shadow:inset 0 -1px 0 var(--inline-field-line-focus); }
+.mw-app .capture-detail-field:hover { box-shadow:inset 0 -1px 0 var(--capture-detail-line-active); }
+.mw-app .capture-detail-field:is(:focus,:focus-visible) { outline:none; box-shadow:inset 0 -1px 0 var(--capture-detail-line-active); }
 @media (prefers-reduced-motion: reduce) { .mw-app .capture-detail-field { transition:none; } }
+
+/* To-do drawer design from Mavix237's design-system branch, 8eb969a.
+   Retain main's bucket picker, slash parsing, shared tasks and version metadata. */
+:root {
+  --composer-surface:var(--user-message-fill);
+  --composer-drawer-surface:#e7e7e4;
+  --composer-drawer-hover:#dfdfdc;
+  --composer-border:var(--line-strong);
+  --composer-drawer-glow:rgb(217 226 239 / 40%);
+  --composer-drawer-glow-end:rgb(217 226 239 / 0%);
+  --composer-drawer-glow-stop:68%;
+  --composer-mode-track:#ebebe8;
+  --composer-inset:calc(var(--workspace-radius) - var(--composer-drawer-radius));
+  --composer-text-inset:var(--panel-heading-padding);
+  --composer-padding-inline:calc(var(--composer-text-inset) - var(--composer-inset) - 1px);
+  --composer-tool-inset:8px;
+  --drawer-open-duration:520ms;
+  --drawer-close-duration:380ms;
+  --drawer-open-ease:cubic-bezier(.33,.7,.2,1);
+  --drawer-close-ease:cubic-bezier(.4,0,.25,1);
+}
+:root[data-theme=dark] {
+  --composer-surface:var(--user-message-fill);
+  --composer-drawer-surface:#21201f;
+  --composer-drawer-hover:#292827;
+  --composer-border:rgb(255 255 255 / 16%);
+  --composer-selected:#454442;
+  --composer-placeholder:#8b8d93;
+  --composer-drawer-glow:#2e2b2f;
+  --composer-drawer-glow-end:rgb(37 39 46 / 0%);
+  --composer-mode-track:#383735;
+}
+.mw-app .composer-area { width:100%; max-width:none; margin:0; padding:8px var(--composer-inset) var(--composer-inset); }
+.mw-app .capture-settings, .mw-app .composer-drawer-heading, .composer-drawer-content { padding-inline:calc(var(--composer-text-inset) - var(--composer-inset)); }
+.composer-drawer { background-color:var(--composer-drawer-surface); background-image:linear-gradient(180deg,var(--composer-drawer-glow) 0%,var(--composer-drawer-glow-end) var(--composer-drawer-glow-stop)); transition:background-color var(--drawer-hover-duration) ease; }
+.composer-drawer:has(.composer-drawer-heading:is(:hover,:focus-visible)) { background-color:var(--composer-drawer-hover); }
+.mw-app .composer-drawer-heading:is(:hover,:focus-visible) { background:transparent; }
+.composer-drawer-heading { touch-action:none; cursor:grab; }
+.composer-drawer.is-dragging .composer-drawer-heading { cursor:grabbing; }
+.composer-drawer:not(.is-dragging) > .composer-drawer-reveal { transition:grid-template-rows var(--drawer-close-duration) var(--drawer-close-ease), opacity var(--drawer-close-duration) var(--drawer-close-ease), margin-bottom var(--drawer-close-duration) var(--drawer-close-ease); }
+.composer-drawer.is-expanded:not(.is-dragging) > .composer-drawer-reveal { transition-duration:var(--drawer-open-duration); transition-timing-function:var(--drawer-open-ease); }
+.composer-drawer.is-dragging > .composer-drawer-reveal { margin-bottom:calc(var(--drawer-drag) * -1); transition:none; }
+.composer-drawer > .mw-composer { position:relative; z-index:1; }
+.mw-app .composer-drawer .mw-composer { background:var(--composer-surface); border-color:var(--composer-border); padding-inline:var(--composer-padding-inline); }
+.mw-app .composer-drawer .mw-composer .composer-tools { margin-inline:calc(var(--composer-tool-inset) - var(--composer-padding-inline)); }
+.composer-mode-switch { background:var(--composer-mode-track); }
+.composer-mode-switch input:checked + span { background:var(--composer-surface); }
+.composer-mode-switch input:not(:checked) + span { color:var(--muted); }
+.composer-mode-switch span { transition:background-color var(--drawer-hover-duration) ease, color var(--drawer-hover-duration) ease; }
+.mw-app .composer-drawer .composer-todo-edit { min-height:0; height:auto; field-sizing:content; resize:none; overflow:hidden; padding:0; border:0; border-radius:0; outline:none; line-height:inherit; box-shadow:inset 0 -0.5px 0 var(--inline-field-line-hover); }
+.mw-app .composer-drawer .composer-todo-edit:focus-visible { outline:none; }
+.composer-drawer-content li.composer-todo-new { align-items:center; }
+.mw-app .composer-todo-input { flex:1; min-width:0; height:var(--drawer-row-height); padding:0; border:0; outline:none; background:transparent; color:var(--ink); caret-color:var(--ink); font:inherit; }
+.composer-todo-input::placeholder { color:var(--capture-detail-placeholder); opacity:1; }
+.mw-app .composer-drawer .composer-todo-input:focus-visible { outline:none; }
+@media (prefers-reduced-motion:reduce) {
+  .composer-drawer, .composer-drawer:not(.is-dragging) > .composer-drawer-reveal, .composer-drawer.is-expanded:not(.is-dragging) > .composer-drawer-reveal, .composer-mode-switch span { transition:none; }
+}
+
+/* Work state simulator: a bottom sheet that compresses the panels above it; the site header keeps its height.
+   The sheet is one full-height slider (iOS Control Center brightness): ink fills from the left and every
+   label floats above it in white with a difference blend, so text inverts where the fill passes under it. */
+:root {
+  --work-state-height:64px;
+  --work-state-padding-inline:20px;
+  --work-state-track:var(--paper);
+  --work-state-track-fill:var(--ink);
+  --work-state-overlay-ink:#fff;
+  --work-state-fill-ms:220ms;
+}
+.mw-main > .work-state-simulator { flex:none; }
+.work-state-reveal { display:grid; grid-template-rows:0fr; opacity:0; transition:grid-template-rows var(--work-state-close) var(--work-state-ease), opacity var(--work-state-close) ease; }
+.work-state-simulator[data-open] .work-state-reveal { grid-template-rows:1fr; opacity:1; transition-duration:var(--work-state-open); }
+.work-state-reveal > .work-state-sheet { min-height:0; overflow:hidden; }
+.work-state-slider { position:relative; isolation:isolate; height:var(--work-state-height); margin:0 var(--workspace-gutter) var(--workspace-gutter); overflow:hidden; border-radius:var(--workspace-radius); background:var(--work-state-track); cursor:ew-resize; touch-action:none; user-select:none; }
+.work-state-slider:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
+.work-state-simulator[data-loading] .work-state-slider { cursor:progress; }
+.work-state-fill { position:absolute; inset:0; background:var(--work-state-track-fill); transform:scaleX(var(--work-state-fill)); transform-origin:left center; }
+.work-state-simulator[data-loading] .work-state-fill { transition:transform var(--work-state-fill-ms) ease-out; }
+.work-state-overlay { position:absolute; inset:0; display:flex; align-items:center; gap:16px; padding-inline:var(--work-state-padding-inline); color:var(--work-state-overlay-ink); mix-blend-mode:difference; pointer-events:none; }
+.work-state-title { display:flex; align-items:center; gap:8px; min-width:0; }
+.work-state-title strong { display:flex; flex:none; font-size:13px; font-weight:600; white-space:nowrap; }
+.work-state-title-suffix { display:grid; grid-template-columns:1fr; transition:grid-template-columns var(--work-state-title-motion) var(--work-state-ease) 100ms; }
+.work-state-title-suffix > span { min-width:0; overflow:hidden; }
+.work-state-title-suffix > span > span { display:block; white-space:pre; transition:transform var(--work-state-title-motion) var(--work-state-ease),opacity var(--work-state-title-motion); }
+.work-state-title[data-compact] .work-state-title-suffix { grid-template-columns:0fr; }
+.work-state-title[data-compact] .work-state-title-suffix > span > span { transform:translateY(-110%); opacity:0; }
+.work-state-moment { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; opacity:.72; }
+.work-state-readout { min-width:4ch; margin-left:auto; font-size:var(--work-state-readout-size); font-weight:600; font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap; }
+.work-state-close { display:grid; place-items:center; width:28px; height:28px; border-radius:50%; color:inherit; pointer-events:auto; cursor:pointer; }
+.work-state-close:hover { background:rgb(255 255 255 / 16%); }
+.work-state-simulating .conversation-inner:has(> .new-chat-welcome) { min-height:100%; display:grid; place-content:center; }
+@media (max-width:600px) {
+  .work-state-overlay { gap:8px; padding-inline:14px; }
+  .work-state-moment { display:none; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .work-state-reveal, .work-state-simulator[data-loading] .work-state-fill { transition:none; }
+  .work-state-title-suffix, .work-state-title-suffix > span > span { transition:none; }
+}
+
+/* Mavix's capsule dropdown, retaining explicit location creation. */
+:root { --capture-chip-height:22px; --capture-chip-radius:999px; --capture-stack-gap:4px; --capture-option-surface:color-mix(in srgb,var(--capture-chip-surface) 92%,var(--paper)); --capture-option-highlight:var(--capture-chip-surface); --capture-new-surface:color-mix(in srgb,var(--capture-chip-surface) 80%,var(--paper)); --capture-new-placeholder:color-mix(in srgb,var(--capture-chip-ink) 55%,transparent); --location-menu-enter:220ms; --location-menu-exit:180ms; --location-menu-stagger:20ms; }
+.mw-app .capture-setting-chip { height:var(--capture-chip-height); padding:0 var(--capture-chip-padding-inline); border:0; }
+.mw-app .capture-setting-chip > span { line-height:1.4; padding-bottom:1px; }
+.capture-bucket-stack { position:fixed; inset:auto; margin:0; padding:0; border:0; background:transparent; overflow:auto; display:flex; flex-direction:column; align-items:flex-start; gap:var(--capture-stack-gap); width:max-content; max-width:calc(100vw - 16px); font-size:var(--capture-chip-font-size); }
+.capture-bucket-stack:not(:popover-open) { display:none; }
+.capture-bucket-options { display:flex; flex-direction:column; align-items:flex-start; gap:var(--capture-stack-gap); }
+.capture-bucket-option, .capture-bucket-new { box-sizing:border-box; display:flex; align-items:center; min-width:var(--location-trigger-width); max-width:100%; height:var(--capture-chip-height); padding:0 var(--capture-chip-padding-inline); border-radius:var(--capture-chip-radius); color:var(--capture-chip-ink); white-space:nowrap; font:inherit; cursor:pointer; }
+.capture-bucket-option { background:var(--capture-option-surface); }
+.capture-bucket-option.is-highlighted { background:var(--capture-option-highlight); }
+.capture-bucket-new { field-sizing:content; border:0; outline:none; background:var(--capture-new-surface); cursor:text; caret-color:var(--capture-chip-ink); }
+.capture-bucket-new::placeholder { color:var(--capture-new-placeholder); opacity:1; }
+.capture-bucket-stack :is(.capture-bucket-option,.capture-bucket-new) { transition:opacity var(--location-menu-enter) ease calc(var(--i,0) * var(--location-menu-stagger)), translate var(--location-menu-enter) ease calc(var(--i,0) * var(--location-menu-stagger)),background-color 150ms ease; }
+@starting-style { .capture-bucket-stack:popover-open :is(.capture-bucket-option,.capture-bucket-new) { opacity:0; translate:0 -6px; } }
+.capture-bucket-stack.is-closing :is(.capture-bucket-option,.capture-bucket-new) { opacity:0; translate:0 -6px; pointer-events:none; transition:opacity var(--location-menu-exit) ease, translate var(--location-menu-exit) ease; }
+.mw-app .location-chip-remove { display:inline-flex; align-items:center; padding:0; border:0; color:inherit; background:transparent; }
+.workspace .workspace-panel-header .panel-view-switch { display:flex; align-items:center; gap:2px; margin-left:4px; }
+.workspace .workspace-panel-header .panel-view-option { height:24px; min-height:0; padding:0 8px; border:0; border-radius:var(--control-radius); color:var(--muted); font:400 12px/1 var(--panel-view-font); background:transparent; }
+.workspace .workspace-panel-header .panel-view-option:hover:not(:disabled) { color:var(--ink); background:var(--fill-hover); }
+.workspace .workspace-panel-header .panel-view-option[aria-pressed=true] { color:var(--ink); background:var(--fill); }
+@media(prefers-reduced-motion:reduce) { .capture-bucket-stack :is(.capture-bucket-option,.capture-bucket-new), .capture-bucket-stack.is-closing :is(.capture-bucket-option,.capture-bucket-new) { transition:none; } }
+
+/* Invitation controls fall as separate rigid bodies inside the card's mask. */
+.mw-app .message-version-card { position:relative; padding:0; }
+.mw-app .message-version-main { position:absolute; inset:0; width:100%; height:100%; display:flex; align-items:center; gap:var(--message-version-gap); padding:0 12px 0 0; border:0; border-radius:inherit; background:transparent; color:inherit; text-align:left; font:inherit; }
+.message-version-main > .phosphor-icon { flex:none; }
+.mw-app .message-version-output > .idea-add { color:var(--ink); border-color:var(--milestone-chip-border); background:var(--milestone-chip-fill); }
+.is-milestone-ready .message-version-label { padding-right:calc(var(--milestone-ball-size) + 12px); }
+.milestone-label-swap { display:grid; overflow:hidden; }
+.milestone-label-swap > span { grid-area:1/1; }
+.milestone-invite-word { animation-delay:var(--panel-label-motion); }
+.milestone-falling-controls { position:absolute; top:0; bottom:0; left:calc(min(var(--message-preview-width), var(--message-preview-max-width)) + var(--message-version-gap)); right:0; pointer-events:none; }
+.mw-app .milestone-falling-controls > button { position:absolute; top:0; left:0; display:flex; align-items:center; justify-content:center; margin:0; padding:0; border:1px solid var(--milestone-control-border); background:var(--milestone-control-fill); color:var(--milestone-control-ink); pointer-events:auto; transform-origin:center; will-change:transform; }
+.mw-app .milestone-falling-controls > .milestone-open { width:var(--milestone-ball-size); height:var(--milestone-ball-size); border-radius:50%; }
+.mw-app .milestone-falling-controls > .milestone-not-yet { width:var(--milestone-pill-width); height:var(--milestone-pill-height); border-radius:999px; font:var(--control-font-size)/1 var(--sans); }
+.mw-app .milestone-falling-controls > button:hover { color:var(--milestone-control-ink); background:var(--milestone-control-hover); }
+.milestone-falling-controls[data-settled=true] > button { will-change:auto; }
+/* Mask the moving light to the outline, following either circle or capsule. */
+@property --outline-orbit-angle { syntax:'<angle>'; inherits:false; initial-value:0deg; }
+.outline-orbit::after { content:''; position:absolute; inset:-1px; border-radius:inherit; padding:var(--outline-orbit-width); pointer-events:none; background:conic-gradient(from var(--outline-orbit-angle), transparent 0deg 220deg, var(--outline-orbit-light) 300deg, transparent 360deg); mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; opacity:0; transition:opacity 160ms; }
+.outline-orbit:is(:hover,:focus-visible)::after { opacity:1; animation:outline-orbit var(--outline-orbit-duration) linear infinite; }
+@keyframes outline-orbit { to { --outline-orbit-angle:360deg; } }
+@media(prefers-reduced-motion:reduce) { .outline-orbit:is(:hover,:focus-visible)::after { animation:none; transition:none; } }
+@media(prefers-reduced-motion:reduce) { .mw-app .message-version-card { transition:none; } .milestone-label-swap > .is-leaving { display:none; } }
+.mw-app .message-version-output .milestone-falling-controls > .milestone-not-yet { background:var(--milestone-control-fill); color:var(--milestone-control-ink); }
+.mw-app .message-version-output .milestone-falling-controls > .milestone-not-yet:hover { background:var(--milestone-control-hover); }
+@media(prefers-reduced-motion:reduce) { .milestone-falling-controls[data-settled=true] .milestone-open > * { transition:none; } }
+
+.select-menu.brand-dropdown > [role=option] { justify-content:flex-start; gap:8px; }
+.select-menu.brand-dropdown > [role=option] > .phosphor-icon { flex:none; }

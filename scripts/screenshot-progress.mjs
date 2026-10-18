@@ -477,8 +477,16 @@ function wantsIdeaStreamCapture(prompt = '') {
 
 function wantsLandingCapture(prompt = '') { return /\bc landing\b/i.test(prompt); }
 
+/** `c slider`, or `c ... w simulator` (`work state simulator`), opens the work state simulator, optionally `at N%`. */
+function workStateCapture(prompt = '') {
+  if (hasFlag('work-state')) return argValue('work-state-progress', 'open');
+  if (!/\bc slider\b/i.test(prompt) && !/\bc\b[^\n]*\b(?:work state )?simulator\b/i.test(prompt)) return null;
+  const percent = /\b(?:simulator|slider)\b[^.\n]*?\bat (\d{1,3})%/i.exec(prompt);
+  return percent ? String(Math.min(100, Number(percent[1])) / 100) : 'open';
+}
+
 function wantsHomeCapture(prompt = '') {
-  return argValue('gallery-view') === 'home' || /\bc (?:home|homescreen|milestone overlay|chat (?:and|&) gallery)\b/i.test(prompt);
+  return argValue('gallery-view') === 'home' || /\bc (?:home|homescreen|slider|milestone overlay|chat (?:and|&) gallery)\b/i.test(prompt);
 }
 
 function wantsDarkCapture(prompt = '') {
@@ -490,7 +498,7 @@ function chatCaptureTitle(prompt = '') {
   if (quoted) return quoted[1].trim();
   const plain = /\bc(?:\s*\/)? chat\s+([^\n]+)/i.exec(prompt);
   if (!plain) return '';
-  return plain[1].replace(/(?:^|\s+)(?:w\/|with)\s+[\s\S]*$/i, '').replace(/\s+/g, ' ').trim();
+  return plain[1].replace(/(?:^|\s+)(?:w\/?|with)\s+[\s\S]*$/i, '').replace(/\s+/g, ' ').trim();
 }
 
 function wantsTodosCapture(prompt = '') {
@@ -546,6 +554,8 @@ function wantsLiveCapture(prompt) { return /\bc chat (?:and|&) playback\b[^.\n]*
 function screenshotUrl(prompt = '') {
   const target = new URL(url);
   target.searchParams.set('screenshot', '1');
+  const workState = workStateCapture(prompt);
+  if (workState) target.searchParams.set('workState', workState);
   if (wantsLandingCapture(prompt)) { target.search = '?screenshot=1&page=landing'; if (wantsDarkCapture(prompt)) target.searchParams.set('theme', 'dark'); return target.href; }
   if (/\bc (?:home|homescreen)\b[^.\n]*milestone[^.\n]*zoomed in/i.test(prompt)) { target.searchParams.set('treeMilestone', 'latest'); target.searchParams.set('treeZoom', '1'); }
   if (hasFlag('tree-fit') || /fit all view/i.test(prompt)) target.searchParams.set('treeFit', '1');
@@ -765,7 +775,7 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
         if (themed.result?.value !== true) { await delay(100); continue; }
       }
       if (hasFlag('todo-drawer') || /\bc (?:home|homescreen|chat)\b[\s\S]*\btodo drawer\b/i.test(prompt)) {
-        const drawer = await cdp('Runtime.evaluate', { expression: 'document.querySelector(".composer-drawer-heading")?.getAttribute("aria-expanded") === "true"', returnByValue: true });
+        const drawer = await cdp('Runtime.evaluate', { expression: 'document.querySelector(".composer-drawer-heading")?.getAttribute("aria-expanded") === "true" && !document.querySelector(".composer-drawer-reveal")?.getAnimations({subtree:true}).some(animation => animation.playState === "running")', returnByValue: true });
         if (drawer.result?.value !== true) { await delay(100); continue; }
         if (/\b(?:location|bucket) chip\b/i.test(prompt)) {
           const tagged = await cdp('Runtime.evaluate', { expression: '!!document.querySelector(".composer-drawer-content .bucket-tag")', returnByValue: true });
@@ -777,7 +787,7 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
         if (!draft.result?.value) { await delay(100); continue; }
       }
       if (hasFlag('milestone-invite')) {
-        const invitation = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.message-version-output.is-milestone-ready:not(.is-milestone-jumping) .milestone-not-yet')`, returnByValue: true });
+        const invitation = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.message-version-output.is-milestone-ready:not(.is-milestone-jumping) .milestone-falling-controls[data-settled=true]')`, returnByValue: true });
         if (!invitation.result?.value) { await delay(100); continue; }
       }
       if (hasFlag('expanded-versions')) {
@@ -806,7 +816,7 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
       }
       if (/milestone overlay/i.test(prompt) && !wantsLiveCapture(prompt) && !wantsPrototypeCapture(prompt)) {
         const milestone = await cdp('Runtime.evaluate', { expression: `(() => {
-          const button = document.querySelector('.message-version-output.is-milestone-ready .message-version-card');
+          const button = document.querySelector('.message-version-output.is-milestone-ready .message-version-main');
           const clicked = !${milestoneRequested} && !!button;
           if (clicked) button.click();
           return { clicked, ready: !!document.querySelector('.milestone-overlay[open][data-entered=true] .annotation-preview')?.complete && !!document.querySelector('.milestone-commit-option input:not(:disabled)') };
@@ -881,7 +891,7 @@ async function capture(chrome, outFile, prompt = '') {
     const ws = new WebSocket(page.webSocketDebuggerUrl);
     await waitForSocket(ws);
     const cdp = createCdp(ws);
-    await waitForScreenshotReady(cdp, wantsLandingCapture(prompt) ? 20000 : (wantsPrototypeCapture(prompt) || wantsLiveCapture(prompt)) ? 60000 : 10000, prompt);
+    await waitForScreenshotReady(cdp, (wantsLandingCapture(prompt) || hasFlag('milestone-invite')) ? 20000 : (wantsPrototypeCapture(prompt) || wantsLiveCapture(prompt)) ? 60000 : 10000, prompt);
     await cdp('Runtime.evaluate', { expression: 'document.fonts.ready.then(() => true)', awaitPromise: true, returnByValue: true });
     if (/edit annotation overlay/i.test(prompt)) {
       const note = await cdp('Runtime.evaluate', { expression: `(() => {
