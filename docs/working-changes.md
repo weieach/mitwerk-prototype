@@ -244,3 +244,17 @@ Changes that are made but not yet committed. The user decides when to commit and
 - `tests/palette.test.ts` (new), `tests/presentation.test.ts`: palette expectations (this also fixes the long-failing route-palette assertion).
 - `scripts/screenshot-progress.mjs`, `AGENTS.md`: `c light mode` capture cue.
 - `docs/design-system-rules.md`: per-theme palette rules.
+
+
+## 2026-10-18 · prompt #452 · Solid runtime background
+
+- `src/features/iteration-gallery/{tokens.ts,IterationGallery.tsx,gallery.css}`: replace the sky image, blur and scrim with shared #818181 background for Live server and saved prototypes; retain backdrop fades.
+- `docs/design-system-rules.md`: record the replacement rule. Capture Live server to show the updated runtime surface.
+- Validation: TypeScript and whitespace checks pass; Live server progress capture #452 saved and visually checked.
+
+
+## 2026-10-18 · prompt #453 · Darker design-system runtime gray
+
+- `src/features/iteration-gallery/tokens.ts`: replace fixed #818181 with existing `--faint` (#646464 in dark mode), shared by Live server and saved prototypes.
+- `docs/design-system-rules.md`: update the solid-backdrop rule. Preserve existing transitions. Browser annotation screenshot supplied inline without a local source path.
+- Validation: TypeScript passes; prototype capture #453 saved and visually checked.

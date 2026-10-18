@@ -2,7 +2,7 @@ import { captureScreens } from '../../shared/capture-screens.ts';
 export const galleryTokens = {
   annotations: { exitMs: 180, blur: 12, blurMs: 220, frameDelayMs: 220, uiDelayMs: 320, enterMs: 180, mainColor: '#cdcdcd', messageStaggerMs: 110, messageEnterMs: 280, hoverLift: 10, bookmarkWidth: 22, bookmarkHeight: 18, bookmarkTextureSize: 128, bookmarkInset: 10 },
   // Server-mode surround (Live server and saved prototypes): a heavily blurred sky under a light scrim.
-  runtimeBackdrop: { blur: `${34 / 1875 * 100}vw`, scrim: 'rgb(0 0 0 / .2)' },
+  runtimeBackdrop: { color: 'var(--faint)' },
   theaterMotion: { rotateMs: 1100, verticalAxisFadeMs: 180, frameBorderMs: 180, controlsFadeMs: 280, captureProgress: .5, timelineMs: 320, timelineOffsetVh: 5 },
   theaterDrag: { radiansPerViewport: Math.PI, pitchLimit: Math.PI * .45 },
   controls: { headerGap: 14, tokenLift: 48, floatingBackground: 'var(--paper)', floatingWidth: 144, floatingPaddingInline: 16, floatingPaddingBlock: 6, labelOpacity: .6, frameSelectorShare: .3, fileMaxWidth: 240, frameSelectMaxWidth: 200, inset: 24, gap: 8 },

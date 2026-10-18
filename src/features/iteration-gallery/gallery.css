@@ -277,9 +277,7 @@
 
 /* Server mode (Live server and saved prototypes): a blurred sky replaces the playback surround. It sits beneath
    the isolated gallery's content (z-index -1), so the covered playback details fade out rather than being scrimmed. */
-.gallery-runtime-backdrop { position:absolute; inset:0; z-index:-1; overflow:hidden; pointer-events:none; animation:runtime-backdrop-in var(--annotation-blur-ms) ease both; }
-.gallery-runtime-backdrop::before { content:""; position:absolute; inset:calc(var(--runtime-backdrop-blur) * -2); background:var(--runtime-backdrop-image) center / cover no-repeat; filter:blur(var(--runtime-backdrop-blur)); }
-.gallery-runtime-backdrop::after { content:""; position:absolute; inset:0; background:var(--runtime-backdrop-scrim); }
+.gallery-runtime-backdrop { position:absolute; inset:0; background:var(--runtime-backdrop-color); z-index:-1; overflow:hidden; pointer-events:none; animation:runtime-backdrop-in var(--annotation-blur-ms) ease both; }
 .iteration-gallery:has(.theater-view[data-runtime-exiting="true"]) > .gallery-runtime-backdrop { animation:runtime-backdrop-out var(--annotation-exit-ms) ease both; }
 .gallery-runtime-active .theater-view.is-runtime :is(.theater-frame-actions, .theater-metadata, .playback-controls, .runtime-passive-timeline),
 .iteration-gallery.gallery-runtime-active > .gallery-footer > * { transition:opacity var(--annotation-blur-ms) ease; }

@@ -1730,3 +1730,8 @@ This file is reserved for project-wide design-system rules requested by the user
 - Branch colors, statuses, feature tags and every other accent use read the theme-following `var(--mw-*)` references (`treeTheme.routes`, `featurePalette`). Canvases and WebGL resolve them with `resolveColor` before painting; merged-branch paling of a reference blends in CSS (`color-mix(..., white 45%)`).
 - The version card's flowing milestone gradient is a second variant per theme, exposed as `--milestone-invite-<accent>` stops plus `--milestone-invite-ink`. Dark keeps the accents at 64% over black with white ink. Light is lighter: the light accents at 72% over white, with dark ink (#191a1b) for contrast. The card's arrow and Not yet controls derive their ink, border (70%) and hover fill (10%) from `--milestone-invite-ink`.
 - `c light mode` captures a frame in the light theme, mirroring `c dark mode`.
+
+
+## Solid runtime backdrop — 2026-10-18
+
+- Live server and saved-prototype backdrops use the existing `--faint` neutral token (#646464 in dark mode), superseding #818181 with a darker design-system gray. The backdrop remains solid, without the former sky image, blur or dark scrim. Preserve existing enter/exit fades and reduced-motion behavior.
