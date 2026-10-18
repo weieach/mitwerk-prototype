@@ -20,7 +20,7 @@
 ## Principles
 
 1. **The tool leads.** Chat, lists and controls stay quiet; the milestone invitation is the one loud moment.
-2. **Dark first, each mode its own palette.** Dark is the default (Cursor Dark grounds). Light mode is not a white page: panels are soft gray and only the message box, in-chat cards and sent messages are near-white.
+2. **Dark first, each mode its own palette.** Dark is the default (Cursor Dark grounds; the one blue is `--cursor-blue` #2f7fe9, Werk Blue #1d4ab9 in light). Light mode is not a white page: panels are soft gray and only the message box, in-chat cards and sent messages are near-white.
 3. **No solid white strokes, no black dividers.** Footer and title dividers use `--row-divider` / `--panel-heading-divider`; popovers use `--popover-border`.
 4. **Chat holds its width.** Beside other panels chat is a fixed column, `--chat-panel-width` = min(440px, 35vw). Chat alone fills the body.
 5. **Two chat edges.** Frames (message bubble, To-do section, message box) sit at `--composer-inset`; all text starts at `--panel-title-text-inset` (24px). Layout spacing scales through `--space-scale` (1.2).

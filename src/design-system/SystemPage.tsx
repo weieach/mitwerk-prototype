@@ -9,6 +9,7 @@ const colorGroups: [string, [string, string][]][] = [
   ['Surfaces', [['--workspace-background', 'Behind panels'], ['--chrome', 'Chrome'], ['--paper', 'Panel'], ['--fill', 'Control fill'], ['--fill-hover', 'Hover fill'], ['--selection', 'Selection'], ['--user-message-fill', 'Own message'], ['--message-version-fill', 'In-chat card'], ['--composer-drawer-surface', 'To-do section'], ['--composer-drawer-glow', 'To-do glow'], ['--composer-surface', 'Message box'], ['--composer-mode-track', 'Mode toggle track']]],
   ['Chips', [['--capture-chip-surface', 'Bucket chip'], ['--capture-option-surface', 'Bucket option'], ['--capture-new-surface', 'Add new'], ['--view-tag-bg', 'View tag']]],
   ['Text', [['--ink', 'Primary'], ['--muted', 'Secondary'], ['--faint', 'Tertiary'], ['--accent', 'Accent'], ['--capture-detail-placeholder', 'Placeholder']]],
+  ['Blue', [['--cursor-blue', 'Dark mode blue: active view text']]],
   ['Lines and strokes', [['--line', 'Hairline'], ['--line-strong', 'Divider'], ['--row-divider', 'Footer divider'], ['--panel-heading-divider', 'Title divider'], ['--panel-divider', 'Inside panels'], ['--popover-border', 'Popover outline'], ['--stroke-strong', 'Emphasis stroke'], ['--inline-field-line', 'Field underline']]],
   ['Branches and milestone', [['--contrast', 'Main branch'], ['--milestone-invite-a', 'Milestone A'], ['--milestone-invite-b', 'Milestone B'], ['--milestone-invite-c', 'Milestone C'], ['--milestone-invite-ink', 'Milestone ink']]],
 ];

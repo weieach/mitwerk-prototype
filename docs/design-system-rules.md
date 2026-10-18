@@ -1586,3 +1586,22 @@ This file is reserved for project-wide design-system rules requested by the user
 - Layout paddings and gaps scale through `--space-scale` (1.2): page edge `--workspace-gutter` 8.4px, panel seam `--workspace-panel-gap` 6px, top-bar inline padding 12px, panel title inset and padding (text inset 24px), `--panel-heading-padding` 24px, `--composer-inset` 4.8px, `--composer-tool-inset` 9.6px. The To-do section radius is `--workspace-radius` − `--composer-inset`, so its corners stay concentric.
 - Chat's maximum width beside other panels is 35% of the screen: `--chat-panel-width` = min(440px, 35vw).
 - Chat uses two shared edges. Frames (your message bubble, the To-do section, the message box) sit at `--composer-inset` from the panel edge; text (replies, bubble text, capture line, To-do heading, message box text, panel title) starts at `--panel-title-text-inset`.
+
+## To-do drag handle — 2026-10-18
+
+- The To-do heading shows a small, faint grab handle centered on its top edge (`--drawer-handle-width` 28px × `--drawer-handle-height` 3px, `--drawer-handle-top` 5px, 16% ink), firming to 34% ink on hover and while dragging. It is decorative; the whole heading remains the click and drag target.
+
+## Dark mode blue — 2026-10-18
+
+- The dark mode blue is `--cursor-blue` #2f7fe9 (was #3a96dd): a deeper, more saturated, less cyan blue. It colors the active top-bar view text and, at 18%, its tag fill. Light mode keeps Werk Blue `--mw-blue` #1d4ab9 at 10%.
+- Light mode's workspace background (behind panels, and the title divider tone) is lightened to #ebebe8 (was #e2e2df), still one step below the #f5f5f3 panels.
+- View link fills: the selected view sits on `--view-tag-fill` and shifts to `--view-tag-hover-fill` while hovered. An unselected view never gets a fill; on hover only its text color changes. Dark mode: #1f2d47 selected, #182234 selected-hover (solid navy under the #2f7fe9 text). Light mode keeps the Werk Blue tint (10% selected, 5% selected-hover).
+- The To-do heading pads equally above and below (`--drawer-heading-padding-top` and `-bottom` 11px, same total height as before), so the label and count sit on the vertical center of the strip above the message box.
+- The To-do count is a filled dot: `--ink` fills it (softened by the heading's opacity) and the number takes the To-do section's surface color, so the old ring is inverted. On hover the number follows the hover surface.
+- The send button eases between disabled and ready over `--composer-send-transition` (180ms): fill, icon color, opacity (.4 → 1) and scale (`--composer-send-idle-scale` .96 → 1) move together.
+- Unselected view links change only their text to `--ink` on hover.
+- Chat frames (your message bubble, the To-do section, the message box) sit `--chat-frame-extra` (6px) further in from the chat panel's left, right and bottom edges: 10.8px. Text still starts at the title's text inset (24px); the To-do radius keeps 11.2px.
+- Your message bubble pads its text equally on all four sides (13.2px including its 1px edge), matching the inset that lines its text up with the panel title.
+- View link hover cross-fades over `--view-tag-fade` (.15s): the selected fill (#1f2d47 → #182234 in dark) and every label color ease instead of snapping.
+- Your message bubble shrinks to its longest rendered line (`useShrinkWrap`), never wider than CSS allows, so its padding reads equal on all sides and its right edge stays on the frame line.
+- The date range control centers its label with the caret right beside it; its menu (`align="center"` on `RowSelect` / `SelectMenu`) is only as wide as its options, centered under the control, with centered labels.

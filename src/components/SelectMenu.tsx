@@ -10,9 +10,11 @@ const preferredHeight = 360;
  * The designed selection overlay shared by every selector. It opens in the top layer next to its trigger,
  * so it clears clipped panels and stays interactive inside modal dialogs such as fullscreen theater.
  */
-export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, gap = 0, className = '', focusOnOpen = true, activeIndex, onActiveIndexChange, onChoose, onDismiss }: {
+export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, gap = 0, className = '', align = 'start', focusOnOpen = true, activeIndex, onActiveIndexChange, onChoose, onDismiss }: {
   id: string; label: string; anchor: RefObject<HTMLElement | null>; options: readonly SelectMenuOption[]; value: string;
   className?: string; minWidth?: number; gap?: number; focusOnOpen?: boolean; activeIndex?: number; onActiveIndexChange?: (index: number) => void; onChoose: (value: string) => void; onDismiss: (restoreFocus: boolean) => void;
+  /** `center` sizes the menu to its options and centers it under the trigger instead of matching the trigger width. */
+  align?: 'start' | 'center';
 }) {
   const list = useRef<HTMLDivElement>(null);
   const [internalCursor, setInternalCursor] = useState(() => Math.max(0, options.findIndex(option => option.value === value)));
@@ -24,15 +26,16 @@ export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, ga
     if (!menu.matches(':popover-open')) menu.showPopover();
     const place = () => {
       const rect = anchor.current!.getBoundingClientRect();
-      const width = Math.min(Math.max(rect.width, minWidth), innerWidth - viewportGap * 2);
+      const width = align === 'center' ? Math.min(Math.max(menu.scrollWidth, minWidth), innerWidth - viewportGap * 2) : Math.min(Math.max(rect.width, minWidth), innerWidth - viewportGap * 2);
+      const preferredLeft = align === 'center' ? rect.left + rect.width / 2 - width / 2 : rect.left;
       const below = innerHeight - rect.bottom - viewportGap - gap, above = rect.top - viewportGap - gap;
       const flip = below < Math.min(preferredHeight, menu.scrollHeight) && above > below;
-      setBounds({ left: Math.max(viewportGap, Math.min(rect.left, innerWidth - viewportGap - width)), minWidth: width, maxWidth: innerWidth - viewportGap * 2,
+      setBounds({ left: Math.max(viewportGap, Math.min(preferredLeft, innerWidth - viewportGap - width)), minWidth: width, maxWidth: innerWidth - viewportGap * 2,
         maxHeight: Math.min(preferredHeight, flip ? above : below), ...(flip ? { bottom: innerHeight - rect.top + gap } : { top: rect.bottom + gap }) });
     };
     place(); addEventListener('resize', place); addEventListener('scroll', place, true);
     return () => { removeEventListener('resize', place); removeEventListener('scroll', place, true); };
-  }, [anchor, minWidth, gap, options.length]);
+  }, [anchor, minWidth, gap, align, options.length]);
   useEffect(() => {
     if (focusOnOpen) list.current?.focus();
     const outside = (event: PointerEvent) => {
@@ -44,7 +47,7 @@ export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, ga
   }, [anchor, onDismiss, focusOnOpen]);
   useEffect(() => { list.current?.children[cursor]?.scrollIntoView({ block: 'nearest' }); }, [cursor]);
   return <div ref={list} id={id} popover="manual" role="listbox" aria-label={label} aria-activedescendant={`${id}-${cursor}`} tabIndex={-1}
-    className={`select-menu ${className}`} style={bounds} onMouseDown={event => { if (!focusOnOpen) event.preventDefault(); }}
+    className={`select-menu ${className}${align === 'center' ? ' is-centered' : ''}`} style={bounds} onMouseDown={event => { if (!focusOnOpen) event.preventDefault(); }}
     onKeyDown={event => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onDismiss(true); }
       else if (event.key === 'Tab') onDismiss(false);

@@ -196,7 +196,7 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
 
   const header = <PanelHeader title="Version blocks" icon={panelIcons.versionBlocks} mode={view === 'album' || view === 'focusing' || view === 'returning' ? 'Gallery' : 'Playback'} onModeChange={switchView} modeAction={runtimeMode ? { label: 'Return to Playback', onClick: () => setLiveRequestKey(key => -Math.abs(key) - 1) } : undefined} modeDisabled={!visibleFrames.length || !['album','theater'].includes(view)} onTitleClick={!runtimeMode && view === 'theater' ? exit : undefined} onToggle={onToggle} expanded={expanded} actions={<>
       <span className="gallery-header-runtime-controls" inert={!!runtimeMode} aria-hidden={!!runtimeMode}><VersionPanelSwitch onClick={onSwitchPanel} target="Version stream"/>
-      {view !== 'album' && view !== 'focusing' && <div className="gallery-range"><RowSelect label="Date range" value={range} onChange={value => { setRange(value as RangeKey); setNow(Date.now()); }} options={ranges}/></div>}
+      {view !== 'album' && view !== 'focusing' && <div className="gallery-range"><RowSelect label="Date range" align="center" value={range} onChange={value => { setRange(value as RangeKey); setNow(Date.now()); }} options={ranges}/></div>}
       <div className="gallery-frame-picker-slot" ref={setFramePickerSlot}/>
       {headerActions}</span>
     </>}/>;
@@ -213,7 +213,7 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
     <footer className="gallery-footer" aria-hidden={!!runtimeMode} inert={!!runtimeMode || view === 'turning' || view === 'returning' || view === 'orbiting'}>
       <TrackedInterface value={interfaceId} onChange={value => { setInterfaceId(value); setSelectedId(''); setView('album'); setTarget(null); }}/>
       {view !== 'theater' && view !== 'orbiting' && <div className="panel-header-actions">
-        <div className="gallery-range"><RowSelect label="Date range" value={range} onChange={value => { setRange(value as RangeKey); setNow(Date.now()); }} options={ranges}/></div>
+        <div className="gallery-range"><RowSelect label="Date range" align="center" value={range} onChange={value => { setRange(value as RangeKey); setNow(Date.now()); }} options={ranges}/></div>
         <button className="icon-button" aria-label="Zoom gallery out" disabled={zoom <= t.zoomMin} onClick={() => camera.current?.zoom(-1)}><Icon name="minus"/></button>
         <ZoomScaleButton zoom={zoom} onResetZoom={() => camera.current?.zoom(0)} onResetView={() => camera.current?.reset()}/>
         <button className="icon-button" aria-label="Zoom gallery in" disabled={zoom >= t.zoomMax} onClick={() => camera.current?.zoom(1)}><Icon name="plus"/></button>

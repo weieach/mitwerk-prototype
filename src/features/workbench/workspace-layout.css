@@ -680,7 +680,7 @@
 :root[data-theme=light] {
   --paper:#f5f5f3;
   --canvas-bg:#f5f5f3;
-  --workspace-background:#e2e2df;
+  --workspace-background:#ebebe8;
   --fill:#e7e7e4;
   --fill-hover:#dddcd9;
   --user-message-fill:#fafaf9;
@@ -723,3 +723,48 @@
 .mw-app .mw-message:not(.from-user) { padding-inline:calc(var(--panel-title-text-inset) - var(--composer-inset)); }
 .mw-app .from-user .message-content { padding-inline:calc(var(--panel-title-text-inset) - var(--composer-inset) - 1px); border:1px solid transparent; }
 .mw-app .from-user .message-time { padding-right:calc(var(--panel-title-text-inset) - var(--composer-inset)); }
+
+/* A small, faint grab handle centered on the To-do heading's top edge signals that the section can be dragged; it firms up on hover and while dragging. */
+:root { --drawer-handle-width:28px; --drawer-handle-height:3px; --drawer-handle-top:5px; --drawer-handle-color:color-mix(in srgb, var(--ink) 16%, transparent); --drawer-handle-active:color-mix(in srgb, var(--ink) 34%, transparent); }
+.mw-app .composer-drawer-heading { position:relative; }
+.mw-app .composer-drawer-heading::before { content:''; position:absolute; top:var(--drawer-handle-top); left:50%; width:var(--drawer-handle-width); height:var(--drawer-handle-height); translate:-50% 0; border-radius:var(--drawer-handle-height); background:var(--drawer-handle-color); pointer-events:none; transition:background-color var(--drawer-hover-duration, .18s) ease; }
+.mw-app .composer-drawer-heading:hover::before, .mw-app .composer-drawer.is-dragging .composer-drawer-heading::before { background:var(--drawer-handle-active); }
+
+/* View link fills (2026-10-18): the selected view sits on --view-tag-fill and shifts to --view-tag-hover-fill on hover; an unselected view only changes its text color on hover.
+   Dark mode uses solid navy fills under the #2f7fe9 text; light mode keeps the tinted Werk Blue mix. */
+.mw-app { --view-tag-fill:color-mix(in srgb, var(--view-tag-ink) var(--view-tag-tint), transparent); --view-tag-hover-fill:color-mix(in srgb, var(--view-tag-ink) calc(var(--view-tag-tint) / 2), transparent); }
+.mw-app[data-theme=dark] { --view-tag-fill:#1f2d47; --view-tag-hover-fill:#182234; }
+.mw-app .workspace-links > button::before { background:var(--view-tag-fill); }
+.mw-app .workspace-links > button:not([aria-pressed=true]):hover::before { opacity:0; }
+.mw-app .workspace-links > button[aria-pressed=true]:hover::before { background:var(--view-tag-hover-fill); }
+
+/* The To-do label and count sit on the vertical center of the visible strip above the message box: equal padding above and below (same total height). */
+:root { --drawer-heading-padding-top:11px; --drawer-heading-padding-bottom:11px; }
+
+/* To-do count is a filled dot: the heading's ink fills it and the number takes the section's surface color (the ring is inverted). */
+.mw-app .composer-drawer-count { border:0; border-radius:var(--drawer-count-size); background:var(--drawer-count-fill, var(--ink)); color:var(--composer-drawer-surface); font-weight:500; font-variant-numeric:tabular-nums; transition:background-color var(--drawer-hover-duration, .18s) ease, color var(--drawer-hover-duration, .18s) ease; }
+.composer-drawer:has(.composer-drawer-heading:is(:hover,:focus-visible)) .composer-drawer-count { color:var(--composer-drawer-hover); }
+
+/* Send button eases between disabled and ready instead of snapping: fill, icon color, opacity and a slight scale move together. */
+:root { --composer-send-transition:180ms cubic-bezier(.2, 0, 0, 1); --composer-send-idle-scale:.96; }
+.mw-app .composer-drawer .composer-tools > button[type=submit] { transition:background-color var(--composer-send-transition), color var(--composer-send-transition), opacity var(--composer-send-transition), scale var(--composer-send-transition); }
+.mw-app .composer-drawer .composer-tools > button[type=submit]:disabled { scale:var(--composer-send-idle-scale); }
+.mw-app .workspace-links > button:not([aria-pressed=true]):hover { color:var(--ink); }
+
+/* Chat panel breathing room: frames (bubble, To-do section, message box) sit 6px further in from the panel's left, right and bottom edges.
+   Text stays on the title's text inset; the To-do radius keeps its root value (11.2px). */
+:root { --chat-frame-extra:6px; }
+.mw-app .mw-surface { --composer-inset:calc(4px * var(--space-scale) + var(--chat-frame-extra)); --composer-padding-inline:calc(var(--composer-text-inset) - var(--composer-inset)); }
+
+/* Your message bubble pads its text equally on every side: the vertical padding matches the horizontal inset that lines its text up with the panel title. */
+.mw-app .from-user .message-content { padding-block:calc(var(--panel-title-text-inset) - var(--composer-inset) - 1px); }
+
+/* View link hover eases instead of snapping: the selected fill and every label color cross-fade over --view-tag-fade. */
+:root { --view-tag-hover-ease:cubic-bezier(.2, 0, 0, 1); }
+.mw-app .workspace-links > button { transition:color var(--view-tag-fade) var(--view-tag-hover-ease); }
+.mw-app .workspace-links > button::before { transition:opacity var(--view-tag-fade) var(--view-tag-hover-ease), background-color var(--view-tag-fade) var(--view-tag-hover-ease); }
+
+/* Date range: the label sits right beside its caret, centered in the control; its menu is only as wide as its options, centered under the control. */
+.workspace .row-select.is-centered { justify-content:center; gap:6px; }
+.workspace .row-select.is-centered > .row-select-value { flex:0 1 auto; }
+.select-menu.is-centered [role=option] { justify-content:center; padding-inline:20px; }
