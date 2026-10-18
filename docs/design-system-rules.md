@@ -27,7 +27,7 @@
 ## Capturing row sits on one line box — 2026-10-18
 
 - The composer's “Capturing [bucket] with [details]” row uses one line height, `--capture-row-height` (20px). The words, the bucket pill (`--capture-chip-height`), the pill text, and the details field (`--capture-detail-height`) all read it, so every piece shares one vertical center and no box is taller than the others.
-- The words and the details field use `--body-font-size` (12px). The pill text stays one step down at `--capture-chip-font-size` (11px). Do not set the row's words larger than the body size.
+- The words and the details field use `--chat-body-size` (13px). The pill text stays one step down at `--capture-chip-font-size`, which is `--chat-meta-size` (11px). Do not set the row's words larger than the body size.
 
 ## Editing a to-do quiets its row — 2026-10-18
 
@@ -48,13 +48,13 @@
 ## Panel footers share one divider and height — 2026-10-18
 
 - Panel footers side by side keep the same height: the gallery footer and the Idea stream controls both use `--panel-footer-height` (52px) as their row height, so their top edges line up.
-- To-do drawer timestamps and run icons are 90% of the row text (`--drawer-meta-scale`).
+- To-do drawer timestamps use `--chat-meta-size` (11px). Run icons stay 90% of 12px (`--drawer-meta-scale`).
 
 - Every panel footer (Version blocks gallery footer, Idea stream controls) draws its top edge with `--row-divider` (`--line`): `#262626` in dark, following Cursor's 7% border, and `#e6e6e6` in light. Footers do not borrow `--workspace-background` (the chrome behind panels) as a divider.
 
 ## Chat message size — 2026-10-18
 
-- User and Mit message text uses `--message-font-size` through the Message type role. It equals `--body-font-size` (12px), the same size as the composer field, so chat and input read as one text size. Line height stays 1.5 (18px). This replaces the earlier 13px message size.
+- User and Mit message text uses `--message-font-size` through the Message type role. It equals `--chat-body-size` (13px), the same size as the composer field, so chat and input read as one text size. This replaces the 12px message size.
 - The to-do drawer heading is regular weight (400), not bold, both in CSS and in the To-do heading type role.
 
 ## Popovers share one outline and shadow — 2026-10-18
@@ -82,6 +82,7 @@
 - Dark mode uses the Cursor Dark Anysphere palette (from Cursor's bundled `cursor-dark-color-theme.json`). Two opaque grounds: canvas `#181818` (`--paper`, `--canvas-bg`) and recessed chrome `#141414` (`--chrome`: sidebar and the gutter between panels). Chrome is darker than the canvas.
 - Every other neutral is `#e4e4e4` at a fixed alpha, pre-mixed over `#181818` so WebGL surfaces can resolve solid colors: text 92% `--ink` `#d4d4d4`, 55% `--muted` `#888`, 37% `--faint` `#646464`; wash 4% `--fill` `#202020`; border and hover 7% `--line` / `--fill-hover` `#262626`; selection 12% `--selection` `#303030`; focus 15% `--line-strong` `#373737`. Accent and `--contrast` are `#e4e4e4`; no pure white.
 - The panel heading divider uses `--line`. The composer drawer, hover, selected mode, placeholder, track, and border derive from those tokens instead of their own warm-black hex. The earlier unused dark composer block is removed.
+- The composer outline is a hairline: `--composer-border-width` (0.5px), drawn as an inset shadow because Chrome rounds borders below 1px up to 1px. At rest it uses `--composer-border`; while focused it uses `--composer-focus-border` (32% ink), not full ink. The padding absorbs the former 1px border, so text and controls stay in place.
 - Branch colors, Werk Blue / Mit Sky, screenshots, scrims, and the landing stage are not part of this pass.
 
 ## Sans serif is Waldenburg — 2026-10-18
@@ -96,7 +97,20 @@
 
 - The MitWerk logo menu offers **Type editor** (Close type editor when open). It floats over the current page and does not change layout.
 - Text is adjusted by shared role, not by one message, card, or screenshot. Roles and their selectors live in `src/shared/type-studio.ts`. Each role exposes size, weight, line height, letter spacing, color, Waldenburg or mono, and italic.
-- Chat messages use `--message-line-height` (1.6, 19.2px at 12px). The Message type role's default leading matches it, because the role rule overrides the CSS token.
+- Chat messages use `--message-line-height` (1.6, 20.8px at 13px). The Message type role's default leading matches it, because the role rule overrides the CSS token.
+
+## Chat type scale — 2026-10-18
+
+- The chat panel uses three sizes only, as shared tokens in `src/control-tokens.css`:
+  - `--chat-meta-size` (11px): message and to-do timestamps, the to-do count, the model selector, and capture chips.
+  - `--chat-body-size` (13px): messages, bylines, version cards, the composer field, the Capturing row, the to-do heading and to-do rows.
+  - `--chat-title-size` (14px): the panel title role, which also sets the Version blocks pill.
+- Do not add 1px steps between these (the earlier 9, 10, 10.8 and 12px sizes are gone). The matching type-editor roles default to these tokens.
+- The to-do count circle is `--drawer-count-size` (16px) so the 11px numeral fits.
+- Mit replies are capped at `--message-max-width` (36em, about 70 characters per line). The cap is in em, not ch, because Waldenburg's `0` is wide enough that 68ch already equals the full column.
+- Message timestamps are hidden (opacity 0, space kept) and fade in over `--drawer-hover-duration` while their message is hovered or focused. Each message's accessible name still carries its time.
+- The conversation's inline padding is `--panel-heading-padding`, so replies, the panel title's icon, the Capturing row, the to-do drawer and the composer text share one left edge.
+- The expanded to-do list is capped at `min(24vh, 200px)` so the composer stack leaves more room for the conversation. The drawer still starts collapsed.
 - Built-in values stay in the role stylesheet. An edit sets the same variable on the document root and is stored in `localStorage` under `mitwerk-type-studio`. Reset restores the built-in value. Copy CSS exports only the variables that differ, so a chosen scale can be locked into the role defaults later.
 - Progress captures (`screenshot=1`) ignore stored edits and do not show the editor. `?type=1` opens it for a working session.
 - Selecting a role outlines every element that uses it. Gallery axis labels stay on their camera-driven size. Branch colors, role tags, and capture textures are not type colors.

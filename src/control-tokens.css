@@ -36,7 +36,11 @@
   --strong-font-weight: 500;
   --card-title-weight: var(--strong-font-weight);
   --body-font-size: 12px;
-  --message-font-size: var(--body-font-size);
+  --chat-meta-size: 11px;
+  --chat-body-size: 13px;
+  --chat-title-size: 14px;
+  --message-font-size: var(--chat-body-size);
+  --message-max-width: 36em;
   --message-line-height: 1.6;
   --message-output-gap: calc(var(--row-padding-inline) * 1.5);
   --message-time-gap: 8px;
@@ -45,7 +49,7 @@
   --outline-orbit-light: #fff;
   --context-list-max-height: 180px;
   --context-count-gap: calc(var(--row-size-unit) * 2);
-  --composer-control-font-size: 11px;
+  --composer-control-font-size: var(--chat-meta-size);
   --drawer-open-duration: 440ms;
   --drawer-close-duration: 300ms;
   --drawer-reorder-duration: 360ms;
@@ -53,8 +57,8 @@
   --drawer-hover-shift: 2px;
   --drawer-open-ease: cubic-bezier(.16, 1, .3, 1);
   --drawer-close-ease: cubic-bezier(.4, 0, .2, 1);
-  --drawer-count-size: 14px;
-  --drawer-count-font-size: 9px;
+  --drawer-count-size: 16px;
+  --drawer-count-font-size: var(--chat-meta-size);
   --composer-model-padding: 7px 10px;
   --composer-mode-padding: 5px 10px;
   --dropdown-panel-padding: 0;
@@ -433,7 +437,7 @@
 
 .workspace.workspace-compact .panel-header > .panel-heading { padding-right:var(--header-padding-left); }
 
-:root { --capture-settings-font-size:var(--body-font-size); --capture-chip-font-size:.6875rem; --capture-chip-padding-inline:8px; --capture-chip-icon-gap:5px; --capture-row-height:20px; }
+:root { --capture-settings-font-size:var(--chat-body-size); --capture-chip-font-size:var(--chat-meta-size); --capture-chip-padding-inline:8px; --capture-chip-icon-gap:5px; --capture-row-height:20px; }
 .select-menu.capture-bucket-menu { font-size:var(--capture-chip-font-size); padding:0; }
 .capture-bucket-menu [role=option] { padding:6px var(--capture-chip-padding-inline); min-height:0; font-weight:inherit; }
 

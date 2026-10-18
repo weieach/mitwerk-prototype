@@ -2543,3 +2543,21 @@ KMRWaldenburg-Thin.woff2 KMRWaldenburg-Bold.woff2 KMRWaldenburg-Black.woff2 KMRW
 ```text
 调整一下行间距，目前是多少，可以适当增加5-10%
 ```
+
+## Prompt #417
+
+```text
+能不能帮我critique一下整个页面里字号的设计，感觉chat区域especially看着有些拥挤 & 可读性不高。
+```
+
+## Prompt #418
+
+```text
+这里的白色线框太显眼了，降低亮度，缩小宽度
+```
+
+## Prompt #419
+
+```text
+你来改吧
+```
