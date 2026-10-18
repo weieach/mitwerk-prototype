@@ -7,8 +7,10 @@ import './control-tokens.css';
 import './features/workbench/workbench-system.css';
 import './features/workbench/workspace-layout.css';
 import { applyTheme, savedTheme } from './shared/theme';
+import { installTypeStudio } from './shared/type-studio';
 
 applyTheme(savedTheme());
+installTypeStudio();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

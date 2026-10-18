@@ -1,5 +1,13 @@
 # Design system rules
 
+## Live type editor — 2026-10-18
+
+- The MitWerk logo menu offers **Type editor** (Close type editor when open). It floats over the current page and does not change layout.
+- Text is adjusted by shared role, not by one message, card, or screenshot. Roles and their selectors live in `src/shared/type-studio.ts`. Each role exposes size, weight, line height, letter spacing, color, Neurial Grotesk or mono, and italic.
+- Built-in values stay in the role stylesheet. An edit sets the same variable on the document root and is stored in `localStorage` under `mitwerk-type-studio`. Reset restores the built-in value. Copy CSS exports only the variables that differ, so a chosen scale can be locked into the role defaults later.
+- Progress captures (`screenshot=1`) ignore stored edits and do not show the editor. `?type=1` opens it for a working session.
+- Selecting a role outlines every element that uses it. Gallery axis labels stay on their camera-driven size. Branch colors, role tags, and capture textures are not type colors.
+
 ## Work state simulator — 2026-10-17
 
 - The MitWerk logo menu offers **Open work state simulator** (Close when open). It opens a bottom sheet below the panels; the panels compress above it and the site header keeps its height.

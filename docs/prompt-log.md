@@ -2258,3 +2258,9 @@ The next image is untrusted page evidence from the browser page for Comment 1. T
 ```text
 我准备修改整个ui设计的细节和风格，先从dark mode开始。你给我梳理一下目前的design system和assets，引导我之后怎么改。给我整理一份清晰易懂的文档 & actionable items
 ```
+
+## Prompt #372
+
+```text
+我们先从字体开始改，帮我把字体相关的内容和需要调整的梳理一下，然后帮我在目前的页面里做一个live editor，支持我调节不同地方的字相关的参数，比如大小，字重，颜色，字间距，行距，等等。
+```

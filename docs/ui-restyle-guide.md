@@ -17,6 +17,45 @@
 
 画布（WebGL / SVG）不会自动读 CSS 变量。它们用 `resolveColor('var(--ink)')` 取当前计算值，并用 `observeTheme` 在主题切换时重绘。见 `src/shared/theme.ts`。
 
+## 字体：现在长什么样，以及怎么试
+
+全站只有一套已加载的字：**Neurial Grotesk**。文件在 `src/fonts/`，`src/index.css` 的 `@font-face` 注册了 Light 300、Regular 400、Medium 500、Bold 700、ExtraBold 800，各有 italic。`--sans` 指向它。等宽是系统字体 `--font-code`，没有单独的字文件。
+
+字号没有收成一个量表。一部分是 `src/control-tokens.css` 里的变量，一部分是后来写死的像素。改一处不会带动另一处，所以试字体时用页面上的 Type editor，它按**角色**改，而不是按某一条消息改。
+
+打开方式：顶栏 MitWerk 菜单里的 **Type editor**。选中一个角色时，页面上所有用到它的文字会出现虚线框。滑块立刻生效，并记在这个浏览器的 `localStorage`（`mitwerk-type-studio`）。**Copy CSS** 只导出改过的变量。**Reset** 回到现在的默认。带 `screenshot=1` 的进度截图不读取这些改动，也不显示编辑器。
+
+每个角色都能调：大小、字重、行距、字间距、颜色、Neurial / Mono、斜体。颜色优先用 Ink、Muted、Faint、Accent、Contrast，这样换 dark mode 时还会跟着主题走。
+
+| 角色 | 现在的默认 | 出现在 |
+| --- | --- | --- |
+| Wordmark | 14px / 700 | 顶栏 MitWerk |
+| View links | 12px / Muted | Chat、Version blocks、Idea stream、Live server |
+| Panel title | 13px / 500 | 对话标题、Version blocks 胶囊 |
+| Gallery / Playback | 11px / 400，行距 1.45 | 胶囊旁边的视图名 |
+| Page title | 卡片标题 + 3px / 700 | Settings 等页标题 |
+| Welcome title | 24–32px 流动 / 500，行距 1.25 | 空对话的大标题 |
+| Welcome text | 13px / Muted | 大标题下面那一行 |
+| Message | 12px，跟 `--body-font-size` / 400，行距 1.5 | 用户和 Mit 的正文。布局文件里的 13px 和 `--message-line-height: 1.45` 目前都没有赢过这条 |
+| Byline | 12px / 500 | Mit 名字。角色色标不在这里改 |
+| Timestamp | 10px / Muted | 每条消息下面的时间 |
+| Version card | 12px | 回复里的版本输出条 |
+| Composer | 12px，行距 1.5 | 输入框。占位符颜色是另一条 token |
+| To-do heading | 12px / 700 | 待办抽屉标题 |
+| To-do item | 12px，行距 1.4 | 抽屉里的每一行 |
+| Capture chip | 0.6875rem（11px）/ Chip ink | 捕获胶囊。Chip ink 目前是固定的深色，不跟主题 |
+| Controls | 约 10–12px 流动，行距 1.25 | 按钮、下拉和由此推出来的行标题 |
+| Navigation | 与 Controls 相同的流动字号 / Muted | 侧栏导航。选中项保持强调色和 500 |
+| Project names | 约 11.5px / Ink | 项目名和 New chat，共用一个字号 |
+| Card title | 17px / 700，行距 1.2 | Idea stream 卡片标题 |
+| Version number | 11px / 700 / Contrast | 站点旁的 V1、V2.1。缩放补偿还在 |
+| Milestone | 17px，行距 1.35 | Idea stream 上的里程碑 |
+| Playback summary | 跟随 Controls / Muted / 斜体 | 帧下面的提示摘要 |
+
+相册日期和版本轴的字号由相机缩放算出来，写在元素的 inline style 上，这个编辑器改不到。要改那一层，得动 `src/features/iteration-gallery/tokens.ts` 的 `axisText`。
+
+试完觉得哪一组该留下，把 Copy CSS 的变量写回 `typeRoles` 的默认值，再把对应的旧像素删掉。不要把滑块结果抄进某一个组件。
+
 ## 改风格时按这个顺序动文件
 
 样式表的加载顺序决定谁覆盖谁：
