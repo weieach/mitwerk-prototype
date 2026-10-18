@@ -1,4 +1,5 @@
 import type { RuntimeMode } from './EmbeddedPrototype';
+import skyBackdrop from '../../assets/sky-bg.jpg';
 import { panelIcons } from '../../components/panel-icons';
 import { captureScreen } from '../../shared/capture-screens';
 import { createPortal } from 'react-dom';
@@ -15,7 +16,7 @@ import type { VisualReference } from './references';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { containedFrameTarget, frameBorderEntrance, timelineEntrance } from './theater-transition';
 import type { GalleryCamera, TheaterTarget } from './theater-transition';
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties, MouseEvent, ReactNode } from 'react';
 import { AlbumView } from './AlbumView';
 import { referenceCapture } from './theater-layout';
 import { TheaterView } from './TheaterView';
@@ -52,6 +53,15 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
   const [framePickerSlot, setFramePickerSlot] = useState<HTMLDivElement | null>(null);
   const viewStack = useRef<HTMLDivElement>(null);
   const galleryRoot = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const root = galleryRoot.current;
+    const footer = root?.querySelector<HTMLElement>('.gallery-footer');
+    if (!root || !footer) return;
+    const measure = () => root.style.setProperty('--gallery-runtime-footer-height', `${footer.getBoundingClientRect().height}px`);
+    const observer = new ResizeObserver(measure);
+    observer.observe(footer); measure();
+    return () => observer.disconnect();
+  }, []);
   const updateTimelineMotion = useCallback((progress: number) => {
     const pose = timelineEntrance(progress);
     galleryRoot.current?.style.setProperty('--timeline-enter-opacity', String(pose.opacity));
@@ -150,9 +160,13 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
     return () => cancelAnimationFrame(tick);
   }, [playbackOnly, view, visibleFrames, enterPlayback, pushRequest]);
   function switchView(mode: 'Gallery' | 'Playback') {
-    if (mode === 'Gallery') exit(); else enterPlayback();
+    if (mode === 'Gallery') {
+      // In server mode the Gallery tab stays available: close the runtime while turning back to the gallery.
+      if (runtimeMode) setLiveRequestKey(key => -Math.abs(key) - 1);
+      exit();
+    } else enterPlayback();
   }
-  function open(id: string) { if (view !== 'album') return; updateTimelineMotion(0); setSelectedId(id); setView('turning'); }
+  function open(id: string) { if (view !== 'album') return; updateTimelineMotion(0); setSelectedId(id); setNavigationKey(key => key + 1); setView('turning'); }
 
   useLayoutEffect(() => {
     if (view !== 'turning') return;
@@ -201,7 +215,15 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
       {headerActions}</span>
     </>}/>;
 
-  return <section ref={galleryRoot} data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${runtimeMode ? ' gallery-runtime-active' : ''}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-label="Version blocks" style={{ '--annotation-blur': `${t.annotations.blur}px`, '--annotation-blur-ms': `${t.annotations.blurMs}ms`, '--annotation-enter-ms': `${t.annotations.enterMs}ms`, '--annotation-exit-ms': `${t.annotations.exitMs}ms`, '--annotation-frame-delay': `${t.annotations.frameDelayMs}ms`, '--annotation-ui-delay': `${t.annotations.uiDelayMs}ms`, '--gallery-label-background': t.labelBackdrop.color, '--gallery-label-opacity': `${t.labelBackdrop.opacity * 100}%`, '--gallery-label-padding-inline': `${t.labelBackdrop.paddingInline}px`, '--gallery-label-padding': `${t.labelBackdrop.paddingBlock}px ${t.labelBackdrop.paddingInline}px`, '--gallery-axis-line-height': t.axisText.lineHeight, '--gallery-header-gap': `${t.controls.headerGap}px`, '--gallery-token-lift': `${t.controls.tokenLift}px`, '--gallery-floating-background': t.controls.floatingBackground, '--gallery-floating-label-opacity': t.controls.labelOpacity, '--gallery-frame-selector-share': `${t.controls.frameSelectorShare * 100}%`, '--gallery-floating-width': `${t.controls.floatingWidth}px`, '--gallery-floating-pad-inline': `${t.controls.floatingPaddingInline}px`, '--gallery-floating-pad-block': `${t.controls.floatingPaddingBlock}px`, '--gallery-file-max-width': `${t.controls.fileMaxWidth}px`, '--gallery-control-inset': `${t.controls.inset}px`, '--gallery-control-gap': `${t.controls.gap}px`, '--gallery-frame-select-max-width': `${t.controls.frameSelectMaxWidth}px`, '--theater-focus-background': t.theater.focusBackground, '--theater-frame-shadow': t.theater.frameShadow, '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px` } as CSSProperties}>
+  // Only Live server exits on a surround click; saved prototypes require the explicit exit action.
+  // Covered controls are inert, so their clicks land on these ancestors.
+  function exitRuntimeOutsideFrame(event: MouseEvent<HTMLElement>) {
+    if (runtimeMode !== 'live' || (event.target as Element).closest('.theater-screen, .runtime-exit-scrim button, .prototype-version-controls, .panel-header')) return;
+    setLiveRequestKey(key => -Math.abs(key) - 1);
+  }
+
+  return <section ref={galleryRoot} data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${runtimeMode ? ' gallery-runtime-active' : ''}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-label="Version blocks" onClick={exitRuntimeOutsideFrame} style={{ '--annotation-blur': `${t.annotations.blur}px`, '--annotation-blur-ms': `${t.annotations.blurMs}ms`, '--annotation-enter-ms': `${t.annotations.enterMs}ms`, '--annotation-exit-ms': `${t.annotations.exitMs}ms`, '--annotation-frame-delay': `${t.annotations.frameDelayMs}ms`, '--annotation-ui-delay': `${t.annotations.uiDelayMs}ms`, '--gallery-label-background': t.labelBackdrop.color, '--gallery-label-opacity': `${t.labelBackdrop.opacity * 100}%`, '--gallery-label-padding-inline': `${t.labelBackdrop.paddingInline}px`, '--gallery-label-padding': `${t.labelBackdrop.paddingBlock}px ${t.labelBackdrop.paddingInline}px`, '--gallery-axis-line-height': t.axisText.lineHeight, '--gallery-header-gap': `${t.controls.headerGap}px`, '--gallery-token-lift': `${t.controls.tokenLift}px`, '--gallery-floating-background': t.controls.floatingBackground, '--gallery-floating-label-opacity': t.controls.labelOpacity, '--gallery-frame-selector-share': `${t.controls.frameSelectorShare * 100}%`, '--gallery-floating-width': `${t.controls.floatingWidth}px`, '--gallery-floating-pad-inline': `${t.controls.floatingPaddingInline}px`, '--gallery-floating-pad-block': `${t.controls.floatingPaddingBlock}px`, '--gallery-file-max-width': `${t.controls.fileMaxWidth}px`, '--gallery-control-inset': `${t.controls.inset}px`, '--gallery-control-gap': `${t.controls.gap}px`, '--gallery-frame-select-max-width': `${t.controls.frameSelectMaxWidth}px`, '--theater-focus-background': t.theater.focusBackground, '--theater-frame-shadow': t.theater.frameShadow, '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px`, '--runtime-backdrop-blur': t.runtimeBackdrop.blur, '--runtime-backdrop-scrim': t.runtimeBackdrop.scrim } as CSSProperties}>
+    {runtimeMode && <div className="gallery-runtime-backdrop" aria-hidden style={{ '--runtime-backdrop-image': `url(${skyBackdrop})` } as CSSProperties}/>}
     {headerTarget ? createPortal(header, headerTarget) : header}
     {error && <div className="gallery-message" role="alert">{error} <button onClick={() => setRetry(value => value + 1)}>Retry</button></div>}
     {!catalog ? <div className="gallery-empty">{error ? 'Screenshot catalog unavailable.' : 'Reading saved frames…'}</div>

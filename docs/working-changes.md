@@ -94,3 +94,142 @@ Changes that are made but not yet committed. The user decides when to commit and
 - `src/features/version-tree/tokens.ts`, `VersionTreePanel.tsx`, `src/index.css`: reduce Idea stream checkbox station diameter to 80% of the circle diameter, preserving border/outline and centering while fitting the completed check.
 - `src/control-tokens.css`: existing Playback overview thumb now uses the existing `--muted` gray token.
 - `docs/design-system-rules.md`: record shared sizing/color rules; prompt log and progress capture record the request.
+
+## 2026-10-18 · prompt #432 · Clickable outside-range hint and darker overview
+
+- `src/features/iteration-gallery/PlaybackTimeline.tsx`, `timeline.ts`, `gallery.css`: make the range hint clickable with native keyboard support, align the first enabled block without seeking, and derive minimal trailing room for exact alignment. Preserve hover transfer to the hint and existing scroller behavior.
+- `src/control-tokens.css`: use the existing darker `--faint` token for the overview thumb.
+- `tests/timeline.test.ts`: cover first-enabled positioning, trailing space, fitting timelines and empty/disabled ranges. Shared rules, full prompt log and progress capture record the request. Annotation references were supplied inline without local file paths.
+
+## 2026-10-18 · prompt #433 — sky backdrop for Live server
+
+- `src/assets/sky-bg.jpg` (new): 1600px, 184 KB copy of the root `sky bg.jpeg` (2975px, 1.2 MB). The image is heavily blurred, so the smaller copy costs nothing visually.
+- `src/features/iteration-gallery/tokens.ts`: `liveBackdrop` token (blur 40px, scrim `rgb(0 0 0 / .22)`).
+- `src/features/iteration-gallery/IterationGallery.tsx`: `gallery-runtime-live` class and a `.gallery-live-backdrop` layer rendered only in Live server mode.
+- `src/features/iteration-gallery/gallery.css`: backdrop at `z-index:-1` inside the isolated gallery (under the panel header and the live frame), fade in/out on the runtime timings; the dark scrims are dropped in live mode, and the covered frame actions, metadata, transport, timeline and footer fade out. The theater entrance animation is disabled while hidden, because its forward fill otherwise pins them at full opacity.
+- `scripts/screenshot-progress.mjs`, `AGENTS.md`: new `c live server` capture cue (Chat + Playback with Live server running).
+- `docs/design-system-rules.md`: Live server backdrop rule.
+- Counter set to prompt #433 at the user's request (#432 left unused).
+
+## 2026-10-18 · prompt #434 — timeline contrast, desktop-scaled runtime, click-outside exit
+
+- `src/control-tokens.css`, `src/features/iteration-gallery/gallery.css`: `--timeline-block-border` (= scroller thumb) for timeline block borders and `--timeline-ruler` (45% of it into `--line-strong`) for prompt ruler ticks.
+- `src/features/iteration-gallery/EmbeddedPrototype.tsx`, `tokens.ts`, `gallery.css`: runtime iframe lays out at `theater.runtimeViewportWidth` (1440px) and is scaled down to the frame with `--runtime-scale` (ResizeObserver; never scales up). Applies to Live server and saved prototypes.
+- `src/features/iteration-gallery/IterationGallery.tsx`: clicking the surround outside the frame, exit button and panel header requests the existing exit (negative `liveRequestKey`).
+- `gallery.css`: exit action has no background/border (hover dims to .72); `tokens.ts`: live sky scrim .22 → .32.
+- `docs/design-system-rules.md`: rules for the above.
+- Counter set to prompt #434 at the user's request.
+
+## 2026-10-18 · prompt #435 — sky backdrop for saved prototypes too
+
+- `src/features/iteration-gallery/IterationGallery.tsx`, `tokens.ts`, `gallery.css`: the sky backdrop now renders for any runtime mode (Live server and Enter prototype). Renamed `liveBackdrop` → `runtimeBackdrop`, `.gallery-live-backdrop` → `.gallery-runtime-backdrop`, and dropped the `gallery-runtime-live` class. Removed the retired dark runtime scrim (`--runtime-surround-scrim`, theater/footer pseudo-element scrims, footer blur, `runtime-scrim-out`).
+- `scripts/screenshot-progress.mjs`, `AGENTS.md`: `c prototype` capture cue (same as `c prototype embed`).
+- `docs/design-system-rules.md`: backdrop rule now covers both runtime modes.
+
+## 2026-10-18 · prompt #435 uncounted · Inspect runtime sky scrim
+
+- `docs/prompt-log.md`: recorded the uncounted inspection request. Read runtime backdrop tokens and CSS; no application changes or progress capture.
+
+## 2026-10-18 · prompt #436 — range-recovery end, block border, push-gap hover
+
+- `src/features/iteration-gallery/timeline.ts`, `PlaybackTimeline.tsx`, `gallery.css`, `tests/timeline.test.ts`: the out-of-range click now scrolls to `min(first enabled block, end of timeline)`. The trailing `.timeline-range-tail` spacer is removed, so short ranges show the timeline's end instead of left-aligning their first block.
+- `src/control-tokens.css`: `--timeline-block-border` is now 75% thumb into `--line-strong` (slightly darker); the ruler stays derived from it.
+- `PlaybackTimeline.tsx`, `gallery.css`: push-gap hover was transparent because the inline `--timeline-push-hover: var(--timeline-push-hover)` referenced itself. It is now passed through `--timeline-push-hover-background`, so the gap lights up (`#4b4b4b` dark / `#c4c4c4` light).
+- `docs/design-system-rules.md`: range-recovery and timeline rules updated.
+
+## 2026-10-18 · prompt #437 · Fitted runtime stage and saved prototype navigation
+
+- `src/features/iteration-gallery/gallery.css`, `TheaterView.tsx`: remove hidden control rows from runtime stage flow; add white version label and previous/next triangles above the frame, saved-prototype mode only. Preserve prototype mode while changing saved versions and remount each iframe's loading state.
+- `runtime-targets.ts`, `tests/runtime-targets.test.ts`: derive adjacent versions from deduplicated push captures and test ordering, missing versions and boundaries.
+- `usePrototype.ts`: associate availability/results with their push number so navigation cannot reuse a stale prototype's availability or URL. `IterationGallery.tsx`: exclude version controls from click-outside exit.
+- `scripts/screenshot-progress.mjs`, `AGENTS.md`: support explicit Chat + prototype capture cue. Shared rules and prompt log record the behavior. Annotation references supplied inline without local source paths.
+
+## 2026-10-18 · prompt #438 — timeline follows a gallery frame click; darker scroll thumb
+
+- `src/features/iteration-gallery/IterationGallery.tsx`: clicking a frame in the gallery (`open`) now bumps `navigationKey`, like the Playback switch already did.
+- `src/features/iteration-gallery/TheaterView.tsx`, `PlaybackTimeline.tsx`: the timeline receives `active` and runs its playhead-into-view smooth scroll once Playback is active, so the scroll animates after the gallery turn instead of finishing unseen.
+- `src/control-tokens.css`: derivation flipped. `--timeline-block-border` now comes from `--faint` (same value as before), and `--timeline-overview-thumb` is 60% of the block border into `--line-strong`, a darker gray than the border.
+- `docs/design-system-rules.md`: timeline rules updated.
+- Counter set to prompt #438 at the user's request (#437 left unused).
+
+## 2026-10-18 · prompt #442 · Balanced runtime spacing and frame shadow
+
+- `src/features/iteration-gallery/TheaterView.tsx`, `gallery.css`: replace runtime centering with a bottom position derived from the exit control, balancing the gaps above and below Exit. Preserve its token-action height and proportional frame fitting on short screens.
+- `tokens.ts`: add a broad, low-opacity light-gray shadow through the shared theater-frame shadow token, covering both playback images and running prototypes.
+- `docs/design-system-rules.md`: record the updated spacing rule and shared shadow. Browser annotation images were supplied inline without local source paths.
+- `scripts/screenshot-progress.mjs`: add `--gallery-view live` to capture the annotated runtime state without modifying the verbatim prompt log.
+- Validation: TypeScript passes. Browser checks at 1876×1333, 1440×1000 and 1440×813 confirm equal 130px gaps around Exit, preserved token-action alignment and proportional fitting; Live server and saved prototypes agree. Visually checked the diffuse shadow in ordinary Playback.
+
+## 2026-10-18 · prompt #441 · Runtime alignment and controls
+
+- `src/features/iteration-gallery/IterationGallery.tsx`, `gallery.css`: center runtime frames in the area below the header, with measured footer clearance. Remove hidden playback rows from layout, align Exit with the token-usage action's shared positioning, and prevent surround clicks from exiting saved prototypes.
+- `tokens.ts`, `gallery.css`: viewport-relative sky blur (40px at 1875px), 45%-white version-tag border and slightly wider control spacing. Shared rules updated. Annotation images supplied inline without local source paths.
+- `scripts/screenshot-progress.mjs`: support `--gallery-view prototype` to capture this state without altering the verbatim prompt log.
+- `TheaterView.tsx`: fit runtime frame width and height proportionally inside symmetric clearance above the exit row; avoid overlap in short viewports while preserving centering.
+- Validation: TypeScript passes; browser checks at 1876×1333 and 1440×1000 confirm centering, exact exit/token alignment, blur scaling, translucent border, surround-click persistence and explicit exit.
+
+## 2026-10-18 · prompt #440 · Centered, masked prototype version label
+
+- `src/features/iteration-gallery/TheaterView.tsx`, `gallery.css`: place the saved-prototype version tag between the triangles; slide the entire tag vertically inside a mask. Preserve the active animation during repeated selections while updating its text. Allow navigation during loading and resolve the most recently requested version; respect reduced motion.
+- `docs/design-system-rules.md`: record shared navigation/motion behavior. Requested #439 was saved by another concurrent chat during verification, so preserve that capture and use #440 for Chat + prototype. The annotation screenshot was supplied inline without a local source path.
+- Validation: TypeScript and both runtime-target tests pass. Browser checks confirm label order, identical running animation across rapid switches, fresh reveal after completion, reduced motion, latest target loading and absence of these controls in Live server.
+
+## 2026-10-18 · prompt #439 — gallery zoom kept across Playback; Gallery tab in server mode
+
+- `src/features/iteration-gallery/AlbumScene.ts`: the reverse turn restores the pose saved by the forward turn and skips `applyResetCamera`/`reset(true)` when one exists (Reset view stays the fallback). `focusFrame` now pans without folding zoom into span (`animateCamera` takes `destinationZoom`), so the zoom readout survives too.
+- `src/components/PanelViewSwitch.tsx`: the runtime `action` only replaces the Playback option; Gallery is no longer disabled in server mode.
+- `src/features/iteration-gallery/IterationGallery.tsx`: Gallery in server mode sends the runtime exit request and starts the return at the same time.
+- `src/features/iteration-gallery/TheaterView.tsx`: runtime exit requests are honored while Playback is inactive (turning back), and are a no-op without a runtime.
+- `docs/design-system-rules.md`: rules for both.
+- Not changed: the Playback tab already animated the gallery→Playback turn in every case tested (fresh load, immediately after load, after a round trip); waiting on reproduction steps.
+
+## 2026-10-18 · prompt #443 — lighter sky scrim
+
+- `src/features/iteration-gallery/tokens.ts`: `runtimeBackdrop.scrim` .32 → .2 (less darkening on the server-mode sky).
+- `docs/design-system-rules.md`: backdrop rule value updated.
+- Counter set to prompt #443 at the user's request (#442 left unused).
+
+## 2026-10-18 · prompt #445 · Frame-relative shadow and bounded prompt captions
+
+- `src/features/iteration-gallery/tokens.ts`, `gallery.css`: reduce shadow opacity from 16% to 9.6%; use 15cqw against the frame stage so blur scales with the displayed container instead of the viewport.
+- `TheaterView.tsx`, `gallery.css`: reserve a responsive caption height (14% of body height, up to 112px), independent of text length. Crop excess prompt text while preserving metadata rows and frame position.
+- `docs/design-system-rules.md`: record shared rules. Saved the provided screenshot in `visual_ref/` under prompt #445.
+- Validation: TypeScript passes. Browser checks at 1876×1333, 1440×900 and 1000×700 verify identical frame top/height for short versus very long captions, clipped overflow, 9.6% shadow opacity and blur exactly 15% of frame-container width.
+
+## 2026-10-18 · prompt #444 · Broader frame shadow and slightly clearer sky
+
+- `src/features/iteration-gallery/tokens.ts`: double the shared frame shadow blur to `clamp(96px, 10vw, 224px)`; reduce viewport-relative sky blur by 15%, from 40px to 34px at 1875px. Preserve shadow spread/opacity and the current sky scrim.
+- `docs/design-system-rules.md`: update shared blur specifications. Capture Chat + Playback as requested.
+
+## 2026-10-18 · prompt #446 · Quieter shadow and readable reference pills
+
+- `src/features/iteration-gallery/tokens.ts`: reduce shadow opacity 70% from 9.6% to 2.88%, and use the requested 20vw blur radius.
+- `src/control-tokens.css`, `src/features/iteration-gallery/gallery.css`: shared reference-pill fill, radius and ink tokens; Playback reference text/icons match prompt size and version-label ink, with stronger fill and rounded ends.
+- `docs/design-system-rules.md`: update shadow and reference-pill rules. Annotation screenshot supplied inline without a local path.
+- Validation: browser-computed chip text/icon sizes match the Playback summary typography token exactly, colors match the version tag, pill radius/fill and reference link are intact, and shadow blur/alpha resolve to 20vw and 2.88%. TypeScript passes.
+
+
+## 2026-10-18 · prompt #448 · 100% work-state hint
+
+- `src/features/workbench/WorkStateSimulator.tsx`: at 100%, the moment label says “Drag to simulate an earlier state of this project” instead of “Current workspace”. Dates and “Empty project” stay for earlier states.
+- `docs/design-system-rules.md`: record that shared label. Capture is home with the simulator, and the prompt’s “at 100%” sets the slider there.
+
+## 2026-10-18 · prompt #447 · Reference links and timeline grouping
+
+- `src/index.css`: remove reference-chip name underlines; darken shared dark chrome from #141414 to #101010.
+- `src/features/iteration-gallery/{timeline.ts,PlaybackTimeline.tsx,gallery.css,tokens.ts}`: derive contiguous disabled regions, render one shared outline using the regular block border, and remove obsolete individual disabled-border opacity. Preserve timeline interactions.
+- `tests/timeline.test.ts`: cover merged disabled groups, separated groups, empty, fully enabled and fully disabled sequences.
+- `docs/design-system-rules.md`: record shared rules; capture Chat + Playback as requested.
+- Validation: TypeScript and all 14 timeline tests pass. Browser checks confirm no underline, #101010 outer background with #181818 panels, and one correctly sized disabled-region border matching enabled blocks. Saved Chat + Playback capture #447.
+
+## 2026-10-18 · prompt #449 — per-theme accent palettes (light branch + light milestone gradient)
+
+- `src/shared/palette.ts`: `featurePalettes.dark` (existing values) and `featurePalettes.light` (≈12 points darker, +8% saturation). `featurePalette` now holds `var(--mw-*)` references; a generated stylesheet keys `--mw-*`, `--milestone-invite-<accent>` stops and `--milestone-invite-ink` to `data-theme` (light gradient = 72% accent over white with dark ink; dark unchanged).
+- `src/features/workbench/milestone-invite.ts`: gradient built from the per-theme stop variables.
+- `src/control-tokens.css`: removed the fixed `--milestone-invite-ink` (now per theme); `--milestone-control-ink/-border/-hover` derive from it, so the arrow and Not yet controls turn dark on the light gradient (dark mode unchanged).
+- `src/features/version-tree/tokens.ts`: `palerAccent` blends `var(--mw-*)` references with `color-mix`.
+- `src/features/annotations/appearance.ts`, `src/features/iteration-gallery/AlbumScene.ts`: bookmark colors resolve the reference before canvas/WebGL painting.
+- `src/design-system/SystemPage.tsx`: lists the real accent and gradient tokens (replacing nonexistent `--milestone-invite-a/b/c`).
+- `tests/palette.test.ts` (new), `tests/presentation.test.ts`: palette expectations (this also fixes the long-failing route-palette assertion).
+- `scripts/screenshot-progress.mjs`, `AGENTS.md`: `c light mode` capture cue.
+- `docs/design-system-rules.md`: per-theme palette rules.

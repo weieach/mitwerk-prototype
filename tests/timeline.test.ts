@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { galleryTokens as t } from '../src/features/iteration-gallery/tokens.ts';
-import { adjacentTimelineIndex, timelineScrollWindow, timelineWheelDelta, adjacentPushIndex, buildTimeline, fitTimeline, nearestTimelineFrame, timelineBranch, timelinePointerIndex, timelineRangeLabelAt } from '../src/features/iteration-gallery/timeline.ts';
+import { adjacentTimelineIndex, timelineScrollWindow, timelineWheelDelta, adjacentPushIndex, buildTimeline, fitTimeline, nearestTimelineFrame, timelineBranch, timelinePointerIndex, timelineRangeLabelAt, timelineDisabledRegions } from '../src/features/iteration-gallery/timeline.ts';
 
 test('version jumps target adjacent saved pushes, including the current version closing push', () => {
   const frames = ['prompt', 'push', 'prompt', 'prompt', 'push', 'prompt', 'push'].map(kind => ({ kind: kind as 'prompt' | 'push' }));
@@ -160,4 +160,24 @@ test('timeline wheel input maps vertical mouse scrolling and horizontal trackpad
   assert.equal(timelineWheelDelta(-80, 3, 0, 600), -80);
   assert.equal(timelineWheelDelta(2, -3, 1, 600), -48);
   assert.equal(timelineWheelDelta(0, 1, 2, 600), 600);
+});
+
+test('range recovery left-aligns the first enabled block, or shows the end when the range cannot fill the viewport', async () => {
+  const { timelineRangeScroll } = await import('../src/features/iteration-gallery/timeline.ts');
+  const versions = [{enabled:false,start:0},{enabled:true,start:.8},{enabled:true,start:.9}];
+  assert.deepEqual(timelineRangeScroll(versions,400,1000,980),{left:600});
+  assert.deepEqual(timelineRangeScroll([{enabled:true,start:.2}],400,1000,980),{left:196});
+  assert.deepEqual(timelineRangeScroll([{enabled:true,start:0}],400,1000,980),{left:0});
+  assert.deepEqual(timelineRangeScroll(versions,1000,1000,980),{left:0});
+  assert.equal(timelineRangeScroll([{enabled:false,start:0}],400,1000,980),null);
+  assert.equal(timelineRangeScroll([],400,1000,980),null);
+});
+
+
+test('disabled region outlines merge neighboring versions but never enclose enabled ones', () => {
+  const versions = [false, false, true, false, false].map((enabled, i) => ({ enabled, start: i * .2, end: i * .2 + .18 }));
+  assert.deepEqual(timelineDisabledRegions(versions), [{ start: 0, end: versions[1].end }, { start: versions[3].start, end: versions[4].end }]);
+  assert.deepEqual(timelineDisabledRegions([]), []);
+  assert.deepEqual(timelineDisabledRegions(versions.map(v => ({ ...v, enabled: true }))), []);
+  assert.deepEqual(timelineDisabledRegions(versions.map(v => ({ ...v, enabled: false }))), [{ start: 0, end: versions[4].end }]);
 });

@@ -9,20 +9,21 @@ const empty: PrototypeState = { available: null, loading: false, url: null, erro
 export function usePrototype(frame: GalleryFrame | undefined, active: boolean) {
   const number = frame?.kind === 'push' ? frame.number : null;
   const [state, setState] = useState<PrototypeState>(empty);
+  const [resolvedNumber, setResolvedNumber] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
   const request = useRef<AbortController | null>(null);
   useEffect(() => {
-    setState(empty); setOpen(false);
+    setState(empty); setOpen(false); setResolvedNumber(null);
     const abort = new AbortController();
     if (number !== null) void fetch(`/__mitwerk/prototypes/${number}`, { signal: abort.signal })
       .then(response => { if (!response.ok) throw new Error('Prototype service unavailable'); return response.json(); })
-      .then(result => { if (!abort.signal.aborted) setState({ ...empty, available: result.available === true }); })
-      .catch(() => { if (!abort.signal.aborted) setState({ ...empty, available: false }); });
+      .then(result => { if (!abort.signal.aborted) { setState({ ...empty, available: result.available === true }); setResolvedNumber(number); } })
+      .catch(() => { if (!abort.signal.aborted) { setState({ ...empty, available: false }); setResolvedNumber(number); } });
     return () => { abort.abort(); request.current?.abort(); request.current = null; };
   }, [number]);
   useEffect(() => { if (!active) setOpen(false); }, [active]);
   async function enter() {
-    if (number === null || !active || !state.available || state.loading) return;
+    if (number === null || resolvedNumber !== number || !active || !state.available || state.loading) return;
     if (state.url) { setOpen(true); return; }
     request.current?.abort();
     const controller = new AbortController(); request.current = controller;
@@ -40,5 +41,5 @@ export function usePrototype(frame: GalleryFrame | undefined, active: boolean) {
     } finally { window.clearTimeout(timeout); }
   }
   const exit = () => { request.current?.abort(); request.current = null; setOpen(false); setState(value => ({ ...value, loading: false })); };
-  return { ...state, open: open && active, enter, exit };
+  return { ...(resolvedNumber === number ? state : empty), open: open && active && resolvedNumber === number, enter, exit };
 }

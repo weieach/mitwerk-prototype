@@ -21,6 +21,14 @@ export function timelineScrollWindow(viewportWidth: number, contentWidth: number
   return { start: Math.max(0, Math.min(maxScroll, scrollLeft)) / width, size: Math.min(1, Math.max(0, viewportWidth) / width), maxScroll };
 }
 
+/** Keep the first playable block left-alignable even when the range ends near the track's end. */
+export function timelineRangeScroll(versions: { enabled: boolean; start: number }[], viewportWidth: number, contentWidth: number, trackWidth: number) {
+  const first = versions.find(version => version.enabled);
+  if (!first) return null;
+  // Never scroll past the end: a range too short to fill the viewport shows the timeline's end instead.
+  return { left: Math.min(first.start * trackWidth, Math.max(0, contentWidth - viewportWidth)) };
+}
+
 /** Share the available width between equal version slots and their push gutters. */
 export function fitTimeline(versionCount: number, availableWidth: number) {
   const slots = Math.max(1, versionCount);
@@ -74,6 +82,18 @@ export function timelineRangeLabelAt(versions: { enabled: boolean; start: number
   const enabled = versions.find(version => version.enabled);
   if (!disabled || !enabled) return null;
   return disabled.start < enabled.start ? enabled.start : disabled.start;
+}
+
+/** Outline each uninterrupted out-of-range region without enclosing playable blocks. */
+export function timelineDisabledRegions(versions: { enabled: boolean; start: number; end: number }[]) {
+  const regions: { start: number; end: number }[] = [];
+  let current: (typeof regions)[number] | undefined;
+  for (const version of versions) {
+    if (version.enabled) { current = undefined; continue; }
+    if (current) current.end = version.end;
+    else { current = { start: version.start, end: version.end }; regions.push(current); }
+  }
+  return regions;
 }
 
 export function nearestTimelineFrame(marks: { index: number; position: number }[], position: number) {

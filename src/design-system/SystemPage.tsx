@@ -11,7 +11,8 @@ const colorGroups: [string, [string, string][]][] = [
   ['Text', [['--ink', 'Primary'], ['--muted', 'Secondary'], ['--faint', 'Tertiary'], ['--accent', 'Accent'], ['--capture-detail-placeholder', 'Placeholder']]],
   ['Blue', [['--cursor-blue', 'Dark mode blue: active view text']]],
   ['Lines and strokes', [['--line', 'Hairline'], ['--line-strong', 'Divider'], ['--row-divider', 'Footer divider'], ['--panel-heading-divider', 'Title divider'], ['--panel-divider', 'Inside panels'], ['--popover-border', 'Popover outline'], ['--stroke-strong', 'Emphasis stroke'], ['--inline-field-line', 'Field underline']]],
-  ['Branches and milestone', [['--contrast', 'Main branch'], ['--milestone-invite-a', 'Milestone A'], ['--milestone-invite-b', 'Milestone B'], ['--milestone-invite-c', 'Milestone C'], ['--milestone-invite-ink', 'Milestone ink']]],
+  ['Branches and accents', [['--contrast', 'Main branch'], ['--mw-dock', 'Dock blue'], ['--mw-route', 'Route yellow'], ['--mw-assemble', 'Assemble green'], ['--mw-handoff', 'Handoff pink'], ['--mw-pulse', 'Pulse orange'], ['--mw-misregister', 'Misregister purple']]],
+  ['Milestone gradient', [['--milestone-invite-dock', 'Stop 1'], ['--milestone-invite-route', 'Stop 2'], ['--milestone-invite-assemble', 'Stop 3'], ['--milestone-invite-handoff', 'Stop 4'], ['--milestone-invite-pulse', 'Stop 5'], ['--milestone-invite-misregister', 'Stop 6'], ['--milestone-invite-ink', 'Milestone ink']]],
 ];
 const layoutTokens: [string, string][] = [
   ['--space-scale', 'Spacing scale'], ['--workspace-gutter', 'Panel to screen edge'], ['--workspace-edge', 'Panel to screen edge'], ['--workspace-panel-gap', 'Panel to panel'], ['--workspace-radius', 'Panel corner'],

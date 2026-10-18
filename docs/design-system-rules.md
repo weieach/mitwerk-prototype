@@ -119,7 +119,7 @@
 
 - The MitWerk logo menu offers **Open work state simulator** (Close when open). It opens a bottom sheet below the panels; the panels compress above it and the site header keeps its height.
 - The sheet is one full-height slider modeled on the iOS Control Center brightness control: ink fills from the left across the whole sheet, dragging anywhere moves the value by the distance travelled (a tap does not jump), and arrow/Home/End keys step it. Only the title, moment, percent and close float above the fill, in white with `mix-blend-mode: difference`; it shows no prompt or version counts and no ruler marks.
-- Leftmost is the empty project (no versions, prompts or chat); rightmost is the current workspace, the 100% benchmark. The first open of a session starts at 100% and warms the gallery images for evenly spaced work states (`workStateTokens.preload*`); the fill shows that loading progress and the slider stays locked until it finishes or times out.
+- Leftmost is the empty project (no versions, prompts or chat); rightmost is the current workspace, the 100% benchmark. At 100% the moment label reads “Drag to simulate an earlier state of this project”. Below 100% it names the simulated date, or “Empty project” at the start. The first open of a session starts at 100% and warms the gallery images for evenly spaced work states (`workStateTokens.preload*`); the fill shows that loading progress and the slider stays locked until it finishes or times out.
 - Closing the sheet does not reset to 100%: a state left below 100% stays applied to the panels (Fit all, All time and anchored growth included) and is kept in session storage, so reloads in the same tab and the next open resume it. Dragging back to 100% returns the workspace to its current state.
 - Every open panel derives from one chronological capture cutoff (`src/shared/work-state.ts`): Version blocks and Playback replay the first N captures, Commit history replays Git commits before the next excluded capture with branch tips rewound, and dated to-dos, frame annotations and task to-dos hide until their creation time. The simulated clock is the newest capture shown.
 - While dragging, panels take the slider value after it settles (`settleMs`, at most `maxWaitMs` apart) and apply immediately on release. Version blocks additionally waits up to `imageWaitMs` for the next state's sampled frames to decode before redrawing. Only the sheet follows the live value; panels subscribe to the applied state (`usePanelWorkState`) so pointer moves never re-render them.
@@ -138,6 +138,12 @@
 - Keep saved prototypes on their exact pushed commit. Live previews use current app code and do not persist preview changes into the host workspace. Loading and build failures stay inside the same pane with Exit always available.
 - Playback frame actions use the shared 24px horizontal gap token.
 - `c prototype embed` captures Chat alongside the embedded saved prototype, using the newest historical push before the live-server push.
+- Server mode backdrop (2026-10-18; extended to saved prototypes the same day): Live server and Enter prototype both replace the dark runtime surround with the sky backdrop (`src/assets/sky-bg.jpg`, a 1600px copy of the root `sky bg.jpeg`). It fills the Playback panel below its header, fades in and out with the runtime blur entrance/exit timings, and uses `galleryTokens.runtimeBackdrop` (40px blur, `rgb(0 0 0 / .2)` scrim). The covered playback details and footer fade to transparent instead of being scrimmed; the former dark runtime scrim is retired. `c live server` and `c prototype` capture these states beside Chat.
+- Server mode (Live server and saved prototypes, 2026-10-18): the runtime lays its app out at a desktop viewport (`galleryTokens.theater.runtimeViewportWidth`, 1440px, the capture width) and scales it uniformly down to the frame width, never up, so layouts are not reflowed into a cramped viewport. A click anywhere in the Playback surround outside the frame, the exit action and the panel header exits, exactly like the exit action. The exit action is plain white text and icon, with no fill or border.
+- Playback timeline (2026-10-18): enabled version block borders use `--timeline-block-border`, a 75% mix of `--faint` into `--line-strong`; disabled borders derive from it. The scroller thumb (`--timeline-overview-thumb`) is a darker gray: 60% of the block border into `--line-strong`. Prompt ruler ticks use `--timeline-ruler`, a 45% mix of the block border into `--line-strong`. Hovering or focusing the push gap between blocks fills it with `--timeline-push-hover`; the timeline passes it through `--timeline-push-hover-background` (a custom property must never reference itself).
+- Opening Playback from the gallery (a frame click, the Playback switch or a frame request) counts as navigation: once Playback is active, the timeline smooth-scrolls just enough to bring the playhead inside its viewport. The scroll waits for the gallery turn to finish, so it is visible (2026-10-18).
+- Returning from Playback to the gallery lands on the camera the person left the gallery with, including its zoom scale and readout; never auto fit-all. The Playback switch's frame focus pans without changing zoom. Only a Playback opened without a gallery pose (e.g. a direct capture or link) returns to Reset view (2026-10-18).
+- In server mode (Live server or a saved prototype) the Gallery tab stays enabled. Choosing it closes the runtime and turns back to the gallery at the same time; the Playback tab keeps acting as "Return to Playback" (2026-10-18).
 
 This file is reserved for project-wide design-system rules requested by the user. Update it whenever a request changes a shared rule. Implement values as shared tokens and behavior as reusable graph-derived logic, never as exceptions for particular node IDs, version labels, or screenshots.
 
@@ -1655,7 +1661,7 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Brighter accents and content-safe invitations — 2026-10-18
 
-- Non-blue feature and route accents share `src/shared/palette.ts`: Assemble green #25D895, Route yellow #FFD65A, Handoff pink #FF89CF, Pulse orange #FF9558 and Misregister purple #B39AFF. Keep both existing blues unchanged. Navigation, panels, graph routes and invitation gradients derive from this palette.
+- Non-blue feature and route accents share `src/shared/palette.ts`: Assemble green #25D895, Route yellow #FFD65A, Handoff pink #FF89CF, Pulse orange #FF9558 and Misregister purple #B39AFF. Keep both existing blues unchanged. Navigation, panels, graph routes and invitation gradients derive from this palette. Superseded 2026-10-18 by the per-theme palettes below; these values are now the dark-mode set.
 - Raise the horizontal conversation-card threshold to `max(640px, 650 / 1876 × viewport width)`. The 640px floor reserves readable copy beside the cover and physical buttons on smaller screens. Restore normal invitation line spacing; this supersedes the earlier 550px ratio and compressed leading.
 - Default stacked cards size their bottom band to the label plus 16px padding above and below. Animate the resulting card-height change over 280ms when entering/leaving invitation mode; skip motion for reduced-motion preferences and while dragging the Chat divider.
 - Start invitation timing only after the cover image has decoded. Mount the falling controls after the height transition settles, and reveal them only after their initial masked transforms are applied. Image failure leaves the ordinary card available.
@@ -1681,3 +1687,45 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Idea stream checkbox stations use 80% of the ordinary station diameter, derived through `ideaTheme.todoStationScale`. Keep their shared light border width, dark clearance outline and graph-centered alignment. Fit the completed check to the reduced inner area. This supersedes matching checkbox and circular station widths.
 - Playback's existing timeline overview thumb uses the shared `--muted` gray instead of white. Reuse the current scroller and its overflow visibility, geometry and interactions; do not introduce another control or gray palette value.
+
+## Recovering the visible playback range — 2026-10-18
+
+- The existing “Outside range” hint is an actionable button. Clicking it (or the disabled timeline region while its hint is visible) scrolls the first enabled version block to the viewport's leading inset without selecting a frame or moving the playhead. Derive the target from the filtered timeline's first enabled block, not a version number. When the in-range blocks cannot fill the viewport from there, scroll only to the timeline's end instead; never add trailing space to force the left alignment (2026-10-18).
+- For overflowing timelines, reserve only the trailing space needed to make that alignment possible when the selected range is shorter than the viewport. Keep version slot widths and the existing scroller; timelines whose blocks fit still hide the scroller. Clear the hint on recovery/scroll, and honor reduced motion for scrolling.
+- The existing overview thumb now uses `--faint` (dark theme #646464), superseding `--muted`. Do not add another neutral color or scroller.
+
+## Runtime frame sizing and saved-version navigation — 2026-10-18
+
+- In Live server and saved-prototype modes, remove hidden playback actions and metadata from the stage's normal flow so its height fits the prototype frame. Keep ordinary Playback layout unchanged.
+- Saved prototypes display their version tag and previous/next filled triangle buttons in white, floating immediately above the frame's top-right corner. Live server omits this group. Keep controls outside the iframe and exempt from click-outside exit.
+- Derive adjacent saved versions from the complete runtime capture catalog: use push snapshots only, order by version, deduplicate each version to its latest push, and disable navigation at either end. Switching stays in prototype mode, loads the target codebase through the existing service, and updates the playback selection; unavailable archives show the existing error treatment rather than silently opening Live server.
+- `c chat and prototype` (also `c chat & prototype`) captures Chat beside the running saved prototype.
+- Saved-prototype navigation places the bordered version label between its triangles. On selection, reveal the whole tag vertically through a clipped mask using the shared theater expansion duration. Further selections update the text without restarting an active reveal; subsequent selections after completion start a new reveal. Honor reduced motion. Navigation follows the latest requested version even while an older archive is loading.
+- Runtime frames center within the full panel area below its header, including the hidden footer area. Measure the footer instead of assuming its height; hidden playback rows reserve no runtime layout space. Anchor runtime exit actions to the same inset, lift and control height as the gallery's token-usage action.
+- In short runtime panels, reserve symmetric space around the frame center from the measured exit-action row and shared control gap; shrink both frame dimensions proportionally so the exit action never overlaps the prototype.
+- Sky blur scales with viewport width (34px at 1875px, expressed in vw; reduced 15% on 2026-10-18). Saved prototypes require the explicit exit action; surround clicks do not dismiss them. Live server keeps its existing surround-click behavior.
+- Prototype version controls use 1.5 row-spacing units between items and the shared 45%-white runtime border on the version tag; text and triangles remain white.
+
+## Balanced runtime exit spacing and diffuse frame shadows — 2026-10-18
+
+- Runtime frames are bottom-aligned above the exit control so the frame-to-button gap equals the button-to-panel-bottom gap. Derive the frame bottom from twice the exit control's center-to-bottom distance, retaining the existing exit/token alignment. This supersedes full vertical centering. Fit the frame proportionally with two control-inset units of top clearance on short panels.
+- All theater frame containers share a broad light-gray shadow: blur is `20vw`, with 8px spread and 2.88% of the existing light neutral palette color. This supersedes frame-relative blur and reduces the prior 9.6% opacity by 70%. Saved images and runtime frames use the same treatment.
+- Playback reserves a caption area of 14% of the available body height, capped at 112px, independently of prompt length. The version/date and supplementary rows retain their space; the prompt shrinks and clips inside the remainder. Long or tightly wrapped prompts cannot increase the reserved area and move the frame upward. Preserve the full prompt in the data/DOM.
+
+## Playback reference pills — 2026-10-18
+
+- Playback reference-chip text inherits the prompt's font size; icons are 1em. Both use the version label's shared ink color. Use a fully rounded pill with 8px horizontal padding and the shared reference fill token (14% ink mixed with paper), retaining filename truncation and link behavior.
+
+
+## Reference links, grouped timeline outlines and darker chrome — 2026-10-18
+
+- Reference-chip names are never underlined, including linked names; preserve links, truncation and keyboard focus.
+- Playback outlines each contiguous out-of-range region once with the same `--timeline-block-border` color and 1px width as enabled blocks. Suppress individual disabled block outlines, retain ticks/progress and push gutters, and derive bounds from the timeline model so enabled blocks are never enclosed by an out-of-range group.
+- Dark-theme site chrome uses #101010 through `--chrome`, darkening the outer background and shared chrome surfaces while panel surfaces retain `--paper`.
+
+## Per-theme accent palettes — 2026-10-18
+
+- Feature and route accents (`src/shared/palette.ts`) have one palette per theme, keyed by `data-theme` through `--mw-dock`, `--mw-route`, `--mw-assemble`, `--mw-handoff`, `--mw-pulse` and `--mw-misregister`. Dark keeps #7A9EF7, #FFD65A, #25D895, #FF89CF, #FF9558, #B39AFF. Light is the same hues about 12 points darker and 8% more saturated: #3870FC, #FFC71D, #14AB73, #FF4CB6, #FF6E1B, #855DFF.
+- Branch colors, statuses, feature tags and every other accent use read the theme-following `var(--mw-*)` references (`treeTheme.routes`, `featurePalette`). Canvases and WebGL resolve them with `resolveColor` before painting; merged-branch paling of a reference blends in CSS (`color-mix(..., white 45%)`).
+- The version card's flowing milestone gradient is a second variant per theme, exposed as `--milestone-invite-<accent>` stops plus `--milestone-invite-ink`. Dark keeps the accents at 64% over black with white ink. Light is lighter: the light accents at 72% over white, with dark ink (#191a1b) for contrast. The card's arrow and Not yet controls derive their ink, border (70%) and hover fill (10%) from `--milestone-invite-ink`.
+- `c light mode` captures a frame in the light theme, mirroring `c dark mode`.

@@ -70,7 +70,7 @@ export function WorkStateSimulator({ frames }: { frames: Capture[] }) {
 
   const percent = Math.round(work.progress * 100);
   const latest = simulated.captures.length ? Math.max(...simulated.captures.map(frame => frame.timestamp)) : null;
-  const moment = work.loading ? `Loading frames ${warmed.done}/${warmed.total}` : work.progress >= 1 ? 'Current workspace' : latest === null ? 'Empty project' : `As of ${formatFrameDate(latest)}`;
+  const moment = work.loading ? `Loading frames ${warmed.done}/${warmed.total}` : work.progress >= 1 ? 'Drag to simulate an earlier state of this project' : latest === null ? 'Empty project' : `As of ${formatFrameDate(latest)}`;
   const fill = work.loading ? (warmed.total ? warmed.done / warmed.total : 0) : work.progress;
   return <section className="work-state-simulator" data-open={work.open || undefined} data-loading={work.loading || undefined} inert={!work.open} aria-hidden={!work.open} aria-labelledby={`${id}-title`}>
     <div className="work-state-reveal"><div className="work-state-sheet">

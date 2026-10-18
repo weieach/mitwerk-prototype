@@ -64,7 +64,7 @@
   background: #181818;
   --cursor-base: #e4e4e4;
   --cursor-blue: #499cff;
-  --chrome: #141414;
+  --chrome: #101010;
   --ink: #d4d4d4;
   --muted: #888;
   --faint: #646464;
@@ -185,7 +185,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .reference-files { margin-top: 12px; min-height: 23px; display: flex; align-items: center; gap: 4px; overflow: hidden; width: 100%; }
 .file-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 5px; border: 1px solid var(--line); background: var(--fill); border-radius: 3px; color: var(--muted); font: 9px var(--mono); flex: 1 1 0; min-width: 0; overflow: hidden; }
 .file-chip .ui-icon { flex-shrink: 0; }
-.file-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.file-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; text-decoration: none; }
 .empty-reference { color: var(--faint); font-size: 10px; }
 .project-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 20; background: var(--ink); color: var(--paper); border-radius: 4px; padding: 8px 12px; font-size: 12px; }
 .version-stats { display: flex; align-items: center; gap: 9px; margin-top: 11px; color: var(--muted); font-size: 11px; }

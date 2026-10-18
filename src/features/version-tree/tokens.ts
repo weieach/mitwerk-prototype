@@ -146,7 +146,8 @@ export function palerAccent(color: string) {
     return `#${[0, 2, 4].map(index => blend(channel(index)).toString(16).padStart(2, '0')).join('')}`;
   }
   const hsl = /^hsl\((\d+(?:\.\d+)?) ([\d.]+)% ([\d.]+)%\)$/.exec(color);
-  if (!hsl) return color;
+  // Theme-following palette references blend in CSS, which matches the hex math above.
+  if (!hsl) return color.startsWith('var(--mw-') ? `color-mix(in srgb, ${color}, white ${Math.round(mix * 100)}%)` : color;
   const lightness = Number(hsl[3]) + (100 - Number(hsl[3])) * mix;
   return `hsl(${hsl[1]} ${hsl[2]}% ${lightness}%)`;
 }

@@ -12,6 +12,10 @@
   --font-code:"SF Mono", SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
   --playback-end-gap:clamp(14px, 2cqw, 32px);
   --text-action-icon-gap:6px;
+  --reference-chip-fill:color-mix(in srgb, var(--ink) 14%, var(--paper));
+  --reference-chip-radius:999px;
+  --reference-chip-ink:var(--ink);
+  --reference-chip-font-size:var(--type-playback-summary-size, var(--control-font-size));
   --workspace-links-gap:6px;
   --work-state-readout-size:12px;
   --work-state-title-motion:240ms;
@@ -21,11 +25,13 @@
   --runtime-panel-duration:320ms;
   --runtime-panel-easing:cubic-bezier(.22,.61,.36,1);
   --timeline-overview-track:#000;
-  --timeline-overview-thumb:var(--muted);
+  --timeline-overview-thumb:color-mix(in srgb, var(--timeline-block-border) 60%, var(--line-strong));
+  /* Playback timeline: block borders lead; the scroller thumb is a darker gray than them, and prompt ruler ticks sit between the border and the base line. */
+  --timeline-block-border:color-mix(in srgb, var(--faint) 75%, var(--line-strong));
+  --timeline-ruler:color-mix(in srgb, var(--timeline-block-border) 45%, var(--line-strong));
   --timeline-range-hint-width:170px;
   --reader-title-gap:10px;
   --milestone-invite-color-strength:64%;
-  --milestone-invite-ink:#fff;
   --milestone-invite-flow:10s;
   --composer-controls-gap:4px;
   --sidebar-item-icon-size: 14px;
@@ -486,7 +492,7 @@
 
 :root { --drawer-heading-padding-top:14px; --drawer-heading-padding-bottom:8px; --drawer-content-top-padding:4px; --drawer-row-height:24px; --drawer-row-gap:6px; --drawer-row-inline-gap:12px; --drawer-check-gap:10px; --drawer-content-bottom-padding:16px; --capture-detail-line:color-mix(in srgb,var(--ink) 65%,transparent); --capture-detail-line-active:color-mix(in srgb,var(--ink) 85%,transparent); }
 
-:root { --milestone-control-extra-padding:clamp(3px, calc(100vw * 4 / 1876), 4.5px); --milestone-control-base-size:clamp(46px, calc(100vw * 64.8 / 1876), 73px); --milestone-arrow-size:clamp(20px, calc(100vw * 28 / 1876), 32px); --milestone-ball-size:calc(var(--milestone-control-base-size) + 2 * var(--milestone-control-extra-padding)); --milestone-pill-width:var(--milestone-ball-size); --milestone-pill-height:calc(var(--milestone-control-base-size) * .37 + 2 * var(--milestone-control-extra-padding)); --milestone-chip-fill:color-mix(in srgb,var(--ink) 16%,var(--paper)); --milestone-chip-border:color-mix(in srgb,var(--ink) 55%,transparent); --milestone-control-fill:transparent; --milestone-control-hover:rgb(255 255 255 / 10%); --milestone-control-ink:#fff; --milestone-control-border:rgb(255 255 255 / 70%); }
+:root { --milestone-control-extra-padding:clamp(3px, calc(100vw * 4 / 1876), 4.5px); --milestone-control-base-size:clamp(46px, calc(100vw * 64.8 / 1876), 73px); --milestone-arrow-size:clamp(20px, calc(100vw * 28 / 1876), 32px); --milestone-ball-size:calc(var(--milestone-control-base-size) + 2 * var(--milestone-control-extra-padding)); --milestone-pill-width:var(--milestone-ball-size); --milestone-pill-height:calc(var(--milestone-control-base-size) * .37 + 2 * var(--milestone-control-extra-padding)); --milestone-chip-fill:color-mix(in srgb,var(--ink) 16%,var(--paper)); --milestone-chip-border:color-mix(in srgb,var(--ink) 55%,transparent); --milestone-control-fill:transparent; --milestone-control-hover:color-mix(in srgb, var(--milestone-invite-ink) 10%, transparent); --milestone-control-ink:var(--milestone-invite-ink); --milestone-control-border:color-mix(in srgb, var(--milestone-invite-ink) 70%, transparent); }
 
 :root[data-small-workspace=true] { font-size:15px; }
 :root { --milestone-edit-border:color-mix(in srgb,var(--ink) 24%,var(--paper)); }

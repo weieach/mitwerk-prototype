@@ -489,6 +489,10 @@ function wantsHomeCapture(prompt = '') {
   return argValue('gallery-view') === 'home' || /\bc (?:home|homescreen|slider|milestone overlay|chat (?:and|&) gallery)\b/i.test(prompt);
 }
 
+function wantsLightCapture(prompt = '') {
+  return /\bc(?:\s+(?:home|homescreen|chat|gallery|theater|token|todos|to-dos))?\s+(?:w\/?\s+)?light mode\b/i.test(prompt);
+}
+
 function wantsDarkCapture(prompt = '') {
   return /\bc(?:\s+(?:home|homescreen|chat|gallery|theater|token|todos|to-dos))?\s+(?:w\/?\s+)?dark mode\b/i.test(prompt);
 }
@@ -547,21 +551,22 @@ function wantsGalleryHover(prompt = '') {
   return argValue('gallery-view') === 'top' || hasFlag('gallery-hover') || (/\bhover(?:ing|ed)?\b/i.test(prompt) && !wantsResetCapture(prompt));
 }
 
-function wantsPrototypeCapture(prompt) { return /\bc prototype embed\b|\bc playback\b[^.\n]*\bprototype\b/i.test(prompt); }
+function wantsPrototypeCapture(prompt) { return argValue('gallery-view') === 'prototype' || /\bc prototype(?: embed)?\b|\bc chat (?:and|&) prototype\b|\bc playback\b[^.\n]*\bprototype\b/i.test(prompt); }
 
-function wantsLiveCapture(prompt) { return /\bc chat (?:and|&) playback\b[^.\n]*\blive server\b/i.test(prompt); }
+function wantsLiveCapture(prompt) { return argValue('gallery-view') === 'live' || /\bc live server\b|\bc chat (?:and|&) playback\b[^.\n]*\blive server\b/i.test(prompt); }
 
 function screenshotUrl(prompt = '') {
   const target = new URL(url);
   target.searchParams.set('screenshot', '1');
   const workState = workStateCapture(prompt);
   if (workState) target.searchParams.set('workState', workState);
-  if (wantsLandingCapture(prompt)) { target.search = '?screenshot=1&page=landing'; if (wantsDarkCapture(prompt)) target.searchParams.set('theme', 'dark'); return target.href; }
+  if (wantsLandingCapture(prompt)) { target.search = '?screenshot=1&page=landing'; if (wantsDarkCapture(prompt)) target.searchParams.set('theme', 'dark'); else if (wantsLightCapture(prompt)) target.searchParams.set('theme', 'light'); return target.href; }
   if (/\bc (?:home|homescreen)\b[^.\n]*milestone[^.\n]*zoomed in/i.test(prompt)) { target.searchParams.set('treeMilestone', 'latest'); target.searchParams.set('treeZoom', '1'); }
   if (hasFlag('tree-fit') || /fit all view/i.test(prompt)) target.searchParams.set('treeFit', '1');
   if (/\bc (?:home|homescreen)\b[^.\n]*todo added to chat field/i.test(prompt)) target.searchParams.set('todoDraft', '1');
   if (hasFlag('todo-drawer') || /\bc (?:home|homescreen|chat)\b[\s\S]*\btodo drawer\b/i.test(prompt)) target.searchParams.set('todoDrawer', 'open');
   if (wantsDarkCapture(prompt)) target.searchParams.set('theme', 'dark');
+  else if (wantsLightCapture(prompt)) target.searchParams.set('theme', 'light');
   // Capture the complete prototype shell, retaining gallery state parameters.
   target.searchParams.delete('view');
   target.searchParams.set('treeMode', argValue('tree-mode', 'history'));

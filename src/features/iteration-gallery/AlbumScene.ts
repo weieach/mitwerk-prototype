@@ -212,10 +212,13 @@ export class AlbumScene {
     if (moving) this.invalidate();
   };
   turnToTheater(id: string, target: TheaterTarget, complete: () => void, freezeAt?: number, reverse = false, started?: () => void) {
+    // Returning to the gallery lands on the camera the person left it with (same zoom scale).
+    // Only a Playback opened without an album pose (e.g. a direct capture) falls back to Reset view.
+    const keepCamera = reverse && !!this.restoreAlbum;
     if (reverse) {
       this.restoreAlbum?.();
       this.theaterTurn = null;
-      this.applyResetCamera();
+      if (!keepCamera) this.applyResetCamera();
     }
     const selected = this.frames.get(id);
     if (!selected) { complete(); return; }
@@ -287,7 +290,9 @@ export class AlbumScene {
       if (finished && ready) {
         if (reverse) {
           restore(); this.restoreAlbum = null; this.theaterTurn = null;
-          this.reset(true); this.controls.enabled = true;
+          if (keepCamera) { this.inspect(null); this.resize(); this.callbacks.zoom(this.camera.zoom); }
+          else this.reset(true);
+          this.controls.enabled = true;
           delete this.host.dataset.transitionProgress;
           this.invalidate();
         } else this.theaterTurn = () => {};
@@ -461,7 +466,7 @@ export class AlbumScene {
       const frame = this.frames.get(id);
       if (!frame || frame.plane.frame.kind === 'push') continue;
       const { plane, group } = frame;
-      const color = annotationBookmarkColor(plane.frame.branch, branches);
+      const color = annotationBookmarkColor(plane.frame.branch, branches, resolveColor);
       let map: THREE.CanvasTexture | null = null;
       if (count > 1) {
         const canvas = document.createElement('canvas');
@@ -620,10 +625,11 @@ export class AlbumScene {
     const offset = this.camera.position.clone().sub(this.controls.target);
     this.framing = 'center';
     this.pin(id);
-    this.animateCamera(center, center.clone().add(offset), this.span / this.camera.zoom, () => {
+    // Pan only: keep the person's zoom scale (and its readout) through Playback and back.
+    this.animateCamera(center, center.clone().add(offset), this.span, () => {
       this.inspect(id);
       complete();
-    });
+    }, this.camera.zoom);
   }
   /** Center all active blocks, with chronological depth running toward screen right. */
   top() {
@@ -643,7 +649,7 @@ export class AlbumScene {
     this.animateCamera(center, center.clone().addScaledVector(direction, vertical * 2), vertical * Math.min(1, aspect), () => this.inspect(inspected));
   }
 
-  private animateCamera(center: THREE.Vector3, position: THREE.Vector3, destinationSpan: number, complete = () => {}) {
+  private animateCamera(center: THREE.Vector3, position: THREE.Vector3, destinationSpan: number, complete = () => {}, destinationZoom = 1) {
     const origin = this.controls.target.clone();
     const fromOffset = this.camera.position.clone().sub(origin), toOffset = position.clone().sub(center);
     const span = this.span, zoom = this.camera.zoom;
@@ -655,7 +661,7 @@ export class AlbumScene {
       this.controls.target.copy(origin).lerp(center, eased);
       this.camera.position.copy(this.controls.target).add(interpolateOrbit(fromOffset, toOffset, eased));
       this.span = THREE.MathUtils.lerp(span, destinationSpan, eased);
-      this.camera.zoom = THREE.MathUtils.lerp(zoom, 1, eased);
+      this.camera.zoom = THREE.MathUtils.lerp(zoom, destinationZoom, eased);
       this.controls.update(); this.resize();
       if (finished) { this.topMotion = null; this.controls.enabled = true; this.callbacks.zoom(this.camera.zoom); complete(); }
       return !finished;

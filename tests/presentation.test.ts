@@ -397,7 +397,7 @@ test('connectors are slimmer than stations and cards clear both routing levels',
   assert.ok(geometry.gridRise * geometry.branchRouteRows - strokeRadius > geometry.horizontalCardOffsetY + geometry.cardHeight);
   assert.ok(geometry.rowGap + geometry.cardOffsetY > geometry.gridRise * geometry.branchRouteRows + strokeRadius);
   assert.ok(treeTheme.endpointTriangleGap > 0);
-  assert.deepEqual(treeTheme.routes, ['#7A9EF7', '#FFC629', '#00A66A', '#EA66B7', '#ED6A2C', '#9A85F0']);
+  assert.deepEqual(treeTheme.routes, ['var(--mw-dock)', 'var(--mw-route)', 'var(--mw-assemble)', 'var(--mw-handoff)', 'var(--mw-pulse)', 'var(--mw-misregister)']);
   assert.equal(treeTheme.activeBranchColor, 'var(--contrast)');
   assert.equal(stationLabelOffset().x, -(treeTheme.stationRadius + treeTheme.versionLabelGap));
   assert.equal(stationLabelOffset().y, 0);

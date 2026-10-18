@@ -1,6 +1,8 @@
 import { captureScreens } from '../../shared/capture-screens.ts';
 export const galleryTokens = {
   annotations: { exitMs: 180, blur: 12, blurMs: 220, frameDelayMs: 220, uiDelayMs: 320, enterMs: 180, mainColor: '#cdcdcd', messageStaggerMs: 110, messageEnterMs: 280, hoverLift: 10, bookmarkWidth: 22, bookmarkHeight: 18, bookmarkTextureSize: 128, bookmarkInset: 10 },
+  // Server-mode surround (Live server and saved prototypes): a heavily blurred sky under a light scrim.
+  runtimeBackdrop: { blur: `${34 / 1875 * 100}vw`, scrim: 'rgb(0 0 0 / .2)' },
   theaterMotion: { rotateMs: 1100, verticalAxisFadeMs: 180, frameBorderMs: 180, controlsFadeMs: 280, captureProgress: .5, timelineMs: 320, timelineOffsetVh: 5 },
   theaterDrag: { radiansPerViewport: Math.PI, pitchLimit: Math.PI * .45 },
   controls: { headerGap: 14, tokenLift: 48, floatingBackground: 'var(--paper)', floatingWidth: 144, floatingPaddingInline: 16, floatingPaddingBlock: 6, labelOpacity: .6, frameSelectorShare: .3, fileMaxWidth: 240, frameSelectMaxWidth: 200, inset: 24, gap: 8 },
@@ -26,11 +28,12 @@ export const galleryTokens = {
   disabledOpacity: 0.14, endpointOpacity: 0.72, refreshMs: 30_000,
   zoomMin: 0.5, zoomMax: 3, zoomStep: 0.25,
   playbackIntervalMs: 350, speeds: [0.5, 1, 2, 4],
-  timeline: { seekDurationMs: 450, height: 34, playheadOverhang: 5, playheadWidth: 2, minorTickHeight: 16, majorTickHeight: 22, inlinePadding: 6, disabledOpacity: .5, disabledBorderOpacity: .28, previewOpacity: .45, gapScale: .5, rangeLabelGap: 6, pushBackground: 'var(--paper)', pushHoverBackground: 'var(--timeline-push-hover)', pushMinWidth: 2.5, edgePadding: 2, maxGapFraction: .5, visibleBlocks: 20, tooltipSpace: 28 },
+  timeline: { seekDurationMs: 450, height: 34, playheadOverhang: 5, playheadWidth: 2, minorTickHeight: 16, majorTickHeight: 22, inlinePadding: 6, disabledOpacity: .5, previewOpacity: .45, gapScale: .5, rangeLabelGap: 6, pushBackground: 'var(--paper)', pushHoverBackground: 'var(--timeline-push-hover)', pushMinWidth: 2.5, edgePadding: 2, maxGapFraction: .5, visibleBlocks: 20, tooltipSpace: 28 },
   fullscreen: { scrim: 'rgba(0, 0, 0, .8)', gutter: 48, closeGap: 8, closeSize: 28 },
   theaterReference: { kind: 'prompt', number: 56 } as const,
   capturePushVersion: 16,
-  theater: { prototypeTimeoutMs: 60000, focusBackground: 'var(--paper)', frameShadow: 'none', frameBed: 'var(--fill)', metadataHeight: 112, metadataGap: 28, metadataHeightMaxVh: 20, metadataRowGap: 4, referenceChipWidth: 180, summaryGapScale: 1.75, playbackFooterGap: 4, playbackEnabled: 'var(--ink)', playbackDisabled: 'var(--faint)', actionGap: 0, actionButtonsGap: 24, enterDelayMs: 1000, enterExpandMs: 280, enterFadeMs: 180, imageCacheSize: 8, preloadFrames: 3, wheelStep: 80, addedColor: '#1f8a4c', removedColor: '#d12b2b' },
+  // Runtime previews render at this desktop width (the capture viewport) and scale down to fit the frame, never up.
+  theater: { runtimeViewportWidth: 1440, prototypeTimeoutMs: 60000, focusBackground: 'var(--paper)', frameShadow: '0 0 20vw 8px color-mix(in srgb, var(--cursor-base, var(--line-strong)) 2.88%, transparent)', frameBed: 'var(--fill)', metadataHeight: 112, metadataHeightShare: .14, metadataGap: 28, metadataHeightMaxVh: 20, metadataRowGap: 4, referenceChipWidth: 180, summaryGapScale: 1.75, playbackFooterGap: 4, playbackEnabled: 'var(--ink)', playbackDisabled: 'var(--faint)', actionGap: 0, actionButtonsGap: 24, enterDelayMs: 1000, enterExpandMs: 280, enterFadeMs: 180, imageCacheSize: 8, preloadFrames: 3, wheelStep: 80, addedColor: '#1f8a4c', removedColor: '#d12b2b' },
   viewportPresets: [
     { value: 'original', label: 'Original size', width: 0, height: 0 },
     { value: 'desktop', label: 'Desktop', width: 1440, height: 900 },
