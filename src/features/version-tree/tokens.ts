@@ -18,7 +18,7 @@ export const ideaTheme = {
   milestonePaddingInline: 14,
 };
 
-/** Shared system tokens. Connector width is one isometric grid-triangle side. */
+/** Shared system tokens. Connectors are slimmer than their stations so stations read as beads on a line. */
 const stationDiameter = 28;
 const stationBorderWidth = 5;
 const stationInnerDiameter = stationDiameter - stationBorderWidth * 2;
@@ -33,7 +33,7 @@ export const treeTheme = {
   stationDiameter,
   stationRadius: stationDiameter / 2,
   stationInnerDiameter,
-  routeWidth: geometry.gridTriangleSide,
+  routeWidth: 12,
   routeClearance: 3,
   routeStripeWidth: 2,
   routeStripeOpacity: 0.25,

@@ -662,3 +662,42 @@
 /* Panel footers: one fixed text size and one icon size; dropdown carets keep their own size. */
 .workspace :is(.gallery-footer, .canvas-controls) { --control-font-size:var(--panel-footer-font-size); --control-icon-size:var(--panel-footer-icon-size); --zoom-icon-size:var(--panel-footer-icon-size); }
 .workspace :is(.gallery-footer, .canvas-controls) .ui-icon:not([class*=ph-caret]) { --icon-size:var(--panel-footer-icon-size); width:var(--panel-footer-icon-size); height:var(--panel-footer-icon-size); font-size:var(--panel-footer-icon-size); }
+
+/* Ported from design-system: chat keeps a fixed width beside other panels, never more than 30% of the screen; the other panels share the rest.
+   With a fixed chat width there is nothing to drag, so the reader resize handle is hidden. Chat alone still fills the body. */
+:root { --chat-panel-width:min(440px, 30vw); }
+@media (min-width:851px) {
+  .mw-app .mw-body:is(.mw-split-view, .has-extra-panels) > .mw-surface:not([hidden]) { flex:0 0 var(--chat-panel-width); width:var(--chat-panel-width); }
+  .mw-app .mw-body:is(.mw-split-view, .has-extra-panels) > .mw-reader { flex:1 1 0; }
+  .mw-app .mw-body > .reader-divider { display:none; }
+}
+
+/* Ported from design-system: chat text follows the panel title's text inset at every width; no centered max-width column. */
+.mw-app .conversation-inner { max-width:none; padding-inline:var(--panel-title-text-inset); }
+
+/* Ported from design-system: light mode hierarchy is inverted from a white page. Panels sit on a soft gray and only what you act on
+   is lighter: the message box and in-chat version/milestone cards are white, your own sent messages a low-contrast near-white. */
+:root[data-theme=light] {
+  --paper:#f5f5f3;
+  --canvas-bg:#f5f5f3;
+  --workspace-background:#e2e2df;
+  --fill:#e7e7e4;
+  --fill-hover:#dddcd9;
+  --user-message-fill:#fafaf9;
+  --composer-surface:#fff;
+  --composer-drawer-surface:#e7e7e4;
+  --composer-drawer-hover:#dfdfdc;
+  --message-version-fill:#fff;
+  /* Title dividers follow the workspace tone instead of black. */
+  --panel-heading-divider:var(--workspace-background);
+}
+
+/* Ported from design-system: narrow reader panels never clip their footer. Below 620px of panel width the gallery footer wraps into two rows:
+   the frame picker on the first, time range and zoom on the second, with the range shrinking first. Controls still fill their row. */
+.workspace .iteration-gallery { container-type:inline-size; }
+@container (max-width: 620px) {
+  .workspace .gallery-footer { flex-wrap:wrap; flex:0 0 auto; height:auto; min-height:var(--panel-footer-height); row-gap:0; }
+  .workspace .gallery-footer > .tracked-interface { flex:1 1 100%; max-width:none; min-height:var(--panel-footer-height); }
+  .workspace .gallery-footer > .panel-header-actions { flex:1 1 100%; min-width:0; min-height:var(--panel-footer-height); justify-content:flex-end; border-top:1px solid var(--row-divider, var(--line)); }
+  .workspace .gallery-footer .gallery-range, .workspace .gallery-footer .gallery-range > .row-select { flex:1 1 auto; width:auto; min-width:0; }
+}

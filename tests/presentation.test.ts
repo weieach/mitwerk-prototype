@@ -389,9 +389,8 @@ test('the checked-out branch stays on a straight vertical spine through a fork',
   assert.ok(presented.routes.some(route => route.spine && route.id === arm.id));
 });
 
-test('connector width matches one grid triangle and cards clear both routing levels', () => {
-  assert.equal(treeTheme.routeWidth, geometry.gridTriangleSide);
-  assert.equal(treeTheme.routeWidth, geometry.gridRise * 2);
+test('connectors are slimmer than stations and cards clear both routing levels', () => {
+  assert.ok(treeTheme.routeWidth < treeTheme.stationDiameter);
   assert.equal(treeTheme.stationInnerDiameter, treeTheme.stationDiameter - treeTheme.stationBorderWidth * 2);
   const strokeRadius = treeTheme.routeWidth / 2 + treeTheme.routeClearance;
   assert.ok(geometry.horizontalCardOffsetY > strokeRadius);

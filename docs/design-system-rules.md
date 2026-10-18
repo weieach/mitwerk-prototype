@@ -1570,3 +1570,13 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Release the Not yet capsule already tilted beside the right wall, using its shape-derived landing x coordinate. Guide its horizontal position and angle during the gravity-driven descent so it does not land flat and then slide sideways into place. Preserve the staggered release, collisions and final paired pose.
 - Show the timeline overview only while its measured content width exceeds its viewport width. Reevaluate on content changes and resizing; hide it entirely, including its keyboard stop, when all blocks fit. This supersedes the always-visible overview rule.
+
+## Ported layout details from design-system — 2026-10-18
+
+- Beside other panels, chat has a fixed width, `--chat-panel-width` = min(440px, 30vw); the other panels share the rest and the reader resize handle is hidden. Chat alone still fills the body; under 851px the narrow layout applies.
+- Chat messages start at `--panel-title-text-inset` (20px) at every width; the conversation no longer centers in a max-width column.
+- Supersedes “connector width is one grid-triangle side”: Idea stream connectors use `treeTheme.routeWidth` (12px), slimmer than a station (28px).
+- Light mode inverts the white-page hierarchy: panels `--paper` #f5f5f3 on `--workspace-background` #e2e2df; the message box and in-chat version/milestone cards are white (`--composer-surface`, `--message-version-fill`); sent messages are near-white (`--user-message-fill` #fafaf9); control fills and the To-do section sit one step below the panel.
+- Below 620px of panel width the gallery footer wraps into two rows (frame picker, then time range and zoom) with a `--row-divider` between them, instead of clipping.
+- `?view=system` is a live token reference that hides tokens the stylesheet does not define. `docs/design-system.md` names this branch's system canonical and gives the merge procedure into `main`.
+- In light mode the line under panel titles (`--panel-heading-divider`) uses the workspace background tone (#e2e2df), not black.

@@ -1,0 +1,40 @@
+/* Reference page only. It reads the product's own tokens; nothing here defines product styling. */
+.sys-page { height:100dvh; overflow-y:auto; background:var(--workspace-background); color:var(--ink); font:400 13px/1.45 var(--sans); }
+.sys-top { position:sticky; top:0; z-index:5; display:flex; align-items:center; justify-content:space-between; gap:16px; height:var(--workspace-bar-height); padding:0 var(--workspace-edge, var(--workspace-gutter)); background:var(--workspace-background); }
+.sys-top strong { font-size:14px; font-weight:700; }
+.sys-nav { display:flex; flex-wrap:wrap; gap:16px; }
+.sys-nav a { color:var(--muted); text-decoration:none; font-size:12px; text-transform:capitalize; transition:color var(--motion-fast) var(--ease-standard); }
+.sys-nav a:hover { color:var(--ink); }
+.sys-theme { display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 10px; border-radius:var(--control-radius); color:var(--muted); font-size:12px; }
+.sys-theme:hover { background:var(--fill-hover); color:var(--ink); }
+.sys-main { display:flex; flex-direction:column; gap:var(--workspace-panel-gap, var(--workspace-gutter)); padding:0 var(--workspace-edge, var(--workspace-gutter)) var(--workspace-edge, var(--workspace-gutter)); }
+.sys-section { padding:28px 28px 32px; border-radius:var(--workspace-radius); background:var(--paper); scroll-margin-top:calc(var(--workspace-bar-height) + 4px); }
+.sys-section-head { display:grid; grid-template-columns:180px 1fr; gap:24px; margin-bottom:24px; }
+.sys-section-head h2 { font-size:20px; font-weight:500; }
+.sys-section-head p { max-width:60ch; color:var(--muted); }
+.sys-sub { margin:0 0 10px; font-size:12px; font-weight:500; color:var(--muted); }
+.sys-group + .sys-group { margin-top:24px; }
+.sys-principles { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:var(--workspace-gutter); margin:0; padding:0; list-style:none; }
+.sys-principles li { padding:16px; border-radius:var(--composer-drawer-radius); background:var(--fill); color:var(--muted); }
+.sys-principles strong { display:block; margin-bottom:4px; color:var(--ink); font-weight:500; }
+.sys-swatches { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px; }
+.sys-swatch { margin:0; display:flex; flex-direction:column; gap:8px; }
+.sys-swatch-chip { height:48px; border-radius:var(--control-radius); box-shadow:inset 0 0 0 1px var(--line); }
+.sys-swatch figcaption { display:flex; flex-direction:column; gap:2px; }
+.sys-swatch code, .sys-rows code { font:400 11px/1.4 var(--panel-view-font); color:var(--muted); overflow-wrap:anywhere; }
+.sys-swatch .sys-value { color:var(--faint); }
+.sys-rows { margin:0; }
+.sys-rows > div { display:grid; grid-template-columns:240px 1fr; align-items:center; gap:24px; min-height:40px; border-top:1px solid var(--line); }
+.sys-rows dt { display:flex; flex-direction:column; padding:8px 0; }
+.sys-rows dd { display:flex; align-items:center; gap:12px; margin:0; min-width:0; }
+.sys-bar { display:block; height:8px; min-width:1px; border-radius:2px; background:var(--muted); }
+.sys-motion-demo { display:flex; align-items:center; gap:16px; margin-top:20px; }
+.sys-fold { display:flex; align-items:center; gap:20px; width:min(100%, 420px); min-height:var(--message-preview-height); border-radius:8px; background:var(--message-version-fill); overflow:hidden; transition:min-height var(--motion-fold) var(--ease-fold); }
+.sys-fold-preview { align-self:stretch; flex:0 0 var(--message-preview-width); background:var(--line-strong); transition:flex-basis var(--motion-fold) var(--ease-fold); }
+.sys-fold.is-folded { min-height:calc(var(--message-preview-height) * var(--milestone-dismiss-scale)); }
+.sys-fold.is-folded .sys-fold-preview { flex-basis:calc(var(--message-preview-width) * var(--milestone-dismiss-scale)); }
+@media (max-width: 860px) {
+  .sys-section { padding:20px; }
+  .sys-section-head, .sys-rows > div { grid-template-columns:1fr; gap:8px; }
+  .sys-principles { grid-template-columns:1fr; }
+}
