@@ -1,5 +1,120 @@
 # Design system rules
 
+## Panel footer text and icons — 2026-10-18
+
+- Both panel footers (the Version blocks gallery footer and the Idea stream controls) use a fixed `--panel-footer-font-size` (12px) for their labels, not the fluid `--control-font-size`, following Cursor's 12px status bar.
+- Every footer icon is `--panel-footer-icon-size` (15px). Dropdown carets keep their own smaller size, because they mark a menu rather than act as icons.
+
+## Milestone card preview — 2026-10-18
+
+- `?milestone=1` shows chat version cards, and their milestone invitation, even when the capture manifest has no frames (for example on a machine without `[frame capture] screenshots/`). Missing values fall back to `milestonePreviewSample` (version 40 and the bundled `examples/iteration-preview.png`). Without the parameter, a card still needs a real capture frame.
+
+## Idea stream background is a dot lattice — 2026-10-18
+
+- The version-stream canvas background (`IsometricGrid`) draws dots instead of diamond lines. The dots sit on the same isometric lattice intersections (`gridUnit` 24px across, `gridRise` about 13.9px down, with alternate rows offset by half a unit), so stations and routes still land on the grid.
+- Dots use `--grid-line` with `treeTheme.gridDotRadius` (0.9) and `treeTheme.gridDotOpacity` (0.6). This replaces the 0.55px line pattern at 0.32 opacity. Visibility rules are unchanged: always on in Idea stream, toggled by the Grid control in the Test diagram.
+
+## Capture chip edit mark shows on hover — 2026-10-18
+
+- The pencil after a capture bucket name is a hint, not its own control. The whole pill opens the location list.
+- The pencil stays collapsed (`max-width: 0`, opacity 0) until the pill is hovered, keyboard-focused, or the location list is open. Its leading margin cancels `--capture-chip-icon-gap`, so the pill does not keep an empty gap.
+
+## Side-by-side panels share one seam — 2026-10-18
+
+- The visible distance between workspace panels (Chat and the reading window) is `--workspace-panel-gap` (5px). The page edge is `--workspace-gutter` (7px): left, right and bottom of the panels, and above and below the site header. The seam is narrower than the edge on purpose.
+- The resize handle is a flex item of width 0, so a plain flex gap would count twice. Its negative inline margin cancels one of those gaps, and the reading window's flex basis subtracts `--workspace-panel-gap` once.
+
+## Capturing row sits on one line box — 2026-10-18
+
+- The composer's “Capturing [bucket] with [details]” row uses one line height, `--capture-row-height` (20px). The words, the bucket pill (`--capture-chip-height`), the pill text, and the details field (`--capture-detail-height`) all read it, so every piece shares one vertical center and no box is taller than the others.
+- The words and the details field use `--chat-body-size` (13px). The pill text stays one step down at `--capture-chip-font-size`, which is `--chat-meta-size` (11px). Do not set the row's words larger than the body size.
+
+## Editing a to-do quiets its row — 2026-10-18
+
+- While a to-do is being edited, its timestamp and run button fade to `--drawer-editing-meta-opacity` (0) over `--drawer-editing-fade` (240ms) and stop taking clicks. Their group (`.composer-todo-meta`) also collapses to zero width, and its leading margin cancels `--drawer-row-inline-gap`, so the edit underline grows to the row's right edge. They return when editing ends.
+
+## To-do drawer spacing — 2026-10-18
+
+- The to-do drawer heading has `--drawer-heading-padding-top` (14px) above and `--drawer-heading-padding-bottom` (8px) below. The list starts `--drawer-content-top-padding` (4px) under it.
+- Rows are `--drawer-row-height` (24px) tall with `--drawer-row-gap` (6px) between them. The checkbox sits `--drawer-check-gap` (10px) from its text.
+
+## Idea stream footer stays one row when narrow — 2026-10-18
+
+- The Idea stream footer never wraps. It is a size container (`idea-footer`), and it condenses in tiers:
+  - At 520px wide or less, controls shrink to `--idea-footer-compact-control` and the zoom scale to `--idea-footer-compact-scale`.
+  - At 400px or less, they shrink to the tight tokens and the jump button drops its word, so it shows only the count (“3/12”).
+  - At 280px or less, the zoom controls hide.
+
+## Panel footers share one divider and height — 2026-10-18
+
+- Panel footers side by side keep the same height: the gallery footer and the Idea stream controls both use `--panel-footer-height` (52px) as their row height, so their top edges line up.
+- To-do drawer timestamps use `--chat-meta-size` (11px). Run icons stay 90% of 12px (`--drawer-meta-scale`).
+
+- Every panel footer (Version blocks gallery footer, Idea stream controls) draws its top edge with `--row-divider` (`--line`): `#262626` in dark, following Cursor's 7% border, and `#e6e6e6` in light. Footers do not borrow `--workspace-background` (the chrome behind panels) as a divider.
+
+## Chat message size — 2026-10-18
+
+- User and Mit message text uses `--message-font-size` through the Message type role. It equals `--chat-body-size` (13px), the same size as the composer field, so chat and input read as one text size. This replaces the 12px message size.
+- The to-do drawer heading is regular weight (400), not bold, both in CSS and in the To-do heading type role.
+
+## Popovers share one outline and shadow — 2026-10-18
+
+- Every dropdown and small menu (`.select-menu`, version card menu, branch menu, to-do attach picker, status picker, to-do card menu) reads `--popover-border`, `--popover-shadow`, and `--popover-radius` (8px, both themes). Do not give a menu its own border, radius, or shadow.
+- Light keeps the previous look: `--line-strong` border and `0 4px 16px var(--shadow-color)`.
+- Dark follows Cursor's menus: canvas `#181818` surface, a hairline of `#e4e4e4` at 10%, and a soft shadow made of a 1px black ring at 30% plus `0 8px 24px` black at 24%, so the edge reads against the dark canvas without a bright border or a heavy black halo.
+
+## Footer controls fill the footer row — 2026-10-18
+
+- In the gallery footer, the date range selector and the icon buttons fill the full footer height, the same as the capture bucket selector, so all footer controls share one top and bottom edge.
+
+## Open view link is a blue toggle — 2026-10-18
+
+- The open site-header view link (Chat, Version blocks, Idea stream, Live server) follows Cursor's selected toggle: label and icon in `--view-tag-ink`, over a rounded tint of that same blue (`--view-tag-radius` 6px, `--view-tag-tint`). Closed links stay muted with no fill.
+- Dark uses Cursor's blue `--cursor-blue` `#3a96dd` with an 18% tint. Light uses Werk Blue `--mw-blue` with a 10% tint.
+- This replaces the parallelogram tag in the earlier header rule. The Type editor's View links color does not override the open link.
+
+## Panel title pill has no outline — 2026-10-18
+
+- The Version blocks title pill (and any `.panel-title-pill`) has no border in either theme: `--panel-title-border-width` is `0px`. Padding, icon, click-to-return behavior, and the title text inset are unchanged, because the inset already includes the border width.
+
+## Dark mode follows Cursor Dark — 2026-10-18
+
+- Dark mode uses the Cursor Dark Anysphere palette (from Cursor's bundled `cursor-dark-color-theme.json`). Two opaque grounds: canvas `#181818` (`--paper`, `--canvas-bg`) and recessed chrome `#141414` (`--chrome`: sidebar and the gutter between panels). Chrome is darker than the canvas.
+- Every other neutral is `#e4e4e4` at a fixed alpha, pre-mixed over `#181818` so WebGL surfaces can resolve solid colors: text 92% `--ink` `#d4d4d4`, 55% `--muted` `#888`, 37% `--faint` `#646464`; wash 4% `--fill` `#202020`; border and hover 7% `--line` / `--fill-hover` `#262626`; selection 12% `--selection` `#303030`; focus 15% `--line-strong` `#373737`. Accent and `--contrast` are `#e4e4e4`; no pure white.
+- The panel heading divider uses `--line`. The composer drawer, hover, selected mode, placeholder, track, and border derive from those tokens instead of their own warm-black hex. The earlier unused dark composer block is removed.
+- The composer outline is a hairline: `--composer-border-width` (0.5px), drawn as an inset shadow because Chrome rounds borders below 1px up to 1px. At rest it uses `--composer-border`; while focused it uses `--composer-focus-border` (32% ink), not full ink. The padding absorbs the former 1px border, so text and controls stay in place.
+- Branch colors, Werk Blue / Mit Sky, screenshots, scrims, and the landing stage are not part of this pass.
+
+## Sans serif is Waldenburg — 2026-10-18
+
+- Every sans-serif text uses Waldenburg through the shared `--sans` token (`'Waldenburg', 'KMR Waldenburg', 'KMR-Waldenburg', 'Helvetica Neue', Helvetica, Arial, sans-serif`). This replaces the Helvetica Neue rule below. Canvas-drawn labels read the same token. Mono stays on `--font-code`.
+- Waldenburg (Kimera, Michael Clasen and Marcel Saidov) is bundled as WOFF2 in `src/fonts/kmr-waldenburg-*.woff2`, with `@font-face` rules at the top of `src/index.css`. Each face's CSS weight is the file's OS/2 weight class: Thin 100, Light 300, Book 375, Regular 400, Medium 500, Bold 700, Heavy 800, Black 900. Every weight except Thin also has an italic.
+- There is no 600 cut, so 600 would render as Bold (700).
+- Medium (500) is the heaviest weight in the interface. Emphasis (the wordmark, panel and page titles, card titles, version numbers, fold counts, the work state title and readout, theater tags and push leads, and the canvas count badges) uses the shared `--strong-font-weight` token (500), and `treeTheme.versionLabelFontWeight` is 500. Do not use 600 or 700 in new styles. Where an earlier rule says "bold", read it as this emphasis weight.
+- Helvetica Neue, Helvetica and Arial remain the fallback while the font loads (`font-display: swap`).
+
+## Live type editor — 2026-10-18
+
+- The MitWerk logo menu offers **Type editor** (Close type editor when open). It floats over the current page and does not change layout.
+- Text is adjusted by shared role, not by one message, card, or screenshot. Roles and their selectors live in `src/shared/type-studio.ts`. Each role exposes size, weight, line height, letter spacing, color, Waldenburg or mono, and italic.
+- Chat messages use `--message-line-height` (1.6, 20.8px at 13px). The Message type role's default leading matches it, because the role rule overrides the CSS token.
+
+## Chat type scale — 2026-10-18
+
+- The chat panel uses three sizes only, as shared tokens in `src/control-tokens.css`:
+  - `--chat-meta-size` (11px): message and to-do timestamps, the to-do count, the model selector, and capture chips.
+  - `--chat-body-size` (13px): messages, bylines, version cards, the composer field, the Capturing row, the to-do heading and to-do rows.
+  - `--chat-title-size` (14px): the panel title role, which also sets the Version blocks pill.
+- Do not add 1px steps between these (the earlier 9, 10, 10.8 and 12px sizes are gone). The matching type-editor roles default to these tokens.
+- The to-do count circle is `--drawer-count-size` (16px) so the 11px numeral fits.
+- Mit replies are capped at `--message-max-width` (36em, about 70 characters per line). The cap is in em, not ch, because Waldenburg's `0` is wide enough that 68ch already equals the full column.
+- Message timestamps are hidden (opacity 0, space kept) and fade in over `--drawer-hover-duration` while their message is hovered or focused. Each message's accessible name still carries its time.
+- The conversation's inline padding is `--panel-heading-padding`, so replies, the panel title's icon, the Capturing row, the to-do drawer and the composer text share one left edge.
+- The expanded to-do list is capped at `min(24vh, 200px)` so the composer stack leaves more room for the conversation. The drawer still starts collapsed.
+- Built-in values stay in the role stylesheet. An edit sets the same variable on the document root and is stored in `localStorage` under `mitwerk-type-studio`. Reset restores the built-in value. Copy CSS exports only the variables that differ, so a chosen scale can be locked into the role defaults later.
+- Progress captures (`screenshot=1`) ignore stored edits and do not show the editor. `?type=1` opens it for a working session.
+- Selecting a role outlines every element that uses it. Gallery axis labels stay on their camera-driven size. Branch colors, role tags, and capture textures are not type colors.
+
 ## Work state simulator — 2026-10-17
 
 - The MitWerk logo menu offers **Open work state simulator** (Close when open). It opens a bottom sheet below the panels; the panels compress above it and the site header keeps its height.
@@ -1455,3 +1570,38 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Release the Not yet capsule already tilted beside the right wall, using its shape-derived landing x coordinate. Guide its horizontal position and angle during the gravity-driven descent so it does not land flat and then slide sideways into place. Preserve the staggered release, collisions and final paired pose.
 - Show the timeline overview only while its measured content width exceeds its viewport width. Reevaluate on content changes and resizing; hide it entirely, including its keyboard stop, when all blocks fit. This supersedes the always-visible overview rule.
+
+## Ported layout details from design-system — 2026-10-18
+
+- Beside other panels, chat has a fixed width, `--chat-panel-width` = min(440px, 30vw); the other panels share the rest and the reader resize handle is hidden. Chat alone still fills the body; under 851px the narrow layout applies.
+- Chat messages start at `--panel-title-text-inset` (20px) at every width; the conversation no longer centers in a max-width column.
+- Supersedes “connector width is one grid-triangle side”: Idea stream connectors use `treeTheme.routeWidth` (12px), slimmer than a station (28px).
+- Light mode inverts the white-page hierarchy: panels `--paper` #f5f5f3 on `--workspace-background` #e2e2df; the message box and in-chat version/milestone cards are white (`--composer-surface`, `--message-version-fill`); sent messages are near-white (`--user-message-fill` #fafaf9); control fills and the To-do section sit one step below the panel.
+- Below 620px of panel width the gallery footer wraps into two rows (frame picker, then time range and zoom) with a `--row-divider` between them, instead of clipping.
+- `?view=system` is a live token reference that hides tokens the stylesheet does not define. `docs/design-system.md` names this branch's system canonical and gives the merge procedure into `main`.
+- In light mode the line under panel titles (`--panel-heading-divider`) uses the workspace background tone (#e2e2df), not black.
+
+## Global spacing at 120% and aligned chat edges — 2026-10-18
+
+- Layout paddings and gaps scale through `--space-scale` (1.2): page edge `--workspace-gutter` 8.4px, panel seam `--workspace-panel-gap` 6px, top-bar inline padding 12px, panel title inset and padding (text inset 24px), `--panel-heading-padding` 24px, `--composer-inset` 4.8px, `--composer-tool-inset` 9.6px. The To-do section radius is `--workspace-radius` − `--composer-inset`, so its corners stay concentric.
+- Chat's maximum width beside other panels is 35% of the screen: `--chat-panel-width` = min(440px, 35vw).
+- Chat uses two shared edges. Frames (your message bubble, the To-do section, the message box) sit at `--composer-inset` from the panel edge; text (replies, bubble text, capture line, To-do heading, message box text, panel title) starts at `--panel-title-text-inset`.
+
+## To-do drag handle — 2026-10-18
+
+- The To-do heading shows a small, faint grab handle centered on its top edge (`--drawer-handle-width` 28px × `--drawer-handle-height` 3px, `--drawer-handle-top` 5px, 16% ink), firming to 34% ink on hover and while dragging. It is decorative; the whole heading remains the click and drag target.
+
+## Dark mode blue — 2026-10-18
+
+- The dark mode blue is `--cursor-blue` #2f7fe9 (was #3a96dd): a deeper, more saturated, less cyan blue. It colors the active top-bar view text and, at 18%, its tag fill. Light mode keeps Werk Blue `--mw-blue` #1d4ab9 at 10%.
+- Light mode's workspace background (behind panels, and the title divider tone) is lightened to #ebebe8 (was #e2e2df), still one step below the #f5f5f3 panels.
+- View link fills: the selected view sits on `--view-tag-fill` and shifts to `--view-tag-hover-fill` while hovered. An unselected view never gets a fill; on hover only its text color changes. Dark mode: #1f2d47 selected, #182234 selected-hover (solid navy under the #2f7fe9 text). Light mode keeps the Werk Blue tint (10% selected, 5% selected-hover).
+- The To-do heading pads equally above and below (`--drawer-heading-padding-top` and `-bottom` 11px, same total height as before), so the label and count sit on the vertical center of the strip above the message box.
+- The To-do count is a filled dot: `--ink` fills it (softened by the heading's opacity) and the number takes the To-do section's surface color, so the old ring is inverted. On hover the number follows the hover surface.
+- The send button eases between disabled and ready over `--composer-send-transition` (180ms): fill, icon color, opacity (.4 → 1) and scale (`--composer-send-idle-scale` .96 → 1) move together.
+- Unselected view links change only their text to `--ink` on hover.
+- Chat frames (your message bubble, the To-do section, the message box) sit `--chat-frame-extra` (6px) further in from the chat panel's left, right and bottom edges: 10.8px. Text still starts at the title's text inset (24px); the To-do radius keeps 11.2px.
+- Your message bubble pads its text equally on all four sides (13.2px including its 1px edge), matching the inset that lines its text up with the panel title.
+- View link hover cross-fades over `--view-tag-fade` (.15s): the selected fill (#1f2d47 → #182234 in dark) and every label color ease instead of snapping.
+- Your message bubble shrinks to its longest rendered line (`useShrinkWrap`), never wider than CSS allows, so its padding reads equal on all sides and its right edge stays on the frame line.
+- The date range control centers its label with the caret right beside it; its menu (`align="center"` on `RowSelect` / `SelectMenu`) is only as wide as its options, centered under the control, with centered labels.

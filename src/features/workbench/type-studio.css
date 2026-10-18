@@ -1,0 +1,50 @@
+.type-studio {
+  position: fixed;
+  z-index: 30;
+  top: 52px;
+  right: 12px;
+  width: min(320px, calc(100vw - 24px));
+  max-height: calc(100dvh - 64px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 16px 40px var(--shadow-color);
+  font: 400 12px/1.4 var(--sans);
+}
+.type-studio header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.type-studio header strong { font-size: 13px; font-weight: var(--strong-font-weight); }
+.type-studio header span { color: var(--muted); margin-right: auto; }
+.type-studio header button, .type-text, .type-role {
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+}
+.type-studio header button { padding: 4px 6px; color: var(--muted); }
+.type-studio header button:hover, .type-text:hover, .type-role:hover { color: var(--ink); background: var(--fill); }
+.type-studio header button:disabled { opacity: .4; }
+.type-css { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+.type-roles { overflow: auto; padding: 8px 8px 16px; }
+.type-roles section { margin-top: 8px; }
+.type-roles h2 { margin: 8px 6px 4px; color: var(--muted); font: 500 10px/1.2 var(--sans); letter-spacing: .04em; text-transform: uppercase; }
+.type-role { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 7px 8px; text-align: left; }
+.type-role i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
+.is-open > .type-role { background: var(--fill); }
+.type-role-controls { display: grid; gap: 8px; padding: 4px 8px 12px; }
+.type-where { margin: 0; color: var(--muted); }
+.type-sample { margin: 0; padding: 8px; border-radius: 6px; background: var(--fill); overflow-wrap: anywhere; }
+.type-field { display: grid; gap: 4px; color: var(--muted); }
+.type-field span { display: flex; justify-content: space-between; }
+.type-field b { color: var(--ink); font-weight: 500; }
+.type-field input[type="range"] { width: 100%; accent-color: var(--ink); }
+.type-field select, .type-field input[type="color"] { width: 100%; height: 28px; border: 1px solid var(--line); border-radius: 4px; background: var(--paper); color: var(--ink); font: inherit; }
+.type-check { display: flex; align-items: center; gap: 8px; }
+.type-text { justify-self: start; padding: 4px 0; color: var(--muted); }

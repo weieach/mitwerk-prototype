@@ -501,7 +501,7 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
         <button className="endpoint-jump" onClick={() => goToEndpoint(jumperEndpoint)} disabled={!jumperEndpoint}
           aria-label={`Jump to ${navigationLabel.toLowerCase()} ${jumperEndpoint ? jumperIndex + 1 : 0} of ${navigationNodes.length}`}
           title={`Jump to current ${navigationLabel.toLowerCase()}`}>
-          {`${navigationLabel} ${jumperEndpoint ? jumperIndex + 1 : 0}/${navigationNodes.length}`}
+          <span className="endpoint-jump-word">{`${navigationLabel} `}</span>{`${jumperEndpoint ? jumperIndex + 1 : 0}/${navigationNodes.length}`}
         </button>
         <button onClick={() => stepEndpoint(1)} disabled={navigationNodes.length < 2} aria-label={`Next ${navigationLabel.toLowerCase()}`} title={`Next ${navigationLabel.toLowerCase()}`}>
           <Icon name="arrow"/>

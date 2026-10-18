@@ -77,7 +77,7 @@ export function CaptureBucketChip({ value, onChange, label = 'Capture screen', i
   return <span ref={anchor} className={`capture-bucket-control${open ? ' is-open' : ''}${compact ? ' is-compact' : ''}`}>
     <button type="button" className={`capture-setting-chip${value ? '' : ' is-empty'}`} aria-label={label} aria-haspopup="listbox" aria-expanded={open && !closing} aria-controls={open ? id : undefined}
       onClick={() => open && !closing ? dismiss(false) : show()} onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); show(); } }}>
-      {value ? <>{icon && <PhosphorIcon name={icon} size={10}/>}<span>{value}</span><PhosphorIcon name="pencil-simple" weight="fill" size={10}/></> : <><PhosphorIcon name="plus" size={10}/><span>{emptyLabel}</span></>}
+      {value ? <>{icon && <PhosphorIcon name={icon} size={10}/>}<span>{value}</span><PhosphorIcon className="capture-chip-edit" name="pencil-simple" weight="fill" size={10}/></> : <><PhosphorIcon name="plus" size={10}/><span>{emptyLabel}</span></>}
     </button>
     {open && <div ref={menu} id={id} popover="manual" className={`capture-bucket-stack${closing ? ' is-closing' : ''}`} inert={closing} style={{ ...place, '--n': options.length + 1 } as CSSProperties} onKeyDown={onKeyDown}>
       <div id={`${id}-options`} role="listbox" aria-label={label} className="capture-bucket-options">

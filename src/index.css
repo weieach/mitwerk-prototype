@@ -1,3 +1,19 @@
+/* Waldenburg weights follow each file's OS/2 weight class; Book is 375 and there is no 600. */
+@font-face { font-family: 'Waldenburg'; src: url('./fonts/kmr-waldenburg-thin.woff2') format('woff2'); font-weight: 100; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Waldenburg'; src: url('./fonts/kmr-waldenburg-light.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Waldenburg'; src: url('./fonts/kmr-waldenburg-light-italic.woff2') format('woff2'); font-weight: 300; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Waldenburg'; src: url('./fonts/kmr-waldenburg-book.woff2') format('woff2'); font-weight: 375; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Waldenburg'; src: url('./fonts/kmr-waldenburg-book-italic.woff2') format('woff2'); font-weight: 375; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Waldenburg'; src: url('./fonts/kmr-waldenburg-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Waldenburg'; src: url('./fonts/kmr-waldenburg-italic.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Waldenburg'; src: url('./fonts/kmr-waldenburg-medium.woff2') format('woff2'); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Waldenburg'; src: url('./fonts/kmr-waldenburg-medium-italic.woff2') format('woff2'); font-weight: 500; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Waldenburg'; src: url('./fonts/kmr-waldenburg-bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Waldenburg'; src: url('./fonts/kmr-waldenburg-bold-italic.woff2') format('woff2'); font-weight: 700; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Waldenburg'; src: url('./fonts/kmr-waldenburg-heavy.woff2') format('woff2'); font-weight: 800; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Waldenburg'; src: url('./fonts/kmr-waldenburg-heavy-italic.woff2') format('woff2'); font-weight: 800; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Waldenburg'; src: url('./fonts/kmr-waldenburg-black.woff2') format('woff2'); font-weight: 900; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Waldenburg'; src: url('./fonts/kmr-waldenburg-black-italic.woff2') format('woff2'); font-weight: 900; font-style: italic; font-display: swap; }
 @font-face { font-family: 'Neurial Grotesk'; src: url('./fonts/neurial-grotesk-medium.otf') format('opentype'); font-weight: 500; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Neurial Grotesk'; src: url('./fonts/neurial-grotesk-light.otf') format('opentype'); font-weight: 300; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Neurial Grotesk'; src: url('./fonts/neurial-grotesk-light-italic.otf') format('opentype'); font-weight: 300; font-style: italic; font-display: swap; }
@@ -10,7 +26,7 @@
 @font-face { font-family: 'Neurial Grotesk'; src: url('./fonts/neurial-grotesk-extrabold-italic.otf') format('opentype'); font-weight: 800; font-style: italic; font-display: swap; }
 
 :root {
-  --sans: 'Neurial Grotesk', sans-serif;
+  --sans: 'Waldenburg', 'KMR Waldenburg', 'KMR-Waldenburg', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-family: var(--sans);
   color: var(--ink);
   background: var(--paper);
@@ -33,29 +49,40 @@
   --timeline-push-hover: #c4c4c4;
   --grid-line: #b0b0b0;
   --shadow-color: rgb(0 0 0 / 6%);
+  --popover-radius: 8px;
+  --popover-border: var(--line-strong);
+  --popover-shadow: 0 4px 16px var(--shadow-color);
   --gallery-capture-opacity: .72;
   --mono: var(--sans);
 }
 /* MitWerk dark palette. Every surface derives from these root tokens. */
+/* Cursor Dark: two opaque grounds, and every other neutral is #e4e4e4 at a fixed alpha,
+   pre-mixed over the #181818 canvas so WebGL surfaces can resolve them as solid colors. */
 :root[data-theme=dark] {
   color-scheme: dark;
-  background: #191a1b;
-  --ink: #fafafa;
-  --muted: #a3a3a8;
-  --faint: #737378;
-  --line: #36373b;
-  --line-strong: #4f5056;
-  --accent: #fafafa;
-  --canvas-bg: #191a1b;
-  --paper: #191a1b;
-  --fill: #27272a;
-  --sidebar: #202123;
-  --fill-hover: #39393e;
-  --contrast: #fff;
-  --token-area: #3a3a3f;
-  --timeline-push-hover: #65676c;
-  --grid-line: #65676c;
+  background: #181818;
+  --cursor-base: #e4e4e4;
+  --cursor-blue: #2f7fe9;
+  --chrome: #141414;
+  --ink: #d4d4d4;
+  --muted: #888;
+  --faint: #646464;
+  --line: #262626;
+  --line-strong: #373737;
+  --accent: var(--cursor-base);
+  --canvas-bg: #181818;
+  --paper: #181818;
+  --fill: #202020;
+  --sidebar: var(--chrome);
+  --fill-hover: #262626;
+  --selection: #303030;
+  --contrast: var(--cursor-base);
+  --token-area: #303030;
+  --timeline-push-hover: #4b4b4b;
+  --grid-line: #4b4b4b;
   --shadow-color: rgb(0 0 0 / 40%);
+  --popover-border: rgb(228 228 228 / 10%);
+  --popover-shadow: 0 0 0 1px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 24%);
   --gallery-capture-opacity: .94;
 }
 * { box-sizing: border-box; }
@@ -81,7 +108,7 @@ button .ui-icon { flex: 0 0 auto; }
 .tree-header { height: auto; min-height: 62px; flex-basis: auto; flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; }
 .tree-mode-switch { font: inherit; font-size: 11px; color: var(--ink); background: var(--paper); border: 1px solid var(--line-strong); border-radius: 4px; padding: 5px 7px; }
 .tree-mode-switch:focus-visible { outline:var(--focus-ring-width) solid var(--focus-ring-color); outline-offset:var(--focus-ring-offset); }
-.panel-header h2 { font-size: 12px; font-weight: 700; margin: 0; }
+.panel-header h2 { font-size: 12px; font-weight: var(--strong-font-weight); margin: 0; }
 .panel-header-actions { display: flex; align-items: center; gap: 8px; }
 .icon-button { height: 29px; padding: 0 8px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font-size: 11px; white-space: nowrap; }
 .icon-button:hover { background: var(--fill); color: var(--ink); }
@@ -117,7 +144,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .idea-editor button { border: 1px solid var(--line); border-radius: 4px; background: var(--paper); color: var(--ink); padding: 5px 8px; cursor: pointer; }
 .idea-editor button[type=submit] { background: var(--ink); color: var(--paper); }
 .idea-fold { position: absolute; width: var(--idea-fold-count-size); height: var(--idea-fold-count-size); transform: translate(-50%, -50%); padding: 0; border: 0; background: none; color: var(--ink); cursor: pointer; z-index: 4; }
-.idea-fold-count { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; place-items: center; width: var(--idea-fold-count-size); height: var(--idea-fold-count-size); background: var(--paper); border: 2px solid var(--ink); border-radius: 50%; font: var(--version-label-weight, 700) var(--version-label-size)/1 var(--sans); }
+.idea-fold-count { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; place-items: center; width: var(--idea-fold-count-size); height: var(--idea-fold-count-size); background: var(--paper); border: 2px solid var(--ink); border-radius: 50%; font: var(--version-label-weight, var(--strong-font-weight)) var(--version-label-size)/1 var(--sans); }
 .idea-fold-count > span { display:block; transform:scale(var(--version-label-zoom, 1)); transform-origin:center; }
 .idea-fold-label { position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%) scale(var(--version-label-zoom, 1)); transform-origin:left center; font: 400 var(--branch-label-size, 10px)/1.25 var(--sans); }
 .idea-refold { display:inline-flex; align-items:center; gap:4px; padding:2px 4px; border:0; border-radius:var(--control-radius); background:transparent; color:var(--muted); font:400 var(--branch-label-size, 10px)/1.25 var(--sans); pointer-events:auto; cursor:pointer; }
@@ -136,7 +163,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .card-menu { position: absolute; top: 8px; right: 8px; z-index: 6; }
 .card-menu-trigger { display: flex; padding: 2px; color: var(--muted); border-radius: 3px; }
 .card-menu-trigger:hover, .card-menu-trigger[aria-expanded="true"] { background: var(--fill); color: var(--ink); }
-.card-menu-panel { position: absolute; top: calc(100% + 4px); right: 0; min-width: 168px; margin: 0; padding:var(--dropdown-panel-padding); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; list-style: none; box-shadow: 0 8px 24px var(--shadow-color); }
+.card-menu-panel { position: absolute; top: calc(100% + 4px); right: 0; min-width: 168px; margin: 0; padding:var(--dropdown-panel-padding); background: var(--paper); border: 1px solid var(--popover-border); border-radius: var(--popover-radius); list-style: none; box-shadow: var(--popover-shadow); overflow: hidden; }
 .card-menu-panel button { width: 100%; justify-content: flex-start; padding: 6px 8px; font-size: 11px; color: var(--ink); text-align: left; }
 .card-menu-panel button:hover:not(:disabled) { background: var(--fill); }
 .card-menu-panel button:disabled { color: var(--faint); }
@@ -145,7 +172,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .version-card.is-active-branch { --card-border-color: var(--route-color); }
 .version-card.is-reverted { --station-color: var(--reverted-route-color); }
 .version-card.is-reverted .version-title { color: var(--reverted-title-color, var(--faint)); text-decoration: line-through; }
-.station-label { position: absolute; z-index: 4; transform: translate(-100%, -50%) scale(var(--version-label-zoom, 1)); transform-origin: right center; display: inline-flex; align-items: center; gap: 6px; font: var(--version-label-weight, 700) var(--version-label-size) var(--sans); color: var(--version-label-color, #000); pointer-events: none; white-space: nowrap; }
+.station-label { position: absolute; z-index: 4; transform: translate(-100%, -50%) scale(var(--version-label-zoom, 1)); transform-origin: right center; display: inline-flex; align-items: center; gap: 6px; font: var(--version-label-weight, var(--strong-font-weight)) var(--version-label-size) var(--sans); color: var(--version-label-color, #000); pointer-events: none; white-space: nowrap; }
 .version-heading { padding: 0 22px 0 0; width: 100%; display: block; text-align: left; }
 .version-card.is-compact .version-heading { padding-right: 0; }
 .version-position:has(.card-menu-panel) { z-index: 9 !important; }
@@ -192,7 +219,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .endpoint-controls .endpoint-jump,
 .branch-controls .branch-current { gap: 6px; padding: 5px 8px; font-size: 11px; color: var(--ink); white-space: nowrap; }
 .branch-controls { position: relative; }
-.branch-menu { position: absolute; bottom: calc(100% + 6px); left: 0; min-width: 100%; margin: 0; padding:var(--dropdown-panel-padding); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; list-style: none; box-shadow: 0 8px 24px var(--shadow-color); }
+.branch-menu { position: absolute; bottom: calc(100% + 6px); left: 0; min-width: 100%; margin: 0; padding:var(--dropdown-panel-padding); background: var(--paper); border: 1px solid var(--popover-border); border-radius: var(--popover-radius); list-style: none; box-shadow: var(--popover-shadow); overflow: hidden; }
 .branch-menu button { width: 100%; justify-content: space-between; gap: 10px; padding: 6px 8px; font-size: 11px; color: var(--ink); }
 .branch-menu button[aria-checked="true"] { background: var(--fill); }
 .branch-menu-name { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }

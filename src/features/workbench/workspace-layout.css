@@ -1,7 +1,8 @@
 /* Shared panel presentation from hifi temp and hifi temp – playback. */
 :root {
   --workspace-background: var(--line);
-  --workspace-gutter: 6px;
+  --workspace-gutter: 7px;
+  --workspace-panel-gap: 5px;
   --user-message-fill:var(--line);
   --landing-brand-size:32px;
   --workspace-radius: 16px;
@@ -11,37 +12,39 @@
   --workspace-bar-gap: var(--workspace-gutter);
   --panel-title-inset:6px;
   --panel-title-padding-inline:14px;
-  --panel-title-border-width:1px;
+  --panel-title-border-width:0px;
   --panel-title-text-inset:calc(var(--panel-title-inset) + var(--panel-title-padding-inline) + var(--panel-title-border-width));
   --panel-expand-width:60px;
   --panel-expand-compact-width:40px;
   --panel-heading-height: 44px;
   --panel-heading-divider: #000;
   --panel-footer-height: 52px;
+  --panel-footer-font-size: 12px;
+  --panel-footer-icon-size: 15px;
   --panel-heading-padding: 20px;
   --panel-title-radius: 30px;
   --playback-action-height: 34px;
   --playback-annotation-fill: var(--line-strong);
   --playback-annotation-ink: var(--ink);
 }
-:root[data-theme=dark] { --workspace-background: #000; }
+:root[data-theme=dark] { --workspace-background: var(--chrome); --panel-heading-divider: var(--line); }
 .mw-app { background: var(--workspace-background); }
 .mw-app .mw-topbar { margin-block:var(--workspace-bar-gap); height:var(--workspace-bar-height); min-height:var(--workspace-bar-height); padding:0 var(--workspace-bar-padding-inline); background:var(--workspace-background); gap:16px; }
 .mw-topbar .workspace-brand { display:flex; align-items:center; gap:var(--workspace-brand-gap); flex-shrink:0; }
 .mw-topbar .workspace-brand .workspace-logo { width:25px; height:25px; object-fit:contain; }
-.mw-topbar .workspace-brand strong { font-size:14px; font-weight:700; }
+.mw-topbar .workspace-brand strong { font-size:14px; font-weight:var(--strong-font-weight); }
 .workspace-links { display:flex; align-items:center; min-width:0; gap:var(--workspace-links-gap); overflow:auto; scrollbar-width:none; }
 .workspace-links > button, .workspace-resource { display:flex; align-items:center; gap:6px; padding:6px 12px; white-space:nowrap; font-size:12px; color:var(--muted); }
 .workspace-links > button:hover { color:var(--ink); }
 .workspace-links > button:not(:first-child) { text-decoration:underline; text-underline-offset:2px; }
-.workspace-count { padding:0 8px; border-radius:20px; background:var(--ink); color:var(--paper); font-size:10px; font-weight:700; }
+.workspace-count { padding:0 8px; border-radius:20px; background:var(--ink); color:var(--paper); font-size:10px; font-weight:var(--strong-font-weight); }
 .workspace-resource { gap:4px; max-width:180px; }
 .workspace-resource button:first-child { overflow:hidden; text-overflow:ellipsis; }
-.mw-app .mw-body { gap:var(--workspace-gutter); padding:0 var(--workspace-gutter) var(--workspace-gutter); }
+.mw-app .mw-body { gap:var(--workspace-panel-gap); padding:0 var(--workspace-gutter) var(--workspace-gutter); }
 .mw-app .mw-surface, .mw-app .mw-reader { border-radius:var(--workspace-radius); background:var(--paper); overflow:hidden; }
-.mw-app .reader-divider { width:0; background:transparent; }
-.mw-app .reader-divider::before { inset:0 calc(var(--workspace-gutter) * -1); }
-.mw-app .mw-reader { flex-basis:calc(var(--reader-width) - var(--workspace-gutter)); }
+.mw-app .reader-divider { width:0; margin-inline:calc(var(--workspace-panel-gap) * -.5); background:transparent; }
+.mw-app .reader-divider::before { inset:0 calc(var(--workspace-panel-gap) * -.5); }
+.mw-app .mw-reader { flex-basis:calc(var(--reader-width) - var(--workspace-panel-gap)); }
 .mw-app .reader-expanded .mw-reader { flex-basis:100%; }
 .mw-app .mw-dialog { padding-top:0; }
 .mw-app .mw-dialog > .workspace-panel-header { flex-shrink:0; }
@@ -77,9 +80,11 @@
 .workspace .workspace-panel-header .gallery-range { flex:0 1 145px; min-width:110px; }
 .workspace .workspace-panel-header .gallery-range > .row-select { flex:1; padding:0 14px; }
 .workspace .workspace-panel-header .row-select { padding-inline:14px; }
-.workspace .gallery-footer { height:var(--panel-footer-height); min-height:var(--panel-footer-height); border-color:var(--workspace-background); }
+.workspace .gallery-footer { height:var(--panel-footer-height); min-height:var(--panel-footer-height); border-top:var(--row-divider); }
+.workspace :is(.gallery-footer, .canvas-controls) { --row-height:var(--panel-footer-height); min-height:var(--panel-footer-height); }
 .workspace .gallery-footer .gallery-range { border:0; flex:none; }
 .workspace .gallery-footer .gallery-range > .row-select { flex:1; padding-inline:22px; }
+.workspace .gallery-footer :is(.gallery-range > .row-select, .panel-header-actions > button) { height:100%; }
 .workspace .gallery-footer :is(.panel-header-actions > button + button, .album-camera-actions) { border:0; }
 .workspace .theater-stage > .theater-frame-actions { margin-bottom:var(--playback-action-row-gap); min-height:0; border:0; align-items:center; gap:0; padding-right:0; flex-wrap:wrap; }
 .workspace .theater-frame-actions .frame-annotation-bookmark { align-self:center; margin:0 auto 0 0; display:flex; }
@@ -150,18 +155,15 @@
   --capture-chip-ink: #36373b;
   --message-gap: 40px;
 }
-:root[data-theme=dark] {
-  --composer-surface: var(--faint);
-  --composer-selected: #7e7e7e;
-  --composer-placeholder: #c4c4c7;
-}
-.mw-app .conversation-inner { width:100%; max-width:686px; margin:0 auto; padding:20px 23px; }
+.mw-app .conversation-inner { width:100%; max-width:686px; margin:0 auto; padding:20px var(--panel-heading-padding); }
 .mw-app .mw-message { margin-bottom:var(--message-gap); }
 .mw-app .mw-message:last-child { margin-bottom:0; }
 .mw-app .from-user { max-width:min(340px,85%); }
-.mw-app .message-content { padding-left:0; font-size:13px; }
+.mw-app .message-content { padding-left:0; font-size:var(--message-font-size); }
+.mw-app .mw-message:not(.from-user) .message-content { max-width:var(--message-max-width); }
 .mw-app .from-user .message-content { border-radius:10px; padding:16px 18px; }
-.mw-app .mw-message .message-time { padding-left:0; margin-top:var(--message-time-gap); font-size:10px; }
+.mw-app .mw-message .message-time { padding-left:0; margin-top:var(--message-time-gap); font-size:var(--chat-meta-size); opacity:0; transition:opacity var(--drawer-hover-duration) ease; }
+.mw-app .mw-message:is(:hover, :focus-within) .message-time { opacity:1; }
 .message-version-output { margin-top:18px; }
 .mw-app .message-version-card { display:flex; align-items:center; width:100%; height:auto; gap:var(--message-version-gap); background:var(--message-version-fill); border:1px solid var(--line-strong); border-radius:8px; padding:0 12px 0 0; min-height:var(--message-preview-height); overflow:hidden; text-align:left; font-size:12px; }
 .message-version-label { display:flex; flex:1; align-items:center; min-width:0; gap:8px; }
@@ -172,19 +174,21 @@
 .theater-branch-row .theater-branch { margin-top:0; }
 .mw-app .composer-area { width:min(100%,680px); padding:8px 20px 17px; }
 .chat-composer-stack { display:flex; flex-direction:column; gap:8px; }
-.capture-settings { display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:var(--capture-settings-font-size); }
-.mw-app .capture-setting-chip { display:inline-flex; align-items:center; gap:5px; min-width:0; max-width:100%; padding:1px var(--capture-chip-padding-inline); border-radius:var(--capture-pill-radius); background:var(--capture-chip-surface); color:var(--capture-chip-ink); font-size:var(--capture-chip-font-size); }
+.capture-settings { display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:var(--capture-settings-font-size); line-height:var(--capture-row-height); }
+.mw-app .capture-setting-chip { display:inline-flex; align-items:center; gap:var(--capture-chip-icon-gap); min-width:0; max-width:100%; padding:1px var(--capture-chip-padding-inline); border-radius:var(--capture-pill-radius); background:var(--capture-chip-surface); color:var(--capture-chip-ink); font-size:var(--capture-chip-font-size); }
+.capture-setting-chip .capture-chip-edit { flex:none; width:10px; min-width:0; max-width:0; margin-inline-start:calc(var(--capture-chip-icon-gap) * -1); overflow:hidden; opacity:0; transition:max-width var(--inline-field-fade) ease, opacity var(--inline-field-fade) ease, margin-inline-start var(--inline-field-fade) ease; }
+.capture-setting-chip:is(:hover,:focus-visible) .capture-chip-edit, .capture-bucket-control.is-open .capture-chip-edit { max-width:10px; margin-inline-start:0; opacity:1; }
 .capture-setting-chip span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* A to-do's bucket reuses the Capturing chip's pill, read-only. */
 .bucket-tag { display:inline-flex; align-items:center; gap:4px; flex:none; max-width:var(--bucket-tag-max-width); padding:1px var(--capture-chip-padding-inline); border-radius:var(--capture-pill-radius); background:var(--capture-chip-surface); color:var(--capture-chip-ink); font-size:var(--capture-chip-font-size); line-height:1.4; }
 .bucket-tag > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .capture-setting-input { max-width:140px; min-width:0; border:1px solid var(--line-strong); border-radius:var(--capture-pill-radius); padding:2px 8px; background:var(--paper); color:var(--ink); font:inherit; }
 .composer-drawer { border-radius:var(--composer-drawer-radius); background:var(--line); }
-.mw-app .composer-drawer-heading { overflow:hidden; display:flex; align-items:center; gap:8px; width:100%; padding:6px 12px; text-align:left; font-size:12px; font-weight:700; transition:background-color var(--drawer-hover-duration) ease; border-radius:var(--composer-drawer-radius) var(--composer-drawer-radius) 0 0; }
+.mw-app .composer-drawer-heading { overflow:hidden; display:flex; align-items:center; gap:8px; width:100%; padding:var(--drawer-heading-padding-top) 12px var(--drawer-heading-padding-bottom); text-align:left; font-size:12px; font-weight:400; transition:background-color var(--drawer-hover-duration) ease; border-radius:var(--composer-drawer-radius) var(--composer-drawer-radius) 0 0; }
 .mw-app .composer-drawer-heading:is(:hover,:focus-visible) { background:var(--fill-hover); }
 .composer-drawer-heading > span { opacity:var(--drawer-heading-opacity); transition:opacity var(--drawer-hover-duration) ease; }
 .composer-drawer-heading:is(:hover,:focus-visible) > span { opacity:1; transition-delay:0s; }
-.composer-drawer-content { max-height: min(30vh,260px); overflow:auto; padding:4px 12px var(--drawer-content-bottom-padding); }
+.composer-drawer-content { max-height: min(24vh,200px); overflow:auto; padding:var(--drawer-content-top-padding) 12px var(--drawer-content-bottom-padding); }
 /* Grid tracks interpolate intrinsic content height and reverse without unmounting. */
 .composer-drawer-reveal { display:grid; grid-template-rows:0fr; opacity:0; transition:grid-template-rows var(--drawer-close-duration) var(--drawer-close-ease), opacity var(--drawer-close-duration) ease; }
 .composer-drawer-clip { min-height:0; overflow:hidden; }
@@ -194,18 +198,21 @@
   .composer-drawer .composer-drawer-reveal, .composer-drawer .composer-drawer-heading, .composer-drawer .composer-drawer-heading > span { transition:none; }
 }
 .composer-drawer-content ul { list-style:none; padding:0; margin:0; display:grid; gap:var(--drawer-row-gap); }
-.composer-drawer-content li { display:flex; min-height:var(--drawer-row-height); align-items:center; gap:12px; font-size:12px; line-height:1.4; }
-.composer-drawer-content label { flex:1; min-width:0; display:flex; align-items:flex-start; gap:8px; cursor:pointer; }
+.composer-drawer-content li { display:flex; min-height:var(--drawer-row-height); align-items:center; gap:var(--drawer-row-inline-gap); font-size:12px; line-height:1.4; }
+.composer-drawer-content label { flex:1; min-width:0; display:flex; align-items:flex-start; gap:var(--drawer-check-gap); cursor:pointer; }
 .composer-drawer-content label span { white-space:pre-wrap; overflow-wrap:anywhere; }
 .composer-drawer-content input[type=checkbox] { appearance:none; width:13px; height:13px; flex:none; margin:0; border:1px solid var(--ink); border-radius:2px; background:transparent; display:grid; place-content:center; }
 .composer-drawer-content input[type=checkbox]:checked::after { content:'✓'; font-size:11px; color:var(--ink); line-height:1; }
-.composer-drawer-content .is-complete span { text-decoration:line-through; color:var(--muted); }
-.composer-drawer-content time { white-space:nowrap; flex:none; }
+.composer-drawer-content .is-complete span:not(.composer-todo-meta) { text-decoration:line-through; color:var(--muted); }
+.composer-drawer-content time { white-space:nowrap; flex:none; font-size:var(--chat-meta-size); }
 .composer-drawer-content time, .composer-todo-version { opacity:var(--drawer-time-opacity); }
+.composer-todo-meta { display:inline-flex; flex:none; align-items:center; gap:var(--drawer-row-inline-gap); max-width:max-content; overflow:hidden; interpolate-size:allow-keywords; transition:max-width var(--drawer-editing-fade) ease, opacity var(--drawer-editing-fade) ease, margin-inline-start var(--drawer-editing-fade) ease; }
+.composer-drawer-content li:has(.composer-todo-edit) .composer-todo-meta { max-width:0; margin-inline-start:calc(var(--drawer-row-inline-gap) * -1); opacity:var(--drawer-editing-meta-opacity); pointer-events:none; }
 .composer-drawer-content .composer-todo-placeholder { opacity:var(--drawer-placeholder-opacity); pointer-events:none; }
 .composer-drawer-empty { margin:2px 0; font-size:12px; color:var(--muted); }
-.mw-app .composer-drawer .mw-composer { background:var(--composer-surface); border:1px solid var(--line-strong); border-radius:var(--composer-radius); padding:12px 12px 8px; }
-.mw-app .composer-drawer .mw-composer:focus-within { border-color:var(--ink); }
+/* Chrome rounds borders below 1px up to 1px, so the outline is an inset shadow; the padding absorbs the former 1px border. */
+.mw-app .composer-drawer .mw-composer { --composer-outline:var(--composer-border); background:var(--composer-surface); border:0; box-shadow:inset 0 0 0 var(--composer-border-width) var(--composer-outline); border-radius:var(--composer-radius); padding:13px 13px 9px; }
+.mw-app .composer-drawer .mw-composer:focus-within { --composer-outline:var(--composer-focus-border); }
 /* Borderless reference chips take a light tint of the field; a leading chip tightens the field's top padding. */
 .mw-app .mw-composer .todo-context-chip { background:var(--composer-chip-surface); border-color:transparent; }
 .mw-app .mw-composer .todo-context-chip > .mw-icon { color:var(--ink); }
@@ -214,7 +221,7 @@
 .composer-todo-line { flex:1; min-width:0; display:flex; align-items:center; gap:var(--bucket-tag-text-gap); }
 .composer-todo-line > .bucket-tag { margin-top:var(--bucket-tag-drawer-offset); }
 .mw-app .mw-composer:has(> .composer-context:first-child) { padding-top:var(--composer-chip-top-padding); }
-.mw-app .composer-drawer .mw-composer.is-frame-drop { border-color:var(--ink); outline:var(--focus-ring-width) dashed var(--focus-ring-color); outline-offset:var(--focus-ring-offset); }
+.mw-app .composer-drawer .mw-composer.is-frame-drop { --composer-outline:var(--ink); outline:var(--focus-ring-width) dashed var(--focus-ring-color); outline-offset:var(--focus-ring-offset); }
 .mw-app .composer-drawer textarea { padding:0; min-height:34px; font-size:12px; line-height:1.5; }
 .mw-app .composer-drawer textarea::placeholder { color:var(--composer-placeholder); }
 .composer-drawer .composer-tools { gap:8px; margin-top:12px; }
@@ -232,13 +239,13 @@
 @media(max-width:600px) {
   .mw-app .composer-area { padding-inline:12px; }
   .mw-app .conversation-inner { padding-inline:16px; }
-  .composer-drawer-content li { gap:8px; }
+  .composer-drawer-content li { --drawer-row-inline-gap:8px; }
   .composer-drawer-content time { font-size:10px; }
 }
 
 /* Workspace links expose panel visibility (mavix237's design-system header). On = ink icon and label over a light parallelogram tag (horizontal top and bottom, sides leaning like the logo); off = plain muted icon and label, never underlined. */
 .workspace-links > button, .workspace-links > button:not(:first-child) { position:relative; isolation:isolate; text-decoration:none; }
-.workspace-links > button::before { content:''; position:absolute; inset:0; z-index:-1; background:var(--view-tag-bg); clip-path:polygon(var(--view-tag-slant) 0, 100% 0, calc(100% - var(--view-tag-slant)) 100%, 0 100%); opacity:0; transition:opacity var(--view-tag-fade); }
+.workspace-links > button::before { content:''; position:absolute; inset:0; z-index:-1; border-radius:var(--view-tag-radius); background:color-mix(in srgb, var(--view-tag-ink) var(--view-tag-tint), transparent); opacity:0; transition:opacity var(--view-tag-fade); }
 .workspace-links > button[aria-pressed=true] { color:var(--view-tag-ink); }
 .workspace-links > button[aria-pressed=true]::before { opacity:1; }
 .workspace-links > button[aria-pressed=true]:hover { color:var(--view-tag-ink); }
@@ -315,7 +322,7 @@
 .workspace .shared-reader-header .zoom-controls { border:0; border-radius:0; padding:0 3px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .composer-drawer-content .composer-todo-text { transition:none; }
+  .composer-drawer-content .composer-todo-text, .composer-todo-meta { transition:none; }
   .composer-drawer-content .composer-todo-text:is(:hover,:focus-visible) { transform:none; }
 }
 
@@ -323,14 +330,25 @@
 .workspace-panel-header .panel-expand .ui-icon,
 .workspace .workspace-panel-header .panel-expand .ui-icon { color:inherit; opacity:1; }
 .composer-drawer-count { margin-left:auto; display:inline-flex; align-items:center; justify-content:center; min-width:var(--drawer-count-size); height:var(--drawer-count-size); padding:0 3px; border:1px solid currentColor; border-radius:999px; font:var(--drawer-count-font-size)/1 var(--mono); }
-.select-menu.composer-model-menu { padding:var(--dropdown-panel-padding); border-radius:var(--surface-radius); }
+.select-menu.composer-model-menu { padding:var(--dropdown-panel-padding); }
 .composer-model-menu [role=option] { border-radius:var(--control-radius); padding:8px 10px; }
 
 .composer-drawer .composer-tools .mw-icon[aria-label="Attach file"] { color:var(--composer-placeholder); opacity:1; }
 
 /* Stretch the entire selector chain, not only the button inside its auto-height wrapper. */
 .workspace .workspace-panel-header :is(.gallery-frame-picker-slot, .album-saved-frame) { align-self:stretch; height:100%; }
-.workspace .canvas-controls.has-navigation { flex-wrap:wrap; height:auto; flex-basis:auto; }
+.workspace .canvas-controls.has-navigation { container:idea-footer / inline-size; flex-wrap:nowrap; height:var(--row-height); flex-basis:auto; }
+.workspace .idea-footer-navigation .endpoint-jump { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+@container idea-footer (max-width:520px) {
+  .canvas-controls > * { --idea-footer-control-min-width:var(--idea-footer-compact-control); --zoom-scale-min-width:var(--idea-footer-compact-scale); }
+}
+@container idea-footer (max-width:400px) {
+  .canvas-controls > * { --idea-footer-control-min-width:var(--idea-footer-tight-control); --zoom-scale-min-width:var(--idea-footer-tight-scale); }
+  .idea-footer-navigation .endpoint-jump-word { display:none; }
+}
+@container idea-footer (max-width:280px) {
+  .idea-footer-navigation .zoom-controls:not(.endpoint-controls) { display:none; }
+}
 .workspace .idea-footer-navigation { display:flex; flex:1 1 200px; min-width:0; }
 .workspace .idea-footer-navigation > .panel-header-actions { flex:1; width:100%; }
 .workspace .canvas-controls.has-navigation button { min-width:0; padding-inline:8px; }
@@ -486,7 +504,7 @@
 .mw-app .capture-detail-field::placeholder { color:var(--capture-detail-placeholder); opacity:1; }
 .mw-app .capture-detail-field:hover { box-shadow:inset 0 -1px 0 var(--capture-detail-line-active); }
 .mw-app .capture-detail-field:is(:focus,:focus-visible) { outline:none; box-shadow:inset 0 -1px 0 var(--capture-detail-line-active); }
-@media (prefers-reduced-motion: reduce) { .mw-app .capture-detail-field { transition:none; } }
+@media (prefers-reduced-motion: reduce) { .mw-app .capture-detail-field, .capture-setting-chip .capture-chip-edit { transition:none; } }
 
 /* To-do drawer design from Mavix237's design-system branch, 8eb969a.
    Retain main's bucket picker, slash parsing, shared tasks and version metadata. */
@@ -495,13 +513,15 @@
   --composer-drawer-surface:#e7e7e4;
   --composer-drawer-hover:#dfdfdc;
   --composer-border:var(--line-strong);
+  --composer-border-width:.5px;
+  --composer-focus-border:color-mix(in srgb, var(--ink) 32%, transparent);
   --composer-drawer-glow:rgb(217 226 239 / 40%);
   --composer-drawer-glow-end:rgb(217 226 239 / 0%);
   --composer-drawer-glow-stop:68%;
   --composer-mode-track:#ebebe8;
   --composer-inset:calc(var(--workspace-radius) - var(--composer-drawer-radius));
   --composer-text-inset:var(--panel-heading-padding);
-  --composer-padding-inline:calc(var(--composer-text-inset) - var(--composer-inset) - 1px);
+  --composer-padding-inline:calc(var(--composer-text-inset) - var(--composer-inset));
   --composer-tool-inset:8px;
   --drawer-open-duration:520ms;
   --drawer-close-duration:380ms;
@@ -510,14 +530,14 @@
 }
 :root[data-theme=dark] {
   --composer-surface:var(--user-message-fill);
-  --composer-drawer-surface:#21201f;
-  --composer-drawer-hover:#292827;
-  --composer-border:rgb(255 255 255 / 16%);
-  --composer-selected:#454442;
-  --composer-placeholder:#8b8d93;
-  --composer-drawer-glow:#2e2b2f;
-  --composer-drawer-glow-end:rgb(37 39 46 / 0%);
-  --composer-mode-track:#383735;
+  --composer-drawer-surface:var(--fill);
+  --composer-drawer-hover:var(--fill-hover);
+  --composer-border:var(--line-strong);
+  --composer-selected:var(--selection);
+  --composer-placeholder:var(--faint);
+  --composer-drawer-glow:var(--fill);
+  --composer-drawer-glow-end:transparent;
+  --composer-mode-track:var(--line);
 }
 .mw-app .composer-area { width:100%; max-width:none; margin:0; padding:8px var(--composer-inset) var(--composer-inset); }
 .mw-app .capture-settings, .mw-app .composer-drawer-heading, .composer-drawer-content { padding-inline:calc(var(--composer-text-inset) - var(--composer-inset)); }
@@ -530,7 +550,7 @@
 .composer-drawer.is-expanded:not(.is-dragging) > .composer-drawer-reveal { transition-duration:var(--drawer-open-duration); transition-timing-function:var(--drawer-open-ease); }
 .composer-drawer.is-dragging > .composer-drawer-reveal { margin-bottom:calc(var(--drawer-drag) * -1); transition:none; }
 .composer-drawer > .mw-composer { position:relative; z-index:1; }
-.mw-app .composer-drawer .mw-composer { background:var(--composer-surface); border-color:var(--composer-border); padding-inline:var(--composer-padding-inline); }
+.mw-app .composer-drawer .mw-composer { background:var(--composer-surface); padding-inline:var(--composer-padding-inline); }
 .mw-app .composer-drawer .mw-composer .composer-tools { margin-inline:calc(var(--composer-tool-inset) - var(--composer-padding-inline)); }
 .composer-mode-switch { background:var(--composer-mode-track); }
 .composer-mode-switch input:checked + span { background:var(--composer-surface); }
@@ -568,14 +588,14 @@
 .work-state-simulator[data-loading] .work-state-fill { transition:transform var(--work-state-fill-ms) ease-out; }
 .work-state-overlay { position:absolute; inset:0; display:flex; align-items:center; gap:16px; padding-inline:var(--work-state-padding-inline); color:var(--work-state-overlay-ink); mix-blend-mode:difference; pointer-events:none; }
 .work-state-title { display:flex; align-items:center; gap:8px; min-width:0; }
-.work-state-title strong { display:flex; flex:none; font-size:13px; font-weight:600; white-space:nowrap; }
+.work-state-title strong { display:flex; flex:none; font-size:13px; font-weight:var(--strong-font-weight); white-space:nowrap; }
 .work-state-title-suffix { display:grid; grid-template-columns:1fr; transition:grid-template-columns var(--work-state-title-motion) var(--work-state-ease) 100ms; }
 .work-state-title-suffix > span { min-width:0; overflow:hidden; }
 .work-state-title-suffix > span > span { display:block; white-space:pre; transition:transform var(--work-state-title-motion) var(--work-state-ease),opacity var(--work-state-title-motion); }
 .work-state-title[data-compact] .work-state-title-suffix { grid-template-columns:0fr; }
 .work-state-title[data-compact] .work-state-title-suffix > span > span { transform:translateY(-110%); opacity:0; }
 .work-state-moment { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; opacity:.72; }
-.work-state-readout { min-width:4ch; margin-left:auto; font-size:var(--work-state-readout-size); font-weight:600; font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap; }
+.work-state-readout { min-width:4ch; margin-left:auto; font-size:var(--work-state-readout-size); font-weight:var(--strong-font-weight); font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap; }
 .work-state-close { display:grid; place-items:center; width:28px; height:28px; border-radius:50%; color:inherit; pointer-events:auto; cursor:pointer; }
 .work-state-close:hover { background:rgb(255 255 255 / 16%); }
 .work-state-simulating .conversation-inner:has(> .new-chat-welcome) { min-height:100%; display:grid; place-content:center; }
@@ -589,9 +609,9 @@
 }
 
 /* Mavix's capsule dropdown, retaining explicit location creation. */
-:root { --capture-chip-height:22px; --capture-chip-radius:999px; --capture-stack-gap:4px; --capture-option-surface:color-mix(in srgb,var(--capture-chip-surface) 92%,var(--paper)); --capture-option-highlight:var(--capture-chip-surface); --capture-new-surface:color-mix(in srgb,var(--capture-chip-surface) 80%,var(--paper)); --capture-new-placeholder:color-mix(in srgb,var(--capture-chip-ink) 55%,transparent); --location-menu-enter:220ms; --location-menu-exit:180ms; --location-menu-stagger:20ms; }
+:root { --capture-chip-height:var(--capture-row-height); --capture-chip-radius:999px; --capture-stack-gap:4px; --capture-option-surface:color-mix(in srgb,var(--capture-chip-surface) 92%,var(--paper)); --capture-option-highlight:var(--capture-chip-surface); --capture-new-surface:color-mix(in srgb,var(--capture-chip-surface) 80%,var(--paper)); --capture-new-placeholder:color-mix(in srgb,var(--capture-chip-ink) 55%,transparent); --location-menu-enter:220ms; --location-menu-exit:180ms; --location-menu-stagger:20ms; }
 .mw-app .capture-setting-chip { height:var(--capture-chip-height); padding:0 var(--capture-chip-padding-inline); border:0; }
-.mw-app .capture-setting-chip > span { line-height:1.4; padding-bottom:1px; }
+.mw-app .capture-setting-chip > span { line-height:var(--capture-chip-height); }
 .capture-bucket-stack { position:fixed; inset:auto; margin:0; padding:0; border:0; background:transparent; overflow:auto; display:flex; flex-direction:column; align-items:flex-start; gap:var(--capture-stack-gap); width:max-content; max-width:calc(100vw - 16px); font-size:var(--capture-chip-font-size); }
 .capture-bucket-stack:not(:popover-open) { display:none; }
 .capture-bucket-options { display:flex; flex-direction:column; align-items:flex-start; gap:var(--capture-stack-gap); }
@@ -638,3 +658,113 @@
 
 .select-menu.brand-dropdown > [role=option] { justify-content:flex-start; gap:8px; }
 .select-menu.brand-dropdown > [role=option] > .phosphor-icon { flex:none; }
+
+/* Panel footers: one fixed text size and one icon size; dropdown carets keep their own size. */
+.workspace :is(.gallery-footer, .canvas-controls) { --control-font-size:var(--panel-footer-font-size); --control-icon-size:var(--panel-footer-icon-size); --zoom-icon-size:var(--panel-footer-icon-size); }
+.workspace :is(.gallery-footer, .canvas-controls) .ui-icon:not([class*=ph-caret]) { --icon-size:var(--panel-footer-icon-size); width:var(--panel-footer-icon-size); height:var(--panel-footer-icon-size); font-size:var(--panel-footer-icon-size); }
+
+/* Ported from design-system: chat keeps a fixed width beside other panels, never more than 35% of the screen; the other panels share the rest.
+   With a fixed chat width there is nothing to drag, so the reader resize handle is hidden. Chat alone still fills the body. */
+:root { --chat-panel-width:min(440px, 35vw); }
+@media (min-width:851px) {
+  .mw-app .mw-body:is(.mw-split-view, .has-extra-panels) > .mw-surface:not([hidden]) { flex:0 0 var(--chat-panel-width); width:var(--chat-panel-width); }
+  .mw-app .mw-body:is(.mw-split-view, .has-extra-panels) > .mw-reader { flex:1 1 0; }
+  .mw-app .mw-body > .reader-divider { display:none; }
+}
+
+/* Ported from design-system: chat text follows the panel title's text inset at every width; no centered max-width column. */
+.mw-app .conversation-inner { max-width:none; padding-inline:var(--panel-title-text-inset); }
+
+/* Ported from design-system: light mode hierarchy is inverted from a white page. Panels sit on a soft gray and only what you act on
+   is lighter: the message box and in-chat version/milestone cards are white, your own sent messages a low-contrast near-white. */
+:root[data-theme=light] {
+  --paper:#f5f5f3;
+  --canvas-bg:#f5f5f3;
+  --workspace-background:#ebebe8;
+  --fill:#e7e7e4;
+  --fill-hover:#dddcd9;
+  --user-message-fill:#fafaf9;
+  --composer-surface:#fff;
+  --composer-drawer-surface:#e7e7e4;
+  --composer-drawer-hover:#dfdfdc;
+  --message-version-fill:#fff;
+  /* Title dividers follow the workspace tone instead of black. */
+  --panel-heading-divider:var(--workspace-background);
+}
+
+/* Ported from design-system: narrow reader panels never clip their footer. Below 620px of panel width the gallery footer wraps into two rows:
+   the frame picker on the first, time range and zoom on the second, with the range shrinking first. Controls still fill their row. */
+.workspace .iteration-gallery { container-type:inline-size; }
+@container (max-width: 620px) {
+  .workspace .gallery-footer { flex-wrap:wrap; flex:0 0 auto; height:auto; min-height:var(--panel-footer-height); row-gap:0; }
+  .workspace .gallery-footer > .tracked-interface { flex:1 1 100%; max-width:none; min-height:var(--panel-footer-height); }
+  .workspace .gallery-footer > .panel-header-actions { flex:1 1 100%; min-width:0; min-height:var(--panel-footer-height); justify-content:flex-end; border-top:1px solid var(--row-divider, var(--line)); }
+  .workspace .gallery-footer .gallery-range, .workspace .gallery-footer .gallery-range > .row-select { flex:1 1 auto; width:auto; min-width:0; }
+}
+
+/* Global spacing scale (2026-10-18): every layout padding and gap is 120% of its base value. Change --space-scale to retune the whole layout.
+   The To-do section's radius follows the scaled inset so its corners stay concentric with the panel. */
+:root {
+  --space-scale:1.2;
+  --workspace-gutter:calc(7px * var(--space-scale));
+  --workspace-panel-gap:calc(5px * var(--space-scale));
+  --workspace-bar-padding-inline:calc(10px * var(--space-scale));
+  --panel-title-inset:calc(6px * var(--space-scale));
+  --panel-title-padding-inline:calc(14px * var(--space-scale));
+  --panel-heading-padding:calc(20px * var(--space-scale));
+  --composer-inset:calc(4px * var(--space-scale));
+  --composer-drawer-radius:calc(var(--workspace-radius) - var(--composer-inset));
+  --composer-tool-inset:calc(8px * var(--space-scale));
+}
+
+/* Chat: upper and lower elements share two edges. Frames (your message bubble, the To-do section, the message box) sit at --composer-inset;
+   text (replies, bubble text, capture line, To-do heading, message box text) starts at --panel-title-text-inset. */
+.mw-app .conversation-inner { padding-inline:var(--composer-inset); }
+.mw-app .mw-message:not(.from-user) { padding-inline:calc(var(--panel-title-text-inset) - var(--composer-inset)); }
+.mw-app .from-user .message-content { padding-inline:calc(var(--panel-title-text-inset) - var(--composer-inset) - 1px); border:1px solid transparent; }
+.mw-app .from-user .message-time { padding-right:calc(var(--panel-title-text-inset) - var(--composer-inset)); }
+
+/* A small, faint grab handle centered on the To-do heading's top edge signals that the section can be dragged; it firms up on hover and while dragging. */
+:root { --drawer-handle-width:28px; --drawer-handle-height:3px; --drawer-handle-top:5px; --drawer-handle-color:color-mix(in srgb, var(--ink) 16%, transparent); --drawer-handle-active:color-mix(in srgb, var(--ink) 34%, transparent); }
+.mw-app .composer-drawer-heading { position:relative; }
+.mw-app .composer-drawer-heading::before { content:''; position:absolute; top:var(--drawer-handle-top); left:50%; width:var(--drawer-handle-width); height:var(--drawer-handle-height); translate:-50% 0; border-radius:var(--drawer-handle-height); background:var(--drawer-handle-color); pointer-events:none; transition:background-color var(--drawer-hover-duration, .18s) ease; }
+.mw-app .composer-drawer-heading:hover::before, .mw-app .composer-drawer.is-dragging .composer-drawer-heading::before { background:var(--drawer-handle-active); }
+
+/* View link fills (2026-10-18): the selected view sits on --view-tag-fill and shifts to --view-tag-hover-fill on hover; an unselected view only changes its text color on hover.
+   Dark mode uses solid navy fills under the #2f7fe9 text; light mode keeps the tinted Werk Blue mix. */
+.mw-app { --view-tag-fill:color-mix(in srgb, var(--view-tag-ink) var(--view-tag-tint), transparent); --view-tag-hover-fill:color-mix(in srgb, var(--view-tag-ink) calc(var(--view-tag-tint) / 2), transparent); }
+.mw-app[data-theme=dark] { --view-tag-fill:#1f2d47; --view-tag-hover-fill:#182234; }
+.mw-app .workspace-links > button::before { background:var(--view-tag-fill); }
+.mw-app .workspace-links > button:not([aria-pressed=true]):hover::before { opacity:0; }
+.mw-app .workspace-links > button[aria-pressed=true]:hover::before { background:var(--view-tag-hover-fill); }
+
+/* The To-do label and count sit on the vertical center of the visible strip above the message box: equal padding above and below (same total height). */
+:root { --drawer-heading-padding-top:11px; --drawer-heading-padding-bottom:11px; }
+
+/* To-do count is a filled dot: the heading's ink fills it and the number takes the section's surface color (the ring is inverted). */
+.mw-app .composer-drawer-count { border:0; border-radius:var(--drawer-count-size); background:var(--drawer-count-fill, var(--ink)); color:var(--composer-drawer-surface); font-weight:500; font-variant-numeric:tabular-nums; transition:background-color var(--drawer-hover-duration, .18s) ease, color var(--drawer-hover-duration, .18s) ease; }
+.composer-drawer:has(.composer-drawer-heading:is(:hover,:focus-visible)) .composer-drawer-count { color:var(--composer-drawer-hover); }
+
+/* Send button eases between disabled and ready instead of snapping: fill, icon color, opacity and a slight scale move together. */
+:root { --composer-send-transition:180ms cubic-bezier(.2, 0, 0, 1); --composer-send-idle-scale:.96; }
+.mw-app .composer-drawer .composer-tools > button[type=submit] { transition:background-color var(--composer-send-transition), color var(--composer-send-transition), opacity var(--composer-send-transition), scale var(--composer-send-transition); }
+.mw-app .composer-drawer .composer-tools > button[type=submit]:disabled { scale:var(--composer-send-idle-scale); }
+.mw-app .workspace-links > button:not([aria-pressed=true]):hover { color:var(--ink); }
+
+/* Chat panel breathing room: frames (bubble, To-do section, message box) sit 6px further in from the panel's left, right and bottom edges.
+   Text stays on the title's text inset; the To-do radius keeps its root value (11.2px). */
+:root { --chat-frame-extra:6px; }
+.mw-app .mw-surface { --composer-inset:calc(4px * var(--space-scale) + var(--chat-frame-extra)); --composer-padding-inline:calc(var(--composer-text-inset) - var(--composer-inset)); }
+
+/* Your message bubble pads its text equally on every side: the vertical padding matches the horizontal inset that lines its text up with the panel title. */
+.mw-app .from-user .message-content { padding-block:calc(var(--panel-title-text-inset) - var(--composer-inset) - 1px); }
+
+/* View link hover eases instead of snapping: the selected fill and every label color cross-fade over --view-tag-fade. */
+:root { --view-tag-hover-ease:cubic-bezier(.2, 0, 0, 1); }
+.mw-app .workspace-links > button { transition:color var(--view-tag-fade) var(--view-tag-hover-ease); }
+.mw-app .workspace-links > button::before { transition:opacity var(--view-tag-fade) var(--view-tag-hover-ease), background-color var(--view-tag-fade) var(--view-tag-hover-ease); }
+
+/* Date range: the label sits right beside its caret, centered in the control; its menu is only as wide as its options, centered under the control. */
+.workspace .row-select.is-centered { justify-content:center; gap:6px; }
+.workspace .row-select.is-centered > .row-select-value { flex:0 1 auto; }
+.select-menu.is-centered [role=option] { justify-content:center; padding-inline:20px; }
