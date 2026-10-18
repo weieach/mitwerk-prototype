@@ -201,7 +201,7 @@
 .composer-drawer-content label span { white-space:pre-wrap; overflow-wrap:anywhere; }
 .composer-drawer-content input[type=checkbox] { appearance:none; width:13px; height:13px; flex:none; margin:0; border:1px solid var(--ink); border-radius:2px; background:transparent; display:grid; place-content:center; }
 .composer-drawer-content input[type=checkbox]:checked::after { content:'✓'; font-size:11px; color:var(--ink); line-height:1; }
-.composer-drawer-content .is-complete span { text-decoration:line-through; color:var(--muted); }
+.composer-drawer-content .is-complete span:not(.composer-todo-meta) { text-decoration:line-through; color:var(--muted); }
 .composer-drawer-content time { white-space:nowrap; flex:none; font-size:calc(1em * var(--drawer-meta-scale)); }
 .composer-drawer-content time, .composer-todo-version { opacity:var(--drawer-time-opacity); }
 .composer-todo-meta { display:inline-flex; flex:none; align-items:center; gap:var(--drawer-row-inline-gap); max-width:max-content; overflow:hidden; interpolate-size:allow-keywords; transition:max-width var(--drawer-editing-fade) ease, opacity var(--drawer-editing-fade) ease, margin-inline-start var(--drawer-editing-fade) ease; }
