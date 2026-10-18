@@ -464,7 +464,7 @@
 .select-menu.capture-bucket-menu { font-size:var(--capture-chip-font-size); padding:0; }
 .capture-bucket-menu [role=option] { padding:6px var(--capture-chip-padding-inline); min-height:0; font-weight:inherit; }
 
-:root { --idea-footer-control-min-width:52px; --idea-footer-compact-control:40px; --idea-footer-compact-scale:52px; --idea-footer-tight-control:32px; --idea-footer-tight-scale:44px; }
+:root { --idea-footer-control-min-width:52px; --idea-footer-compact-control:40px; --idea-footer-compact-scale:52px; --idea-footer-tight-control:32px; --idea-footer-tight-scale:44px; --idea-jump-max-width:300px; }
 
 :root { --message-milestone-action-gap:10px; --message-milestone-action-width:116px; --idea-todo-time-size:12px; --idea-todo-time-gap:4px; }
 

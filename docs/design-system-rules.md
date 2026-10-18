@@ -40,6 +40,7 @@
 
 ## Idea stream footer stays one row when narrow — 2026-10-18
 
+- The Idea stream footer navigation row uses `space-between`. The locate control stays at the start; the previous, milestone jump and next group sits at the end, aligned to the right of that row. The jump label uses `--idea-jump-max-width` (300px) and sizes to its text instead of stretching across the row.
 - The Idea stream footer never wraps. It is a size container (`idea-footer`), and it condenses in tiers:
   - At 520px wide or less, controls shrink to `--idea-footer-compact-control` and the zoom scale to `--idea-footer-compact-scale`.
   - At 400px or less, they shrink to the tight tokens and the jump button drops its word, so it shows only the count (“3/12”).
@@ -1339,7 +1340,7 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Workspace chrome restoration and to-do metadata — 2026-10-17
 
-- Load workspace layout styles once, after base and control styles. Home's dark-theme backdrop behind panels stays black through `--workspace-background`; panels retain their paper surface. Chat and Version blocks share the existing 44px border-box heading height, including the combined reader header. Narrow readers can still wrap their controls.
+- Load workspace layout styles once, after base and control styles. Home's dark-theme backdrop behind panels stays black through `--workspace-background`; panels retain their paper surface. Chat, Version blocks and Idea stream share the existing 44px border-box heading height (`--panel-heading-height`), including the combined reader header. Narrow readers can still wrap their controls.
 - Add milestone and its replacement Not yet chip share action height, minimum width, typography, padding and 10px card separation; changing invitation state must not shift the content below. Keep the chip's rounded shape.
 - Each Idea stream to-do displays its persisted creation timestamp beneath its text, aligned with the text after the checkbox. Share the drawer's relative local-time formatting, saved version suffix, muted opacity and live refresh. Completed text stays struck through; timestamps remain readable. Keep the existing bounded list scrolling and graph-derived space reservation.
 
@@ -1626,7 +1627,7 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Node outlines and responsive frame details — 2026-10-18
 
-- Square to-do stations use the circular station's 28px border box, 5px route-colored border and 3px canvas-colored outer outline: 34px total extent including the outline. Draw the square in CSS, avoiding icon-internal margins; completed nodes add a check inside the same geometry.
+- Square to-do stations use the circular station's diameter as their base and a 3px canvas-colored outer outline. Draw the square in CSS, avoiding icon-internal margins; completed nodes add a check inside the same geometry. Their route-colored border is the thinner to-do token below, not the circular station's 5px border.
 - Conversation version covers retain an 8:5 aspect ratio in horizontal and stacked layouts. In horizontal cards, the cover and content share the card height. Covers paint above falling invitation actions, masking any overlap. During pointer resizing, cards fade out over 160ms, then fade in on release; reduced motion changes opacity immediately.
 - Gallery hover labels place the capture's prompt number above its summary, with both lines centered. Push captures use their actual Push number rather than a fabricated prompt number.
 
@@ -1685,7 +1686,7 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Compact checkbox stations and quieter timeline — 2026-10-18
 
-- Idea stream checkbox stations use 80% of the ordinary station diameter, derived through `ideaTheme.todoStationScale`. Keep their shared light border width, dark clearance outline and graph-centered alignment. Fit the completed check to the reduced inner area. This supersedes matching checkbox and circular station widths.
+- Idea stream checkbox stations use 80% of the ordinary station diameter, derived through `ideaTheme.todoStationScale`. Their route-colored border is `ideaTheme.todoStationBorderWidth` (2px), thinner than the circular station border; keep the dark clearance outline and graph-centered alignment. Fit the completed check to the reduced inner area. This supersedes matching checkbox and circular station widths.
 - Playback's existing timeline overview thumb uses the shared `--muted` gray instead of white. Reuse the current scroller and its overflow visibility, geometry and interactions; do not introduce another control or gray palette value.
 
 ## Recovering the visible playback range — 2026-10-18

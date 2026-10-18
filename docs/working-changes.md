@@ -209,6 +209,11 @@ Changes that are made but not yet committed. The user decides when to commit and
 - Validation: browser-computed chip text/icon sizes match the Playback summary typography token exactly, colors match the version tag, pill radius/fill and reference link are intact, and shadow blur/alpha resolve to 20vw and 2.88%. TypeScript passes.
 
 
+## 2026-10-18 · prompt #450 · Idea stream heading height
+
+- `src/features/workbench/workspace-layout.css`: Idea stream’s header and title row use the shared 44px `--panel-heading-height`, matching the Chat panel header.
+- `docs/design-system-rules.md`: include Idea stream in the shared heading-height rule.
+
 ## 2026-10-18 · prompt #448 · 100% work-state hint
 
 - `src/features/workbench/WorkStateSimulator.tsx`: at 100%, the moment label says “Drag to simulate an earlier state of this project” instead of “Current workspace”. Dates and “Empty project” stay for earlier states.
@@ -221,6 +226,12 @@ Changes that are made but not yet committed. The user decides when to commit and
 - `tests/timeline.test.ts`: cover merged disabled groups, separated groups, empty, fully enabled and fully disabled sequences.
 - `docs/design-system-rules.md`: record shared rules; capture Chat + Playback as requested.
 - Validation: TypeScript and all 14 timeline tests pass. Browser checks confirm no underline, #101010 outer background with #181818 panels, and one correctly sized disabled-region border matching enabled blocks. Saved Chat + Playback capture #447.
+
+## 2026-10-18 · prompt #451 · Thinner to-do stations and milestone jump width
+
+- `src/features/version-tree/tokens.ts`, `VersionTreePanel.tsx`, `src/index.css`: square to-do stations use a shared 2px route-colored border, thinner than the circular station ring. The canvas outline stays 3px.
+- `src/control-tokens.css`, `src/features/workbench/workspace-layout.css`: the Idea stream footer navigation row is space-between, the milestone button group sits at the right, and the jump label maxes at `--idea-jump-max-width` (300px).
+- `docs/design-system-rules.md`: record both shared rules.
 
 ## 2026-10-18 · prompt #449 — per-theme accent palettes (light branch + light milestone gradient)
 

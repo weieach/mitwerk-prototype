@@ -3383,3 +3383,23 @@ HTML Element: <span class="work-state-fill" aria-hidden="true" data-cursor-eleme
 ```text
 In design system, distinguish a version of theme colors for light mode and for dark mode and apply them respectively: the light mode version palette should be a little darker and a little more saturated. While the dark mode palette is already done, do this for light mode, keep in mind of 2 variations: one for the flowing gradient in version card, which should be lighter than it currently is in light mode, and one for other uses like branch colors. c light mode
 ```
+
+## Prompt #450
+
+```text
+DOM Path: div#root > div.mw-app nav-collap.ed > div.mw-main > div.mw-body reader-open  mw-.plit-view > aside#workspace-pane-version > div.reader-content hi.tory-content > main.work.pace > div.work.pace-.plit > section#workspace-pane-ideas > div.panel-header tree-header > div.panel-heading
+Position: top=55px, left=439px, width=766px, height=35px
+HTML Element: <div class="panel-heading" data-cursor-element-id="cursor-el-1" style="">Idea stream</div> should be same height as DOM Path: div#root > div.mw-app nav-collap.ed > div.mw-main > div.mw-body reader-open  mw-.plit-view > main#workspace-pane-chat > section.mw-dialog > header.panel-header work.pace-panel-header
+Position: top=55px, left=8px, width=425px, height=44px
+HTML Element: <header class="panel-header workspace-panel-header" data-cursor-element-id="cursor-el-2">Building an iteration gallery</header> 
+```
+
+## Prompt #451
+
+```text
+DOM Path: div#root > div.mw-app nav-collap.ed > div.mw-main > div.mw-body reader-open  mw-.plit-view > aside#workspace-pane-version > div.reader-content hi.tory-content > main.work.pace > div.work.pace-.plit > section#workspace-pane-ideas > div.canva.-.hell > div.tree-viewport > div.canva.-.ize > div.canva.-world > div.ver.ion-po.ition[9] > article.idea-card > button.tation i.-todo
+Position: top=364px, left=656px, width=22px, height=22px
+HTML Element: <button class="station is-todo" aria-label="Select V29 · 0/1 to-dos complete" aria-expanded="false" data-cursor-element-id="cursor-el-3"></button> thinner border for these - the colored part. DOM Path: div#root > div.mw-app nav-collap.ed > div.mw-main > div.mw-body reader-open  mw-.plit-view > aside#workspace-pane-version > div.reader-content hi.tory-content > main.work.pace > div.work.pace-.plit > section#workspace-pane-ideas > footer.canva.-control. ha.-navigation > div.idea-footer-navigation > div.panel-header-action > div.zoom-control. endpoint-control > button.endpoint-jump
+Position: top=822px, left=543px, width=442px, height=51px
+HTML Element: <button class="endpoint-jump" aria-label="Jump to milestone 7 of 7" title="Jump to current milestone" data-cursor-ref="e95" data-cursor-element-id="cursor-el-1">Milestone 7/7</button> set a 200px max width to this, have this group of btns aligned to the right, and use space-between for the row. c idea stream
+```

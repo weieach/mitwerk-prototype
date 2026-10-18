@@ -3,6 +3,8 @@ import { featurePalette } from '../../shared/palette.ts';
 
 export const ideaTheme = {
   todoStationScale: 0.8,
+  /** Route-colored ring on square to-do stations. Thinner than the circular station border. */
+  todoStationBorderWidth: 2,
   fitMinZoom: 0.05,
   nodeGap: 140,
   todoGap: 10,

@@ -65,6 +65,14 @@
   display:flex; flex-wrap:nowrap; height:var(--panel-heading-height); min-height:var(--panel-heading-height); flex:0 0 var(--panel-heading-height);
   padding:0; gap:0; border-bottom:1px solid var(--panel-heading-divider); background:var(--paper);
 }
+/* Idea stream uses the same title-row height as Chat, not the shorter stream control row. */
+.workspace .tree-header {
+  --row-height: var(--panel-heading-height);
+  height: var(--panel-heading-height);
+  min-height: var(--panel-heading-height);
+  flex: 0 0 var(--panel-heading-height);
+}
+.workspace .tree-header > .panel-heading { height: 100%; min-height: 100%; }
 .workspace-panel-header .panel-heading, .workspace .workspace-panel-header .panel-heading {
   display:flex; flex:1 1 auto; min-width:0; align-items:center; justify-content:flex-start; gap:10px; padding:0 var(--panel-title-inset);
 }
@@ -339,7 +347,7 @@
 /* Stretch the entire selector chain, not only the button inside its auto-height wrapper. */
 .workspace .workspace-panel-header :is(.gallery-frame-picker-slot, .album-saved-frame) { align-self:stretch; height:100%; }
 .workspace .canvas-controls.has-navigation { container:idea-footer / inline-size; flex-wrap:nowrap; height:var(--row-height); flex-basis:auto; }
-.workspace .idea-footer-navigation .endpoint-jump { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.workspace .idea-footer-navigation .endpoint-jump { flex:0 1 auto; width:auto; max-width:var(--idea-jump-max-width); min-width:0; overflow:hidden; text-overflow:ellipsis; }
 @container idea-footer (max-width:520px) {
   .canvas-controls > * { --idea-footer-control-min-width:var(--idea-footer-compact-control); --zoom-scale-min-width:var(--idea-footer-compact-scale); }
 }
@@ -351,7 +359,8 @@
   .idea-footer-navigation .zoom-controls:not(.endpoint-controls) { display:none; }
 }
 .workspace .idea-footer-navigation { display:flex; flex:1 1 200px; min-width:0; }
-.workspace .idea-footer-navigation > .panel-header-actions { flex:1; width:100%; }
+.workspace .idea-footer-navigation > .panel-header-actions { flex:1; width:100%; justify-content:space-between; }
+.workspace .idea-footer-navigation .endpoint-controls { flex:0 0 auto; margin-left:auto; min-width:0; max-width:100%; }
 .workspace .canvas-controls.has-navigation button { min-width:0; padding-inline:8px; }
 .workspace .canvas-controls.has-navigation .icon-button,
 .workspace .idea-footer-navigation .zoom-controls > button:not(.endpoint-jump) { width:32px; min-width:32px; aspect-ratio:auto; padding-inline:0; }
