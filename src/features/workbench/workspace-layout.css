@@ -589,7 +589,7 @@
 .composer-mode-switch input:checked + span { background:var(--composer-surface); }
 .composer-mode-switch input:not(:checked) + span { color:var(--muted); }
 .composer-mode-switch span { transition:background-color var(--drawer-hover-duration) ease, color var(--drawer-hover-duration) ease; }
-.mw-app .composer-drawer .composer-todo-edit { min-height:0; height:auto; overflow:hidden; padding:0; border:0; border-radius:0; outline:none; line-height:inherit; box-shadow:inset 0 -0.5px 0 var(--inline-field-line-hover); }
+.mw-app .composer-drawer .composer-todo-edit { min-height:0; height:auto; overflow:hidden; padding:0; border:0; border-radius:0; outline:none; line-height:inherit; box-shadow:inset 0 calc(-1 * var(--edit-field-line-width)) 0 var(--inline-field-line-hover); }
 .mw-app .composer-drawer .composer-todo-edit:focus-visible { outline:none; }
 .composer-drawer-content li.composer-todo-new { align-items:center; }
 .mw-app .composer-todo-input { flex:1; min-width:0; height:var(--drawer-row-height); padding:0; border:0; outline:none; background:transparent; color:var(--ink); caret-color:var(--ink); font:inherit; }
