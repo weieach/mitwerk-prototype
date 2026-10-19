@@ -21,6 +21,7 @@ import type { CSSProperties, MouseEvent, ReactNode } from 'react';
 import { AlbumView } from './AlbumView';
 import { referenceCapture } from './theater-layout';
 import { TheaterView } from './TheaterView';
+import { simulationAdvanced } from './playback-selection';
 import { resolveFrameRequest, buildVersions, versionsForScreen, defaultVersionRange, inRange, rangeCounts, ranges, versionKeepsPush } from './model';
 import type { Capture, GalleryFrame, RangeKey, FrameRequest } from './model';
 import { galleryTokens as t } from './tokens';
@@ -209,11 +210,14 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
     }
   }, [versions, range, clock]);
 
-  // While simulating, Playback keeps its playhead on the newest frame as work is added or removed.
+  // Follow added/removed work, not a view transition or an explicit frame selection.
   const latestVisible = visibleFrames.reduce<GalleryFrame | undefined>((last, frame) => !last || frame.timestamp >= last.timestamp ? frame : last, undefined);
+  const previousLatestId = useRef(latestVisible?.id);
   useEffect(() => {
-    if (simulating && view === 'theater' && latestVisible && latestVisible.id !== selectedId) select(latestVisible.id);
-  }, [simulating, view, latestVisible?.id]);
+    const advanced = simulationAdvanced(previousLatestId.current, latestVisible?.id, simulating, view === 'theater');
+    previousLatestId.current = latestVisible?.id;
+    if (advanced && latestVisible && latestVisible.id !== selectedId) select(latestVisible.id);
+  }, [simulating, view, latestVisible?.id, selectedId, select]);
 
   useEffect(() => { if (simulating) return; try { seedAnnotations(versions.flatMap(version => version.frames)); } catch { /* Demo seeds can be retried after storage is available. */ } }, [versions, simulating]);
 

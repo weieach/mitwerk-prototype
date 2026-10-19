@@ -170,3 +170,21 @@
 - `landing-orbit.ts`: change the shared starting-angle step from −45° to −10° per rectangle.
 - `tests/landing-orbit.test.ts`: update the spacing regression check. `docs/design-system-rules.md`: record the revised value.
 - Validation: all seven orbit tests and targeted whitespace checks pass. Saved and visually inspected landing progress capture #525.
+
+## 2026-10-19 · prompt #525 uncounted · Post-push records
+
+- Deployment repository fix and tests committed and pushed to `main` as `7917858170f54496e1fb44629f29ecc0a8bcedc3`.
+- `AGENTS.md` / `data/push-shas.json`: record push #55 and its exact commit after the push. These bookkeeping updates remain uncommitted, as a commit cannot include its own SHA. Prompt remains #525; screenshot capture skipped.
+
+## 2026-10-19 · prompt #526 · Preserve gallery prompt selection
+
+- `src/features/iteration-gallery/IterationGallery.tsx`, `playback-selection.ts`: restrict simulator follow-latest to actual changes in the newest visible frame. Entering Playback or choosing another prompt no longer overwrites explicit selection with the last frame.
+- `tests/playback-selection.test.ts`: cover entry while simulating, growth/rewind, and cutoff changes while still in Gallery. Three tests pass.
+- Local startup is stalled; browser validation and the single progress capture are pending.
+
+## 2026-10-19 · prompt #525 uncounted — prototype build cache fix (cleanup)
+
+- `server/prototype-service.mjs`: staging for a push build skips `[frame capture] screenshots` and `exports` (Git LFS smudged ~177MB of captures into every staged commit) and deletes the staged copy after the build. `tests/prototype-service.test.ts` expects the staged copy to be gone. Not yet test-verified: the machine is blocked by iCloud Drive syncing this folder (vite import hangs).
+- Browser reproduction against production confirmed choosing prompt #495 opened #520 with the simulator active. The same interaction against the isolated fixed app selected and displayed #495. TypeScript `--noEmit` also passed against that copy.
+- Restored cloud-only generated dependency files from a temporary install using the existing lockfile; package manifests and lockfile were unchanged. Main-workspace startup remained blocked by iCloud reads, so browser verification used the isolated source copy on port 5173 with the published gallery catalog.
+- Saved and inspected progress capture #526 with prompt #495 selected in Playback and the simulator active. The isolated verification environment had missing icon glyphs; selection and the displayed frame were correct. Capture's optional Git line-count scan was stopped after it stalled, allowing the script's built-in fallback to finish without a duplicate capture.

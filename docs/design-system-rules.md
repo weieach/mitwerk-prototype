@@ -2023,3 +2023,4 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Prompt #523 (2026-10-19): refine the orbit starting-angle step to −25° per sheet (0°, −25°, −50°, …), replacing −30°. All other motion and size tokens remain unchanged.
 - Prompt #524 (2026-10-19): change the shared orbit starting-angle step to −45° per sheet (0°, −45°, −90°, …), superseding −25°.
+- Prompt #525 (2026-10-19): change the shared orbit starting-angle step to −10° per sheet (0°, −10°, −20°, …), superseding −45°.

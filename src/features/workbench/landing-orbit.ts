@@ -4,7 +4,7 @@ export const LANDING_ORBIT = {
   count:20, size:.6, diameter:.86, speed:.035, pulse:.12,
   accelerateDuration:2.4, decelerateDuration:.65, cycleDuration:9,
   revealDuration:.65, growDuration:2.4, scaleDuration:2.8, initialScale:.01,
-  rotationStep:-45 * Math.PI / 180, rotationSpeed:.42, rotationStagger:.18, rotationEase:.9,
+  rotationStep:-10 * Math.PI / 180, rotationSpeed:.42, rotationStagger:.18, rotationEase:.9,
   tilt:.28, ambient:.2, diffuse:.8, light:{x:.6, y:-.45, z:.66},
 } as const;
 

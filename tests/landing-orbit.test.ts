@@ -101,9 +101,9 @@ test('shared orbit slows to its coasting speed in the shorter deceleration inter
 });
 
 
-test('initial angles decrease by 45 degrees per sheet while motion stays clockwise', () => {
+test('initial angles decrease by 10 degrees per sheet while motion stays clockwise', () => {
   const starts = Array.from({length:LANDING_ORBIT.count}, (_,index)=>orbitRotation(0,index));
-  const step = -45 * Math.PI / 180;
+  const step = -10 * Math.PI / 180;
   assert.equal(starts[0],0);
   for(let index=0;index<LANDING_ORBIT.count;index++) {
     if (index > 0) assert.ok(Math.abs(starts[index]-starts[index-1]-step)<1e-9);

@@ -15,7 +15,8 @@ export const prototypeApi = '/__mitwerk/prototypes';
 const assetsPrefix = '/__mitwerk/prototype-assets/';
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.otf': 'font/otf' };
 // Top-level paths a historical prototype never needs at runtime.
-const excludedPaths = new Set(['.cursor', '.githooks', 'node_modules', 'dist', 'archive', 'docs', 'tests', 'scripts', 'server', 'visual_ref']);
+// Captures (Git LFS) and exported media are served by the host or unused; copying them cost ~180MB per build.
+const excludedPaths = new Set(['.cursor', '.githooks', 'node_modules', 'dist', 'archive', 'docs', 'tests', 'scripts', 'server', 'visual_ref', '[frame capture] screenshots', 'exports']);
 const execFileAsync = promisify(execFile);
 
 /** Push numbers resolve to the exact commit recorded at push time. Never guess by version order. */
@@ -133,6 +134,8 @@ export function createPrototypeService(root, { catalog, history }) {
         }],
         build: { outDir, emptyOutDir: true, sourcemap: false },
       });
+      // The staged commit is only build input; the built output under push-N is what gets served.
+      await rm(sourceDir, { recursive: true, force: true });
       ready.set(number, { outDir, images: new Set(frozen.frames.map(frame => frame.filename)), references: new Set((frozen.references ?? []).map(reference => reference.name)) });
       return { url: `${base}index.html`, number };
     })();

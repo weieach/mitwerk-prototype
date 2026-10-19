@@ -3124,5 +3124,29 @@
     "output": 3929,
     "total": 12028,
     "simulated": true
+  },
+  "[prompt #524] +1.5k-742 · [screen landing] -in-app-browser-context source=-ambient-ui-state-- This block is automatically supplied ambient UI state, not part of th-2026-10-19-120531.png": {
+    "input": 4523,
+    "output": 5734,
+    "total": 10257,
+    "simulated": true
+  },
+  "[push #54] 56 files · +1508 -742 · transition to playback added staggered UI entry, reposition prototype frame & matching transition; sample chat response -2026-10-19-120613.png": {
+    "input": 6291,
+    "output": 1990,
+    "total": 8281,
+    "simulated": true
+  },
+  "[prompt #525] +40-5 · [screen landing] -in-app-browser-context source=-ambient-ui-state-- This block is automatically supplied ambient UI state, not part of th-2026-10-19-120754.png": {
+    "input": 14865,
+    "output": 4378,
+    "total": 19243,
+    "simulated": true
+  },
+  "[prompt #526] +28-0 · -in-app-browser-context source=-ambient-ui-state-- This block is automatically supplied ambient UI state, not part of th-2026-10-19-125308.png": {
+    "input": 646,
+    "output": 4455,
+    "total": 5101,
+    "simulated": true
   }
 }

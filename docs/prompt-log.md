@@ -5184,3 +5184,30 @@ x counter. what's taking up so large size in this codebase and are they necessar
 ```
 
 Git staging recovery: restored 147 cloud-only Git objects from GitHub after SHA-1 verification; 231 objects unavailable on the remote were left untouched. Staging completed after restoration.
+
+## Prompt #525 uncounted
+
+```text
+the progress bar is constantly going back and forth on the cloud progress. x counter
+```
+
+## Prompt #526
+
+```text
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://localhost:5173/?page=landing
+</in-app-browser-context>
+
+## My request:
+for some reason whne I click on prompt in gallery it doesnt take me to the correct frame but straight landing on the last frame
+
+```
+
+## Prompt #526 uncounted
+
+```text
+done step 1. x counter
+```

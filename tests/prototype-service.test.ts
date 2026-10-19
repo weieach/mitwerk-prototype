@@ -46,7 +46,8 @@ test('push service builds the recorded commit on demand, bypasses archived hooks
     const out = join(root, '.mitwerk-prototypes/push-7');
     assert.deepEqual(JSON.parse(readFileSync(join(out, 'gallery/manifest.json'), 'utf8')).frames.map((frame: {id: string}) => frame.id), ['old', 'push']);
     assert.equal(readFileSync(join(root, 'src/main.js'), 'utf8'), 'throw new Error("Working tree must not be built")');
-    assert.equal(existsSync(join(root, '.mitwerk-prototypes/source-7/docs')), false);
+    // The staged commit (without docs or captures) is removed once the build is done.
+    assert.equal(existsSync(join(root, '.mitwerk-prototypes/source-7')), false);
     const bundle = readdirSync(join(out, 'assets')).filter(name => name.endsWith('.js')).map(name => readFileSync(join(out, 'assets', name), 'utf8')).join('');
     assert.ok(bundle.includes('clicked') && !bundle.includes('Working tree must not be built'));
     assert.equal(git('status', '--porcelain', '--', 'index.html', 'package.json'), '');
