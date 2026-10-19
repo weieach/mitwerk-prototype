@@ -32,7 +32,13 @@ export function createLandingStage({ canvas, theme, target, geometry, intro, onP
   if (!context) return null;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fixedTime = reducedMotion ? intro.settleTime : null;
-  const readColors = () => ({ background:token(theme, '--landing-stage-background'), frame:token(theme, '--landing-frame'), glow:token(theme, '--landing-frame-glow') });
+  const readColors = () => {
+    const frame = token(theme, '--landing-frame');
+    // The glow is the quad color at --landing-frame-glow-alpha, built here so the canvas gets a plain rgba().
+    const alpha = Number(getComputedStyle(theme).getPropertyValue('--landing-frame-glow-alpha')) || .55;
+    const [r, g, b] = frame.match(/[\d.]+/g)?.map(Number) ?? [255, 255, 255];
+    return { background:token(theme, '--landing-stage-background'), frame, glow:`rgba(${r}, ${g}, ${b}, ${alpha})` };
+  };
   let colors = readColors();
   let size = { width:0, height:0, ratio:1 };
   let start = performance.now(), frame = 0, phase: LandingPhase | null = null;

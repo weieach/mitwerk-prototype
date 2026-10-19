@@ -14,8 +14,10 @@ export const initialMilestones: Record<string, string> = {
   V18: 'Let users open a pushed version as a live prototype',
   V25: 'Build a chat workspace around the version tools',
   // Nicole Wei: eefeb1f (Idea stream V37) and dbd64b2 (Idea stream V42).
-  'capture-version-36': 'Automatically publish saved frames to Vercel Blob',
-  'capture-version-41': 'Navigate prototype versions with consistent scaling and smooth panel switching',
+  'capture-version-36': 'Constructed a Vercel Blob pipeline for dynamically updating frame storage',
+  'capture-version-41': 'Implemented immersive live server view with new background',
+  // v44 ends with push #44, the verso rename.
+  'capture-version-44': 'Finalized brand name & concept!',
 };
 
 /** A capture version's milestone text: saved value first (empty means deleted), then the seeded label. */

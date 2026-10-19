@@ -7,6 +7,8 @@ import { multiplyIntro } from './landing-multiply';
 import { impactIntro } from './landing-impact';
 import { flattenIntro, unfoldIntro } from './landing-trials';
 import { createLandingStage } from './landing-stage';
+import { LogomarkSymbol } from '../../components/LogomarkSymbol';
+import { setStartingWorkState } from '../../shared/work-state';
 
 const geometry = logoGeometry(logoShapePart, logoShape);
 /** Version 3 (impact) is the default; `?intro=` picks `stack`, `multiply`, or the `flatten` / `unfold` trials. */
@@ -44,11 +46,15 @@ export function LandingPage() {
     <canvas ref={canvasRef} className="landing-stage" aria-hidden="true"/>
     <div className="landing-scrim" aria-hidden="true"/>
     <div className="landing-content">
-      <div className="landing-brand">
-        <svg ref={symbolRef} className="landing-symbol" viewBox={`0 0 ${geometry.width} ${geometry.height}`} aria-hidden="true"><path d={geometry.path} fill="currentColor"/></svg>
+      <div className="landing-brand logomark">
+        <LogomarkSymbol ref={symbolRef} className="landing-symbol"/>
         <strong>verso</strong>
       </div>
-      <a className="mw-button landing-open" href={import.meta.env.BASE_URL}>Open project</a>
+      {/* Shared design-system buttons: primary for the sample, secondary for an empty (0% work state) project. */}
+      <div className="landing-actions">
+        <a className="mw-button primary landing-open" href={import.meta.env.BASE_URL} onClick={() => setStartingWorkState(1)}>Open sample project</a>
+        <a className="mw-button landing-open" href={import.meta.env.BASE_URL} onClick={() => setStartingWorkState(0)}>New project (view-only)</a>
+      </div>
     </div>
   </main>;
 }

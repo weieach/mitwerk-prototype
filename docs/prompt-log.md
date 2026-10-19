@@ -3999,3 +3999,27 @@ i want to update the brand's name from "mitwerk" to "verso", all lowercase. Help
 ```text
 make sure the push node name is loaded from git commits online not from captured image filename, so the full text is accessible; decide a max height to cut short the msg with "..." (but hovering will show tool tip with full text
 ```
+
+## Prompt #472
+
+```text
+I want to add a milestone to the latest version called "Finalized brand name & concept!". Hide type editor from logo menu. Add the shape in logo to favicon. Change the "automatically publish saved frame..." milestone to say "Constructed a Vercel Blob pipeline for dynamically updating frame storage", and change the "Navigate prototype versions..." milestone to say "Implemented immersive live server view with new background"
+```
+
+## Prompt #473
+
+```text
+make sure that the buttons on splashscreen are built according to design system. Change the first btn text to say "Open sample project", and add a button below that says "View new project". If user clicked on the second option, it still takes user to the default proj screen but with work state set to 0% (this panel is still hidden by default). In the splashscreen animation, remove the part where shapes shoot out from the logo
+```
+
+## Prompt #474
+
+```text
+in all logomark, the gap between the shape and the name should be kept consistent and proportional to computed text size; this includes splashscreen and site header. use the amount of gap in site header logomark as baseline, but make sure the text part there is increase a little, and then use it as scale reference too.
+```
+
+## Prompt #475
+
+```text
+Change the new proj btn to say "New project (view-only)". The hover state of prim btn on splash feels weird. The large quads in the entry animation should be same light gray color as logomark in home - after that, change logomark in home to white. The bg color of splash screen should match panel color on main screen.
+```

@@ -45,6 +45,8 @@ function savedProgress() {
   try { const saved = Number(sessionStorage.getItem(storageKey)); return saved >= 0 && saved < 1 && sessionStorage.getItem(storageKey) !== null ? saved : 1; }
   catch { return 1; }
 }
+/** Sets the work state the next page load opens with (0 = a new, empty project; 1 = the full sample). */
+export function setStartingWorkState(progress: number) { saveProgress(clamp(progress)); }
 function saveProgress(progress: number) {
   try { if (progress >= 1) sessionStorage.removeItem(storageKey); else sessionStorage.setItem(storageKey, String(progress)); } catch { /* Session-only convenience. */ }
 }

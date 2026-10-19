@@ -475,7 +475,7 @@ function wantsIdeaStreamCapture(prompt = '') {
   return /\bc chat\b[^.\n]*\bidea stream\b/i.test(prompt) || hasFlag('idea-stream') || /\bc chat (?:and|&) idea stream\b/i.test(prompt) || /\bc idea stream\b/i.test(prompt) || /\bc (?:home|homescreen)\s+w\/?\s+[^.\n]*\bidea stream\b/i.test(prompt);
 }
 
-function wantsLandingCapture(prompt = '') { return /\bc landing\b/i.test(prompt); }
+function wantsLandingCapture(prompt = '') { return argValue('gallery-view') === 'landing' || /\bc landing\b/i.test(prompt); }
 
 /** `c slider`, or `c ... w simulator` (`work state simulator`), opens the work state simulator, optionally `at N%`. */
 function workStateCapture(prompt = '') {

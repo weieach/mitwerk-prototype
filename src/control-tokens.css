@@ -485,7 +485,18 @@
 
 :root { --brand-padding-inline:10px; --zoom-scale-min-width:64px; }
 
-:root { --workspace-brand-gap:4px; }
+:root {
+  /* Logomarks (shape + name): gap and shape height per 1em of the name, taken from the site header (15px name, 9.2px gap, 17.6px shape). */
+  --logomark-gap:.613em;
+  --logomark-symbol-height:1.173em;
+}
+.logomark { display:flex; align-items:center; gap:var(--logomark-gap); color:var(--logomark-ink); }
+/* Logomarks are white in dark mode and ink in light mode. */
+:root { --logomark-ink:var(--ink); }
+/* Primary buttons hover by easing their own fill slightly toward the page, keeping the label's contrast. */
+.mw-app { --mw-accent-hover:color-mix(in srgb, var(--mw-accent) 86%, var(--mw-page)); }
+:root[data-theme=dark] { --logomark-ink:#fff; }
+.logomark-symbol { display:block; flex:none; height:var(--logomark-symbol-height); width:auto; overflow:visible; }
 
 /* Site header view tags (from mavix237's design-system branch). */
 :root { --view-tag-fade:.15s; --view-tag-radius:6px; --view-tag-tint:10%; --view-tag-ink:var(--accent); }

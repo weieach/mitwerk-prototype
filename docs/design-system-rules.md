@@ -1826,8 +1826,24 @@ This file is reserved for project-wide design-system rules requested by the user
 - The sidebar wordmark is live text (`.workspace-wordmark`, at the former 18px logo height and the shared strong weight) instead of the MitWerk wordmark image. The symbol mark is unchanged until a verso mark exists.
 - Saved sample names and instructions that still carry the old brand migrate to verso on load; custom text is kept as written.
 - Internal identifiers keep their names (storage keys, `/__mitwerk/*` routes, `mw-` classes, `MITWERK_*` env vars, file and repo names) so saved data and tooling keep working.
+- The favicon is the verso symbol (`public/favicon.svg`, the top-bar shape cropped to its bounds), near-black in light browser themes and near-white in dark ones.
+- The logo menu offers Light/Dark mode, Work state simulator and Exit to splash screen; the type editor is no longer listed there.
 
 ## Push names from Git; clamped captions — 2026-10-18
 
 - A push frame's name is its full Git commit message (trailers such as Co-Authored-By removed), not the length-limited capture filename. The catalog resolves it from the recorded SHA in `data/push-shas.json` only when that commit's subject matches the capture's summary; otherwise it finds the commit by subject, nearest before the capture time. The message travels in the catalog (`commitMessage`), so the published Blob catalog serves it online too.
 - Playback captions (prompt text or push message) show at most `--theater-summary-lines` (2) lines, ending in an ellipsis, and never collapse to zero height. When cut short, hovering or focusing the caption shows the full text in a top-layer tooltip (`.theater-summary-tip`) placed above the caption, or below when there is no room.
+
+## Splash screen actions and intro — 2026-10-18
+
+- The splash screen's actions are the shared design-system buttons, stacked and equal width (`--landing-action-width`, `--landing-action-gap`) under the brand: **Open sample project** (`.mw-button.primary`) and **New project (view-only)** (`.mw-button`). No splash-only button colors.
+- Open sample project opens the default project at 100% work state. New project (view-only) opens the same default project screen at 0% work state (an empty project); the work state simulator panel stays hidden until opened from the logo menu.
+- The default intro (version 3) no longer bursts frames out of the logo after the pile lands; the background loop starts at that moment instead.
+
+## Logomark proportions — 2026-10-18
+
+- Every logomark (site header, splash screen) is the verso shape plus the name, built with the shared `.logomark` / `LogomarkSymbol` (the shape drawn tight to its bounds, in the text color). Its shape-to-name gap (`--logomark-gap`, 0.613em) and shape height (`--logomark-symbol-height`, 1.173em) are proportional to the name's computed size.
+- The site header is the reference: its name grew from 14px to 16px (type role `brand`, about 15px computed) while keeping its 9.2px visible gap and 17.6px shape. The splash keeps its 32px name and scales the shape (37.5px) and gap (19.6px) from those ratios.
+- Logomarks are white in dark mode (`--logomark-ink`; ink in light mode), including the header name's type role color.
+- The splash follows the main screen's theme: its stage is the panel color (`--paper`), the scrim is that color at 76%, and the intro's quads use the ink light gray (`--landing-frame: var(--ink)`, the home logomark's former color) with a glow of the same color at `--landing-frame-glow-alpha`.
+- Primary buttons hover by easing their fill 14% toward the page (`--mw-accent-hover`, border included), not by switching to the muted gray.

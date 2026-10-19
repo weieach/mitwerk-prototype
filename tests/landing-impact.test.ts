@@ -40,3 +40,9 @@ test('version 3 drops the pile onto the two logo frames, then loops seamlessly',
   const a = impactBands(impactLoopStart + 3, viewport, target, geometry), b = impactBands(impactLoopStart + 3 + period, viewport, target, geometry);
   a.forEach((band, index) => assert.ok(Math.abs(band.x0 - b[index].x0) < 1e-6));
 });
+
+test('version 3 no longer bursts frames out of the landed logo', () => {
+  for (let time = IMPACT_INTRO.releaseStart; time < IMPACT_INTRO.releaseStart + IMPACT_INTRO.throwStart; time += .02) {
+    assert.equal(impactBands(time, viewport, target, geometry).length, 0);
+  }
+});

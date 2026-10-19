@@ -2,8 +2,10 @@ import { easeInCubic, easeInOutCubic, easeOutCubic, frameBand, lerp, progress, t
 
 /**
  * Landing intro version 3: a fixed set of white frames (no multiplying) is thrown from the
- * camera onto an isometric pile, which then drops a long way in scale onto the logo. In the
- * loop frames are flung back past the camera. Every move eases; nothing overshoots.
+ * camera onto an isometric pile, which then drops a long way in scale onto the logo. Nothing
+ * bursts out of the logo afterwards (removed 2026-10-18); the background loop starts once the
+ * pile has landed, throwing and flinging frames around the screen center behind the scrim.
+ * Every move eases; nothing overshoots.
  */
 export const IMPACT_INTRO = {
   frames: 7,
@@ -21,6 +23,7 @@ export const IMPACT_INTRO = {
   dropStart: 2.95,
   dropDuration: 1,
   revealAt: 3.95,
+  /** The landed logo hands over to the background loop here. */
   releaseStart: 4.5,
   flingStagger: .12,
   flingDuration: .6,
@@ -67,7 +70,7 @@ const entryPoint = (index:number, viewport:Viewport, center:Point) => {
   return { x:center.x + dx * viewport.width, y:center.y + dy * viewport.height };
 };
 
-export const impactLoopStart = t.releaseStart + (count - 1) * t.flingStagger + t.flingDuration;
+export const impactLoopStart = t.releaseStart;
 /** Settles once the first loop pile has landed, so captures show it under the scrim. */
 export const impactSettleTime = impactLoopStart + t.throwStart + (count - 1) * t.throwStagger + t.throwDuration + .3;
 
@@ -86,16 +89,6 @@ export function impactBands(time:number, viewport:Viewport, target:Rect, geometr
       const magnification = throwMagnification(time, t.throwStart + index * t.throwStagger);
       if (magnification === null) continue;
       bands.push(bodyBand({ depth:lerp(pileDepth(index), logoDepth(index), drop), magnification, vanish:entryPoint(index, viewport, screen) }, center, scale, geometry));
-    }
-    return bands;
-  }
-
-  if (time < impactLoopStart) {
-    // Release: the logo's frames are flung back past the camera, front first, bursting around the logo.
-    for (let index = 0; index < count; index += 1) {
-      const magnification = flingMagnification(time, t.releaseStart + (count - 1 - index) * t.flingStagger);
-      if (magnification === null) continue;
-      bands.push(bodyBand({ depth:logoDepth(index), magnification, vanish:entryPoint(index, viewport, logoCenter) }, logoCenter, final, geometry));
     }
     return bands;
   }

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="3.2 3.2 18.6 18.6">
+  <style>path { fill: #191a1b; } @media (prefers-color-scheme: dark) { path { fill: #f2f2f2; } }</style>
+  <!-- verso symbol, the same shape as src/assets/mitwerk-symbol.svg (mirrored), cropped to its bounds. -->
+  <path transform="translate(25 0) scale(-1 1)" d="M19.8276 9.83594V18.9492L15.9048 16.7812V21.3018L5.17236 15.3711V6.05078L9.09521 8.29395V3.69824L19.8276 9.83594Z"/>
+</svg>

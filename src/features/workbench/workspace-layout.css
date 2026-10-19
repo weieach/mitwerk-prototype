@@ -35,7 +35,7 @@
 :root[data-theme=dark] { --workspace-background: var(--chrome); --panel-heading-divider: var(--line); }
 .mw-app { background: var(--workspace-background); }
 .mw-app .mw-topbar { margin-block:var(--workspace-bar-gap); height:var(--workspace-bar-height); min-height:var(--workspace-bar-height); padding:0 var(--workspace-bar-padding-inline); background:var(--workspace-background); gap:16px; }
-.mw-topbar .workspace-brand { display:flex; align-items:center; gap:var(--workspace-brand-gap); flex-shrink:0; }
+.mw-topbar .workspace-brand { display:flex; align-items:center; gap:var(--logomark-gap); flex-shrink:0; font-size:var(--type-brand-size); }
 .mw-topbar .workspace-brand .workspace-logo { width:25px; height:25px; object-fit:contain; }
 .mw-topbar .workspace-brand strong { font-size:14px; font-weight:var(--strong-font-weight); }
 .workspace-links { display:flex; align-items:center; min-width:0; gap:var(--workspace-links-gap); overflow:auto; scrollbar-width:none; }
@@ -136,8 +136,6 @@
   .workspace .workspace-panel-header .panel-header-actions { flex:1 1 auto; min-height:var(--panel-heading-height); justify-content:flex-end; }
   .workspace .workspace-panel-header .gallery-frame-picker-slot { flex:1; }
 }
-.workspace-symbol { display:block; flex:none; }
-:root[data-theme=light] .workspace-symbol { filter:invert(1); }
 .workspace .theater-version-tag { --control-height:18px; --control-font-size:11px; }
 .workspace .theater-frame-actions .annotation-tag { --control-height:var(--playback-action-height); }
 @media(max-width:600px) {
@@ -428,15 +426,14 @@
 .workspace-brand-menu .workspace-brand[aria-expanded=true], .brand-dropdown { background:var(--user-message-fill); }
 /* Landing intro: complete-white frames with a white glow on a dark stage, under a dark scrim. Timing in landing-*.ts; colors and reveal here. No blur. */
 .landing-page {
-  --landing-stage-background:#000;
-  --landing-frame:#fff;
-  --landing-frame-glow:rgb(255 255 255 / 55%);
-  --landing-scrim:rgb(6 6 7 / 76%);
-  --landing-on-scrim:#fafafa;
-  --landing-action-fill:rgb(255 255 255 / 12%);
-  --landing-action-fill-hover:rgb(255 255 255 / 20%);
-  --landing-action-line:rgb(255 255 255 / 18%);
-  --landing-symbol-height:27px;
+  /* The splash sits on the main screen's panel color; its quads use the light gray the home logomark used before it turned white. */
+  --landing-stage-background:var(--paper);
+  --landing-frame:var(--ink);
+  --landing-frame-glow-alpha:.55;
+  --landing-scrim:color-mix(in srgb, var(--paper) 76%, transparent);
+  --landing-on-scrim:var(--logomark-ink);
+  --landing-action-gap:10px;
+  --landing-action-width:180px;
   --landing-reveal-duration:.9s;
   --landing-reveal-stagger:.14s;
   --landing-reveal-ease:cubic-bezier(.2,.7,.1,1);
@@ -446,14 +443,13 @@
 .landing-stage, .landing-scrim { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
 .landing-scrim { background:var(--landing-scrim); opacity:0; transition:opacity calc(var(--landing-reveal-duration) * 1.4) var(--landing-reveal-ease); }
 .landing-content { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:28px; color:var(--landing-on-scrim); }
-.landing-brand { display:flex; align-items:center; gap:22px; font-size:var(--landing-brand-size); color:var(--landing-on-scrim); }
-.landing-symbol { display:block; flex:none; height:var(--landing-symbol-height); width:auto; overflow:visible; }
-.landing-open { position:absolute; top:calc(100% + 28px); display:inline-flex; align-items:center; justify-content:center; text-decoration:none; min-width:150px; }
-.mw-app.landing-page .landing-open { background:var(--landing-action-fill); color:var(--landing-on-scrim); border-color:var(--landing-action-line)!important; }
-.mw-app.landing-page .landing-open:hover { background:var(--landing-action-fill-hover); }
+.landing-brand { display:flex; align-items:center; gap:var(--logomark-gap); font-size:var(--landing-brand-size); color:var(--landing-on-scrim); }
+.landing-actions { position:absolute; top:calc(100% + 28px); display:flex; flex-direction:column; align-items:stretch; gap:var(--landing-action-gap); }
+.landing-open { text-decoration:none; min-width:var(--landing-action-width); }
 .landing-symbol, .landing-brand strong, .landing-open { transition:opacity var(--landing-reveal-duration) var(--landing-reveal-ease), transform var(--landing-reveal-duration) var(--landing-reveal-ease); }
 .landing-brand strong { transition-delay:var(--landing-reveal-stagger); }
 .landing-open { transition-delay:calc(var(--landing-reveal-stagger) * 2.5); }
+.landing-open + .landing-open { transition-delay:calc(var(--landing-reveal-stagger) * 3.5); }
 .landing-page[data-intro=playing] :is(.landing-symbol, .landing-brand strong, .landing-open) { opacity:0; }
 .landing-page[data-intro=playing] .landing-brand strong { transform:translateX(-14px); }
 .landing-page[data-intro=playing] .landing-open { transform:translateY(8px); }

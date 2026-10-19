@@ -423,3 +423,34 @@ Changes that are made but not yet committed. The user decides when to commit and
 - `data/push-shas.json`: corrected pushes #38–#41, which pointed at other commits (#38 a0555fa1, #39 2017e216, #40 9d2b89e5, #41 dbd64b23); Enter prototype for those pushes now loads the right code.
 - `tests/prototype-service.test.ts`: trailer stripping.
 - `docs/design-system-rules.md`: rules for the above.
+
+## 2026-10-18 · prompt #472 — milestones, logo menu, favicon
+
+- `src/features/version-tree/idea-stream.ts`: seeded milestones — v36 "Constructed a Vercel Blob pipeline for dynamically updating frame storage", v41 "Implemented immersive live server view with new background", new v44 (push #44, the verso rename) "Finalized brand name & concept!". Browser milestones reset on each load, so these defaults are what everyone sees.
+- `src/features/workbench/BrandMenu.tsx`: Type editor removed from the logo menu.
+- `public/favicon.svg` (new), `index.html`: favicon from the logo symbol, adapting to light/dark browser themes.
+- `docs/design-system-rules.md`: favicon and logo-menu rules.
+
+## 2026-10-18 · prompt #473 — splash screen buttons and intro
+
+- `src/features/workbench/LandingPage.tsx`, `workspace-layout.css`: "Open sample project" (`.mw-button.primary`) and new "View new project" (`.mw-button`) stacked at equal width; splash-only button fills/lines removed.
+- `src/shared/work-state.ts`: `setStartingWorkState` — the sample opens at 100%, the new project at 0% (session-saved; simulator panel stays hidden).
+- `src/features/workbench/landing-impact.ts`, `tests/landing-impact.test.ts`: removed the release burst out of the logo; the loop starts when the pile lands.
+- `scripts/screenshot-progress.mjs`: `--gallery-view landing` capture option.
+- `docs/design-system-rules.md`: splash rules.
+
+## 2026-10-18 · prompt #474 — logomark proportions
+
+- `src/components/LogomarkSymbol.tsx` (new): shared tight inline SVG of the verso shape (text color), used by the header and splash.
+- `src/control-tokens.css`: `--logomark-gap` (.613em) and `--logomark-symbol-height` (1.173em), `.logomark` / `.logomark-symbol`; removed the unused `--workspace-brand-gap`.
+- `src/features/workbench/BrandMenu.tsx`, `LandingPage.tsx`, `workspace-layout.css`: both logomarks use the shared symbol and em-based gap/height (removed `--landing-symbol-height`, the fixed 22px gap, the header image and its light-mode invert).
+- `src/shared/type-studio.ts`: header name (`brand` role) 14px → 16px.
+- `docs/design-system-rules.md`: logomark rule.
+
+## 2026-10-18 · prompt #475 — splash colors, white logomark, primary hover
+
+- `src/features/workbench/LandingPage.tsx`: second button reads "New project (view-only)".
+- `src/features/workbench/workspace-layout.css`, `landing-stage.ts`: splash stage = panel color (`--paper`), scrim = panel color at 76%, quads = `--ink` light gray; the glow is built from the quad color at `--landing-frame-glow-alpha`.
+- `src/control-tokens.css`, `src/shared/type-studio.ts`: `--logomark-ink` (white in dark mode, ink in light) for the shape and the header name.
+- `src/features/workbench/workbench.css`, `control-tokens.css`: design-system primary hover uses `--mw-accent-hover` (fill eased 14% toward the page) instead of muted gray — applies to every primary button.
+- `docs/design-system-rules.md`: rules updated.
