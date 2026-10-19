@@ -162,3 +162,14 @@ test('a partial cloud checkout builds public saved commits without a GitHub toke
     rmSync(root, {recursive:true,force:true});
   }
 });
+
+test('archived prototypes forward Tab and Escape to the host so it can leave full screen', async () => {
+  const { runtimeKeyMessage } = await import('../src/shared/runtime-messages.mjs');
+  const posted: unknown[] = []; let listener: ((event: { key: string }) => void) | null = null;
+  const window: Record<string, any> = { fetch: async () => new Response('{}'), addEventListener: (type: string, handler: (event: { key: string }) => void) => { if (type === 'keydown') listener = handler; }, parent: { postMessage: (data: unknown) => posted.push(data) } };
+  runInNewContext(prototypeBootstrap('/__mitwerk/prototype-assets/7/').replace(/^<script>|<\/script>$/g, ''),
+    { window, URL, Response, location: new URL('http://localhost:5173/__mitwerk/prototype-assets/7/index.html') });
+  listener!({ key: 'a' }); listener!({ key: 'Tab' }); listener!({ key: 'Escape' });
+  // Messages come from the sandbox realm, so compare their JSON.
+  assert.equal(JSON.stringify(posted), JSON.stringify([{ type: runtimeKeyMessage, key: 'Tab' }, { type: runtimeKeyMessage, key: 'Escape' }]));
+});

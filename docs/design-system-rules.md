@@ -1928,3 +1928,98 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Hidden simulator status beside the brand — 2026-10-19
 
 - While the simulator session is open, its sheet is hidden, and progress is below 100%, show “work state x%” beside the workspace logomark. Update the percentage from the shared live simulator state using the slider's whole-percent rounding. Hide the label at 100%, when the sheet returns, or when the session closes. Use shared muted text and control typography.
+
+## Scripted chat results and live refresh — 2026-10-19
+
+- The exact demo prompt “Increase the max width of chat panel” returns a session-only animated completion and a new-version-style card. Derive its displayed version/prompt numbers from the capture catalog and earlier demo results; do not alter saved Git/capture history. The card appears after printing and opts out of the automatic gradient milestone invitation.
+- A scripted completion refreshes an already active Live server iframe exactly once after printing ends. Do not start Live server or refresh an archived prototype. Ordinary unmatched prompts keep the existing fallback reply.
+- Live server and saved-prototype frames center vertically in the complete reader area below the header, including the hidden footer. This supersedes bottom-aligned runtime frames. Reserve symmetric clearance using the measured exit row and shared inset so short panels fit the frame without overlap.
+
+## Playback entry and matched runtime return — 2026-10-19
+
+- Each navigation into Playback reveals the saved frame first, its actions and prompt/push details after 180ms, and transport/timeline after 640ms (updated in prompt #507), with 240ms fades and a 6px lift for the secondary rows. Changing the selected frame during Playback does not replay this entrance.
+- Leaving Live server or a saved prototype preserves the visible runtime while its frame interpolates into the saved-frame bounds over 560ms; dissolve into the saved image in the latter part of that movement. Derive both rectangles from the live layout, including restoring split panes, and cancel on interruption/unmount. Reduced motion restores the final layout immediately without stagger or movement.
+
+## Playback control summary order — 2026-10-19
+
+- On wide playback rows, the Controls label is followed by two visible spaces and the summary in speed, loop, unit order, without parentheses: “Controls  2×, no loop, per prompt”. Use “per prompt”, “per version”, or “per milestone” for the selected unit. The dropdown follows the same order: Speed, Loop, then Play at the right.
+
+## Splash glow only at logo arrival — 2026-10-19
+
+- Splash shapes remain crisp during arrival, piling, and the background loop. Allow a single smooth white glow pulse only from 180ms before to 420ms after the intro's final-logo reveal. Derive the window from each intro variant's reveal time using shared `LANDING_INTRO` tokens. The resting logo has no glow; reduced motion skips the pulse. This supersedes the always-on white glow rule.
+
+- Prompt #509 softens that pulse to 14% peak opacity (formerly 55%) with a squared-sine opacity envelope and a steady blur radius, so the wider 600ms fade eases in and out without a bright flash.
+
+## Rotating-sheet splash and persistent description — 2026-10-19
+
+- The default splash begins as one light-gray rectangle extending beyond all viewport edges. It rotates toward the existing quad orientation, brightens uniformly to white as if turning into a light, opens into a sequence of seven quads, then gathers into the SVG-derived logo. Keep the subtle arrival glow; stop on the final logo instead of returning to the background loop. Existing intro trials remain available. This supersedes the default thrown-frame intro and its flat-white opening.
+- Double the landing logomark scale using a landing-only token, preserving shared SVG proportions. On very narrow screens, fit the available width. Position the action group lower, with its bottom using the same workspace gutter, panel footer, control inset, and token-usage lift as the gallery's token button; on short screens keep the group reachable without overlapping the brand.
+- After the logo reveals, type “Visualization tool for AI-assisted creative process” beneath it in a centered 300px-wide box (two lines at the shared 16px size). Letters use short varying pauses, spaces use longer pauses. Reserve the text box so typing never shifts the logo, retain the completed sentence, expose it once to assistive technology, and show it immediately for reduced motion. Landing captures wait for typing to finish.
+
+## Textured splash and orbiting quads — 2026-10-19
+
+- Use the updated root `verso-logomark.svg` through the shared themed Logomark asset. Reduce landing scale from 2 to 1.8; keep other brand roles at their existing sizes.
+- Landing actions and slogan share a 16px copy token. Actions have 12px vertical / 22px horizontal padding. Type letters at 18–29ms and spaces at 85ms after a 350ms pause.
+- Intro sheets have subtle deterministic grain and soft mutual shadows clipped to the sheets, fading before the clean final logo. Preserve the subtle arrival-only glow.
+- After the intro, fade in twenty single-logo quads around a circle whose diameter is 86% of viewport height (fit to narrower viewports). Derive quad size and slope from the measured logo and SVG geometry; project 3D rotation with depth sorting and smooth periodic acceleration. This supersedes the static-after-intro rule. Reduced motion keeps the static logo without an orbit.
+- Keep landing actions hidden and inert until a new pointer move into the bottom half after the intro settles, then fade in the group once. Bottom-half touch and keyboard Tab also reveal the actions for equivalent access. Landing captures perform that pointer movement after settling and typing.
+
+## Landing copy and masked actions refinement — 2026-10-19
+
+- Landing slogan and buttons use the existing responsive action-button text size (control font size + action increase), superseding the 16px landing override. Button padding is 8px vertically / 22px horizontally, with a 12px group gap.
+- Reserve two slogan lines from the first typed character, breaking before “creative”; invisible full-line text fixes each line's width so letters never cause reflow or recentering. Typing eases from slower edges into a brisk middle, retaining longer spaces and immediate reduced-motion completion.
+- After the existing post-intro pointer trigger, reveal each button upward through its own clipping wrapper over 600ms, with the second delayed 100ms. This replaces the whole-group fade. Reduced motion reveals immediately, and focus outlines stay inside the mask.
+
+## Orthographic lit landing orbit — 2026-10-19
+
+- Remove the landing scrim and all grain. Shade each orbiting sheet from its rotated surface normal against a shared upper-right directional light, with ambient fill; no depth-dependent perspective scaling. Preserve the SVG-derived quad angle, orthographic parallel edges and depth sorting.
+- Expand the orbit from the screen center over 2.4s, staggering sheets by 25ms. Phase-shift each sheet's acceleration and 3D rotation around the ring for a traveling rhythm, keeping forward motion. This supersedes the simultaneous, perspective-projected orbit.
+- Intro overlap shadows project away from that same directional light, with a smaller 7px blur and 24px projection distance; retain the clean final morph and subtle arrival glow.
+- Lower the landing action group to an 8vh bottom inset, clamped to 24–80px, retaining short-screen placement and separate masked reveals. This supersedes its alignment with the workspace token-usage control.
+
+## Unified orbit rhythm and restrained rotation — 2026-10-19
+
+- Once the intro settles, fade in a linear scrim from transparent at the top to 44% panel color at the bottom over 900ms. Keep it below the brand, slogan and actions. This replaces the no-scrim rule without restoring a uniform overlay.
+- The orbit uses one angular clock and one growing radius for every sheet, preserving equal spacing. Shared speed accelerates smoothly over 2.4s, decelerates over 650ms, then coasts until the next 9s cycle; only individual rotation is staggered.
+- Every sheet begins at 0.01 scale when the orbit starts and eases to its logo-derived size over 2.8s. Individual rotation varies only around X; lock Y and Z while retaining the SVG quad's baseline orientation, orthographic projection and angle-dependent lighting. This supersedes individually offset orbit speeds and multi-axis rotation.
+
+## Logo-aligned Z rotation and slogan spacing — 2026-10-19
+
+- Reduce the landing logo-to-slogan gap from 22px to 16px.
+- Lock each orbiting sheet's X/Y tilt and animate only Z rotation. Start every sheet at the exact SVG logo angle; stagger rotation starts by 180ms with a 900ms ease-in. Keep the collective orbital clock, fixed spacing, 1%-to-full growth and orthographic projection.
+- Derive the fixed plane's normal from the SVG edges and an isometric depth lift, rotating that normal around Z for directional lighting. Preserve projected edge lengths throughout rotation. This supersedes individual X rotation and the Y/Z lock.
+
+## Y-axis orbit and flattened intro hold — 2026-10-19
+
+- Constrain individual X/Z rotation and animate only Y around the SVG-derived 3D plane. Keep the logo-aligned initial orientation, staggered starts, shared orbit clock and orthographic projection; projected height stays fixed while width foreshortens. This supersedes the X/Y lock and Z rotation.
+- The intro sheets stay exactly coincident through the full 1.5s turn and a further 300ms flattened hold, then separate. Expansion starts at 2.05s, gathering at 3.6s, logo reveal at 4.85s and settling at 5.45s.
+- Position the intro light farther behind the stack at normalized depth -1.2, independent of the orbit source. Use softer backlit faces before the morph, restoring clean white at the final logo; derive directional shadow projection from this source.
+
+## Vertical-edge orbit and wireframe intro — 2026-10-19
+
+- Rotate every orbiting sheet about its own short edge, derived from the SVG's reconstructed 3D plane, so both short edges remain vertical in screen space throughout rotation. Preserve the initial logo angle, orthographic projection, stagger and common orbital clock. This supersedes world-Y rotation, which tilted the projected short edges.
+- Orbit sheets finish at 75% of the measured single-logo-quad size; retain the 1%-to-full growth. Increase the post-entry gradient's bottom opacity from 44% to 64%, keeping its top transparent.
+- Remove directional shadows from the intro. Once all sheets have expanded (3.36s), fade their fill out over 400ms, leaving a 1px outline at 65% opacity. Start gathering at 4.1s; restore fill 700ms into gathering over 450ms and fade outlines away. Reveal the logo at 5.35s and settle at 5.95s. Preserve the flattened opening hold and subtle final glow.
+
+## Runtime full screen — 2026-10-19
+
+- Prototype and Live server show a full-screen button (Phosphor corners-out) at the end of the runtime controls, after the next-version triangle; Live server, which has no version arrows, shows the button alone in that spot. It puts the running runtime pane into real browser full screen, where the desktop-width layout refits to the screen.
+- On entering, a toast at the bottom center reads "Press Esc or Tab to exit full screen" for `theater.fullscreenHintMs` (3.5s). Esc exits natively; Tab exits too, including when focus is inside the prototype or live preview, which forward Tab / Escape to the host (`runtimeKeyMessage`).
+
+## Random clockwise sheet rotation and overlapping fill transitions — 2026-10-19
+
+- Give each orbiting sheet a randomized initial rotation phase, seeded once per landing-stage mount so resizing and redraws never rerandomize it. Rotate continuously clockwise about its short edge, preserving vertical projected short sides, individual eased/staggered starts, lighting and the shared orbital motion. This replaces the back-and-forth rotation and matching initial logo angles.
+- Fade intro fill throughout the full expansion interval, deriving its timing from the spread duration and last sheet's stagger. Sheets are wireframes by full expansion. Begin restoring fill 450ms into gathering (250ms earlier), over the existing 450ms fade, preserving the final logo timing.
+
+## Stepped orbit angles and eased wordmark reveal — 2026-10-19
+
+- Set each orbit sheet's initial rotation to its index times 360° divided by the sheet count (18° steps for twenty sheets), beginning at the logo's baseline orientation. This replaces randomized starting phases. Keep clockwise motion, staggered rotation starts and vertical short edges.
+- Fade the landing wordmark name in over 1.2s with cubic-bezier(.45,0,.2,1), starting 140ms after logo reveal. Keep the name stationary during this fade and preserve the separate shape reveal. Reduced motion reveals it immediately.
+
+## Descending orbit phases and quicker wordmark — 2026-10-19
+
+- Start successive orbit sheets at 0°, −30°, −60°, and so on, using a shared −30° rotation-step token independent of sheet count. Preserve clockwise animated motion and vertical short edges.
+- Reduce orbit sheet size from 75% to 60% of the measured logo quad (20% smaller than the previous size). Shorten the eased landing-name fade from 1.2s to 650ms, preserving its 140ms delay and easing curve.
+
+- Prompt #523 (2026-10-19): refine the orbit starting-angle step to −25° per sheet (0°, −25°, −50°, …), replacing −30°. All other motion and size tokens remain unchanged.
+- Prompt #524 (2026-10-19): change the shared orbit starting-angle step to −45° per sheet (0°, −45°, −90°, …), superseding −25°.

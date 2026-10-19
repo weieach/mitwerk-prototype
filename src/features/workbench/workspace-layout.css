@@ -4,7 +4,7 @@
   --workspace-gutter: 7px;
   --workspace-panel-gap: 5px;
   --user-message-fill:var(--line);
-  --landing-brand-size:32px;
+  --landing-brand-size:24px;
   --workspace-radius: 16px;
   --workspace-bar-height: 38px;
   --workspace-bar-padding-inline: 10px;
@@ -426,40 +426,62 @@
 /* The brand trigger sits inside the top bar with breathing room; its highlight never touches the screen edge. */
 .mw-topbar .workspace-brand-menu .workspace-brand { height:var(--brand-trigger-height); padding-block:0; }
 .workspace-brand-menu .workspace-brand[aria-expanded=true], .brand-dropdown { background:var(--user-message-fill); }
-/* Landing intro: complete-white frames with a white glow on a dark stage, under a dark scrim. Timing in landing-*.ts; colors and reveal here. No blur. */
+/* Landing intro and orbit: surface rendering in landing-stage.ts; theme and reveal tokens here. */
 .landing-page {
   /* The splash sits on the main screen's panel color; its quads use the light gray the home logomark used before it turned white. */
   --landing-stage-background:var(--paper);
+  --landing-scrim-bottom:color-mix(in srgb, var(--paper) 64%, transparent);
+  --landing-scrim-duration:900ms;
   --landing-frame:var(--ink);
-  --landing-frame-glow-alpha:.55;
-  --landing-scrim:color-mix(in srgb, var(--paper) 76%, transparent);
-  --landing-on-scrim:var(--logomark-ink);
-  --landing-action-gap:10px;
+  --landing-opening-frame:#d0d0d0;
+  --landing-lit-frame:#fff;
+  --landing-logo-scale:1.8;
+  --landing-copy-size:calc(var(--control-font-size) + var(--action-button-font-increase));
+  --landing-action-padding:8px 22px;
+  --landing-action-duration:600ms;
+  --landing-action-stagger:100ms;
+  --landing-description-width:300px;
+  --landing-description-gap:16px;
+  --landing-frame-glow-alpha:.14;
+  --landing-brand-ink:var(--logomark-ink);
+  --landing-actions-bottom:clamp(24px, 8vh, 80px);
+  --landing-action-gap:12px;
   --landing-action-width:180px;
   --landing-reveal-duration:.9s;
   --landing-reveal-stagger:.14s;
+  --landing-name-reveal-duration:.65s;
+  --landing-name-reveal-ease:cubic-bezier(.45,0,.2,1);
   --landing-reveal-ease:cubic-bezier(.2,.7,.1,1);
   position:relative; overflow:hidden; min-height:100dvh; display:grid; place-items:center; padding:24px;
 }
 .mw-app.landing-page { width:100%; height:100dvh; display:grid; grid-template-columns:1fr; grid-template-rows:1fr; background:var(--landing-stage-background); }
 .landing-stage, .landing-scrim { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
-.landing-scrim { background:var(--landing-scrim); opacity:0; transition:opacity calc(var(--landing-reveal-duration) * 1.4) var(--landing-reveal-ease); }
-.landing-content { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:28px; color:var(--landing-on-scrim); }
-/* The splash logomark scales from the same em ratio as the header (32px → 45px tall). */
-.landing-brand { display:flex; align-items:center; margin:0; font-size:var(--landing-brand-size); color:var(--landing-on-scrim); }
+.landing-scrim { background:linear-gradient(to bottom, transparent 0%, var(--landing-scrim-bottom) 100%); opacity:0; transition:opacity var(--landing-scrim-duration) ease-in-out; }
+.landing-page[data-intro=settled] .landing-scrim { opacity:1; }
+.landing-content { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:28px; color:var(--landing-brand-ink); }
+/* Landing-only scale; retain the shared SVG proportions. */
+.mw-app .landing-brand { display:flex; align-items:center; margin:0; font-size:min(calc(var(--landing-brand-size) * var(--landing-logo-scale)), calc((100vw - 48px) / 4.3)); color:var(--landing-brand-ink); }
 .landing-logomark :is([data-logomark-shape], [data-logomark-name]) { transform-box:fill-box; }
-.landing-actions { position:absolute; top:calc(100% + 28px); display:flex; flex-direction:column; align-items:stretch; gap:var(--landing-action-gap); }
-.landing-open { text-decoration:none; min-width:var(--landing-action-width); }
-.landing-logomark :is([data-logomark-shape], [data-logomark-name]), .landing-open { transition:opacity var(--landing-reveal-duration) var(--landing-reveal-ease), transform var(--landing-reveal-duration) var(--landing-reveal-ease); }
-.landing-logomark [data-logomark-name] { transition-delay:var(--landing-reveal-stagger); }
-.landing-open { transition-delay:calc(var(--landing-reveal-stagger) * 2.5); }
-.landing-open + .landing-open { transition-delay:calc(var(--landing-reveal-stagger) * 3.5); }
-.landing-page[data-intro=playing] :is(.landing-logomark [data-logomark-shape], .landing-logomark [data-logomark-name], .landing-open) { opacity:0; }
-.landing-page[data-intro=playing] .landing-logomark [data-logomark-name] { transform:translateX(-16%); }
-.landing-page[data-intro=playing] .landing-open { transform:translateY(8px); }
-.landing-page:not([data-intro=playing]) .landing-scrim { opacity:1; }
+.landing-actions { position:absolute; z-index:1; left:50%; transform:translateX(-50%); bottom:var(--landing-actions-bottom); display:flex; flex-direction:column; align-items:stretch; gap:var(--landing-action-gap); }
+.landing-description { position:absolute; top:calc(100% + var(--landing-description-gap)); width:var(--landing-description-width); max-width:calc(100vw - 48px); margin:0; text-align:center; font-size:var(--landing-copy-size); line-height:1.5; color:var(--muted); min-height:3em; }
+@media (max-height:680px) { .landing-actions { bottom:24px; } }
+@media (max-height:500px) { .landing-content { align-self:start; margin-top:5vh; } .landing-actions { bottom:16px; } }
+.landing-page .landing-open { --action-button-font-size:var(--landing-copy-size); --primary-button-font-size:var(--landing-copy-size); text-decoration:none; min-width:var(--landing-action-width); padding:var(--landing-action-padding); font-size:var(--landing-copy-size); }
+.landing-description-line { position:relative; display:block; width:max-content; margin-inline:auto; white-space:nowrap; }
+.landing-description-reserve { visibility:hidden; }
+.landing-description-typed { position:absolute; inset:0; text-align:left; }
+.landing-actions { visibility:hidden; }
+.landing-actions[data-visible=true] { visibility:visible; }
+.landing-action-mask { overflow:hidden; }
+.landing-action-mask .landing-open { width:100%; opacity:0; transform:translateY(110%); transition:transform var(--landing-action-duration) cubic-bezier(.22,1,.36,1), opacity var(--landing-action-duration) ease; }
+.landing-action-mask:nth-child(2) .landing-open { transition-delay:var(--landing-action-stagger); }
+.landing-actions[data-visible=true] .landing-open { opacity:1; transform:translateY(0); }
+.landing-action-mask .landing-open:focus-visible { outline-offset:-3px; }
+.landing-logomark :is([data-logomark-shape], [data-logomark-name]) { transition:opacity var(--landing-reveal-duration) var(--landing-reveal-ease), transform var(--landing-reveal-duration) var(--landing-reveal-ease); }
+.landing-logomark [data-logomark-name] { opacity:1; transition:opacity var(--landing-name-reveal-duration) var(--landing-name-reveal-ease) var(--landing-reveal-stagger); }
+.landing-page[data-intro=playing] :is(.landing-logomark [data-logomark-shape], .landing-logomark [data-logomark-name]) { opacity:0; }
 @media (prefers-reduced-motion:reduce) {
-  .landing-scrim, .landing-logomark :is([data-logomark-shape], [data-logomark-name]), .landing-open { transition:none; }
+  .landing-scrim, .landing-actions, .landing-logomark :is([data-logomark-shape], [data-logomark-name]) { transition:none; }
 }
 .select-menu.brand-dropdown { background:var(--user-message-fill); }
 

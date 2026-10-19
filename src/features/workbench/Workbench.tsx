@@ -45,7 +45,8 @@ import { chatSlide, effectiveProgress, isSimulating, existedAt, simulateCaptures
 import { useSlideTransition, usePanelWorkState } from '../../shared/useWorkState';
 import { assets as initialAssets, hydratePromptMessages, workbenchEntry, loadState, now, saveState, statuses, uid, tasksForProject, saveMit, archiveProject, isTodoChat, todoContext } from './model';
 import { PrintedText } from './PrintedText';
-import { galleryDemoUpdateEvent } from '../../shared/demo-events';
+import { scriptedReply } from './scripted-replies';
+import { galleryDemoUpdateEvent, livePreviewRefreshEvent } from '../../shared/demo-events';
 import type { Asset, Message, SavedState, Task, TaskStatus, View, Mit } from './model';
 
 type ModalState = 'search' | 'task' | 'project' | 'share' | null;
@@ -72,7 +73,7 @@ export function Workbench() {
  const pinnedToast=screenshotMode&&screenshotParams.get('toast')==='1';
  /** `?milestone=1` shows a version card and its milestone invitation even when no capture frames are available locally. */
  const milestonePreview=screenshotParams.get('milestone')==='1';
- const shownOutput=(output:NonNullable<Message['versionOutput']>)=>output.frameId?output:milestonePreview?{...output,version:output.version??milestonePreviewSample.version,imageUrl:output.imageUrl??milestonePreviewSample.imageUrl}:null;
+ const shownOutput=(output:NonNullable<Message['versionOutput']>)=>output.frameId||output.imageUrl?output:milestonePreview?{...output,version:output.version??milestonePreviewSample.version,imageUrl:output.imageUrl??milestonePreviewSample.imageUrl}:null;
  const unavailableNotice="This isn't available yet.";
  const [state,setState] = useState<SavedState>(loadState);
  const [todoVersions, setTodoVersions] = useState<TodoVersion[]>([]);
@@ -324,6 +325,7 @@ export function Workbench() {
    const linked=annotations.filter(note=>note.todo&&(contextAttachment?.annotationId===note.id||(note.chatId===task.id&&draft.includes(`[Frame annotation ${note.id}]`))));
    const source=linked.find(note=>note.id===contextAttachment?.annotationId);
    const text=[contextAttachment?`To-do: ${source?.text || visibleMessageText(contextAttachment.text)}`:'',draft.trim()].filter(Boolean).join('\n\n');
+   const scripted=scriptedReply(text,catalogFrames,task.messages);
    const message={id:uid(),sessionOnly:true,role:'user' as const,name:userName,time:now(),text,assetIds:attached,
      annotationContext:source?annotationContext(source):undefined,
      frames:source?appendFrameContext(frameAttachments,{id:source.frame.id,url:source.frame.url,filename:'',label:`Prompt #${source.frame.number} (v${source.frame.version})`}):frameAttachments};
@@ -340,11 +342,18 @@ export function Workbench() {
    linked.forEach(note=>updateAnnotation(note.id,{status:'In progress'}));setPending(p=>[...p,id]);
    timers.current.set(id,setTimeout(()=>{
      const replyId=uid();setPrintingId(replyId);
-     updateTask(id,t=>({...t,status:isTodoChat(t)?'Ready for review':t.status,updated:now(),messages:[...t.messages,{id:replyId,sessionOnly:true,role:'mit',name:t.mit,time:now(),text:linked.length
+     updateTask(id,t=>({...t,status:isTodoChat(t)?'Ready for review':t.status,updated:now(),messages:[...t.messages,{id:replyId,sessionOnly:true,role:'mit',name:t.mit,time:now(),...scripted,text:scripted?.text ?? (linked.length
        ? `This sample project isn't connected to a live agent, so nothing ran for your to-do.\n\n${linked.map(note=>`• ${note.text}`).join('\n')}\n\nIn a connected project, the agent would work from this saved frame and return an updated frame here for review.`
-       : `This sample project isn't connected to a live agent, so I can't act on your message${contextAttachment?', to-do context':''}${attached.length?', files':''}${frameAttachments.length?' or saved frames':''} here.\n\nIn a connected project, the reply would appear in this conversation, and new frames would show up in Version blocks as the work is captured.`}]}));
+       : `This sample project isn't connected to a live agent, so I can't act on your message${contextAttachment?', to-do context':''}${attached.length?', files':''}${frameAttachments.length?' or saved frames':''} here.\n\nIn a connected project, the reply would appear in this conversation, and new frames would show up in Version blocks as the work is captured.`)}]}));
      linked.forEach(note=>updateAnnotation(note.id,{status:'Ready for review'}));setPending(p=>p.filter(value=>value!==id));timers.current.delete(id);
    },900));
+ }
+ const completedReplies=useRef(new Set<string>());
+ function finishReply(message:Message){
+   if(completedReplies.current.has(message.id))return;
+   completedReplies.current.add(message.id);setPrintingId(null);
+   window.dispatchEvent(new Event(galleryDemoUpdateEvent));
+   if(message.demoAction==='refresh-live')window.dispatchEvent(new Event(livePreviewRefreshEvent));
  }
  function stop(){annotations.filter(note=>note.chatId===task.id&&note.status==='In progress').forEach(note=>updateAnnotation(note.id,{status:'To do'}));clearTimeout(timers.current.get(task.id));timers.current.delete(task.id);setPending(p=>p.filter(x=>x!==task.id));updateTask(task.id,t=>({...t,status:'To do'}));setNotice('Demo run stopped. Your message is kept in the conversation.');}
  function moveBoardTask(id:string,status:TaskStatus){const item=state.tasks.find(t=>t.id===id);if(!item||item.status===status||pending.includes(id))return;updateTask(id,t=>({...t,status,updated:now(),unread:false}));setNotice(`${item.title} moved to ${status}.`);}
@@ -392,7 +401,7 @@ export function Workbench() {
 
 
       <div className="conversation-scroll" ref={scrollRef}><div className="conversation-inner" ref={conversationRef} data-chat-slide={isSimulating(work)?slide.key:undefined}>{isNewChat||(isSimulating(work)&&!shownMessages.length)?<div className="new-chat-welcome"><h1>What would you like to work on?</h1><p>Start with an idea, a question, or a file.</p></div>:task.messages.length===0&&isTaskChat&&<div className="conversation-empty"><Avatar isMit={task.kind==='mit'} name={task.mit}/><h2>{task.kind==='colleague'?`Say hello to ${task.mit}.`:`Work it out with ${task.mit}.`}</h2><p>{task.kind==='colleague'?'Send a message or share a file. Start a project together when you’re ready.':'Describe what you want to explore. Your inputs stay close, and each output has a place to return to.'}</p></div>}
-       {shownMessages.map(m=><article className={`mw-message ${m.role==='user'?'from-user':''}`} key={m.id} aria-label={`${m.role==='user'?'You':m.name} at ${m.time}`}>{m.role==='colleague'&&<div className="message-byline"><strong>{m.name}</strong></div>}<div className="message-content">{m.id===printingId&&m.role!=='user'?<PrintedText text={m.text} onDone={()=>{setPrintingId(null);window.dispatchEvent(new Event(galleryDemoUpdateEvent));}}/>:(m.role==='user'?visibleMessageText(m.text):m.text).split('\n\n').map((p,i)=><p key={i}>{p}</p>)}{m.frames?.map(frame=><FrameContextChip key={frame.id} frame={frame}/>)}{m.assetIds?.map(id=>allAssets.find(a=>a.id===id)).filter((a):a is Asset=>!!a).map(a=>assetButton(a))}{m.assetId&&allAssets.find(a=>a.id===m.assetId)&&assetButton(allAssets.find(a=>a.id===m.assetId)!)}</div>{m.versionOutput&&shownOutput(m.versionOutput)&&<MessageOutput output={shownOutput(m.versionOutput)!} onOpen={milestone=>{if(m.versionOutput!.frameId)setFrameRequest({frameId:m.versionOutput!.frameId,milestone});if(milestone)setIdeaOpen(false);setReader('prototype');setExpanded(false);setSelectedPane('version');setMobilePanel('version');}}/>}<time className="message-time">{m.time}</time></article>)}
+       {shownMessages.map(m=><article className={`mw-message ${m.role==='user'?'from-user':''}`} key={m.id} aria-label={`${m.role==='user'?'You':m.name} at ${m.time}`}>{m.role==='colleague'&&<div className="message-byline"><strong>{m.name}</strong></div>}<div className="message-content">{m.id===printingId&&m.role!=='user'?<PrintedText text={m.text} onDone={()=>finishReply(m)}/>:(m.role==='user'?visibleMessageText(m.text):m.text).split('\n\n').map((p,i)=><p key={i}>{p}</p>)}{m.frames?.map(frame=><FrameContextChip key={frame.id} frame={frame}/>)}{m.assetIds?.map(id=>allAssets.find(a=>a.id===id)).filter((a):a is Asset=>!!a).map(a=>assetButton(a))}{m.assetId&&allAssets.find(a=>a.id===m.assetId)&&assetButton(allAssets.find(a=>a.id===m.assetId)!)}</div>{m.id!==printingId&&m.versionOutput&&shownOutput(m.versionOutput)&&<MessageOutput output={shownOutput(m.versionOutput)!} onOpen={milestone=>{if(m.demoAction==='refresh-live')setFrameRequest({live:true});else if(m.versionOutput!.frameId)setFrameRequest({frameId:m.versionOutput!.frameId,milestone});if(milestone)setIdeaOpen(false);setReader('prototype');setExpanded(false);setSelectedPane('version');setMobilePanel('version');}}/>}<time className="message-time">{m.time}</time></article>)}
        {working&&<div className="run-progress" role="status"><span className="run-progress-mask"><span className="run-progress-line"><LoaderCircle size={15} className="spinning"/><span>Preparing your response</span></span></span></div>}
        {isTaskChat&&task.status==='Ready for review'&&!working&&<div className="review-bar"><div className="review-heading"><strong>Ready for review</strong><small>Take a look before moving forward.</small></div><div><button className="mw-button" onClick={()=>{setStatus('In progress');composerRef.current?.focus();}}>Continue refining</button><button className="mw-button primary" onClick={()=>{setStatus('Complete');setNotice('Task marked complete. Its conversation and outputs are preserved.');}}><Check size={14}/>Mark complete</button></div></div>}
        {isTaskChat&&task.status==='Complete'&&<div className="review-bar"><div className="review-heading"><strong>Marked as complete</strong></div><div><button className="mw-button" onClick={()=>setStatus('In progress')}>Undo</button></div></div>}

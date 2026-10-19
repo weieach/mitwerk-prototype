@@ -7,7 +7,7 @@ import { galleryTokens as t } from './tokens';
 
 export const loopModes: { value: LoopMode; label: string }[] = [{ value: 'once', label: 'No loop' }, { value: 'loop', label: 'Loop' }, { value: 'ping-pong', label: 'Ping-pong' }];
 
-const playUnitLabels: Record<JumpScale, string> = { frame: 'by prompts', version: 'by versions', milestone: 'by milestones' };
+const playUnitLabels: Record<JumpScale, string> = { frame: 'per prompt', version: 'per version', milestone: 'per milestone' };
 
 /** One "Controls" menu for the playback unit, speed and looping; each section keeps its own choice. */
 export function PlaybackControls({ unit, speed, loop, onUnit, onSpeed, onLoop }: {
@@ -27,13 +27,13 @@ export function PlaybackControls({ unit, speed, loop, onUnit, onSpeed, onLoop }:
   useEffect(() => { const params = new URLSearchParams(location.search); if (!captureOpened.current && params.get('screenshot') === '1' && params.get('controlsOpen') === '1') { captureOpened.current = true; menu.trigger.current?.click(); } }, []);
   // The current choice in each column is marked by Version blocks blue text (see `.playback-controls-menu`).
   const options: SelectMenuOption[] = [
-    ...jumpScales.map(option => ({ value: `unit:${option.value}`, label: option.label, group: 'Play', selected: unit === option.value })),
     ...t.speeds.map(value => ({ value: `speed:${value}`, label: `${value}×`, group: 'Speed', selected: speed === value })),
     ...loopModes.map(option => ({ value: `loop:${option.value}`, label: option.label, group: 'Loop', selected: loop === option.value })),
+    ...jumpScales.map(option => ({ value: `unit:${option.value}`, label: option.label, group: 'Play', selected: unit === option.value })),
   ];
   return <>
     <button type="button" {...menu.triggerProps} className="row-select playback-controls-trigger" aria-label="Playback controls" aria-controls={menu.open ? id : undefined}>
-      <span className="row-select-value"><span className="row-select-copy">Controls<span className="playback-controls-summary"> ({playUnitLabels[unit]}, {speed}×, {loopModes.find(option => option.value === loop)?.label.toLowerCase()})</span></span></span>
+      <span className="row-select-value"><span className="row-select-copy">Controls<span className="playback-controls-summary">{'\u00a0\u00a0'}{speed}×, {loopModes.find(option => option.value === loop)?.label.toLowerCase()}, {playUnitLabels[unit]}</span></span></span>
       <Icon name="chevron" size={12} style={{ transform: 'rotate(90deg)' }}/>
     </button>
     {menu.open && <SelectMenu id={id} label="Playback controls" anchor={menu.trigger} options={options} value="" align="end" columns gap={t.controls.gap}

@@ -2,7 +2,7 @@
  * Landing intro geometry. Every frame is the `logo-shape-part.svg` parallelogram; the
  * stacked depth offset comes from how `logo-shape.svg` layers two of those frames.
  * Bands, album and logo are one band description, so the sequence morphs continuously.
- * Frames are flat complete white: no strokes, gradients, tone, shadow or blur; only a white glow.
+ * The default intro fades to wireframes, with a brief white glow near the final logo.
  */
 export type Point = { x:number; y:number };
 export type Rect = { x:number; y:number; width:number; height:number };
@@ -14,7 +14,7 @@ export type Band = { x0:number; x1:number; topHinge:number; bottomHinge:number; 
 export type LandingPhase = 'playing' | 'revealed' | 'settled';
 export type Viewport = { width:number; height:number };
 /** A landing intro variant: bands over time, plus when the brand reveals and the loop settles. */
-export type LandingIntro = { revealAt:number; settleTime:number; bands:(time:number, viewport:Viewport, target:Rect, geometry:LogoGeometry) => Band[] };
+export type LandingIntro = { fillOpacity?:(time:number) => number; light?:{x:number;y:number;z:number}; orbitAfterSettle?:boolean; illumination?:(time:number) => number; staticAfterSettle?:boolean; revealAt:number; settleTime:number; bands:(time:number, viewport:Viewport, target:Rect, geometry:LogoGeometry) => Band[] };
 
 export const LANDING_INTRO = {
   bands: 13,
@@ -43,7 +43,9 @@ export const LANDING_INTRO = {
   /** After the logo lands, the stack exhales back into the looping bands under the scrim. */
   releaseStart: 4.6,
   releaseDuration: 2,
-  /** Render: one white glow around the white shapes (no shader, grain, trail or blur). */
+  /** Render: a brief glow only around the final logo arrival, in seconds. */
+  glowLead: .18,
+  glowTail: .42,
   glowBlur: 26,
   pixelRatio: 2,
 } as const;

@@ -59,6 +59,10 @@ export function AlbumView({ simulating = false, extent, framePickerSlot, onSelec
     callbacks.current.onCamera?.({ zoom: direction => scene.current?.zoomBy(direction), focus: (id, complete) => { if (scene.current) scene.current.focusFrame(id, complete); else complete(); }, center: () => scene.current?.center(), arrive: () => scene.current?.replayLatestArrival(), reset: () => scene.current?.reset(), top: () => scene.current?.top(), orbit: (id, target, ready, complete) => scene.current?.beginTheaterOrbit(id, target, ready, complete) ?? null });
     return () => { callbacks.current.onCamera?.(null); scene.current?.dispose(); scene.current = null; };
   }, []);
+  // Showing the gallery without the reverse turn (bucket change, fallback exit) must release the held Playback turn first.
+  useEffect(() => {
+    if (!hidden && !returning && !turning && !focusing) scene.current?.releaseTheater();
+  }, [hidden, returning, turning, focusing]);
   useEffect(() => {
     if (hidden || returning || (turning && host.current?.dataset.transitionProgress)) return;
     const params = new URLSearchParams(location.search);

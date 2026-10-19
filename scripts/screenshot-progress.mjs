@@ -715,7 +715,7 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
   while (Date.now() - started < timeoutMs) {
     const result = await cdp('Runtime.evaluate', {
       expression: wantsLandingCapture(prompt)
-        ? 'document.querySelector(".landing-page")?.dataset.intro === "settled" && !!document.querySelector(".landing-page .landing-open")'
+        ? 'document.querySelector(".landing-page")?.dataset.intro === "settled" && document.querySelector(".landing-description")?.dataset.typingComplete === "true" && document.querySelector(".landing-stage")?.dataset.orbitReady === "true" && !!document.querySelector(".landing-page .landing-open")'
         : wantsLiveCapture(prompt)
         ? 'document.querySelector(".theater-runtime")?.dataset.runtimeReady === "true" && !!document.querySelector(".theater-screen .theater-runtime iframe") && !document.querySelector(".runtime-status")'
         : wantsPrototypeCapture(prompt)
@@ -744,6 +744,11 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
       returnByValue: true,
     });
     if (result.result?.value === true) {
+      if (wantsLandingCapture(prompt)) {
+        const viewport = await cdp('Runtime.evaluate', { expression:'({width:innerWidth, height:innerHeight})', returnByValue:true });
+        await cdp('Input.dispatchMouseEvent', { type:'mouseMoved', x:viewport.result.value.width / 2, y:viewport.result.value.height * .85 });
+        await delay(750);
+      }
       if (wantsPrototypeCapture(prompt)) {
         // Sandboxed archives run in an out-of-process iframe, with their own CDP target.
         if (!runtimeSession) {
@@ -909,6 +914,30 @@ async function capture(chrome, outFile, prompt = '') {
     }
     await waitForScreenshotReady(cdp, (wantsLandingCapture(prompt) || hasFlag('milestone-invite')) ? 20000 : (wantsPrototypeCapture(prompt) || wantsLiveCapture(prompt)) ? 60000 : 10000, prompt);
     await cdp('Runtime.evaluate', { expression: 'document.fonts.ready.then(() => true)', awaitPromise: true, returnByValue: true });
+    const chatPrompt = argValue('chat-prompt');
+    if (chatPrompt) {
+      const composer = await cdp('Runtime.evaluate', { expression: '(() => { const input = document.querySelector(".mw-composer textarea"); input?.focus(); return !!input; })()', returnByValue: true });
+      if (!composer.result?.value) throw new Error('Chat prompt capture needs an open conversation');
+      const before = await cdp('Runtime.evaluate', { expression: 'document.querySelectorAll(".mw-message").length', returnByValue: true });
+      await cdp('Input.insertText', { text: chatPrompt });
+      for (let attempt = 0; attempt < 50; attempt++) {
+        const enabled = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('button[aria-label="Send message"]:not(:disabled)')`, returnByValue: true });
+        if (enabled.result?.value) break;
+        await delay(50);
+      }
+      await cdp('Runtime.evaluate', { expression: `document.querySelector('button[aria-label="Send message"]')?.click()` });
+      let finished = false;
+      for (let attempt = 0; attempt < 200; attempt++) {
+        const reply = await cdp('Runtime.evaluate', { expression: `(() => {
+          const message = document.querySelector('.mw-message:last-child:not(.from-user)');
+          return document.querySelectorAll('.mw-message').length >= ${Number(before.result?.value) + 2} && !!message && !message.querySelector('.printed-text') && !!message.querySelector('.message-version-output:not([hidden])');
+        })()`, returnByValue: true });
+        if (reply.result?.value) { finished = true; break; }
+        await delay(100);
+      }
+      if (!finished) throw new Error('Chat prompt capture timed out waiting for the completed version card');
+      await waitForScreenshotReady(cdp, 60000, prompt);
+    }
     if (hasFlag('milestone-editor')) {
       await cdp('Runtime.evaluate', { expression: `(() => { const wip = document.querySelector('.idea-wip-action'); if (!wip?.querySelector('.idea-editor')) wip?.querySelector('button')?.click(); })()` });
       await delay(100);

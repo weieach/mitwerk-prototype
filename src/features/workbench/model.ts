@@ -6,7 +6,7 @@ import type { FrameContext } from './frame-context.ts';
 import { userName } from './user-profile.ts';
 export type TaskStatus = 'To do' | 'In progress' | 'Ready for review' | 'Complete';
 export type View = 'Home' | 'Projects' | 'Todos' | 'Inbox' | 'Mits' | 'Library' | 'Settings' | 'dialog' | 'project' | 'Co-workers';
-export type Message = { sessionOnly?: boolean; sourcePrompt?: number; versionOutput?: {version?:number;prompt:number;imageUrl?:string;frameId?:string}; annotationContext?: string; frames?:FrameContext[]; id: string; role: 'user' | 'mit' | 'colleague'; name: string; text: string; assetId?: string; assetIds?: string[]; time: string };
+export type Message = { demoAction?: 'refresh-live'; sessionOnly?: boolean; sourcePrompt?: number; versionOutput?: {inviteMilestone?:boolean;version?:number;prompt:number;imageUrl?:string;frameId?:string}; annotationContext?: string; frames?:FrameContext[]; id: string; role: 'user' | 'mit' | 'colleague'; name: string; text: string; assetId?: string; assetIds?: string[]; time: string };
 export type Task = { origin?: 'chat' | 'todo'; todoPrompt?: string; annotationSourceId?: string; id: string; title: string; status: TaskStatus; creator: string; mit: string; mitId?: string; participantMitIds?:string[]; project: boolean; projectId?: string; kind: 'mit' | 'colleague'; unread: boolean; updated: string; created?: string; messages: Message[]; input: string[]; output: string[] };
 export type Asset = { id: string; title: string; kind: 'document' | 'image' | 'prototype'; detail: string; url?: string; content?: string; local?: boolean; previewPrompt?: number; previewUrl?: string };
 export const statuses: TaskStatus[] = ['To do', 'In progress', 'Ready for review', 'Complete'];
@@ -236,6 +236,7 @@ export function todoContext(task: Task) { return task.todoPrompt || task.message
 export function hydratePromptMessages(tasks: Task[], captures: Capture[]): Task[] {
  const frames = buildVersions(captures).flatMap(version => version.frames);
  return tasks.map(task => ({...task, messages: task.messages.map(message => {
+  if (message.sessionOnly) return message;
   const prompt = message.sourcePrompt ?? message.versionOutput?.prompt;
   const frame = frames.find(frame => frame.kind === 'prompt' && frame.number === prompt);
   if (!frame) return message;

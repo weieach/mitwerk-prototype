@@ -1,10 +1,8 @@
+import { LANDING_ORBIT, orbitQuads } from './landing-orbit.ts';
 import { LANDING_INTRO, landingPhase, type Band, type LandingIntro, type LandingPhase, type LogoGeometry, type Rect } from './landing-intro.ts';
 
-/**
- * Landing intro renderer. Plain Canvas2D, no shaders: every visible frame is filled in
- * complete white as one path, so a single glow wraps the shapes. No gradients, tone,
- * shadow, grain, motion blur or trails.
- */
+/** Canvas surface rendering shared by the sheet intro and its depth-sorted 3D orbit. */
+const SURFACE = { wireWidth:1, wireOpacity:.65 } as const;
 type Options = { canvas:HTMLCanvasElement; theme:HTMLElement; target:() => Rect | null; geometry:LogoGeometry; intro:LandingIntro; onPhase:(phase:LandingPhase) => void };
 
 function token(host:HTMLElement, name:string) {
@@ -35,27 +33,69 @@ export function createLandingStage({ canvas, theme, target, geometry, intro, onP
   const readColors = () => {
     const frame = token(theme, '--landing-frame');
     // The glow is the quad color at --landing-frame-glow-alpha, built here so the canvas gets a plain rgba().
-    const alpha = Number(getComputedStyle(theme).getPropertyValue('--landing-frame-glow-alpha')) || .55;
+    const rawAlpha = getComputedStyle(theme).getPropertyValue('--landing-frame-glow-alpha').trim();
+    const alpha = rawAlpha ? Number(rawAlpha) : .14;
     const [r, g, b] = frame.match(/[\d.]+/g)?.map(Number) ?? [255, 255, 255];
-    return { background:token(theme, '--landing-stage-background'), frame, glow:`rgba(${r}, ${g}, ${b}, ${alpha})` };
+    const opening = token(theme, '--landing-opening-frame').match(/[\d.]+/g)?.map(Number) ?? [208, 208, 208];
+    const lit = token(theme, '--landing-lit-frame').match(/[\d.]+/g)?.map(Number) ?? [255, 255, 255];
+    return { opening, lit, background:token(theme, '--landing-stage-background'), frame, glowRgb:`${r}, ${g}, ${b}`, glowAlpha:alpha };
   };
   let colors = readColors();
+  let lastTime = 0;
   let size = { width:0, height:0, ratio:1 };
   let start = performance.now(), frame = 0, phase: LandingPhase | null = null;
 
   const render = (time:number) => {
+    lastTime = time;
     const { width, height, ratio } = size;
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     context.shadowBlur = 0;
+    context.shadowOffsetX = context.shadowOffsetY = 0;
     context.fillStyle = colors.background;
     context.fillRect(0, 0, width, height);
     const box = target() ?? { x:width / 2, y:height / 2, width:1, height:1 };
+    const orbitTime = time - intro.settleTime;
+    const orbitReady = String(reducedMotion || !intro.orbitAfterSettle || orbitTime >= Math.max(LANDING_ORBIT.growDuration, LANDING_ORBIT.scaleDuration));
+    if (canvas.dataset.orbitReady !== orbitReady) canvas.dataset.orbitReady = orbitReady;
+    if (intro.orbitAfterSettle && orbitTime >= 0 && !reducedMotion) {
+      for (const quad of orbitQuads(orbitTime, { width, height }, box, geometry)) {
+        context.save();
+        context.globalAlpha = quad.opacity;
+        context.beginPath();
+        quad.points.forEach((point, index) => index ? context.lineTo(point.x, point.y) : context.moveTo(point.x, point.y));
+        context.closePath();
+        const shade = Math.round(255 * quad.light);
+        context.fillStyle = `rgb(${shade}, ${shade}, ${shade})`;
+        context.fill();
+        context.restore();
+      }
+      return;
+    }
+    const bands = intro.bands(time, { width, height }, box, geometry);
+    const light = intro.illumination?.(time);
+    const fill = light === undefined ? colors.frame : `rgb(${colors.opening.map((channel, index) => channel + (colors.lit[index] - channel) * light).join(', ')})`;
+    const glowProgress = (time - intro.revealAt + LANDING_INTRO.glowLead) / (LANDING_INTRO.glowLead + LANDING_INTRO.glowTail);
+    const glow = !reducedMotion && glowProgress > 0 && glowProgress < 1 ? Math.sin(Math.PI * glowProgress) ** 2 : 0;
     context.beginPath();
-    for (const band of intro.bands(time, { width, height }, box, geometry)) trace(context, band);
-    context.fillStyle = colors.frame;
-    context.shadowColor = colors.glow;
-    context.shadowBlur = LANDING_INTRO.glowBlur * ratio;
+    for (const band of bands) trace(context, band);
+    context.fillStyle = fill;
+    context.shadowColor = `rgba(${colors.glowRgb}, ${colors.glowAlpha * glow})`;
+    context.shadowBlur = (glow > 0 ? LANDING_INTRO.glowBlur * ratio : 0);
+    const fillOpacity = intro.fillOpacity?.(time) ?? 1;
+    context.save();
+    context.globalAlpha = fillOpacity;
     context.fill('nonzero');
+    context.restore();
+    // One stroke pass keeps overlapping outlines crisp without accumulating opacity.
+    if (fillOpacity < 1) {
+      context.save();
+      context.shadowBlur = 0;
+      context.globalAlpha = (1 - fillOpacity) * SURFACE.wireOpacity;
+      context.strokeStyle = fill;
+      context.lineWidth = SURFACE.wireWidth;
+      context.stroke();
+      context.restore();
+    }
   };
 
   const resize = () => {
@@ -72,10 +112,10 @@ export function createLandingStage({ canvas, theme, target, geometry, intro, onP
   };
 
   const tick = (now:number) => {
-    frame = requestAnimationFrame(tick);
     const time = (now - start) / 1000;
     render(time);
     report(time);
+    if (!intro.staticAfterSettle || time < intro.settleTime) frame = requestAnimationFrame(tick);
   };
 
   const observer = new ResizeObserver(resize);
@@ -92,7 +132,7 @@ export function createLandingStage({ canvas, theme, target, geometry, intro, onP
     },
     refreshColors() {
       colors = readColors();
-      if (fixedTime !== null) render(fixedTime);
+      render(fixedTime ?? lastTime);
     },
     dispose() {
       cancelAnimationFrame(frame);

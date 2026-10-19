@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom';
+import { useRuntimeReturn } from './useRuntimeReturn';
 import { PlaybackExport } from './PlaybackExport';
 import { PanelIcon } from '../../components/PanelIcon';
 import { attachFrame, writeFrameDrag } from '../workbench/frame-context';
@@ -75,6 +76,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
   const [playing, setPlaying] = useState(false);
   const [runtimeMode, setRuntimeMode] = useState<RuntimeMode | null>(null);
   const [runtimeExiting, setRuntimeExiting] = useState(false);
+  const runtimeLayout = !!runtimeMode && !runtimeExiting;
   const pendingPrototype = useRef<string | null>(null);
   const runtimeExitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (runtimeExitTimer.current) clearTimeout(runtimeExitTimer.current); }, []);
@@ -84,6 +86,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
     setRuntimeExiting(false); setRuntimeMode(mode);
   }
   const entryButton = useRef<HTMLButtonElement>(null);
+  const runtimeRef = useRef<HTMLElement>(null);
   const exitButton = useRef<HTMLButtonElement>(null);
   useEffect(() => { if (runtimeMode) exitButton.current?.focus(); }, [runtimeMode]);
   const handledLiveRequest = useRef(0);
@@ -95,7 +98,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
     runtimeExitTimer.current = null;
     setRuntimeExiting(false); setRuntimeMode(null);
   }, [selectedId, active]);
-  useEffect(() => { onRuntimeChange?.(runtimeMode); }, [runtimeMode, onRuntimeChange]);
+  useEffect(() => { onRuntimeChange?.(runtimeLayout ? runtimeMode : null); }, [runtimeLayout, runtimeMode, onRuntimeChange]);
   useEffect(() => () => onRuntimeChange?.(null), [onRuntimeChange]);
   const [jumpScale, setJumpScale] = useState<JumpScale>(savedPlayUnit);
   useEffect(() => { if (jumpScale === 'milestone') onRangeChange('all'); }, [jumpScale, onRangeChange]);
@@ -105,6 +108,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
+  const captureRuntimeRect = useRuntimeReturn(screenRef, runtimeExiting, active);
   const actionsRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const actions = actionsRef.current;
@@ -203,9 +207,10 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
       const playbackOnly = !!body.closest('.workspace-gallery-only');
       const width = Math.min(body.clientWidth, window.innerWidth * t.theater.contentMaxViewportShare,
         playbackOnly ? view.clientWidth * t.theater.contentShare : body.clientWidth);
-      const runtimeClearance = parseFloat(getComputedStyle(body).paddingBottom) + 2 * t.controls.inset;
-      const height = Math.max(0, body.clientHeight - (runtimeMode ? runtimeClearance : 0));
-      setStageSize({ width: runtimeMode ? body.clientWidth : width, height, actions, bodyHeight: body.clientHeight, caption: meta + metadataGap });
+      const exitRow = view.querySelector<HTMLElement>('.runtime-exit-scrim');
+      const runtimeClearance = exitRow ? (parseFloat(getComputedStyle(exitRow).bottom) || 0) + exitRow.offsetHeight + t.controls.inset : t.controls.inset;
+      const height = Math.max(0, body.clientHeight - (runtimeLayout ? 2 * runtimeClearance : 0));
+      setStageSize({ width: runtimeLayout ? body.clientWidth : width, height, actions, bodyHeight: body.clientHeight, caption: meta + metadataGap });
       setStageMeasured(body.clientWidth > 0 && height > 0);
     };
     const observer = new ResizeObserver(measure);
@@ -219,7 +224,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
     if (actionsRef.current) observer.observe(actionsRef.current);
     measure();
     return () => { observer.disconnect(); modeObserver.disconnect(); window.removeEventListener('resize', measure); };
-  }, [Boolean(frame), runtimeMode]);
+  }, [Boolean(frame), runtimeLayout]);
 
   // Follow the image actually on screen, never a loading request or hover preview.
   const playingVersion = playing && active ? displayed?.version ?? null : null;
@@ -288,13 +293,13 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
   if (!frame) return <div className="gallery-empty">No frames in this date range. Choose a wider range to play.</div>;
   const naturalFrame = theaterFrameSize(stageSize, baseline, baseline);
   const staticRatio = baseline.width / Math.max(baseline.height, 1);
-  const staticHeight = runtimeMode ? Math.min(naturalFrame.height, stageSize.height) : naturalFrame.height;
+  const staticHeight = runtimeLayout ? Math.min(naturalFrame.height, stageSize.height) : naturalFrame.height;
   const staticFrame = { width: staticHeight * staticRatio, height: staticHeight };
   const frameSize = staticFrame;
   const stageHeight = stageSize.actions + frameSize.height + stageSize.caption;
   // Center the complete section above the transport, keeping the frame full-width.
   const stageTop = Math.max(0, Math.min(stageSize.bodyHeight - stageHeight, (stageSize.bodyHeight - stageHeight) / 2 + t.theater.stageOffsetY));
-  const scrollStage = !runtimeMode && stageHeight > stageSize.bodyHeight;
+  const scrollStage = !runtimeLayout && stageHeight > stageSize.bodyHeight;
   function selectFrame(next: number) {
     prototype.exit();
     const nextFrame = frames[next];
@@ -379,8 +384,9 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
   function exitPrototype() {
     if (runtimeExitTimer.current || runtimeExiting) return;
     pendingPrototype.current = null;
+    captureRuntimeRect();
     setRuntimeExiting(true);
-    const duration = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : t.annotations.exitMs;
+    const duration = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : t.theaterMotion.runtimeReturnMs;
     runtimeExitTimer.current = setTimeout(() => {
       runtimeExitTimer.current = null;
       prototype.exit(); setRuntimeMode(null); setRuntimeExiting(false);
@@ -421,16 +427,20 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
     onSelect(next.id, true);
   }
 
-  return <div className={`theater-view${runtimeMode ? ' is-runtime' : ''}`} data-runtime-exiting={runtimeExiting} data-frame-id={frame?.id} data-selected-frame-id={requested?.id} data-preview-frame-id={previewFrame?.id} data-range-edge={atRangeEnd ? 'end' : atRangeStart ? 'start' : ''} data-frame-ready={ready && stageMeasured}
-    style={{ '--theater-footer-gap': `${t.theater.playbackFooterGap}px`, '--theater-action-buttons-gap': `${t.theater.actionButtonsGap}px` } as CSSProperties}
+  return <div className={`theater-view${runtimeLayout ? ' is-runtime' : ''}`} data-runtime-exiting={runtimeExiting} data-frame-id={frame?.id} data-selected-frame-id={requested?.id} data-preview-frame-id={previewFrame?.id} data-range-edge={atRangeEnd ? 'end' : atRangeStart ? 'start' : ''} data-frame-ready={ready && stageMeasured} data-has-frame={!!displayed && stageMeasured}
+    style={{ '--playback-entry-ms': `${t.theaterMotion.entryMs}ms`, '--playback-info-delay': `${t.theaterMotion.infoDelayMs}ms`, '--playback-controls-delay': `${t.theaterMotion.playbackDelayMs}ms`, '--runtime-return-ms': `${t.theaterMotion.runtimeReturnMs}ms`, '--theater-footer-gap': `${t.theater.playbackFooterGap}px`, '--theater-action-buttons-gap': `${t.theater.actionButtonsGap}px` } as CSSProperties}
     onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} onLostPointerCapture={pointerEnd}>
     {active && !runtimeMode && exportTarget && createPortal(<PlaybackExport catalog={catalog} range={range} now={now} unit={jumpScale} hasMilestone={hasMilestone}/>, exportTarget)}
     <div className={`theater-body${scrollStage ? ' is-scrollable' : ''}`} ref={bodyRef} style={{ '--theater-metadata-height': `${t.theater.metadataHeight}px`, '--theater-metadata-max': `${t.theater.metadataHeightMaxVh}vh`, '--theater-metadata-gap': `${t.theater.metadataGap}px` } as CSSProperties}>
-      <div className="theater-stage" style={{ top: runtimeMode ? undefined : stageTop, width: runtimeMode ? frameSize.width : rowWidth ?? '100%', '--theater-action-gap': `${t.theater.actionGap}px`, '--theater-frame-bed': t.theater.frameBed } as CSSProperties}>
-      {runtimeMode === 'prototype' && <nav className="prototype-version-controls" aria-label="Prototype versions" data-orbit-blocked inert={runtimeExiting} onClick={event => event.stopPropagation()}>
+      <div className="theater-stage" style={{ top: runtimeLayout ? undefined : stageTop, width: runtimeLayout ? frameSize.width : rowWidth ?? '100%', '--theater-action-gap': `${t.theater.actionGap}px`, '--theater-frame-bed': t.theater.frameBed } as CSSProperties}>
+      {runtimeLayout && runtimeMode && <nav className="prototype-version-controls" aria-label={runtimeMode === 'prototype' ? 'Prototype versions' : 'Live server'} data-orbit-blocked inert={runtimeExiting} onClick={event => event.stopPropagation()}>
+        {runtimeMode === 'prototype' && <>
         <button type="button" aria-label="Previous prototype version" disabled={!prototypeNeighbors.previous} onClick={() => switchPrototype(prototypeNeighbors.previous)}><i className="ph-fill ph-play is-previous" aria-hidden="true"/></button>
         <PrototypeVersionLabel version={prototypeVersion}/>
         <button type="button" aria-label="Next prototype version" disabled={!prototypeNeighbors.next} onClick={() => switchPrototype(prototypeNeighbors.next)}><i className="ph-fill ph-play" aria-hidden="true"/></button>
+        </>}
+        {/* Real full screen for the running prototype or live server; Esc / Tab exit (see EmbeddedPrototype). */}
+        <button type="button" className="runtime-fullscreen" aria-label={`Open ${runtimeMode === 'live' ? 'live server' : 'prototype'} in full screen`} onClick={() => void runtimeRef.current?.requestFullscreen?.()}><i className="ph ph-corners-out" aria-hidden="true"/></button>
       </nav>}
       <div className="theater-frame-actions" inert={!!runtimeMode} aria-hidden={!!runtimeMode} data-orbit-blocked ref={actionsRef}>
         {(frame.kind !== 'push' || milestone) && <FrameAnnotations key={navigationKey} selected={!previewFrame || frame.id === selectedId} color={annotationBookmarkColor(frame.branch, branches)} milestone={milestone} milestoneColor={galleryBranchPaint(frame.branch ?? 'main', branches)} frame={frame} active={active && ready && !playing} onOpen={() => { setPlaying(false); setDisplayed(frame); setPreviewId(null); setPreviewImage(null); onSelect(frame.id); }}/>}
@@ -442,10 +452,11 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
         </button>}
         </div>
       </div>
-        <div className={`theater-screen${displayed?.kind === 'push' ? ' is-push' : ''}${runtimeMode ? ' is-runtime-screen' : ''}`} inert={runtimeExiting} ref={screenRef} style={{ height: frameSize.height, width: frameSize.width, maxWidth: '100%' }}
+        <div className={`theater-screen${displayed?.kind === 'push' ? ' is-push' : ''}${runtimeLayout ? ' is-runtime-screen' : ''}`} inert={runtimeExiting} ref={screenRef} style={{ height: frameSize.height, width: frameSize.width, maxWidth: '100%' }}
           onDragStart={event => { if (runtimeMode) { event.preventDefault(); return; } setPlaying(false); writeFrameDrag(event.dataTransfer, frameContext()); }}>
-          {runtimeMode ? <EmbeddedPrototype key={runtimeMode === 'prototype' ? frame.id : runtimeMode} mode={runtimeMode} url={prototype.url} loading={prototype.loading} error={prototype.error ?? (prototype.available === false ? 'No saved codebase for this push.' : null)} version={frame.version} onRetry={() => void prototype.enter()}/> : displayed ? <img draggable src={`${import.meta.env.BASE_URL}${displayed.url}`} alt={`${formatVersion(displayed.version)}: ${displayed.summary}`} aria-hidden={showingPreview}/>
-            : <div className="gallery-empty">{failedImage ? 'This saved image could not be loaded.' : 'Loading frame…'}</div>}
+          {runtimeMode && <EmbeddedPrototype ref={runtimeRef} key={runtimeMode === 'prototype' ? frame.id : runtimeMode} mode={runtimeMode} url={prototype.url} loading={prototype.loading} error={prototype.error ?? (prototype.available === false ? 'No saved codebase for this push.' : null)} version={frame.version} onRetry={() => void prototype.enter()}/>}
+          {(!runtimeMode || runtimeExiting) && (displayed ? <img draggable src={`${import.meta.env.BASE_URL}${displayed.url}`} alt={`${formatVersion(displayed.version)}: ${displayed.summary}`} aria-hidden={showingPreview}/>
+            : <div className="gallery-empty">{failedImage ? 'This saved image could not be loaded.' : 'Loading frame…'}</div>)}
           {!runtimeMode && showingPreview && <img draggable className="theater-preview-image" src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`Preview ${formatVersion(frame.version)}: ${frame.summary}`}/>}
         </div>
       <div className="theater-metadata" inert={!!runtimeMode} aria-hidden={!!runtimeMode} ref={metaRef} style={{ '--theater-reference-width': `${t.theater.referenceChipWidth}px`, '--line-added': t.theater.addedColor, '--line-removed': t.theater.removedColor, '--theater-row-gap': `${t.theater.metadataRowGap}px`, '--theater-summary-gap': `${t.theater.metadataRowGap * (t.theater.summaryGapScale - 1)}px` } as CSSProperties}>
@@ -465,7 +476,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
       </div>
       </div>
     </div>
-    <div className="theater-playback" data-orbit-blocked style={{ width: runtimeMode ? undefined : rowWidth, alignSelf: !runtimeMode && rowWidth ? 'center' : undefined }}>
+    <div className="theater-playback" data-orbit-blocked style={{ width: runtimeLayout ? undefined : rowWidth, alignSelf: !runtimeLayout && rowWidth ? 'center' : undefined }}>
       {runtimeMode && <div className="runtime-exit-scrim" inert={runtimeExiting}>
         <button ref={exitButton} className="theater-text-action" onClick={exitPrototype}><Icon name="close"/>Exit {runtimeMode === 'live' ? 'live server' : 'prototype'}</button>
       </div>}

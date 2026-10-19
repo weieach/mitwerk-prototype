@@ -170,10 +170,11 @@
 }
 .gallery-phase-turning .album-frame-bar, .gallery-phase-turning .album-floating-actions, .gallery-phase-turning .album-saved-frame, .gallery-phase-turning .album-navigation-help,
 .gallery-phase-turning > .gallery-footer, .gallery-phase-turning .panel-header-actions { opacity: 0; pointer-events: none; }
-.gallery-phase-theater .theater-view > .gallery-toolbar,
-.gallery-phase-theater .theater-metadata, .gallery-phase-theater .playback-controls,
-.gallery-phase-theater .theater-frame-actions, .gallery-phase-theater .gallery-back,
-.gallery-phase-theater > .gallery-footer { animation: theater-controls-in var(--theater-controls-fade) ease-out both; }
+.gallery-phase-theater .theater-view:not(.is-runtime)[data-has-frame="true"] :is(.theater-frame-actions, .theater-metadata) { animation:playback-details-in var(--playback-entry-ms) ease-out var(--playback-info-delay) both; }
+.gallery-phase-theater .theater-view:not(.is-runtime)[data-has-frame="true"] .theater-playback { animation:playback-details-in var(--playback-entry-ms) ease-out var(--playback-controls-delay) both; }
+.gallery-phase-theater > .gallery-footer { animation:theater-controls-in var(--theater-controls-fade) ease-out both; }
+.theater-view:not(.is-runtime)[data-has-frame="false"] :is(.theater-frame-actions, .theater-metadata, .theater-playback) { opacity:0; }
+@keyframes playback-details-in { from { opacity:0; translate:0 6px; } to { opacity:1; translate:0 0; } }
 @keyframes theater-controls-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .gallery-phase-theater * { animation: none !important; } }
 
@@ -258,7 +259,7 @@
 .iteration-gallery { --runtime-frame-border:rgb(255 255 255 / .45); }
 .gallery-runtime-active .gallery-theater-layer { bottom:calc(-1 * var(--gallery-runtime-footer-height, var(--panel-footer-height, 56px))); }
 .theater-view.is-runtime { position:relative; padding-block:0; gap:0; }
-.theater-view.is-runtime .theater-body { justify-content:flex-end; padding-bottom:calc(2 * (var(--gallery-runtime-footer-height, var(--panel-footer-height, 56px)) + var(--gallery-control-inset) + var(--gallery-token-lift)) + var(--base-control-height) + 2 * var(--gallery-floating-pad-block)); }
+.theater-view.is-runtime .theater-body { justify-content:center; padding-block:0; }
 .theater-view.is-runtime .theater-playback { position:static; height:0; margin:0; }
 .theater-view.is-runtime .theater-stage { position:relative; margin:0; }
 .theater-view.is-runtime .theater-stage > :is(.theater-frame-actions, .theater-metadata) { position:absolute; visibility:hidden; pointer-events:none; }
@@ -269,6 +270,11 @@
 .prototype-version-controls button:hover { opacity:.72; }
 .prototype-version-controls button:disabled { opacity:.35; cursor:default; }
 .prototype-version-controls .is-previous { transform:rotate(180deg); }
+/* Full screen: the runtime fills the screen (its desktop layout refits); a hint shows how to leave. */
+.theater-runtime:fullscreen { background:var(--paper); }
+.runtime-fullscreen-hint { position:absolute; left:50%; bottom:var(--runtime-fullscreen-hint-inset, 24px); z-index:3; transform:translateX(-50%); padding:8px 14px; border-radius:var(--surface-radius); background:var(--ink); color:var(--paper); font-size:var(--control-font-size, 12px); white-space:nowrap; pointer-events:none; animation:runtime-hint-in var(--annotation-enter-ms, 180ms) ease both; }
+@keyframes runtime-hint-in { from { opacity:0; transform:translate(-50%, 8px); } to { opacity:1; transform:translate(-50%, 0); } }
+@media (prefers-reduced-motion:reduce) { .runtime-fullscreen-hint { animation:none; } }
 .theater-screen.is-runtime-screen { z-index:6; animation:annotation-content-in var(--annotation-enter-ms) ease var(--annotation-frame-delay) both; }
 .theater-screen.is-runtime-screen::after { content:""; position:absolute; inset:0; z-index:4; pointer-events:none; border:1px solid var(--runtime-frame-border); }
 .theater-runtime { position:absolute; inset:0; z-index:1; background:var(--paper); overflow:hidden; }
@@ -280,27 +286,29 @@
 .runtime-exit-scrim .theater-text-action:hover { background:none; color:#fff; opacity:.72; }
 
 .runtime-passive-timeline { min-width:0; }
-.theater-view[data-runtime-exiting="true"] .is-runtime-screen,
-.theater-view[data-runtime-exiting="true"] .runtime-exit-scrim { animation:runtime-content-out var(--annotation-exit-ms) ease both; pointer-events:none; }
-@keyframes runtime-content-out { from { opacity:1; transform:translateY(0); } to { opacity:0; transform:translateY(var(--row-size-unit)); } }
+.theater-view[data-runtime-exiting="true"] .runtime-exit-scrim { display:none; }
+/* Let the matched frame cross the returning Idea stream divider until it settles. */
+.iteration-gallery:has(.theater-view[data-runtime-exiting="true"]) { z-index:2; }
+.theater-view[data-runtime-exiting="true"], .theater-view[data-runtime-exiting="true"] .theater-body { overflow:visible; }
+.gallery-phase-theater .theater-view[data-runtime-exiting="true"] .theater-screen { animation:none; z-index:6; }
+.theater-view[data-runtime-exiting="true"] .theater-runtime { animation:runtime-frame-dissolve var(--runtime-return-ms) linear both; pointer-events:none; }
+@keyframes runtime-frame-dissolve { 0%, 45% { opacity:1; } 100% { opacity:0; } }
 
 /* Server mode (Live server and saved prototypes): a blurred sky replaces the playback surround. It sits beneath
    the isolated gallery's content (z-index -1), so the covered playback details fade out rather than being scrimmed. */
-.gallery-runtime-backdrop { position:absolute; inset:0; background:var(--runtime-backdrop-color); z-index:-1; overflow:hidden; pointer-events:none; animation:runtime-backdrop-in var(--annotation-blur-ms) ease both; }
-.iteration-gallery:has(.theater-view[data-runtime-exiting="true"]) > .gallery-runtime-backdrop { animation:runtime-backdrop-out var(--annotation-exit-ms) ease both; }
+.gallery-runtime-backdrop { position:absolute; inset:0; background:var(--runtime-backdrop-color); z-index:-1; overflow:hidden; pointer-events:none; opacity:0; transition:opacity var(--annotation-blur-ms) ease; }
+.gallery-runtime-backdrop[data-active="true"] { opacity:1; }
+
 .gallery-runtime-active .theater-view.is-runtime :is(.theater-frame-actions, .theater-metadata, .playback-controls, .runtime-passive-timeline),
 .iteration-gallery.gallery-runtime-active > .gallery-footer > * { transition:opacity var(--annotation-blur-ms) ease; }
-/* The theater entrance animation fills forward and would hold these at full opacity; on exit it replays as their fade-in. */
+/* Playback rows stay mounted for measurement, but are hidden during runtime. */
 .gallery-runtime-active .theater-view.is-runtime:not([data-runtime-exiting="true"]) :is(.theater-frame-actions, .theater-metadata, .playback-controls, .runtime-passive-timeline),
 .iteration-gallery.gallery-runtime-active:not(:has(.theater-view[data-runtime-exiting="true"])) > .gallery-footer > * { opacity:0; animation:none; }
 .iteration-gallery.gallery-runtime-active > .gallery-footer { border-top-color:transparent; }
-@keyframes runtime-backdrop-in { from { opacity:0; } to { opacity:1; } }
-@keyframes runtime-backdrop-out { from { opacity:1; } to { opacity:0; } }
 @media (prefers-reduced-motion:reduce) {
   .theater-screen.is-runtime-screen, .runtime-exit-scrim,
-  .theater-view[data-runtime-exiting="true"] .is-runtime-screen,
-  .theater-view[data-runtime-exiting="true"] .runtime-exit-scrim,
-  .gallery-runtime-backdrop, .iteration-gallery:has(.theater-view[data-runtime-exiting="true"]) > .gallery-runtime-backdrop { animation:none; }
+  .theater-view[data-runtime-exiting="true"] .theater-runtime,
+  .gallery-runtime-backdrop { animation:none; transition:none; }
   .gallery-runtime-active .theater-view.is-runtime :is(.theater-frame-actions, .theater-metadata, .playback-controls, .runtime-passive-timeline),
   .iteration-gallery.gallery-runtime-active > .gallery-footer > * { transition:none; }
 }

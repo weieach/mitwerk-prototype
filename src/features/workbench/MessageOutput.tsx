@@ -61,7 +61,7 @@ export function MessageOutput({ output, onOpen }: { output: NonNullable<Message[
   }, [invited, coverReady]);
   useEffect(() => {
     setInvited(false); setJumping(false);
-    if (!key || milestone || dismissedKey === key || !coverReady) return;
+    if (output.inviteMilestone === false || !key || milestone || dismissedKey === key || !coverReady) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
     let visible = false, started = false;
     const clear = () => { timers.forEach(clearTimeout); timers.length = 0; };
@@ -81,7 +81,7 @@ export function MessageOutput({ output, onOpen }: { output: NonNullable<Message[
     observer.observe(root.current!);
     document.addEventListener('visibilitychange', schedule);
     return () => { clear(); observer.disconnect(); document.removeEventListener('visibilitychange', schedule); };
-  }, [key, milestone, dismissedKey, coverReady]);
+  }, [key, milestone, dismissedKey, coverReady, output.inviteMilestone]);
   const openMilestone = () => {
     setDismissedKey(key); setInvited(false); setJumping(false);
     onOpen(true);

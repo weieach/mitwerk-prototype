@@ -1,3 +1,5 @@
+import { runtimeKeyMessage } from './runtime-messages.mjs';
+
 /** Run before app modules: each live preview starts fresh without changing the host's data. */
 if (window.self !== window.top && new URLSearchParams(location.search).get('livePreview') === '1') {
   const storage = (): Storage => {
@@ -14,4 +16,8 @@ if (window.self !== window.top && new URLSearchParams(location.search).get('live
     if (!['GET', 'HEAD'].includes(method)) return Promise.reject(new Error('Live preview changes stay in this preview.'));
     return fetchOriginal(input, init);
   };
+  // Tab / Escape inside the preview let the host leave full screen (the host page never sees these keys).
+  window.addEventListener('keydown', event => {
+    if (event.key === 'Tab' || event.key === 'Escape') window.parent.postMessage({ type: runtimeKeyMessage, key: event.key }, '*');
+  }, true);
 }

@@ -220,6 +220,18 @@ export class AlbumScene {
     this.host.dataset.inspectionReady = String(!!hovered && this.textures.has(hovered.plane.frame.id) && hovered.group.position.y === t.hoverLift && (!edgePanArmed(this.edgeHoldMs) || this.lookSettled(hovered.plane)));
     if (moving) this.invalidate();
   };
+  /**
+   * Leave a held Playback turn without the reverse animation — e.g. the capture bucket changed while in Playback.
+   * Otherwise the scene keeps replaying the finished turn, drawing the old frame with its controls disabled.
+   */
+  releaseTheater() {
+    if (!this.theaterTurn && !this.restoreAlbum) return;
+    this.restoreAlbum?.(); this.restoreAlbum = null; this.theaterTurn = null;
+    this.controls.enabled = true;
+    delete this.host.dataset.transitionProgress; delete this.host.dataset.transitionReady;
+    this.invalidate();
+  }
+
   /** Live-update demo: hide the newest active frame, then drop it in from half its height above while it fades in. */
   replayLatestArrival() {
     if (this.theaterTurn || !this.album) return;
