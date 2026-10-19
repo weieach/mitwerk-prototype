@@ -5117,3 +5117,70 @@ This block is automatically supplied ambient UI state, not part of the user's re
 try 45 deg
 
 ```
+
+## Prompt #525
+
+```text
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://localhost:5173/
+</in-app-browser-context>
+
+## My request:
+try 10 deg
+
+```
+
+## Prompt #525 uncounted
+
+```text
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://localhost:5173/
+</in-app-browser-context>
+
+## My request:
+production deployment just failed, and git history in cursor is having a hard time loading. x counter
+```
+
+## Prompt #525 uncounted
+
+```text
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://localhost:5173/
+</in-app-browser-context>
+
+## My request:
+can you try pushing to vercel again. x counter
+```
+
+## Prompt #525 uncounted
+
+```text
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://localhost:5173/
+</in-app-browser-context>
+
+## My request:
+commit and push too. x counter
+```
+
+Deployment verification: production deployment `dpl_BdWyzmpNFN8TZoTt41sy7cRd4Cvw` succeeded with the source-only repository fallback. Verified 520 gallery frames and 53 recorded prototype endpoints, HTML, frozen catalogs and sample image hashes. Commit/push requested without a progress capture.
+
+## Prompt #525 uncounted
+
+```text
+x counter. what's taking up so large size in this codebase and are they necessary files at this point
+```
+
+Git staging recovery: restored 147 cloud-only Git objects from GitHub after SHA-1 verification; 231 objects unavailable on the remote were left untouched. Staging completed after restoration.

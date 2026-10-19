@@ -1,5 +1,6 @@
 import { visualReferencePrompt } from '../src/shared/visual-reference-path.mjs';
 import { runtimeKeyMessage } from '../src/shared/runtime-messages.mjs';
+import { githubRepository } from './github-repository.mjs';
 import { build } from 'vite';
 import react from '@vitejs/plugin-react';
 import { execFile, spawn } from 'node:child_process';
@@ -45,13 +46,6 @@ async function stageFromGit(root, sha, dest) {
   git.stderr.on('data', chunk => { stderr += chunk; });
   const exited = new Promise((done, fail) => { git.on('error', fail); git.on('close', code => code === 0 ? done() : fail(new Error(stderr.trim() || `git archive failed for ${sha}`))); });
   await Promise.all([extractTar(git.stdout, dest), exited]);
-}
-
-async function githubRepository(root) {
-  const { stdout } = await execFileAsync('git', ['remote', 'get-url', 'origin'], { cwd: root });
-  const repo = /github\.com[:/]([^/]+\/[^/]+?)(?:\.git)?$/i.exec(stdout.trim())?.[1];
-  if (!repo) throw new Error('The origin remote is not a GitHub repository.');
-  return repo;
 }
 
 /** Public archives need no token. Private repositories use the authenticated API. */

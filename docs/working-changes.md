@@ -163,3 +163,10 @@
 
 - `landing-orbit.ts`: change the shared starting-angle step from −25° to −45° per rectangle.
 - `tests/landing-orbit.test.ts`: update the spacing regression check. `docs/design-system-rules.md`: record the new value.
+- Validation: all seven orbit tests and targeted whitespace checks pass. Saved and visually inspected landing progress capture #524.
+
+## 2026-10-19 · prompt #525 · Descending 10° orbit phases
+
+- `landing-orbit.ts`: change the shared starting-angle step from −45° to −10° per rectangle.
+- `tests/landing-orbit.test.ts`: update the spacing regression check. `docs/design-system-rules.md`: record the revised value.
+- Validation: all seven orbit tests and targeted whitespace checks pass. Saved and visually inspected landing progress capture #525.
