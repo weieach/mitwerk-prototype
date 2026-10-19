@@ -170,3 +170,36 @@ test('the MitWerk to verso rename updates saved sample names and instructions bu
  assert.equal(migrated.projects[1].name, 'MitWerk notes');
  assert.equal((migrated.projects[1] as { instructions?: string }).instructions, 'Keep MitWerk as written');
 });
+
+
+test('local chat turns disappear on reload while bundled history and workspace data survive', () => {
+ const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+ let saved = '';
+ Object.defineProperty(globalThis, 'localStorage', {configurable:true, value:{getItem:()=>saved || null, setItem:(_key:string,value:string)=>{saved=value;}}});
+ try {
+  const state = migrateState(null);
+  const task = state.tasks.find(task=>task.id==='panel')!;
+  const history = [...task.messages];
+  task.messages.push(
+   {id:'legacy-user',role:'user',name:'Me',time:'12:00',text:'Previously saved message'},
+   {id:'legacy-reply',role:'mit',name:'Design Mit',time:'12:00',text:'Previous demo response'},
+   {id:'new-user',sessionOnly:true,role:'user',name:'Me',time:'12:01',text:'Temporary message'},
+   {id:'new-reply',sessionOnly:true,role:'mit',name:'Design Mit',time:'12:01',text:'Temporary demo response'},
+  );
+  state.drafts.panel = 'Unsent draft';
+  state.projects[0].instructions = 'Keep project settings';
+  // Loading an old build's stored turns cleans them too.
+  saved = JSON.stringify(state);
+  assert.deepEqual(loadState().tasks.find(task=>task.id==='panel')!.messages, history);
+  saveState(state);
+  assert.equal(task.messages.length, history.length + 4, 'saving must not remove messages from the active session');
+  assert.deepEqual(JSON.parse(saved).tasks.find((task:{id:string})=>task.id==='panel').messages, history);
+  const restored = loadState();
+  assert.deepEqual(restored.tasks.find(task=>task.id==='panel')!.messages, history);
+  assert.equal(restored.drafts.panel, 'Unsent draft');
+  assert.equal(restored.projects[0].instructions, 'Keep project settings');
+ } finally {
+  if (descriptor) Object.defineProperty(globalThis, 'localStorage', descriptor);
+  else Reflect.deleteProperty(globalThis, 'localStorage');
+ }
+});

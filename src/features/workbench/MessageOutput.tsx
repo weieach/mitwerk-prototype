@@ -25,6 +25,7 @@ export function MessageOutput({ output, onOpen }: { output: NonNullable<Message[
   const coverReady = !!output.imageUrl && decodedCover === output.imageUrl;
   useLayoutEffect(() => {
     const cover = image.current!;
+    setDecodedCover(null);
     let cancelled = false;
     const loaded = async () => {
       if (!cover.naturalWidth) return;
@@ -39,6 +40,7 @@ export function MessageOutput({ output, onOpen }: { output: NonNullable<Message[
     return () => { cancelled = true; cover.removeEventListener('load', loaded); };
   }, [output.imageUrl]);
   useLayoutEffect(() => {
+    if (!coverReady) { previousHeight.current = 0; return; }
     const card = root.current!.querySelector<HTMLElement>('.message-version-card')!;
     const main = card.querySelector<HTMLElement>('.message-version-main')!;
     const height = () => main.getBoundingClientRect().height + 2;
@@ -50,7 +52,7 @@ export function MessageOutput({ output, onOpen }: { output: NonNullable<Message[
     const observer = new ResizeObserver(() => { previousHeight.current = height(); });
     observer.observe(main);
     return () => { animation?.cancel(); observer.disconnect(); };
-  }, [invited]);
+  }, [invited, coverReady]);
   useEffect(() => {
     setControlsReady(false);
     if (!invited || !coverReady) return;
@@ -98,7 +100,7 @@ export function MessageOutput({ output, onOpen }: { output: NonNullable<Message[
     window.addEventListener(milestonesChangedEvent, sync);
     return () => { window.removeEventListener('storage', sync); window.removeEventListener(milestonesChangedEvent, sync); };
   }, [key]);
-  return <div ref={root} className={`message-version-output${jumping ? ' is-milestone-jumping' : ''}${invited ? ' is-milestone-ready' : ''}`} style={{'--message-image-aspect':imageAspect, '--milestone-invite-gradient':milestoneInviteGradient, '--milestone-bump-duration':`${milestoneInviteMotion.duration}ms`} as CSSProperties}>
+  return <div ref={root} hidden={!coverReady} className={`message-version-output${jumping ? ' is-milestone-jumping' : ''}${invited ? ' is-milestone-ready' : ''}`} style={{'--message-image-aspect':imageAspect, '--milestone-invite-gradient':milestoneInviteGradient, '--milestone-bump-duration':`${milestoneInviteMotion.duration}ms`} as CSSProperties}>
     <div className="message-version-card">
       <span className="message-version-placeholder" aria-hidden="true"/>
       <button type="button" className="message-version-main" aria-label={invited ? "You've accomplished a lot! Ready to mark a new milestone?" : `Version block #${output.version}, Prompt #${output.prompt}`} onClick={invited ? openMilestone : () => onOpen()}>

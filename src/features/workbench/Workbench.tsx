@@ -1,5 +1,5 @@
 import { useWorkspaceViewport } from './useWorkspaceViewport';
-import { singleReaderRequired } from './workspace-responsive';
+import { singleReaderRequired, workspaceResponsive } from './workspace-responsive';
 import { PanelIcon } from '../../components/PanelIcon';
 import { useFirstPanelEntry } from './useFirstPanelEntry';
 import { useChatPanelWidth } from './useChatPanelWidth';
@@ -231,7 +231,7 @@ export function Workbench() {
  useEffect(()=>{const chatShot=chatLayout||Boolean(chatCapture);if(!chatShot||view!=='dialog')return;if(chatCapture&&task.title!==chatCapture)return;if(scrollTopCapture&&(scrollRef.current?.scrollTop??1)!==0)return;document.documentElement.dataset.screenshotReady='1';},[chatLayout,chatCapture,task.title,view,scrollTopCapture,task.messages.length]);
  useEffect(()=>()=>{timers.current.forEach(clearTimeout);},[]);
  useEffect(()=>{const open=()=>{setView('Todos');setReader(null);setExpanded(false);setSelectedPane('chat');};window.addEventListener('mitwerk-open-todos',open);return()=>window.removeEventListener('mitwerk-open-todos',open);},[]);
- useEffect(()=>{const key=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();setModal('search');}if(e.key==='Escape'&&!document.querySelector('dialog[open]')){setReader(null);setExpanded(false);setSelectedPane('chat');}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[]);
+ useEffect(()=>{const key=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();setModal('search');}if(e.key==='Escape'&&!(chatShown&&versionShown)&&!document.querySelector('dialog[open]')){setReader(null);setExpanded(false);setSelectedPane('chat');}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[chatShown,versionShown]);
  function openTodoAction(target:TodoTarget,mode:'edit'|'delete',text:string){setTodoText(text);setTodoAction({target,mode});}
  function saveTodoAction(){
   if(!todoAction)return;
@@ -324,7 +324,7 @@ export function Workbench() {
    const linked=annotations.filter(note=>note.todo&&(contextAttachment?.annotationId===note.id||(note.chatId===task.id&&draft.includes(`[Frame annotation ${note.id}]`))));
    const source=linked.find(note=>note.id===contextAttachment?.annotationId);
    const text=[contextAttachment?`To-do: ${source?.text || visibleMessageText(contextAttachment.text)}`:'',draft.trim()].filter(Boolean).join('\n\n');
-   const message={id:uid(),role:'user' as const,name:userName,time:now(),text,assetIds:attached,
+   const message={id:uid(),sessionOnly:true,role:'user' as const,name:userName,time:now(),text,assetIds:attached,
      annotationContext:source?annotationContext(source):undefined,
      frames:source?appendFrameContext(frameAttachments,{id:source.frame.id,url:source.frame.url,filename:'',label:`Prompt #${source.frame.number} (v${source.frame.version})`}):frameAttachments};
    setState(s=>{
@@ -340,7 +340,7 @@ export function Workbench() {
    linked.forEach(note=>updateAnnotation(note.id,{status:'In progress'}));setPending(p=>[...p,id]);
    timers.current.set(id,setTimeout(()=>{
      const replyId=uid();setPrintingId(replyId);
-     updateTask(id,t=>({...t,status:isTodoChat(t)?'Ready for review':t.status,updated:now(),messages:[...t.messages,{id:replyId,role:'mit',name:t.mit,time:now(),text:linked.length
+     updateTask(id,t=>({...t,status:isTodoChat(t)?'Ready for review':t.status,updated:now(),messages:[...t.messages,{id:replyId,sessionOnly:true,role:'mit',name:t.mit,time:now(),text:linked.length
        ? `This sample project isn't connected to a live agent, so nothing ran for your to-do.\n\n${linked.map(note=>`• ${note.text}`).join('\n')}\n\nIn a connected project, the agent would work from this saved frame and return an updated frame here for review.`
        : `This sample project isn't connected to a live agent, so I can't act on your message${contextAttachment?', to-do context':''}${attached.length?', files':''}${frameAttachments.length?' or saved frames':''} here.\n\nIn a connected project, the reply would appear in this conversation, and new frames would show up in Version blocks as the work is captured.`}]}));
      linked.forEach(note=>updateAnnotation(note.id,{status:'Ready for review'}));setPending(p=>p.filter(value=>value!==id));timers.current.delete(id);
@@ -384,7 +384,7 @@ export function Workbench() {
      {openAssetIds.filter(id=>id!=='prototype').map(id=>{const asset=allAssets.find(a=>a.id===id);return asset&&<span className="workspace-resource" key={id}><button onClick={()=>selectPane(`asset:${id}`)}>{asset.title}</button><button aria-label={`Close ${asset.title}`} onClick={()=>closeAssetTab(id)}><X size={12}/></button></span>;})}
     </nav>
    </header>
-   <div ref={bodyRef} className={`mw-body ${reader?'reader-open':''} ${expanded?'reader-expanded':''} ${reader&&!expanded?'mw-split-view':''} ${!chatVisible?'chat-hidden':''} ${chatPanel.resizing?'is-chat-resizing':''}`} style={{'--chat-panel-width':`${chatPanel.width}px`} as CSSProperties}>
+   <div ref={bodyRef} className={`mw-body ${chatShown&&!versionShown?'chat-only':''} ${reader?'reader-open':''} ${expanded?'reader-expanded':''} ${reader&&!expanded?'mw-split-view':''} ${!chatVisible?'chat-hidden':''} ${chatPanel.resizing?'is-chat-resizing':''}`} style={{'--chat-panel-width':`${chatPanel.width}px`, '--chat-panel-max-width':`${workspaceResponsive.chatMaxWidth}px`, '--chat-content-max-width':`${chatShown&&!versionShown?workspaceResponsive.chatFullscreenContentWidth:workspaceResponsive.chatMaxWidth}px`} as CSSProperties}>
     <main hidden={!chatShown} id="workspace-pane-chat" aria-label="Conversation" className="mw-surface">
      {view==='dialog' ? <section className={`mw-dialog ${isNewChat?'new-chat-launch':''} ${!task.messages.length?'empty-chat':''}`} aria-label={isNewChat?'New chat':isTaskChat?'Task conversation':'Chat conversation'}>
       <PanelHeader title={isNewChat?'New chat':task.title} icon={panelIcons.chat} expanded={!reader} onToggle={()=>{setSelectedPane('chat');if(!reader){setReader('prototype');setExpanded(false);}else{setReader(null);setExpanded(false);}}}/>

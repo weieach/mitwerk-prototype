@@ -1885,3 +1885,15 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Narrow milestone invitation spacing — 2026-10-18
 
 - When the narrow stacked invitation places controls below the text, reserve the actual milestone button diameter plus an 8px gap instead of a fixed 88px action area. Use shared size tokens so the spacing follows responsive control sizing.
+
+## Chat width limits and fullscreen — 2026-10-18
+
+- Side-by-side Chat panels and their content have a hard maximum of 575 CSS pixels at every viewport width, including drag and keyboard resizing; this supersedes the previous 600px cap, scaled 760px ceiling and uncapped 36vw defaults.
+- When Chat is the only visible panel, its surface fills the workspace and the conversation plus composer/to-do content are horizontally centered in a column no wider than 675 CSS pixels. Hide the aside conversation cards and remove their reserved space. Apply this exception from visible-panel state, including narrow screens.
+- Escape must not turn side-by-side Chat and Version blocks into fullscreen Chat; preserve other Escape dismissal behavior.
+
+- In fullscreen Chat, assistant reply text uses the full content width, matching the version card beneath it; the centered 675px column still sets the outer limit.
+
+## Version-card loading — 2026-10-18
+
+- Keep the entire Chat version output, including its milestone action, hidden and out of layout until the current preview image has decoded and its natural aspect ratio is available. Reveal the image and card together; no empty preview gap. Reset readiness on preview changes and begin invitation timing only after readiness.

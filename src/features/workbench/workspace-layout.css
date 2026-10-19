@@ -190,6 +190,7 @@
 .mw-app .mw-message .message-time { padding-left:0; margin-top:var(--message-time-gap); font-size:var(--chat-meta-size); opacity:0; transition:opacity var(--drawer-hover-duration) ease; }
 .mw-app .mw-message:is(:hover, :focus-within) .message-time { opacity:1; }
 .message-version-output { margin-top:18px; }
+.message-version-output[hidden] { display:none; }
 .mw-app .message-version-card { display:flex; align-items:center; width:100%; height:auto; gap:var(--message-version-gap); background:var(--message-version-fill); border:1px solid var(--line-strong); border-radius:8px; padding:0 12px 0 0; min-height:var(--message-preview-height); overflow:hidden; text-align:left; font-size:12px; }
 .message-version-label { display:flex; flex:1; align-items:center; min-width:0; gap:8px; }
 .message-version-label > .ui-icon { flex:none; margin-left:auto; }
@@ -856,3 +857,12 @@
 .workspace-links > button[aria-pressed=true] .panel-feature-icon { color:var(--panel-feature-color); }
 
 .workspace .theater-frame-actions .annotation-milestone-icon .milestone-trophy-glyph { display:flex; align-items:center; justify-content:center; opacity:1; }
+
+/* Shared Chat limits: split panels cap at 575px; a sole Chat centers a 675px content column. */
+.mw-app .mw-body:not(.chat-only) > .mw-surface:has(> .mw-dialog) { max-width:var(--chat-panel-max-width); }
+.mw-app .mw-body .mw-dialog :is(.conversation-inner, .composer-area) { width:100%; max-width:var(--chat-content-max-width); margin-inline:auto; }
+.mw-app .mw-body.chat-only > .mw-surface { flex:1 1 0; width:auto; max-width:none; }
+.mw-app .mw-body.chat-only .mw-dialog { padding-right:0; }
+.mw-app .mw-body.chat-only .conversation-cards { display:none; }
+
+.mw-app .mw-body.chat-only { --message-max-width:100%; }

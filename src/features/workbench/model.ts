@@ -6,7 +6,7 @@ import type { FrameContext } from './frame-context.ts';
 import { userName } from './user-profile.ts';
 export type TaskStatus = 'To do' | 'In progress' | 'Ready for review' | 'Complete';
 export type View = 'Home' | 'Projects' | 'Todos' | 'Inbox' | 'Mits' | 'Library' | 'Settings' | 'dialog' | 'project' | 'Co-workers';
-export type Message = { sourcePrompt?: number; versionOutput?: {version?:number;prompt:number;imageUrl?:string;frameId?:string}; annotationContext?: string; frames?:FrameContext[]; id: string; role: 'user' | 'mit' | 'colleague'; name: string; text: string; assetId?: string; assetIds?: string[]; time: string };
+export type Message = { sessionOnly?: boolean; sourcePrompt?: number; versionOutput?: {version?:number;prompt:number;imageUrl?:string;frameId?:string}; annotationContext?: string; frames?:FrameContext[]; id: string; role: 'user' | 'mit' | 'colleague'; name: string; text: string; assetId?: string; assetIds?: string[]; time: string };
 export type Task = { origin?: 'chat' | 'todo'; todoPrompt?: string; annotationSourceId?: string; id: string; title: string; status: TaskStatus; creator: string; mit: string; mitId?: string; participantMitIds?:string[]; project: boolean; projectId?: string; kind: 'mit' | 'colleague'; unread: boolean; updated: string; created?: string; messages: Message[]; input: string[]; output: string[] };
 export type Asset = { id: string; title: string; kind: 'document' | 'image' | 'prototype'; detail: string; url?: string; content?: string; local?: boolean; previewPrompt?: number; previewUrl?: string };
 export const statuses: TaskStatus[] = ['To do', 'In progress', 'Ready for review', 'Complete'];
@@ -180,14 +180,30 @@ export function loadState(): SavedState {
   const raw=JSON.parse(localStorage.getItem(KEY)||'null');
   if(raw && (!Array.isArray(raw.tasks)||!raw.tasks.every((t:Task)=>typeof t.id==='string' && typeof t.title==='string' && typeof t.mit==='string' && statuses.includes(t.status) && Array.isArray(t.input) && Array.isArray(t.output) && Array.isArray(t.messages))))return migrateState(null);
   // Unsent frame references are session-only, like queued file attachments.
-  return { ...durableCaptureState(migrateState(raw)), frameAttachments: {} };
+  return { ...durableConversationState(durableCaptureState(migrateState(raw))), frameAttachments: {} };
  }catch{return migrateState(null);}
 }
 export function tasksForProject(tasks:Task[],id:string){return tasks.filter(t=>t.projectId===id);}
 function durableCaptureState(state: SavedState): SavedState {
  return { ...state, chatComposers: Object.fromEntries(Object.entries(state.chatComposers ?? {}).map(([id, composer]) => [id, { ...composer, capture: { ...composer.capture, screen: durableCaptureScreen(composer.capture.screen) } }])) };
 }
-export function saveState(state:SavedState) { localStorage.setItem(KEY,JSON.stringify({ ...durableCaptureState(state), frameAttachments: {} })); }
+/** Sent demo turns live only in memory. Also discard turns saved by earlier builds. */
+function durableConversationState(state: SavedState): SavedState {
+ const seeds = new Map(seedTasks().map(task => [task.id, new Set(task.messages.map(message => message.id))]));
+ return {...state, tasks: state.tasks.map(task => {
+  let localTurn = false;
+  return {...task, messages: task.messages.filter(message => {
+   if (message.sessionOnly) { localTurn = true; return false; }
+   if (seeds.get(task.id)?.has(message.id) || message.sourcePrompt !== undefined || message.versionOutput) {
+    localTurn = false;
+    return true;
+   }
+   if (message.role === 'user') { localTurn = true; return false; }
+   return !(localTurn && message.role === 'mit');
+  })};
+ })};
+}
+export function saveState(state:SavedState) { localStorage.setItem(KEY,JSON.stringify({ ...durableConversationState(durableCaptureState(state)), frameAttachments: {} })); }
 export function now() { return new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
 export function uid() { return crypto.randomUUID(); }
 

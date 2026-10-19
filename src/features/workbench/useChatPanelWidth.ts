@@ -1,14 +1,14 @@
 import { defaultChatWidth, workspaceResponsive } from './workspace-responsive';
 import { useLayoutEffect, useRef, useState, type RefObject, type PointerEvent, type KeyboardEvent } from 'react';
 
-export const chatPanelSizing = { initial: 500, min: 320, max: 760, maxFraction: .55, keyStep: 24 } as const;
+export const chatPanelSizing = { initial: 500, min: 320, max: workspaceResponsive.chatMaxWidth, maxFraction: .55, keyStep: 24 } as const;
 
 export function useChatPanelWidth(body: RefObject<HTMLDivElement | null>, viewportWidth: number) {
   const [preferred, setPreferred] = useState<number | null>(null);
   const [available, setAvailable] = useState(window.innerWidth);
   const [resizing, setResizing] = useState(false);
   const drag = useRef<{ id: number; x: number; width: number } | null>(null);
-  const max = Math.min(chatPanelSizing.max * Math.max(1, viewportWidth / workspaceResponsive.desktopWidth), Math.floor(available * chatPanelSizing.maxFraction));
+  const max = Math.min(chatPanelSizing.max, Math.floor(available * chatPanelSizing.maxFraction));
   const min = Math.min(chatPanelSizing.min, max);
   const clamp = (value: number) => Math.max(min, Math.min(max, value));
   const width = clamp(preferred ?? defaultChatWidth(viewportWidth));

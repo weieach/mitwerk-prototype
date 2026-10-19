@@ -527,3 +527,33 @@ Changes that are made but not yet committed. The user decides when to commit and
 - `control-tokens.css`: replace the fixed 88px stacked action reserve with the responsive milestone button diameter plus an 8px gap, bringing the buttons closer to the copy on narrow cards.
 - `docs/design-system-rules.md`: record the shared spacing rule. Inline browser reference has no local source path.
 - Validation: Chrome at a 385px Chat width confirms a 60px action reserve (52px button + 8px), reduced from 88px, with no text/button overlap; visually checked and diff check passes.
+
+## 2026-10-18 · prompt #486 · Chat width caps and fullscreen content
+
+- `workspace-responsive.ts`, `useChatPanelWidth.ts`: shared 600px split-Chat maximum for default and user-resized widths, plus a 675px fullscreen content token.
+- `Workbench.tsx`, `workspace-layout.css`: derive the Chat-only layout from visible panels, center its conversation/composer, hide aside cards and their reserved space, and stop Escape from closing the reader when both panels are visible.
+- `tests/workspace-responsive.test.ts`: update wide-screen default expectations for the hard cap.
+- `docs/design-system-rules.md`: record these layout and keyboard rules.
+- `scripts/screenshot-progress.mjs`: recognize `c chat fullscreen` as a layout cue, not a conversation title.
+- Validation: TypeScript, responsive-width test, and diff checks pass. Chrome verifies the 600px resize ceiling at 1198/1669/2560px viewports, Escape preserving the reader, and centered fullscreen conversation/composer at 675px (or available width on a 600px screen), with aside cards hidden.
+
+## 2026-10-18 · prompt #487 · Chat cap and fullscreen reply width
+
+- `workspace-responsive.ts`: reduce the shared split Chat cap to 575px for defaults and resizing; fullscreen retains its 675px content limit.
+- `workspace-layout.css`: fullscreen assistant replies use the full content width, matching version cards via the existing message-width token.
+- `tests/workspace-responsive.test.ts`, `docs/design-system-rules.md`: update cap expectations and document fullscreen reply alignment. Inline annotation has no local source path.
+- Validation: responsive-width test and diff check pass; Chrome confirms 575px split panels at 1198/1669/2560px viewports and identical fullscreen reply/card bounds at 600/1198/2560px, retaining centered content and hidden aside cards.
+- `scripts/screenshot-progress.mjs`: support explicit `--gallery-view chat` so fullscreen captures without a textual capture cue use Chat readiness instead of waiting for a hidden Gallery.
+
+## 2026-10-18 · prompt #488 · Session-only sent chat turns
+
+- `model.ts`, `Workbench.tsx`: mark newly sent messages and demo replies as session-only, omit them from persisted state, and discard previously saved local turns on load while retaining bundled/catalog history and unrelated workspace data.
+- `AGENTS.md`: reconcile the push counter with the existing push #48 capture after the concurrent merge resolved its conflicting text.
+- `tests/workbench.test.ts`: cover legacy and newly sent turns, preserving in-memory messages, bundled history, drafts, and project settings.
+- Validation: TypeScript and all 14 workbench tests pass. Chrome confirms sending a message shows both sides of the turn in-session, then refresh removes both while preserving the example conversation.
+
+## 2026-10-18 · prompt #489 · Reveal version cards only when ready
+
+- `MessageOutput.tsx`, `workspace-layout.css`: hide the complete version output until its current image is decoded and measured, reset readiness on source changes, and avoid measuring/animating hidden cards.
+- `docs/design-system-rules.md`: record the shared card-loading rule.
+- Validation: TypeScript and diff checks pass. Chrome with deliberately paused image decoding confirms zero visible/layout space while waiting, then reveals the complete card at its natural image ratio with no left gap, for both cold and cached loads.

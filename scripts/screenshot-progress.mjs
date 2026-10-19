@@ -502,6 +502,7 @@ function chatCaptureTitle(prompt = '') {
   if (quoted) return quoted[1].trim();
   const plain = /\bc(?:\s*\/)? chat\s+([^\n]+)/i.exec(prompt);
   if (!plain) return '';
+  if (/^fullscreen(?:\s|$)/i.test(plain[1])) return '';
   return plain[1].replace(/(?:^|\s+)(?:w\/?|with)\s+[\s\S]*$/i, '').replace(/\s+/g, ' ').trim();
 }
 
@@ -518,6 +519,7 @@ function wantsChatPlaybackCapture(prompt = '') {
 }
 
 function wantsChatCapture(prompt = '') {
+  if (argValue('gallery-view') === 'chat') return true;
   return /\bc(?:\s*\/)? chat\b/i.test(prompt) && !wantsHomeCapture(prompt) && !wantsSideBySideCapture(prompt) && !wantsChatPlaybackCapture(prompt);
 }
 
