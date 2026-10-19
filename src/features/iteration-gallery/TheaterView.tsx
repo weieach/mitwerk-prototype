@@ -70,7 +70,7 @@ function PrototypeVersionLabel({ version }: { version: number }) {
   return <span className="prototype-version-mask"><span ref={label} className="theater-version-tag" aria-live="polite">{formatVersion(version)}</span></span>;
 }
 
-export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveRequestKey = 0, onRuntimeChange, onPlaybackVersion, navigationKey, references, frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline }: { onRangeChange: (range: RangeKey) => void; exportTarget?: HTMLElement | null; runtimeCatalog: GalleryFrame[]; liveRequestKey?:number; onRuntimeChange?:(mode:RuntimeMode|null)=>void; onPlaybackVersion?:(version:number|null)=>void; navigationKey: number; references: VisualReference[]; baseline: { width: number; height: number }; active: boolean; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string, animate?: boolean) => void }) {
+export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveRequestKey = 0, onLiveRequestHandled, onRuntimeChange, onPlaybackVersion, navigationKey, references, frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline }: { onRangeChange: (range: RangeKey) => void; exportTarget?: HTMLElement | null; runtimeCatalog: GalleryFrame[]; liveRequestKey?:number; onLiveRequestHandled:(key:number)=>void; onRuntimeChange?:(mode:RuntimeMode|null)=>void; onPlaybackVersion?:(version:number|null)=>void; navigationKey: number; references: VisualReference[]; baseline: { width: number; height: number }; active: boolean; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string, animate?: boolean) => void }) {
   const timelineRef = useRef<HTMLDivElement>(null);
   const gesture = useRef<{ pointer: number; x: number; y: number; frameClick: boolean; orbit: TheaterOrbit | null } | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -89,7 +89,6 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
   const runtimeRef = useRef<HTMLElement>(null);
   const exitButton = useRef<HTMLButtonElement>(null);
   useEffect(() => { if (runtimeMode) exitButton.current?.focus(); }, [runtimeMode]);
-  const handledLiveRequest = useRef(0);
   const [toast, setToast] = useState('');
   useEffect(() => {
     if (active && pendingPrototype.current === selectedId) return;
@@ -265,11 +264,12 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
   }, [prototype.error]);
   useEffect(() => {
     // Exit requests also apply while Playback is turning back to the gallery, so a runtime never outlives it.
-    if (!ready || !liveRequestKey || handledLiveRequest.current === liveRequestKey || (!active && liveRequestKey > 0)) return;
-    handledLiveRequest.current = liveRequestKey;
+    if (!liveRequestKey || (liveRequestKey > 0 && (!active || !ready))) return;
+    // Consume in the owner so remounting Playback cannot replay an old open request.
+    onLiveRequestHandled(liveRequestKey);
     if (liveRequestKey < 0) { if (runtimeMode) exitPrototype(); return; }
     setPlaying(false); setPreviewId(null); setPreviewImage(null); openRuntime('live');
-  }, [active, ready, liveRequestKey]);
+  }, [active, ready, liveRequestKey, onLiveRequestHandled]);
   const capturedRuntime = useRef(false);
   useEffect(() => {
     const params = new URLSearchParams(location.search);

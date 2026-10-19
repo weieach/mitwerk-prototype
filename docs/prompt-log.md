@@ -5211,3 +5211,17 @@ for some reason whne I click on prompt in gallery it doesnt take me to the corre
 ```text
 done step 1. x counter
 ```
+
+## Prompt #527
+
+```text
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://localhost:5173/
+</in-app-browser-context>
+
+## My request:
+live server sometimes turns itself back on after I've already clicked exit, go back to gallery, and then click on a prompt to see playback, but live server would then interject
+```

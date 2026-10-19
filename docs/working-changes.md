@@ -184,7 +184,15 @@
 
 ## 2026-10-19 · prompt #525 uncounted — prototype build cache fix (cleanup)
 
-- `server/prototype-service.mjs`: staging for a push build skips `[frame capture] screenshots` and `exports` (Git LFS smudged ~177MB of captures into every staged commit) and deletes the staged copy after the build. `tests/prototype-service.test.ts` expects the staged copy to be gone. Not yet test-verified: the machine is blocked by iCloud Drive syncing this folder (vite import hangs).
+- `server/prototype-service.mjs`: staging for a push build skips `[frame capture] screenshots` and `exports` (Git LFS smudged ~177MB of captures into every staged commit) and deletes the staged copy after the build. `tests/prototype-service.test.ts` expects the staged copy to be gone. Tests pass.
+- Cleanup (user ran the delete): `.mitwerk-prototypes/`, `[ver capture] codebase/`, `.vercel/output/` removed (all rebuildable or retired); 23 unreferenced Finder/iCloud " 2" duplicates removed with `git rm` (staged deletions); `git gc --prune=never` packed 6,374 loose objects (155MB) into one pack (103MB).
 - Browser reproduction against production confirmed choosing prompt #495 opened #520 with the simulator active. The same interaction against the isolated fixed app selected and displayed #495. TypeScript `--noEmit` also passed against that copy.
 - Restored cloud-only generated dependency files from a temporary install using the existing lockfile; package manifests and lockfile were unchanged. Main-workspace startup remained blocked by iCloud reads, so browser verification used the isolated source copy on port 5173 with the published gallery catalog.
 - Saved and inspected progress capture #526 with prompt #495 selected in Playback and the simulator active. The isolated verification environment had missing icon glyphs; selection and the displayed frame were correct. Capture's optional Git line-count scan was stopped after it stalled, allowing the script's built-in fallback to finish without a duplicate capture.
+
+## 2026-10-19 · prompt #527 · Prevent Live server reopening after exit
+
+- `src/features/iteration-gallery/IterationGallery.tsx`, `TheaterView.tsx`: consume Live server commands in the persistent gallery owner when handled, so remounting Playback cannot replay an already handled open request. Exit commands no longer wait for the frame image to finish loading.
+- Validation: TypeScript and targeted whitespace checks pass. A real Chrome regression check passed Exit → Gallery → prompt Playback, explicitly reopening Live server, and direct Live server → Gallery → prompt Playback; neither return to Playback reopened Live server. Progress capture failed: Chrome did not reach the capture script’s ready state. Counter remains #526; no image saved.
+
+- Three progress-capture attempts timed out without saving or advancing the counter. A temporary capture-readiness diagnostic edit was reverted; no capture-script changes remain. The full request is logged under reserved prompt #527.
