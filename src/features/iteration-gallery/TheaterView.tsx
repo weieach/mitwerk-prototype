@@ -198,8 +198,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
       const view = body.parentElement!;
       const actionsElement = actionsRef.current;
       const frameGap = actionsElement ? parseFloat(getComputedStyle(actionsElement).marginBottom) || 0 : 0;
-      const metadataGap = frameGap * t.theater.metadataGapScale;
-      body.style.setProperty('--theater-metadata-gap', `${metadataGap}px`);
+      const metadataGap = t.theater.metadataGap;
       const actions = (actionsElement?.offsetHeight ?? 0) + frameGap;
       const playbackOnly = !!body.closest('.workspace-gallery-only');
       const width = Math.min(body.clientWidth, window.innerWidth * t.theater.contentMaxViewportShare,

@@ -1888,7 +1888,7 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Chat width limits and fullscreen — 2026-10-18
 
-- Side-by-side Chat panels have a maximum of 40vw, including drag and keyboard resizing. Their conversation-inner and composer content are independently capped at 575 CSS pixels and horizontally centered. Wide-screen default panels use 36vw; this supersedes the fixed 575px panel cap.
+- Side-by-side Chat panels have a maximum of 40vw, including drag and keyboard resizing. Their conversation-inner is capped at 575 CSS pixels and horizontally centered. The composer area, including capture status and to-dos, fills the split Chat panel width with its existing insets and no content max-width. Wide-screen default panels use 36vw; this supersedes the fixed 575px panel cap.
 - When Chat is the only visible panel, its surface fills the workspace and the conversation plus composer/to-do content are horizontally centered in a column no wider than 675 CSS pixels. Hide the aside conversation cards and remove their reserved space. Apply this exception from visible-panel state, including narrow screens.
 - Escape must not turn side-by-side Chat and Version blocks into fullscreen Chat; preserve other Escape dismissal behavior.
 
@@ -1905,4 +1905,4 @@ This file is reserved for project-wide design-system rules requested by the user
 - Frames fill the same responsive width as actions, captions, and transport, preserving their aspect ratio. Do not shrink horizontally to fit height; allow content scrolling in exceptionally short panels.
 - Playback bottom padding is 12px, adding 8px beneath the timeline before the panel footer.
 
-- The gap from frame to metadata is twice the measured action-row-to-frame gap, using the shared playback spacing token and metadata gap multiplier. Preserve this ratio across responsive typography and wrapped actions.
+- Playback metadata uses a shared 16px top margin below the frame, including the reserved stage layout space. This supersedes the prior action-row gap multiplier.

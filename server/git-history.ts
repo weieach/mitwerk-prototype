@@ -6,7 +6,7 @@ import type { GitHistory } from '../src/features/version-tree/git-history.ts';
 
 /** Local Git parents/refs are authoritative; reflogs preserve fast-forward branch activity. */
 export function readGitHistory(root: string): GitHistory {
-  const run = (args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }).trim();
+  const run = (args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8', timeout: 10000, killSignal: 'SIGKILL', maxBuffer: 16 * 1024 * 1024 }).trim();
   try {
     const branches = run(['for-each-ref', '--format=%(refname:short)%09%(objectname)', 'refs/heads']).split('\n').filter(Boolean).map(row => {
       const [name, tip] = row.split('\t'); return { name, tip, base: null as string | null };

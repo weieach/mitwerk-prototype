@@ -596,3 +596,17 @@ Changes that are made but not yet committed. The user decides when to commit and
 - `TheaterView.tsx`, `tokens.ts`: double the frame-to-metadata gap through a shared multiplier, including its reserved layout space.
 - `docs/design-system-rules.md`: record the new 2:1 spacing ratio. Inline browser reference has no local source file to archive.
 - Validation: TypeScript and source diff checks pass. Chrome measures 6.39px above and 12.80px below the frame, confirming the doubled caption gap without control overlap.
+
+## 2026-10-18 · prompt #496 · Full-width split Chat composer
+
+- `workspace-layout.css`: remove the content max-width from the split Chat composer area, including capture status and to-dos; retain centered 575px conversation content and fullscreen's centered 675px composer.
+- `docs/design-system-rules.md`: distinguish split composer width from conversation width. Browser annotation has no local source file to archive.
+- `AGENTS.md`: reconcile the push counter with the existing push #50 capture. Restarted the stalled local Vite process on port 5173 to restore browser verification.
+- `server/git-history.ts`: bound local Git reads to 10 seconds and force-terminate hung subprocesses, using the existing unavailable-history fallback; a Git object read was freezing the entire preview and blocking validation.
+- Validation: TypeScript, six Git-history tests, and source diff checks pass. Chrome confirms composer width equals panel width at 1198/1669/2560px viewports, conversation content retains its 575px cap, and fullscreen composer stays centered at 675px or the available narrow-screen width. Saved frame images failed to load during verification; dimensions were checked independently.
+
+## 2026-10-18 · prompt #497 · Playback metadata margin
+
+- `TheaterView.tsx`, `tokens.ts`: set the shared metadata top margin to 16px and reserve that same amount in stage sizing; remove the prior measured-gap multiplier.
+- `docs/design-system-rules.md`: record the fixed shared spacing. The inline browser reference has no local source file to archive.
+- Validation: TypeScript and source diff checks pass. Chrome measures exactly 16px between the frame and metadata in split Chat/Playback, with matching frame/transport widths and no control overlap.

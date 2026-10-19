@@ -861,6 +861,7 @@
 /* Shared Chat limits: split panels cap at 40vw with centered 575px content; a sole Chat centers a 675px content column. */
 .mw-app .mw-body:not(.chat-only) > .mw-surface:has(> .mw-dialog) { max-width:var(--chat-panel-max-width); }
 .mw-app .mw-body .mw-dialog :is(.conversation-inner, .composer-area) { width:100%; max-width:var(--chat-content-max-width); margin-inline:auto; }
+.mw-app .mw-body:not(.chat-only) .mw-dialog .composer-area { max-width:none; }
 .mw-app .mw-body.chat-only > .mw-surface { flex:1 1 0; width:auto; max-width:none; }
 .mw-app .mw-body.chat-only .mw-dialog { padding-right:0; }
 .mw-app .mw-body.chat-only .conversation-cards { display:none; }
