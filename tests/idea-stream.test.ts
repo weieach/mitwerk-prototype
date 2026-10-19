@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { playbackIdeaId, playbackIdeaDisclosure, ideaBranchColor, isFinishedIdeaVersion, navigableMilestones, saveMilestone, ideaStreamDefaults, milestoneNavigationIndex, parseMilestones, projectIdeaStream, seedMilestones } from '../src/features/version-tree/idea-stream.ts';
+import { visibleIdeaHistory, playbackIdeaId, playbackIdeaDisclosure, ideaBranchColor, isFinishedIdeaVersion, navigableMilestones, saveMilestone, ideaStreamDefaults, milestoneNavigationIndex, parseMilestones, projectIdeaStream, seedMilestones } from '../src/features/version-tree/idea-stream.ts';
 import { layoutGitHistory, layoutIdeaTimeline } from '../src/features/version-tree/git-layout.ts';
 import type { VersionNode } from '../src/features/version-tree/model.ts';
 import { captureMilestoneKey, currentIdeaWipId, withinNodeHoverRadius } from '../src/features/version-tree/idea-stream.ts';
@@ -271,4 +271,23 @@ test('playback temporarily opens the exact commit and expands only its current g
   assert.deepEqual([...playbackIdeaDisclosure(source, runs, 6, new Set(['2']), '0').expandedRuns], ['2','7']);
   assert.equal(playbackIdeaDisclosure(source, runs, 20, manual, '0').commandId, '0', 'capture identity is distinct from the displayed Git label');
   assert.equal(playbackIdeaDisclosure(source, runs, 4, manual, '0').expandedRuns.size, 0, 'milestone station needs no expansion');
+});
+
+
+test('Idea stream hides main decimal stations before folding and navigation, preserving other branches', () => {
+  const source = [node('43'), { ...node('a', ['43']), label:'V43.1' },
+    { ...node('b', ['a']), label:'V43.2' }, { ...node('feature', ['a'], 'feature'), label:'V43.3' },
+    { ...node('44', ['b', 'feature']), chronologyParentId:'b' }];
+  const graph = { nodes:source, selectedId:'b', activeBranchId:'main', revertedIds:[] };
+  const snapshot = structuredClone(graph);
+  const projected = visibleIdeaHistory(graph);
+  assert.deepEqual(projected.nodes.map(node => node.id), ['43','feature','44']);
+  assert.deepEqual(projected.nodes[1].git?.parents, ['43']);
+  assert.deepEqual(projected.nodes[2].git?.parents, ['43','feature']);
+  assert.equal(projected.nodes[2].chronologyParentId, '43');
+  assert.equal(projected.selectedId, '43');
+  assert.deepEqual(ideaStreamDefaults(projected.nodes).latestIds, ['43','feature','44']);
+  assert.deepEqual(navigableMilestones(projected.nodes, {a:'Hidden milestone',feature:'Branch milestone'}).map(node => node.id), ['feature']);
+  assert.deepEqual(projectIdeaStream(projected.nodes, {}, new Set(['b'])).nodes.map(node => node.id), ['43','feature','44']);
+  assert.deepEqual(graph, snapshot);
 });

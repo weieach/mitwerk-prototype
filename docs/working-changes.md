@@ -610,3 +610,26 @@ Changes that are made but not yet committed. The user decides when to commit and
 - `TheaterView.tsx`, `tokens.ts`: set the shared metadata top margin to 16px and reserve that same amount in stage sizing; remove the prior measured-gap multiplier.
 - `docs/design-system-rules.md`: record the fixed shared spacing. The inline browser reference has no local source file to archive.
 - Validation: TypeScript and source diff checks pass. Chrome measures exactly 16px between the frame and metadata in split Chat/Playback, with matching frame/transport widths and no control overlap.
+
+## 2026-10-18 · prompt #497 uncounted — capture video export
+
+- `exports/prompts-350-497-every-2nd-4x.mp4` (new, untracked output, 4 MB): every second prompt capture from #350 to #497 (49 frames), 80/7 fps (one frame per 87.5ms = Playback's 350ms interval at 4×), 2880×1626 H.264; taller captures are fitted and padded with the dark chrome color (#101010).
+
+## 2026-10-18 · prompt #497 uncounted · Deployed history diagnosis
+
+- `docs/prompt-log.md`: log the informational request without incrementing the capture counter.
+- Read the deployed Git history and capture manifest; reproduced the exact numbering bug with `buildGitCaptureHistory`: the deployed history starts at captured V42, then unmatched captured V1–V41 are appended after V51 and relabeled V52–V92. The manifest retains V1–V51. No application code changed.
+
+## 2026-10-18 · prompt #498 · Preserve deployed Idea stream history
+
+- `src/features/version-tree/capture-history.ts`: insert unmatched saved versions into their chronological positions, preserve capture numbering, and keep Git ancestry separate from capture continuity. Uncaptured merges use dotted labels instead of shifting saved versions.
+- `tests/git-history.test.ts`: cover truncated 51-version deployment data, missing middle captures, pending work, and preserved numbering around merges.
+- `docs/design-system-rules.md`: record stable capture identities across partial Git histories.
+- Validation: 12 history/capture tests, TypeScript, and source diff checks pass. Replaying the actual deployed manifest and truncated Git history produces original V1–V51 in order plus the legitimate V47.1 interim commit. Chrome verifies the rendered stream ends at and selects V51. Saved the requested Chat + Idea stream capture. Production deployment has not been changed.
+
+## 2026-10-18 · prompt #499 · Hide main-branch decimal stations
+
+- `idea-stream.ts`, `VersionTreePanel.tsx`: project out main-branch decimal versions before Idea stream layout, folding and navigation; reconnect visible parents and move hidden selection to its visible ancestor. Preserve the source history and other branches.
+- `tests/idea-stream.test.ts`: verify filtering, connections, selection, navigation and source immutability.
+- `docs/design-system-rules.md`: record this shared Idea stream visibility rule. The inline browser annotation has no local source path to archive.
+- Validation: 20 Idea stream tests, TypeScript and source diff checks pass. Chrome using deployed history data confirms 51 visible versions, no main-branch decimal station, and V51 still selected. Saved the Idea stream progress capture.

@@ -1,4 +1,4 @@
-import type { VersionNode } from './model.ts';
+import type { GraphState, VersionNode } from './model.ts';
 
 export type Milestones = Record<string, string>;
 export const milestoneStorageKey = 'mitwerk.idea-stream.milestones.v1';
@@ -87,6 +87,28 @@ export function ideaStreamDefaults(nodes: VersionNode[]) {
 
 export type IdeaRun = { id: string; nodeIds: string[]; firstLabel: string; lastLabel: string };
 const parentsOf = (node: VersionNode) => node.git?.parents ?? (node.parentId ? [node.parentId] : []);
+
+/** Hide main-branch interim stations only in Idea stream, preserving source Git history. */
+export function visibleIdeaHistory(graph: GraphState): GraphState {
+  const hidden = new Set(graph.nodes.filter(node => node.branchId === 'main' && /^v\d+\.\d+(?:\.\d+)*$/i.test(node.label)).map(node => node.id));
+  if (!hidden.size) return graph;
+  const byId = new Map(graph.nodes.map(node => [node.id, node]));
+  function nearest(id: string, visited = new Set<string>()): string[] {
+    if (!hidden.has(id)) return [id];
+    if (visited.has(id)) return [];
+    const node = byId.get(id);
+    return node ? parentsOf(node).flatMap(parent => nearest(parent, new Set([...visited, id]))) : [];
+  }
+  const nodes = graph.nodes.filter(node => !hidden.has(node.id)).map(node => {
+    const parents = [...new Set(parentsOf(node).flatMap(id => nearest(id)))];
+    return { ...node, parentId: parents[0] ?? null,
+      chronologyParentId: node.chronologyParentId ? nearest(node.chronologyParentId)[0] : undefined,
+      git: node.git ? { ...node.git, parents } : undefined };
+  });
+  const selectedId = graph.selectedId && hidden.has(graph.selectedId)
+    ? nearest(graph.selectedId)[0] ?? nodes.at(-1)?.id ?? null : graph.selectedId;
+  return { ...graph, nodes, selectedId };
+}
 
 /** Fold adjacent same-branch history, retaining external graph connections on the representative. */
 export function projectIdeaStream(source: VersionNode[], milestones: Milestones, expanded: ReadonlySet<string> = new Set(), visible: ReadonlySet<string> = new Set()) {

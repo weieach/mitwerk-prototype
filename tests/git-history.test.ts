@@ -63,7 +63,7 @@ test('fast-forward branch activity records the merge without inventing a merge c
   assert.equal(layoutGitHistory(graph.nodes).edges.length, 1);
 });
 
-test('parallel merge milestones advance labels without changing Git ancestry or push lookup keys', () => {
+test('parallel merges preserve capture labels and Git ancestry', () => {
   const history: GitHistory = { commits: [
     { sha: 'base', parents: [], subject: 'base', timestamp: 1, branch: 'main' },
     { sha: 'external', parents: ['base'], subject: 'collaborator work', timestamp: 2, branch: 'collaborator' },
@@ -78,9 +78,9 @@ test('parallel merge milestones advance labels without changing Git ancestry or 
   const graph = buildGitCaptureHistory(shots, history);
   const lookup = (id: string) => graph.nodes.find(node => node.id === id)!;
   assert.equal(lookup('fix').label, 'V24');
-  assert.equal(lookup('import').label, 'V25');
-  assert.equal(lookup('merge').label, 'V26');
-  assert.equal(graph.nodes.at(-1)?.label, 'V27');
+  assert.equal(lookup('import').label, 'V24.1');
+  assert.equal(lookup('merge').label, 'V25');
+  assert.equal(graph.nodes.at(-1)?.label, 'V26');
   assert.equal(lookup('merge').capture?.version, 25);
   assert.deepEqual(lookup('import').git?.parents, ['base', 'external']);
   assert.equal(lookup('import').chronologyParentId, 'fix');
@@ -107,7 +107,7 @@ test('uncaptured remote merge work becomes an unnumbered origin beside the prece
   const graph = buildGitCaptureHistory(shots, history);
   assert.equal(graph.nodes.some(node => node.id.startsWith('external')), false);
   const imported = graph.nodes.find(node => node.id === 'import')!;
-  assert.equal(imported.label, 'V25');
+  assert.equal(imported.label, 'V24.1');
   assert.deepEqual(imported.git?.rawParents, ['base', 'external-b']);
   const layout = layoutGitHistory(graph.nodes);
   const origin = layout.mergeOrigins![0];
@@ -122,5 +122,45 @@ test('uncaptured remote merge work becomes an unnumbered origin beside the prece
   const route = layout.edges.find(edge => edge.sourceId === origin.id)!;
   const points = [...route.path.matchAll(/[ML] ([\d.-]+) ([\d.-]+)/g)].map(match => [Number(match[1]), Number(match[2])]);
   for (let i = 1; i < points.length; i++) assert.ok(points[i][0] === points[i - 1][0] || points[i][1] === points[i - 1][1]);
-  assert.equal(layout.nodes.find(node => node.id === 'merge')?.label, 'V26');
+  assert.equal(layout.nodes.find(node => node.id === 'merge')?.label, 'V25');
+});
+
+test('truncated deployed Git history retains all 51 capture identities in chronological order', () => {
+  const shots = Array.from({ length: 51 }, (_, index) => ({ ...captures[0],
+    id: `push-${index + 1}`, filename: `push-${index + 1}`, number: index + 1,
+    summary: `Saved version ${index + 1} complete`, timestamp: (index + 1) * 1000,
+  }));
+  const recent = shots.slice(41).map((shot, index) => ({ sha: `sha-${shot.number}`,
+    parents: index ? [`sha-${shot.number! - 1}`] : [], subject: shot.summary,
+    timestamp: shot.timestamp - 100, branch: null,
+  }));
+  const history: GitHistory = { commits: recent, branches: [{ name: 'main', tip: 'sha-51', base: null }],
+    merges: [], currentBranch: 'main', head: 'sha-51' };
+  const graph = buildGitCaptureHistory(shots, history);
+  assert.deepEqual(graph.nodes.map(node => node.label), shots.map(shot => `V${shot.number}`));
+  assert.deepEqual(graph.nodes.map(node => node.capture?.version), shots.map(shot => shot.number));
+  assert.equal(graph.selectedId, 'sha-51');
+  assert.equal(graph.nodes[0].parentId, null);
+  assert.equal(graph.nodes[40].parentId, 'capture-version-40');
+  assert.equal(graph.nodes[41].chronologyParentId, 'capture-version-41');
+  assert.deepEqual(graph.nodes[41].git?.rawParents, []);
+  assert.deepEqual(graph.nodes.at(-1)?.git?.parents, ['sha-50']);
+});
+
+test('missing middle captures and pending work retain order without linking to a future tip', () => {
+  const shots = Array.from({ length: 4 }, (_, index) => ({ ...captures[0],
+    id: `shot-${index + 1}`, filename: `shot-${index + 1}`, number: index + 1,
+    summary: `Saved version ${index + 1} complete`, timestamp: (index + 1) * 1000,
+    kind: index === 3 ? 'prompt' as const : 'push' as const,
+  }));
+  const history: GitHistory = { commits: [
+    { sha: 'first', parents: [], subject: shots[0].summary, timestamp: 900, branch: 'main' },
+    { sha: 'last', parents: ['first'], subject: shots[2].summary, timestamp: 2900, branch: 'main' },
+  ], branches: [{ name: 'main', tip: 'last', base: null }], merges: [], currentBranch: 'main', head: 'last' };
+  const graph = buildGitCaptureHistory(shots, history);
+  assert.deepEqual(graph.nodes.map(node => node.label), ['V1', 'V2', 'V3', 'V4']);
+  assert.equal(graph.nodes[1].parentId, 'first');
+  assert.deepEqual(graph.nodes[2].git?.parents, ['first']);
+  assert.equal(graph.nodes[2].chronologyParentId, graph.nodes[1].id);
+  assert.equal(graph.nodes[3].parentId, 'last');
 });

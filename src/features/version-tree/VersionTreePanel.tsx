@@ -21,7 +21,7 @@ import { VersionCard } from './VersionCard';
 import { branchName, isBranchDivergence, mergedBranchIds, presentTree } from './presentation';
 import { canEditTree, treeModes, type TreeMode } from './panel-state';
 import { IdeaCard } from './IdeaCard';
-import { milestonesChangedEvent, playbackIdeaDisclosure, currentIdeaWipId, ideaBranchColor, isFinishedIdeaVersion, navigableMilestones, saveMilestone, ideaStreamDefaults, milestoneStorageKey, milestoneNavigationIndex, parseMilestones, firstBranchLabels, projectIdeaStream, seedMilestones } from './idea-stream';
+import { visibleIdeaHistory, milestonesChangedEvent, playbackIdeaDisclosure, currentIdeaWipId, ideaBranchColor, isFinishedIdeaVersion, navigableMilestones, saveMilestone, ideaStreamDefaults, milestoneStorageKey, milestoneNavigationIndex, parseMilestones, firstBranchLabels, projectIdeaStream, seedMilestones } from './idea-stream';
 
 type Props = { playbackVersion?:number|null; embedded?:boolean; id?:string; title?:string; onSwitchPanel?:()=>void; onOpenPush?: (version: number) => void; status?: string; graph: GraphState; dispatch: Dispatch<GraphAction>; mode: TreeMode; modeSwitchVisible: boolean; onModeChange: (mode: TreeMode) => void };
 
@@ -60,8 +60,9 @@ const screenshotFlags = typeof window !== 'undefined'
 const screenshotCapture = screenshotFlags.capture;
 if (screenshotFlags.countHover) document.documentElement.dataset.screenshotCountHover = '1';
 
-export function VersionTreePanel({ playbackVersion = null, embedded = false, id, title = 'Idea stream', graph, dispatch, onSwitchPanel, onOpenPush, mode, modeSwitchVisible, onModeChange, status = '' }: Props) {
+export function VersionTreePanel({ playbackVersion = null, embedded = false, id, title = 'Idea stream', graph: sourceGraph, dispatch, onSwitchPanel, onOpenPush, mode, modeSwitchVisible, onModeChange, status = '' }: Props) {
   const ideaMode = mode === 'history';
+  const graph = useMemo(() => ideaMode ? visibleIdeaHistory(sourceGraph) : sourceGraph, [sourceGraph, ideaMode]);
   const { todosByNode, toggleTodo } = useIdeaTodos(graph.nodes);
   const [todoHeights, setTodoHeights] = useState<Record<string, number>>({});
   const onTodoHeight = useCallback((id: string, height: number) => {

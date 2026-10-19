@@ -1906,3 +1906,12 @@ This file is reserved for project-wide design-system rules requested by the user
 - Playback bottom padding is 12px, adding 8px beneath the timeline before the panel footer.
 
 - Playback metadata uses a shared 16px top margin below the frame, including the reserved stage layout space. This supersedes the prior action-row gap multiplier.
+
+## Stable Idea stream version identities — 2026-10-18
+
+- Saved capture version numbers are authoritative in Idea stream, including when deployed Git history is truncated or unavailable. Insert unmatched captures in recorded version order among matched history, never after the current branch tip solely because they lack a Git match. Preserve actual Git parents; use separate chronological links for missing-history continuity.
+- Uncaptured commits and merges use dotted labels between captured versions rather than shifting later capture numbers. The latest selected version follows the ordered history. This supersedes merge-driven renumbering of captured versions.
+
+## Main-branch interim stations in Idea stream — 2026-10-18
+
+- Hide decimal-numbered main-branch versions (for example v43.1) from Idea stream before folding, counts, recent-version selection and milestone navigation. Keep whole-number main versions and other branches' decimal versions. Reconnect display edges through hidden ancestors without deleting or changing the underlying Git history or saved capture numbers. This is an Idea stream projection only.

@@ -111,13 +111,30 @@ export function buildGitCaptureHistory(captures: Capture[], git: GitHistory, ref
         merges: git.merges.filter(merge => merge.sha === commit.sha).map(merge => `${merge.source} → ${merge.branch}${merge.fastForward ? ' (fast-forward)' : ''}`) },
     };
   });
-  // Unpushed or unmatched captures remain explicitly labeled, attached to the recorded branch tip when known.
+  // Insert missing captures between their recorded version anchors. Keep Git's
+  // topological order intact and never attach old captures to today's branch tip.
   for (const node of unmatched) {
+    const version = node.capture!.version;
+    const previousIndex = nodes.reduce((last, item, index) => item.capture && item.capture.version < version ? index : last, -1);
+    const nextIndex = nodes.findIndex(item => item.capture && item.capture.version > version);
+    const end = nextIndex < 0 ? nodes.length : nextIndex;
+    let index = Math.min(previousIndex + 1, end);
+    while (index < end && Date.parse(nodes[index].createdAt) <= Date.parse(node.createdAt)) index++;
     const branch = node.capture?.branches.at(-1) ?? git.currentBranch;
+    const preceding = nodes.slice(0, index);
     const ref = git.branches.find(ref => ref.name === branch);
-    const parentId = ref ? nearest(ref.tip)[0] ?? null : null;
-    nodes.push({ ...node, branchId: branch, parentId, relation: parentId ? 'commit' : 'root',
+    const tip = ref ? nearest(ref.tip)[0] : undefined;
+    const parentId = tip && preceding.some(item => item.id === tip) ? tip
+      : preceding.slice().reverse().find(item => item.branchId === branch)?.id ?? null;
+    nodes.splice(index, 0, { ...node, branchId: branch, parentId, relation: parentId ? 'commit' : 'root',
       summary: `${node.capture?.pushed ? 'Capture without a matching Git commit' : 'Unpushed work'} · ${node.summary}` });
+  }
+  // A capture-only predecessor is chronological evidence, not a Git parent.
+  let previousCapture: VersionNode | undefined;
+  for (const node of nodes) {
+    if (!node.capture) continue;
+    if (previousCapture && !previousCapture.git && node.git) node.chronologyParentId = previousCapture.id;
+    previousCapture = node;
   }
   assignInterimVersionLabels(nodes);
   for (const node of nodes) {
@@ -154,7 +171,7 @@ export function displayedCommitTitle(label: string) {
   return displayedCommitTitles[label.toLowerCase()] ?? null;
 }
 
-/** Captured versions and real merges are milestones; other commits keep dotted labels. */
+/** Capture identities are authoritative; uncaptured commits use dotted labels. */
 export function assignInterimVersionLabels(nodes: VersionNode[]) {
   let major = 0, minor = 0;
   let previousMilestone: VersionNode | undefined;
@@ -173,18 +190,22 @@ export function assignInterimVersionLabels(nodes: VersionNode[]) {
     return false;
   }
   for (const node of nodes) {
-    const recorded = /^V(\d+)$/.exec(node.label);
+    const precedingMilestone = previousMilestone;
+    const recorded = node.capture?.version ?? (/^V(\d+)$/.exec(node.label)?.[1] ? Number(node.label.slice(1)) : null);
     const merge = (node.git?.rawParents?.length ?? node.git?.parents.length ?? 0) > 1;
-    if (recorded || merge && major > 0) {
-      major = Math.max(major + 1, recorded ? Number(recorded[1]) : 0);
+    if (recorded !== null) {
+      major = recorded;
       node.label = `V${major}`;
       minor = 0;
-      if (merge && previousMilestone && !hasAncestor(node, previousMilestone.id)) {
-        node.chronologyParentId = previousMilestone.id;
-      }
       previousMilestone = node;
     } else if (major && !/^V\d+\.\d+$/.test(node.label)) {
       node.label = `V${major}.${++minor}`;
+    }
+    if (merge) {
+      if (precedingMilestone && !hasAncestor(node, precedingMilestone.id)) {
+        node.chronologyParentId = precedingMilestone.id;
+      }
+      previousMilestone = node;
     }
   }
   return nodes;
