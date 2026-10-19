@@ -1863,6 +1863,11 @@ This file is reserved for project-wide design-system rules requested by the user
 - Annotation fields, Idea stream milestone fields, and to-do editing fields share a 0.5px bottom hairline with no surrounding border, corner radius, or inline padding. This supersedes the stronger rectangular inline milestone border.
 - Render the hairline as one inset shadow to avoid pixel-rounded borders and doubled focused lines. Use white in dark mode and contrast ink in light mode; focus brightens the line without thickening it.
 
+## Shared milestone and to-do hairlines — 2026-10-19
+
+- The shared bottom hairline is 0.4px (`--edit-field-line-width`), 20% thinner than the previous 0.5px. Rest opacity is 35% of the line color (`--edit-field-line-opacity`, half of the previous 70%). Focus opacity is 50% (`--edit-field-line-opacity-focus`, half of the previous full color). Focus still brightens the line without thickening it.
+- This is the line under the Idea stream milestone field and under the frame annotation field used to set a milestone or to-do. To-do editing fields keep the same width. Do not restore a separate 1px annotation border or focus shadow.
+
 ## Wider Chat from 1600px — 2026-10-18
 
 - From 1600 CSS pixels up, default Chat is 36vw (`workspaceResponsive.wideChatWidth` and `desktopChatFraction`). That replaces the 500px plateau in this range and the 32vw default that previously began above 1728px. At 1600px the default is 576px; at 1875px it is 675px.

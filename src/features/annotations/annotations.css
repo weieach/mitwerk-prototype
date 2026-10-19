@@ -16,8 +16,8 @@
 .annotation-overlay .annotation-sheet h2 { display:flex; gap:var(--row-size-unit); align-items:center; margin:0; font-size:var(--row-title-size); font-weight:var(--compact-title-weight); }
 .annotation-preview { display:block; width:100%; max-height:var(--annotation-preview-height); object-fit:contain; background:var(--paper); border:1px solid var(--line); border-radius:var(--surface-radius); animation:annotation-content-in var(--annotation-enter-ms) ease var(--annotation-frame-delay) both; }
 .annotation-sheet form { margin-top:var(--row-padding-inline); }
-.annotation-sheet .annotation-text { display:block; width:100%; min-height:var(--base-control-height); padding:calc(var(--row-padding-inline) * .375) 0; border:0; border-bottom:1px solid var(--annotation-input-border); border-radius:0; background:var(--paper); color:var(--ink); font:var(--body-font-size)/var(--message-line-height) var(--sans); }
-.annotation-sheet .annotation-text:focus { outline:none; box-shadow:0 1px 0 var(--annotation-input-border); }
+.annotation-sheet .annotation-text { display:block; width:100%; min-height:var(--base-control-height); padding:calc(var(--row-padding-inline) * .375) 0; border:0; border-radius:0; background:var(--paper); color:var(--ink); font:var(--body-font-size)/var(--message-line-height) var(--sans); }
+.annotation-sheet .annotation-text:focus { outline:none; }
 .annotation-form-actions { display:flex; align-items:center; justify-content:space-between; gap:var(--row-size-unit); flex-wrap:wrap; margin-top:calc(var(--row-size-unit) * 3); }
 .annotation-form-actions label,.annotation-form-actions>div { display:flex; align-items:center; gap:calc(var(--row-size-unit) * 2); }
 .annotation-form-actions > .annotation-submit-actions { margin-left:auto; justify-content:flex-end; flex-wrap:wrap; }
@@ -53,7 +53,7 @@
 @media(prefers-reduced-motion:reduce) { .annotation-tag { transition:none; } }
 
 .annotation-sheet .annotation-text { box-sizing:border-box;max-width:100%; }
-.mw-app .annotation-sheet .annotation-text:focus-visible, .annotation-sheet .annotation-text:focus-visible { outline:none;box-shadow:0 1px 0 var(--annotation-input-border);border-color:var(--annotation-input-border); }
+.mw-app .annotation-sheet .annotation-text:focus-visible, .annotation-sheet .annotation-text:focus-visible { outline:none; }
 
 .workspace .frame-annotation-bookmark .annotation-tag { height:auto; padding:var(--annotation-pill-padding); }
 
