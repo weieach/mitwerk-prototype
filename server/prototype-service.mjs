@@ -46,26 +46,44 @@ async function stageFromGit(root, sha, dest) {
   await Promise.all([extractTar(git.stdout, dest), exited]);
 }
 
-/** Commits missing from the local clone come from GitHub; the repository is private, so a token is required. */
-async function stageFromGithub(root, sha, dest) {
-  const token = process.env.GITHUB_TOKEN;
-  if (!token) throw new Error('This push is not in the local repository. Set GITHUB_TOKEN to load it from GitHub.');
+async function githubRepository(root) {
   const { stdout } = await execFileAsync('git', ['remote', 'get-url', 'origin'], { cwd: root });
   const repo = /github\.com[:/]([^/]+\/[^/]+?)(?:\.git)?$/i.exec(stdout.trim())?.[1];
   if (!repo) throw new Error('The origin remote is not a GitHub repository.');
-  const response = await fetch(`https://api.github.com/repos/${repo}/tarball/${sha}`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(60000) });
-  if (!response.ok || !response.body) throw new Error(`GitHub returned ${response.status} for this push.`);
+  return repo;
+}
+
+/** Public archives need no token. Private repositories use the authenticated API. */
+async function stageFromGithub(root, sha, dest) {
+  const token = process.env.GITHUB_TOKEN;
+  const repo = await githubRepository(root);
+  const url = token ? `https://api.github.com/repos/${repo}/tarball/${sha}`
+    : `https://codeload.github.com/${repo}/tar.gz/${sha}`;
+  const response = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' } : {},
+    signal: AbortSignal.timeout(60000) });
+  if (!response.ok || !response.body) throw new Error(`GitHub returned ${response.status} for saved commit ${sha}. Check that the commit exists${token ? '.' : '; private repositories require GITHUB_TOKEN.'}`);
   await extractTar(Readable.fromWeb(response.body), dest, ['-z', '--strip-components=1']);
   await Promise.all([...excludedPaths].map(name => rm(join(dest, name), { recursive: true, force: true })));
 }
 
 const hasLocalCommit = (root, sha) => execFileAsync('git', ['cat-file', '-e', `${sha}^{commit}`], { cwd: root }).then(() => true, () => false);
 
-/** A push can be entered when its commit is local, or reachable on GitHub with a token. */
+/** A push can be entered when its exact commit is local or available from GitHub. */
 export async function pushAvailable(root, number) {
   const sha = findPushSha(root, number);
-  return !!sha && (!!process.env.GITHUB_TOKEN || await hasLocalCommit(root, sha));
+  if (!sha) return false;
+  if (await hasLocalCommit(root, sha)) return true;
+  try {
+    const repo = await githubRepository(root);
+    const token = process.env.GITHUB_TOKEN;
+    const response = await fetch(`https://api.github.com/repos/${repo}/git/commits/${sha}`, {
+      headers: { Accept: 'application/vnd.github+json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      signal: AbortSignal.timeout(15000),
+    });
+    await response.body?.cancel();
+    return response.ok;
+  } catch { return false; }
 }
 
 /** Materialize a pushed tree on demand: local Git objects first, GitHub second. */

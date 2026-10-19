@@ -1915,3 +1915,16 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Main-branch interim stations in Idea stream — 2026-10-18
 
 - Hide decimal-numbered main-branch versions (for example v43.1) from Idea stream before folding, counts, recent-version selection and milestone navigation. Keep whole-number main versions and other branches' decimal versions. Reconnect display edges through hidden ancestors without deleting or changing the underlying Git history or saved capture numbers. This is an Idea stream projection only.
+
+## Hidden work-state simulator controls — 2026-10-19
+
+- Opening the simulator enables a keyboard session. Minus hides its sheet without closing that session; Escape restores the hidden sheet and takes precedence over workspace Escape actions. Closing with × ends the session and disables its shortcuts.
+- Within the active session, 0 immediately sets 0%; a second distinct 0 press within 300ms sets 100%. Holding [ decreases and holding ] increases progress by 1 percentage point every 50ms, clamped to 0–100%. Release, window blur, backgrounding, or closing stops held-key motion. Ignore key repeat for tap actions and avoid intercepting text entry, IME composition, and modified shortcuts. Hidden simulation retains the existing shared progress and preload behavior.
+
+## History loading preserves branch topology — 2026-10-19
+
+- Git file-change totals are optional metadata. A slow or failed statistics query must not replace the Idea stream's commits, branch ownership, merge edges or original version numbers with a flat capture-only history. Read topology independently and cache statistics per commit set. Simulator cutoffs remain a temporary view of the complete history.
+
+## Hidden simulator status beside the brand — 2026-10-19
+
+- While the simulator session is open, its sheet is hidden, and progress is below 100%, show “work state x%” beside the workspace logomark. Update the percentage from the shared live simulator state using the slider's whole-percent rounding. Hide the label at 100%, when the sheet returns, or when the session closes. Use shared muted text and control typography.

@@ -2998,5 +2998,17 @@
     "output": 2537,
     "total": 5611,
     "simulated": true
+  },
+  "[push #52] 15 files · +234 -22 · fixed idea stream display issue on vercel-2026-10-18-232757.png": {
+    "input": 2363,
+    "output": 5919,
+    "total": 8282,
+    "simulated": true
+  },
+  "[prompt #503] +409-33 · -in-app-browser-context source=-ambient-ui-state-- This block is automatically supplied ambient UI state, not part of th-2026-10-19-013350.png": {
+    "input": 8016,
+    "output": 6397,
+    "total": 14413,
+    "simulated": true
   }
 }

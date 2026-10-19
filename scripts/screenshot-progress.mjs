@@ -479,7 +479,7 @@ function wantsLandingCapture(prompt = '') { return argValue('gallery-view') === 
 
 /** `c slider`, or `c ... w simulator` (`work state simulator`), opens the work state simulator, optionally `at N%`. */
 function workStateCapture(prompt = '') {
-  if (hasFlag('work-state')) return argValue('work-state-progress', 'open');
+  if (hasFlag('work-state') || hasFlag('work-state-hidden')) return argValue('work-state-progress', 'open');
   if (!/\bc slider\b/i.test(prompt) && !/\bc\b[^\n]*\b(?:work state )?simulator\b/i.test(prompt)) return null;
   const percent = /\b(?:simulator|slider)\b[^.\n]*?\bat (\d{1,3})%/i.exec(prompt);
   return percent ? String(Math.min(100, Number(percent[1])) / 100) : 'open';
@@ -958,6 +958,14 @@ async function capture(chrome, outFile, prompt = '') {
           }
         }
       }
+    }
+    if (hasFlag('work-state-hidden')) {
+      await cdp('Runtime.evaluate', { expression: 'document.activeElement?.blur()' });
+      await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: '-', code: 'Minus' });
+      await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: '-', code: 'Minus' });
+      await delay(600);
+      const hidden = await cdp('Runtime.evaluate', { expression: 'document.querySelector(".work-state-simulator")?.getAttribute("aria-hidden") === "true"', returnByValue: true });
+      if (!hidden.result?.value) throw new Error('The simulator did not hide for the requested capture');
     }
     await delay(['top', 'overhead'].includes(argValue('gallery-view')) ? 500 : 150);
     const hoverLabel = argValue('hover-label');

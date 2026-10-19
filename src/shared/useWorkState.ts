@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import type { RefObject } from 'react';
 import { workStateStore, workStateTokens } from './work-state';
 
-/** Live state, including the slider value as it moves. Only the simulator sheet needs this. */
+/** Live state, including the slider value as it moves. Used by the simulator sheet and its hidden-state readout. */
 export function useWorkState() {
   return useSyncExternalStore(workStateStore.subscribe, workStateStore.get);
 }

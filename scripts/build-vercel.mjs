@@ -2,12 +2,12 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
-import { builtPrototypeData, createPrototypeService, pushAvailable } from '../server/prototype-service.mjs';
+import { builtPrototypeData, createPrototypeService, findPushSha } from '../server/prototype-service.mjs';
 import { blobGalleryRoutes } from '../server/blob-gallery.mjs';
 import { packageBlobManifest } from './package-blob-manifest.mjs';
 
-// Build locally: captures and Git history are not in Git; push sources come from data/push-shas.json.
-// Upload only this output via `vercel deploy --prebuilt --prod`.
+// Package exact pushed trees from local Git or GitHub, including partial cloud checkouts.
+// Capture images come from Blob; recorded commit identities come from data/push-shas.json.
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const cloudBuild = process.env.VERCEL === '1' || process.env.MITWERK_GALLERY_SOURCE === 'blob';
 execFileSync('npm', ['run', 'build'], { cwd: root, stdio: 'inherit' });
@@ -29,9 +29,13 @@ const prototypes = {};
 const routes = blobGalleryRoutes(blobConfig, localCatalog, blobCatalog);
 const numbers = [...new Set(data.catalog().frames.filter(f => f.kind === 'push').map(f => f.number))];
 for (const number of numbers) {
-  if (!await pushAvailable(root, number)) continue;
+  if (!findPushSha(root, number)) {
+    console.warn(`Push #${number} has no recorded commit; no prototype can be packaged.`);
+    continue;
+  }
   console.log(`Preparing archived prototype ${number}…`);
-  prototypes[number] = await service.prepare(number);
+  try { prototypes[number] = await service.prepare(number); }
+  catch (error) { throw new Error(`Could not package recorded push #${number}; refusing to deploy an incomplete prototype catalog.`, { cause: error }); }
   const base = `/__mitwerk/prototype-assets/${number}`;
   const built = join(root, '.mitwerk-prototypes', `push-${number}`);
   await cp(built, join(staticDir, base), { recursive: true });

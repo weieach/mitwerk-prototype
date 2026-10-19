@@ -116,3 +116,49 @@ test('push names use the full commit message without trailing Git trailers', asy
   assert.equal(commitMessageText('Fix: keep the colon in a one-paragraph subject'), 'Fix: keep the colon in a one-paragraph subject');
   assert.equal(commitMessageText('Title\n\nBody paragraph.\n\nSigned-off-by: A <a@b.c>\nCo-Authored-By: B <b@c.d>'), 'Title\n\nBody paragraph.');
 });
+
+test('a partial cloud checkout builds public saved commits without a GitHub token', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'mitwerk-public-archive-'));
+  const previousToken = process.env.GITHUB_TOKEN;
+  delete process.env.GITHUB_TOKEN;
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root });
+    execFileSync('git', ['remote', 'add', 'origin', 'https://github.com/example/prototype.git'], { cwd: root });
+    const sha = 'a'.repeat(40);
+    mkdirSync(join(root, 'data'));
+    writeFileSync(join(root, pushShaFile), JSON.stringify({ 18: sha }));
+    const archiveRoot = join(root, 'fixture');
+    mkdirSync(join(archiveRoot, 'repo/src'), { recursive: true });
+    writeFileSync(join(archiveRoot, 'repo/package.json'), '{"type":"module"}');
+    writeFileSync(join(archiveRoot, 'repo/index.html'), '<html><head></head><body><script type="module" src="/src/main.js"></script></body></html>');
+    writeFileSync(join(archiveRoot, 'repo/src/main.js'), 'document.body.textContent="Exact public archive";');
+    const archive = execFileSync('tar', ['-czf', '-', 'repo'], { cwd: archiveRoot });
+    const calls: {url:string; authorization:string|null}[] = [];
+    t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
+      calls.push({url:String(url),authorization:new Headers(init.headers).get('Authorization')});
+      return String(url).includes('/git/commits/') ? new Response('{}', {status:200}) : new Response(archive);
+    });
+    assert.equal(await pushAvailable(root, 18), true);
+    const service = createPrototypeService(root, { catalog: () => ({frames:[{kind:'push', number:18, timestamp:1}]}), history: () => ({commits:[],branches:[],merges:[]}) });
+    assert.deepEqual(await service.prepare(18), {url:'/__mitwerk/prototype-assets/18/index.html',number:18});
+    assert.equal(calls[1].url, `https://codeload.github.com/example/prototype/tar.gz/${sha}`);
+    assert.ok(calls.every(call => call.authorization === null));
+    const assets = join(root, '.mitwerk-prototypes/push-18/assets');
+    assert.ok(readdirSync(assets).some(name => readFileSync(join(assets,name),'utf8').includes('Exact public archive')));
+    assert.equal(existsSync(join(root,'src/main.js')), false);
+    process.env.GITHUB_TOKEN = 'test-token';
+    assert.equal(await pushAvailable(root, 18), true);
+    assert.equal(calls.at(-1)?.authorization, 'Bearer test-token');
+    const privateService = createPrototypeService(root, { catalog: () => ({frames:[{kind:'push',number:18,timestamp:1}]}), history: () => ({commits:[],branches:[],merges:[]}) });
+    await privateService.prepare(18);
+    assert.equal(calls.at(-1)?.url, `https://api.github.com/repos/example/prototype/tarball/${sha}`);
+    assert.equal(calls.at(-1)?.authorization, 'Bearer test-token');
+    t.mock.method(globalThis, 'fetch', async () => new Response('Not found', {status:404}));
+    assert.equal(await pushAvailable(root, 18), false);
+    const unavailable = createPrototypeService(root, { catalog: () => ({frames:[{kind:'push',number:18,timestamp:1}]}), history: () => ({commits:[],branches:[],merges:[]}) });
+    await assert.rejects(unavailable.prepare(18), /GitHub returned 404/);
+  } finally {
+    if (previousToken === undefined) delete process.env.GITHUB_TOKEN; else process.env.GITHUB_TOKEN = previousToken;
+    rmSync(root, {recursive:true,force:true});
+  }
+});

@@ -4692,3 +4692,85 @@ This block is automatically supplied ambient UI state, not part of the user's re
 in idea stream, do not show versions on main branch like these that are in decimal places
 
 ```
+
+## Prompt #499 uncounted
+
+```text
+x counter. make the video 3x speed instead, and add the folder to gitignore
+```
+
+## Prompt #499 uncounted
+
+```text
+x counter. do a 2x speed version with every frame in this range
+```
+
+## Prompt #499 uncounted
+
+```text
+x counter. print this as text
+```
+
+## Prompt #500
+
+```text
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://localhost:5173/
+</in-app-browser-context>
+
+## My request:
+i tried "enter prototype" on vercel on a number of version but it tells me there's no saved codebase
+
+```
+
+## Prompt #501
+
+```text
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://localhost:5173/
+</in-app-browser-context>
+
+## My request:
+ i want to create some keyboard shortcut for controlling work state simulator without it having a visible presence. if user opened work state simulator and then pressed minus key on keyboard, the simulator will be hidden, but double clicking "0" set the state to 100, single click "0" set it to 0%, holding "[" and "]" key respectively will continuously increase / decrease the percentage. if user press esc, the slider will show again, and clicking on the xmark will close it - then these hotkeys will not work.
+
+```
+
+## Prompt #502
+
+```text
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://localhost:5173/
+</in-app-browser-context>
+
+## My request:
+looks like the idea steam got incorrectly overwritten again. [ is supposed to decrease and ] is supposed to increase
+```
+
+Clarification for prompt #502:
+
+```text
+all the different branch colors were not there, not to mention all versions that are supposed t follow v32; prompts from those versions disappeared from playback as well
+```
+
+## Prompt #503
+
+```text
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://localhost:5173/
+</in-app-browser-context>
+
+## My request:
+when work state simulator is on but hidden, include a label next to logomark "work state x%" when below 100%
+```

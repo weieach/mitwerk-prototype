@@ -28,6 +28,9 @@ build/
 
 dist/
 
+# Exported capture videos and other generated media
+exports/
+
 # Rebuildable archived prototype bundles
 .mitwerk-prototypes/
 

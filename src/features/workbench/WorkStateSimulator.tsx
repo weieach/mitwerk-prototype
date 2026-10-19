@@ -5,6 +5,7 @@ import { formatFrameDate, type Capture } from '../iteration-gallery/model';
 import { simulatorPreloadUrls, warmCaptures } from '../iteration-gallery/capture-cache';
 import { galleryTokens } from '../iteration-gallery/tokens';
 import { simulateCaptures, simulatedCount, workStateStore, workStateTokens } from '../../shared/work-state';
+import { bindWorkStateShortcuts } from '../../shared/work-state-shortcuts';
 import { useWorkState } from '../../shared/useWorkState';
 
 /** Motion tokens for the sheet and for panels that animate while simulating; set on the app root. */
@@ -18,6 +19,8 @@ export const workStateStyle = { '--work-state-open': `${workStateTokens.panelOpe
 export function WorkStateSimulator({ frames }: { frames: Capture[] }) {
   const id = useId();
   const work = useWorkState();
+  const visible = work.open && !work.hidden;
+  useEffect(() => bindWorkStateShortcuts(window), []);
   const [interacted, setInteracted] = useState(work.progress < 1);
   const compactTitle = interacted || work.progress < 1;
   const count = simulatedCount(frames.length, work.progress);
@@ -72,7 +75,7 @@ export function WorkStateSimulator({ frames }: { frames: Capture[] }) {
   const latest = simulated.captures.length ? Math.max(...simulated.captures.map(frame => frame.timestamp)) : null;
   const moment = work.loading ? `Loading frames ${warmed.done}/${warmed.total}` : work.progress >= 1 ? 'Drag to simulate an earlier state of this project' : latest === null ? 'Empty project' : `As of ${formatFrameDate(latest)}`;
   const fill = work.loading ? (warmed.total ? warmed.done / warmed.total : 0) : work.progress;
-  return <section className="work-state-simulator" data-open={work.open || undefined} data-loading={work.loading || undefined} inert={!work.open} aria-hidden={!work.open} aria-labelledby={`${id}-title`}>
+  return <section className="work-state-simulator" data-open={visible || undefined} data-loading={work.loading || undefined} inert={!visible} aria-hidden={!visible} aria-labelledby={`${id}-title`}>
     <div className="work-state-reveal"><div className="work-state-sheet">
       <div className="work-state-slider" role="slider" tabIndex={0} aria-labelledby={`${id}-title`} aria-disabled={work.loading || undefined}
         aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-valuetext={work.loading ? moment : `${percent}% · ${moment}`}

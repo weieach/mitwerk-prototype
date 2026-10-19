@@ -2,11 +2,13 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseGitLog } from '../src/features/version-tree/git-history.ts';
-import type { GitHistory } from '../src/features/version-tree/git-history.ts';
+import type { GitCommit, GitHistory } from '../src/features/version-tree/git-history.ts';
+
+type GitRunner = (args: string[], timeout?: number) => string;
+const statisticsCache = new Map<string, { key: string; commits: Map<string, GitCommit> }>();
 
 /** Local Git parents/refs are authoritative; reflogs preserve fast-forward branch activity. */
-export function readGitHistory(root: string): GitHistory {
-  const run = (args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8', timeout: 10000, killSignal: 'SIGKILL', maxBuffer: 16 * 1024 * 1024 }).trim();
+export function readGitHistory(root: string, run: GitRunner = (args, timeout = 10000) => execFileSync('git', args, { cwd: root, encoding: 'utf8', timeout, killSignal: 'SIGKILL', maxBuffer: 16 * 1024 * 1024 }).trim()): GitHistory {
   try {
     const branches = run(['for-each-ref', '--format=%(refname:short)%09%(objectname)', 'refs/heads']).split('\n').filter(Boolean).map(row => {
       const [name, tip] = row.split('\t'); return { name, tip, base: null as string | null };
@@ -28,7 +30,25 @@ export function readGitHistory(root: string): GitHistory {
         if (merge) merges.push({ branch: branch.name, source: merge[1], sha, fastForward: merge[2] === 'Fast-forward' });
       }
     }
-    const commits = parseGitLog(run(['log', '--branches', '--remotes', 'HEAD', '--date-order', '--reverse', '--format=%H%x09%P%x09%ct%x09%s', '--shortstat'])).map(commit => ({ ...commit, branch: owners.get(commit.sha) ?? null }));
+    // Reading topology is cheap; diffing every historical screenshot is not. A slow
+    // statistics query must never discard the actual branch graph.
+    const logArgs = ['log', '--branches', '--remotes', 'HEAD', '--date-order', '--reverse', '--format=%H%x09%P%x09%ct%x09%s'];
+    const topology = parseGitLog(run(logArgs));
+    const key = topology.map(commit => commit.sha).join(',');
+    let statistics = statisticsCache.get(root);
+    if (statistics?.key !== key) {
+      const totals = new Map(statistics?.commits);
+      try {
+        for (const commit of parseGitLog(run([...logArgs, '--shortstat', '--no-renames'], 1500))) totals.set(commit.sha, commit);
+      } catch { /* Optional totals can be unavailable; preserve commits, refs and merges. */ }
+      statistics = { key, commits: totals };
+      statisticsCache.set(root, statistics);
+    }
+    const commits = topology.map(commit => ({ ...commit,
+      filesChanged: statistics.commits.get(commit.sha)?.filesChanged,
+      added: statistics.commits.get(commit.sha)?.added,
+      removed: statistics.commits.get(commit.sha)?.removed,
+      branch: owners.get(commit.sha) ?? null }));
     return { commits, branches, remoteBranches, merges, currentBranch: run(['branch', '--show-current']), head: run(['rev-parse', 'HEAD']) };
   } catch { return { commits: [], branches: [], merges: [], currentBranch: '', head: '', error: 'Git history is unavailable.' }; }
 }

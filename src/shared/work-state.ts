@@ -7,6 +7,9 @@ import type { GitBranch, GitHistory } from '../features/version-tree/git-history
 export const workStateTokens = {
   /** Slider resolution; the readout rounds to whole percent. */
   steps: 1000,
+  keyboardStep: .01,
+  keyboardRepeatMs: 50,
+  doubleZeroMs: 300,
   /** Intermediate chat variations between the empty and the current conversation. */
   chatSlides: 4,
   /** Exchanges (a prompt and its replies) shown per chat variation. */
@@ -33,7 +36,7 @@ export const workStateTokens = {
 } as const;
 
 /** `progress` follows the slider; `applied` is what the panels render after the settle delay. */
-export type WorkState = { open: boolean; progress: number; applied: number; loading: boolean };
+export type WorkState = { open: boolean; hidden?: boolean; progress: number; applied: number; loading: boolean };
 
 const clamp = (value: number) => Math.min(1, Math.max(0, Number.isFinite(value) ? value : 1));
 
@@ -71,7 +74,7 @@ const listeners = new Set<() => void>();
 let settleTimer: ReturnType<typeof setTimeout> | undefined;
 let pendingSince: number | null = null;
 function emit(next: WorkState) {
-  if (next.open === state.open && next.progress === state.progress && next.applied === state.applied && next.loading === state.loading) return;
+  if (next.hidden === state.hidden && next.open === state.open && next.progress === state.progress && next.applied === state.applied && next.loading === state.loading) return;
   state = next;
   listeners.forEach(listener => listener());
 }
@@ -84,7 +87,7 @@ function apply() {
 // Panels read the applied state; the live slider value would re-render them on every pointer move.
 let applied: WorkState = { ...state, progress: state.applied };
 function appliedSnapshot() {
-  if (applied.open !== state.open || applied.applied !== state.applied || applied.loading !== state.loading) applied = { ...state, progress: state.applied };
+  if (applied.hidden !== state.hidden || applied.open !== state.open || applied.applied !== state.applied || applied.loading !== state.loading) applied = { ...state, progress: state.applied };
   return applied;
 }
 
@@ -94,10 +97,13 @@ export const workStateStore = {
   getApplied: appliedSnapshot,
   subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
   /** Opening resumes the saved state; the first open of a session warms gallery images first. */
-  open: () => emit({ ...state, open: true, loading: !warmed }),
+  open: () => emit({ ...state, open: true, hidden: false, loading: !warmed }),
+  /** Hide only the sheet; the simulator and its keyboard session stay active. */
+  hide: () => { if (state.open) emit({ ...state, hidden: true }); },
+  show: () => { if (state.open) emit({ ...state, hidden: false }); },
   /** Closing hides the sheet and keeps the simulated state; it does not reset to 100%. */
-  close: () => { apply(); emit({ ...state, open: false, loading: false }); },
-  toggle: () => state.open ? workStateStore.close() : workStateStore.open(),
+  close: () => { apply(); emit({ ...state, open: false, hidden: false, loading: false }); },
+  toggle: () => state.open && !state.hidden ? workStateStore.close() : workStateStore.open(),
   ready: () => { warmed = true; emit({ ...state, loading: false }); },
   /** Debounced with a maximum wait, so dragging redraws the panels in steady steps. */
   setProgress(progress: number) {

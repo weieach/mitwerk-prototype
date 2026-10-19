@@ -613,7 +613,9 @@ Changes that are made but not yet committed. The user decides when to commit and
 
 ## 2026-10-18 · prompt #497 uncounted — capture video export
 
-- `exports/prompts-350-497-every-2nd-4x.mp4` (new, untracked output, 4 MB): every second prompt capture from #350 to #497 (49 frames), 80/7 fps (one frame per 87.5ms = Playback's 350ms interval at 4×), 2880×1626 H.264; taller captures are fitted and padded with the dark chrome color (#101010).
+- `exports/prompts-350-497-every-2nd-3x.mp4` (ignored output, 4.3 MB; replaced the 4× version): every second prompt capture from #350 to #497 (49 frames), 60/7 fps (one frame per 116.7ms = Playback's 350ms interval at 3×), 2880×1626 H.264, 5.7s; taller captures are fitted and padded with the dark chrome color (#101010).
+- `exports/prompts-350-497-all-2x.mp4` (ignored output, 8.3 MB): every prompt capture from #350 to #497 (97 frames), 40/7 fps (one frame per 175ms = Playback at 2×), 2880×1626 H.264, 17s, same fitting/padding.
+- `.gitignore`: ignores `exports/`.
 
 ## 2026-10-18 · prompt #497 uncounted · Deployed history diagnosis
 
@@ -633,3 +635,35 @@ Changes that are made but not yet committed. The user decides when to commit and
 - `tests/idea-stream.test.ts`: verify filtering, connections, selection, navigation and source immutability.
 - `docs/design-system-rules.md`: record this shared Idea stream visibility rule. The inline browser annotation has no local source path to archive.
 - Validation: 20 Idea stream tests, TypeScript and source diff checks pass. Chrome using deployed history data confirms 51 visible versions, no main-branch decimal station, and V51 still selected. Saved the Idea stream progress capture.
+
+## 2026-10-19 · prompt #500 · Recover deployed prototype archives
+
+- `server/prototype-service.mjs`: retrieve exact missing commits from public GitHub archives without requiring a token; retain authenticated retrieval for private repositories. Availability now checks the recorded remote commit when absent locally.
+- `scripts/build-vercel.mjs`: attempt every push with a recorded SHA and stop on packaging failures, instead of silently skipping commits absent from the build checkout.
+- `AGENTS.md`: reconcile push #52 with the existing push captures and SHA map.
+- `tests/prototype-service.test.ts`: exercise public retrieval without credentials, authenticated private retrieval, missing remote commits, and exact archived output from an empty Git checkout.
+- Validation: seven archive/deployed-handler tests, TypeScript, JavaScript syntax and source diff checks pass. Real public GitHub downloads for recorded pushes #18 and #42 both build successfully in a temporary checkout without GITHUB_TOKEN. Production endpoints currently report these unavailable, while #45 and #50 are available; this fix requires a new deployment. No commit, push or deployment performed.
+- Progress capture #500 remains pending: repeated Playback captures timed out while the local preview stayed on “Reading saved frames…”. The full prompt is logged; no screenshot was saved and the prompt counter remains #499.
+
+## 2026-10-19 · prompt #501 · Hidden simulator keyboard session
+
+- `work-state.ts`, `work-state-shortcuts.ts`, `WorkStateSimulator.tsx`: separate hidden-sheet state from the open simulator session; add minus/0/double-0/bracket/Escape controls with clamping, text-entry guards and held-key cleanup. Closing disables the session.
+- `docs/design-system-rules.md`: record the keyboard mappings and shared timing tokens.
+- `tests/work-state.test.ts`: verify hidden/open/closed session transitions and retained simulated progress. Eight state tests, TypeScript and source diff checks pass.
+- Browser validation passes for hide/reveal, 0/double-0, ignored repeats, both held brackets, 0–100% bounds, release/blur stopping, text-entry protection, and close disabling shortcuts. Restarted the unresponsive Vite preview on port 5173 to complete verification.
+- Progress capture #501 remains pending: Gallery readiness timed out, then a Chat retry could not reach the local preview even with a 15-second health deadline. Temporary capture-timeout changes were reverted. The full prompt is logged; no screenshot was saved and the counter remains #499.
+
+## 2026-10-19 · prompt #502 · Correct simulator bracket direction
+
+- `src/shared/work-state-shortcuts.ts`: holding [ decreases progress and holding ] increases it, correcting the previous mapping.
+- `docs/design-system-rules.md`: update the shared shortcut rule; `docs/prompt-log.md` records the complete request.
+- Investigating the reported Idea stream overwrite; the earlier version-identity and main-decimal filtering fixes are still present in the current source.
+- `server/git-history.ts`: separate fast topology retrieval from optional, time-bounded statistics and cache totals per commit set. The local `git log --shortstat` repeatedly timed out at 10 seconds, causing the entire graph to be replaced by capture-only history.
+
+## 2026-10-19 · prompt #503 · Hidden simulator status
+
+- `BrandMenu.tsx`, `workspace-layout.css`, `useWorkState.ts`: show the live work-state percentage beside the logo only for an open, hidden simulator below 100%, using shared text/spacing tokens.
+- `docs/design-system-rules.md`, `docs/prompt-log.md`: record the visibility rule and full request.
+- `scripts/screenshot-progress.mjs`: add `--work-state-hidden` to capture the real hidden-sheet state through its minus shortcut.
+- Continued #502 verification: added `tests/git-history-reader.test.ts` for statistics timeouts/caching and successful enrichment. All 38 focused history/simulator tests and TypeScript pass. The live endpoint now returns 100 commits, all six branch identities, and captures through V52; bracket direction passed browser checks.
+- Browser validation confirms “work state 60%” / “work state 0%” while hidden, no label at 100% or with the sheet visible, and corrected bracket directions. Saved and inspected progress capture #503 with the 80% label, hidden sheet, and restored colored Idea stream branches.

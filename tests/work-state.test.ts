@@ -68,11 +68,11 @@ test('slider moves apply after the settle delay, and release applies at once', a
   // Closing keeps the simulated state; reopening resumes it without warming images again.
   workStateStore.setProgress(.3);
   workStateStore.close();
-  assert.deepEqual(workStateStore.get(), { open: false, progress: .3, applied: .3, loading: false });
+  assert.deepEqual(workStateStore.get(), { open: false, hidden: false, progress: .3, applied: .3, loading: false });
   assert.equal(isSimulating(workStateStore.get()), true);
   assert.equal(effectiveProgress(workStateStore.get()), .3);
   workStateStore.open();
-  assert.deepEqual(workStateStore.get(), { open: true, progress: .3, applied: .3, loading: false });
+  assert.deepEqual(workStateStore.get(), { open: true, hidden: false, progress: .3, applied: .3, loading: false });
   workStateStore.setProgress(1);
   workStateStore.close();
   assert.equal(isSimulating(workStateStore.get()), false);
@@ -101,4 +101,22 @@ test('while simulating, the date axis drops the newest prompt and keeps one tick
     .map(frame => ({ ...frame, filename: frame.id, url: '', width: 1, height: 1, number: 1, branch: null, summary: '', added: null, removed: null, version: 1, position: 0 })) as Parameters<typeof dateTicks>[0];
   assert.deepEqual(dateTicks(frames).map(tick => tick.id), ['morning', 'newest']);
   assert.deepEqual(dateTicks(frames, { latestPrompt: false }).map(tick => tick.id), ['morning']);
+});
+
+test('hiding the simulator keeps its session active while closing ends it', () => {
+  workStateStore.open(); workStateStore.ready();
+  workStateStore.setProgress(.6); workStateStore.commit();
+  workStateStore.hide();
+  assert.equal(workStateStore.get().open, true);
+  assert.equal(workStateStore.get().hidden, true);
+  assert.equal(workStateStore.get().applied, .6);
+  workStateStore.show();
+  assert.equal(workStateStore.get().hidden, false);
+  workStateStore.hide(); workStateStore.toggle();
+  assert.equal(workStateStore.get().open, true);
+  assert.equal(workStateStore.get().hidden, false);
+  workStateStore.close(); workStateStore.show(); workStateStore.hide();
+  assert.equal(workStateStore.get().open, false);
+  assert.equal(workStateStore.get().hidden, false);
+  assert.equal(workStateStore.get().applied, .6);
 });

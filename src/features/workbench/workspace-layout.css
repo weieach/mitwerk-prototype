@@ -420,7 +420,8 @@
 .chat-milestone-dialog .milestone-commit-option { display:flex; align-items:center; gap:8px; margin:0; }
 .milestone-commit-option input { accent-color:var(--ink); }
 
-.workspace-brand-menu { flex:none; }
+.workspace-brand-menu { flex:none; display:flex; align-items:center; gap:var(--brand-padding-inline); }
+.workspace-work-state { color:var(--muted); font-size:var(--control-font-size); white-space:nowrap; font-variant-numeric:tabular-nums; }
 .mw-topbar .workspace-brand-menu .workspace-brand { padding:6px var(--brand-padding-inline); border-radius:var(--control-radius); }
 /* The brand trigger sits inside the top bar with breathing room; its highlight never touches the screen edge. */
 .mw-topbar .workspace-brand-menu .workspace-brand { height:var(--brand-trigger-height); padding-block:0; }
