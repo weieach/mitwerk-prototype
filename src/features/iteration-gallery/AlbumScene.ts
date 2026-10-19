@@ -229,6 +229,7 @@ export class AlbumScene {
     this.restoreAlbum?.(); this.restoreAlbum = null; this.theaterTurn = null;
     this.controls.enabled = true;
     delete this.host.dataset.transitionProgress; delete this.host.dataset.transitionReady;
+    this.updateImages();
     this.invalidate();
   }
 
@@ -305,7 +306,17 @@ export class AlbumScene {
       // Cold loads must decode the frame before starting either entrance stage.
       // Reverse likewise keeps the DOM image until its GPU counterpart is ready.
       if (!ready) { this.invalidate(); return; }
-      if (start === null) { start = time; started?.(); }
+      if (start === null) {
+        // Upload the selected capture before starting the motion clock. A cold GPU
+        // texture must not consume the first part of the camera interpolation.
+        // Frames outside the starting camera can enter its frustum mid-turn.
+        // Prepare all attached capture maps now, not on their first animated draw.
+        for (const frame of this.frames.values()) {
+          if (frame.image.visible && frame.image.material.map) this.renderer.initTexture(frame.image.material.map);
+        }
+        this.renderer.render(this.scene, this.camera);
+        start = performance.now(); started?.(); this.invalidate(); return;
+      }
       const duration = reverse ? t.theaterMotion.rotateMs : theaterEntranceDuration();
       const clock = transitionProgress(time - start, this.reducedMotion ? 0 : duration, freezeAt);
       const { progress, complete: finished } = clock;
@@ -1031,6 +1042,9 @@ export class AlbumScene {
     const visible = new Set([...this.representatives, ...(this.hovered ? [this.hovered] : [])]);
     this.pickTargets = this.pickTargets.filter(mesh => mesh.userData.version !== undefined);
     for (const [id, frame] of this.frames) {
+      // Background loads may finish during a turn; attach them only after return
+      // so their GPU uploads cannot interrupt the selected frame's animation.
+      if (this.theaterTurn && id !== this.hovered) continue;
       frame.image.visible = visible.has(id);
       frame.image.material.opacity = id === this.hovered ? 1 : this.captureOpacity;
       frame.outline.color.set(id === this.hovered ? this.colors.ink : this.colors.line);
@@ -1046,15 +1060,20 @@ export class AlbumScene {
         this.textures.set(id, this.prepareCapture(texture));
       }
       const ready = this.textures.get(id);
-      if (ready) { frame.image.material.map = ready; frame.image.material.color.set(0xffffff); frame.image.material.needsUpdate = true; }
+      if (ready) {
+        if (frame.image.material.map !== ready) {
+          frame.image.material.map = ready;
+          frame.image.material.color.set(0xffffff);
+          frame.image.material.needsUpdate = true;
+        }
+      }
       else if (!this.pending.has(id) && !this.failedTextures.has(id)) {
         this.pending.add(id);
         new THREE.TextureLoader().load(url, texture => {
           this.pending.delete(id);
           if (this.dead || !this.frames.has(id)) { texture.dispose(); return; }
           this.textures.set(id, this.prepareCapture(texture));
-          this.updateImages();
-          this.invalidate();
+          if (!this.theaterTurn || id === this.hovered) { this.updateImages(); this.invalidate(); }
         }, undefined, () => { this.pending.delete(id); this.failedTextures.add(id); this.pumpPrefetch(); });
       }
     }
@@ -1077,7 +1096,7 @@ export class AlbumScene {
 
   /** Decodes queued captures only once every sampled frame has settled, so the resting album loads first. */
   private pumpPrefetch() {
-    if (this.dead || [...this.representatives].some(id => this.frames.has(id) && !this.textures.has(id) && !this.failedTextures.has(id))) return;
+    if (this.dead || this.theaterTurn || [...this.representatives].some(id => this.frames.has(id) && !this.textures.has(id) && !this.failedTextures.has(id))) return;
     while (this.prefetching < t.webgl.prefetchConcurrency && this.prefetchQueue.length) {
       const { url } = this.prefetchQueue.shift()!;
       if (prefetchedCaptures.has(url)) continue;

@@ -5225,3 +5225,23 @@ This block is automatically supplied ambient UI state, not part of the user's re
 ## My request:
 live server sometimes turns itself back on after I've already clicked exit, go back to gallery, and then click on a prompt to see playback, but live server would then interject
 ```
+
+## Prompt #526 uncounted
+
+```text
+help me push. x counter
+```
+
+## Prompt #528
+
+```text
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://localhost:5173/
+</in-app-browser-context>
+
+## My request:
+when jumping from gallery to playback after clicking a frame, the animation isn't ass smooth as before and there's observable frame drop. Also, the selected frame should be centered in the timeline below; if there isnt enough version blocks to center it on either side, have that side be aligned against the edge of the timeline wrapper
+```

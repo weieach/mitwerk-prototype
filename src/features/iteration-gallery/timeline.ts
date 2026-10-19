@@ -54,6 +54,11 @@ export function timelineScrollWindow(viewportWidth: number, contentWidth: number
   return { start: Math.max(0, Math.min(maxScroll, scrollLeft)) / width, size: Math.min(1, Math.max(0, viewportWidth) / width), maxScroll };
 }
 
+/** Center a selected frame without adding empty space at either end of the track. */
+export function centeredTimelineScroll(frameX: number, viewportWidth: number, contentWidth: number) {
+  return Math.max(0, Math.min(Math.max(0, contentWidth - viewportWidth), frameX - viewportWidth / 2));
+}
+
 /** Keep the first playable block left-alignable even when the range ends near the track's end. */
 export function timelineRangeScroll(versions: { enabled: boolean; start: number }[], viewportWidth: number, contentWidth: number, trackWidth: number) {
   const first = versions.find(version => version.enabled);

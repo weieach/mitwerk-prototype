@@ -5,7 +5,7 @@ import { formatVersion, galleryBranchPaint, inRange } from './model';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent, RefObject } from 'react';
 import type { GalleryFrame, RangeKey } from './model';
-import { buildTimeline, fitTimeline, timelineDisabledRegions, timelinePointerIndex, timelineRangeScroll, type JumpScale } from './timeline';
+import { buildTimeline, centeredTimelineScroll, fitTimeline, timelineDisabledRegions, timelinePointerIndex, timelineRangeScroll, type JumpScale } from './timeline';
 import { galleryTokens as t } from './tokens';
 
 export function PlaybackTimeline({ unit = 'frame', hasMilestone = () => false, branches = [], navigationKey, active, frames, catalog, range, now, index, selectedId, previewIndex, onPreview, onSelect, onSelectPush, viewportRef }: { unit?: JumpScale; hasMilestone?: (version: number) => boolean; branches?: string[]; navigationKey: number; active: boolean; viewportRef: RefObject<HTMLDivElement | null>; catalog: GalleryFrame[]; range: RangeKey; now: number; previewIndex: number; onPreview: (index: number | null) => void; frames: GalleryFrame[]; index: number; selectedId: string; onSelect: (index: number) => void; onSelectPush: (id: string) => void }) {
@@ -51,17 +51,22 @@ export function PlaybackTimeline({ unit = 'frame', hasMilestone = () => false, b
   const selectedPush = timeline.pushes.find(node => node.frameId === selectedId);
   const targetPosition = selectedPush ? (selectedPush.start + selectedPush.end) / 2 : selectedMark?.position ?? timeline.marks.find(mark => mark.index === index)?.position ?? 0;
   const position = usePlayheadMotion(targetPosition, navigationKey);
-  // Bring the playhead into view once Playback is showing, so the smooth scroll is visible after the gallery turn.
+  // Measure the actual track, including its push gutters and animated unit sizing.
+  // Settle the initial seek before the staggered playback controls are revealed.
   useLayoutEffect(() => {
-    if (!navigationKey || !active) return;
+    if (!active) return;
     const viewport = containerRef.current;
     const track = viewport?.querySelector<HTMLElement>('.gallery-timeline');
     if (!viewport || !track) return;
-    const x = viewport.scrollLeft + track.getBoundingClientRect().left - viewport.getBoundingClientRect().left + targetPosition * track.clientWidth;
-    const padding = t.timeline.edgePadding + t.timeline.playheadWidth;
-    const left = x < viewport.scrollLeft + padding ? x - padding
-      : x > viewport.scrollLeft + viewport.clientWidth - padding ? x - viewport.clientWidth + padding : viewport.scrollLeft;
-    viewport.scrollTo({ left, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+    const center = () => {
+      if (viewport.querySelector('.gallery-timeline-scrubber')?.matches(':active')) return;
+      const x = viewport.scrollLeft + track.getBoundingClientRect().left - viewport.getBoundingClientRect().left + targetPosition * track.clientWidth;
+      viewport.scrollTo({ left: centeredTimelineScroll(x, viewport.clientWidth, viewport.scrollWidth), behavior: 'instant' });
+    };
+    center();
+    const observer = new ResizeObserver(center);
+    observer.observe(viewport); observer.observe(track);
+    return () => observer.disconnect();
   }, [navigationKey, targetPosition, active]);
   const tipIndex = previewIndex;
   const tipPosition = tipIndex >= 0 ? timeline.marks.find(mark => mark.index === tipIndex)?.position : undefined;

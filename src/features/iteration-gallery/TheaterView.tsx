@@ -178,7 +178,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
   }, [requested]);
 
   useEffect(() => {
-    if (!requested) return;
+    if (!active || !ready || !requested) return;
     let nextIndex = index, nextDirection = direction;
     for (let offset = 0; offset < t.theater.preloadFrames; offset++) {
       const next = playbackStep(nextIndex, frames.length, nextDirection, mode);
@@ -186,7 +186,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
       void loader.current!.load(`${import.meta.env.BASE_URL}${frames[nextIndex].url}`).catch(() => {});
       if (!next.playing) break;
     }
-  }, [requested, frames, index, direction, mode]);
+  }, [active, ready, requested, frames, index, direction, mode]);
   useEffect(() => { if (!active) setPlaying(false); }, [active]);
   const sequence = frames.map(frame => frame.id).join('|');
 

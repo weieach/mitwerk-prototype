@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { galleryTokens as t } from '../src/features/iteration-gallery/tokens.ts';
-import { adjacentTimelineIndex, timelineScrollWindow, timelineWheelDelta, adjacentPushIndex, buildTimeline, fitTimeline, nearestTimelineFrame, timelineBranch, timelinePointerIndex, timelineRangeLabelAt, timelineDisabledRegions } from '../src/features/iteration-gallery/timeline.ts';
+import { adjacentTimelineIndex, centeredTimelineScroll, timelineScrollWindow, timelineWheelDelta, adjacentPushIndex, buildTimeline, fitTimeline, nearestTimelineFrame, timelineBranch, timelinePointerIndex, timelineRangeLabelAt, timelineDisabledRegions } from '../src/features/iteration-gallery/timeline.ts';
 
 test('version jumps target adjacent saved pushes, including the current version closing push', () => {
   const frames = ['prompt', 'push', 'prompt', 'prompt', 'push', 'prompt', 'push'].map(kind => ({ kind: kind as 'prompt' | 'push' }));
@@ -224,4 +224,12 @@ test('milestone fit keeps every push inside the viewport even in narrow panels',
     }
     assert.ok(Math.abs(timeline.pushes.at(-1)!.end * trackWidth - width) < 1e-8);
   }
+});
+
+test('selected frames center in the timeline and clamp to either content edge', () => {
+  assert.equal(centeredTimelineScroll(750, 600, 1800), 450);
+  assert.equal(centeredTimelineScroll(50, 600, 1800), 0);
+  assert.equal(centeredTimelineScroll(1750, 600, 1800), 1200);
+  assert.equal(centeredTimelineScroll(200, 600, 400), 0);
+  assert.equal(centeredTimelineScroll(0, 0, 0), 0);
 });

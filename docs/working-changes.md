@@ -196,3 +196,24 @@
 - Validation: TypeScript and targeted whitespace checks pass. A real Chrome regression check passed Exit → Gallery → prompt Playback, explicitly reopening Live server, and direct Live server → Gallery → prompt Playback; neither return to Playback reopened Live server. Progress capture failed: Chrome did not reach the capture script’s ready state. Counter remains #526; no image saved.
 
 - Three progress-capture attempts timed out without saving or advancing the counter. A temporary capture-readiness diagnostic edit was reverted; no capture-script changes remain. The full request is logged under reserved prompt #527.
+
+## 2026-10-19 · prompt #526 uncounted · Push frame-jump fix
+
+- Pushed `b4f099ddf943d6ca7a98bf04fafa88f593039ac2` (`fixed frame jump from gallery`) to `main`. The first push stopped because the screenshot hook waited for a reading window that this commit message does not open.
+- `[frame capture] screenshots/[push #56] …`, `data/push-shas.json`, `data/token-usage.json`, `AGENTS.md`: saved the home-layout push capture, recorded its commit, and set the push counter to #56. Prompt counter stays #526.
+- `scripts/screenshot-progress.mjs`: if that commit’s push screenshot is already recorded, the pre-push hook reuses it instead of taking another. These bookkeeping updates remain uncommitted.
+
+## 2026-10-19 · prompt #527 · verso brand animation (Design canvas)
+
+- `visual_ref/[prompt #527] 1.png`: saved the user's three-step storyboard sketch.
+- No app source changed. The 16:9 brand animation (isometric version blocks → top view → wrapped vertical stream) lives in a claude.ai Design canvas built from verso tokens and gallery geometry (`versionDepth`/block width → 195px stride at 797px).
+- Follow-up (same canvas, no repo source changed): square corners on frames, bars and wrappers; 150px frame spacing and 96px wrapper padding; wrapped blocks continue as a horizontal row that holds on screen; a later block centers with a #FED65B border while verso's Playback milestone chip (trophy + reference-chip label, Waldenburg uploaded to the canvas) types "Finalized branding concept".
+
+## 2026-10-19 · prompt #528 · Smooth gallery handoff and center timeline selection
+
+- `AlbumScene.ts`, `TheaterView.tsx`: prepare selected textures before the camera clock starts and defer background GPU uploads / look-ahead decoding during the turn. Chrome profiling identified texture uploads as the dominant stall.
+- `PlaybackTimeline.tsx`, `timeline.ts`, `tests/timeline.test.ts`: center the selected frame against measured scroll bounds, clamp both ends, and remeasure on resize; include center/edge/short-track tests. `docs/design-system-rules.md` records the shared behavior.
+- Validation: TypeScript and 27 timeline/transition tests pass. Chrome profiling of the moving camera measured a 16.7ms p95 and 16.8ms maximum after preparing textures, versus a 116.8ms p95 in the original entry trace; cold GPU preparation happens before motion. Browser checks passed middle/first/last selections, resize, and manual scrolling; center error was below 0.2px. Saved and visually inspected progress capture #528.
+- Follow-up 2 (same canvas, no repo source changed): shot 1 frames use the gallery version-block material (muted edge 18%, line fill 3.5%) and cross-fade to the 2px final style as the camera starts moving; wrapper padding 120px; the wrapped stack turns 90° anticlockwise and the row is built from turned blocks; the ending adds a cursor click on the trophy with the app's trophy bounce and 16-particle confetti physics (`celebration.ts`).
+
+- `scripts/screenshot-progress.mjs`: Playback captures wait for the actual settled Playback and loaded frame, rather than an Idea stream readiness flag that is absent in Chat/Playback; allow 30s for cold captures. Reserved #528 because #527 already has a logged request awaiting its capture.

@@ -3154,5 +3154,17 @@
     "output": 5485,
     "total": 16751,
     "simulated": true
+  },
+  "[push #56] 6 files · +41 -7 · fixed frame jump from gallery-2026-10-19-140312.png": {
+    "input": 2771,
+    "output": 1445,
+    "total": 4216,
+    "simulated": true
+  },
+  "[prompt #528] +122-20 · -in-app-browser-context source=-ambient-ui-state-- This block is automatically supplied ambient UI state, not part of th-2026-10-19-181633.png": {
+    "input": 807,
+    "output": 1096,
+    "total": 1903,
+    "simulated": true
   }
 }

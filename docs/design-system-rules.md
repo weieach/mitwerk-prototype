@@ -2024,3 +2024,8 @@ This file is reserved for project-wide design-system rules requested by the user
 - Prompt #523 (2026-10-19): refine the orbit starting-angle step to −25° per sheet (0°, −25°, −50°, …), replacing −30°. All other motion and size tokens remain unchanged.
 - Prompt #524 (2026-10-19): change the shared orbit starting-angle step to −45° per sheet (0°, −45°, −90°, …), superseding −25°.
 - Prompt #525 (2026-10-19): change the shared orbit starting-angle step to −10° per sheet (0°, −10°, −20°, …), superseding −45°.
+
+## Gallery handoff and centered Playback selection — 2026-10-19
+
+- Center Playback's selected prompt mark or push node using measured timeline geometry. Clamp scroll to the real content edges when there are too few blocks on either side; never add blank space to force centering. Recalculate after panel or unit sizing changes, preserving manual scrolling and direct scrubbing.
+- Prepare the selected WebGL texture before starting the gallery camera turn. Defer background texture attachment and look-ahead decoding during the transition so capture uploads do not interrupt the shared motion clock.
