@@ -1832,7 +1832,7 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Push names from Git; clamped captions — 2026-10-18
 
 - A push frame's name is its full Git commit message (trailers such as Co-Authored-By removed), not the length-limited capture filename. The catalog resolves it from the recorded SHA in `data/push-shas.json` only when that commit's subject matches the capture's summary; otherwise it finds the commit by subject, nearest before the capture time. The message travels in the catalog (`commitMessage`), so the published Blob catalog serves it online too.
-- Playback captions (prompt text or push message) show at most `--theater-summary-lines` (2) lines, ending in an ellipsis, and never collapse to zero height. When cut short, hovering or focusing the caption shows the full text in a top-layer tooltip (`.theater-summary-tip`) placed above the caption, or below when there is no room.
+- Playback captions (prompt text or push message) show at most `--theater-summary-lines` (2) lines, ending in an ellipsis, and never collapse to zero height. Full-text hover/focus tooltips are not shown for prompt captions, push captions, or push-node titles; preserve the existing clamping and click-to-expand behavior.
 
 ## Splash screen actions and intro — 2026-10-18
 
@@ -1862,3 +1862,21 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Annotation fields, Idea stream milestone fields, and to-do editing fields share a 0.5px bottom hairline with no surrounding border, corner radius, or inline padding. This supersedes the stronger rectangular inline milestone border.
 - Render the hairline as one inset shadow to avoid pixel-rounded borders and doubled focused lines. Use white in dark mode and contrast ink in light mode; focus brightens the line without thickening it.
+
+## Wider Chat from 1600px — 2026-10-18
+
+- From 1600 CSS pixels up, default Chat is 36vw (`workspaceResponsive.wideChatWidth` and `desktopChatFraction`). That replaces the 500px plateau in this range and the 32vw default that previously began above 1728px. At 1600px the default is 576px; at 1875px it is 675px.
+- Below 1600px, keep the 500px intermediate default and the small-laptop default (`min(440px, 35vw)` at or below 1512px). The 1728px reference still scales the 760px drag ceiling. Explicit drag and keyboard widths stay preferred.
+
+
+## Chat version-card orientation — 2026-10-18
+
+- Version cards switch from stacked to horizontal when the Chat panel is at least 500 CSS pixels wide; below 500px they remain stacked. Use the named Chat container query, not viewport width. Apply the same boundary to ordinary cards and milestone invitations, preserving the narrower action-band layouts. This supersedes the previous 525px and responsive 640px/viewport-derived boundaries.
+
+## Horizontal version-card images — 2026-10-18
+
+- Horizontal Chat version cards derive preview width from the loaded image's natural aspect ratio and the shared card height, capped by the existing preview-width limit. Fit the complete image without cropping or stretching when capped. This applies to ordinary cards and milestone invitations; stacked cards keep their existing layout.
+
+## Narrow milestone invitation spacing — 2026-10-18
+
+- When the narrow stacked invitation places controls below the text, reserve the actual milestone button diameter plus an 8px gap instead of a fixed 88px action area. Use shared size tokens so the spacing follows responsive control sizing.

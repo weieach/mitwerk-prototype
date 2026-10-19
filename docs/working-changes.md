@@ -2,6 +2,12 @@
 
 Changes that are made but not yet committed. The user decides when to commit and push. Remove an entry once it is committed.
 
+## 2026-10-18 · prompt #481 · Wider default Chat from 1600px
+
+- `src/features/workbench/workspace-responsive.ts`: from 1600 CSS pixels, default Chat is 36vw instead of the 500px plateau or the previous 32vw above 1728px. Smaller widths stay on their existing defaults.
+- `docs/design-system.md`, `docs/design-system-rules.md`: record the shared breakpoint and fraction.
+- `tests/workspace-responsive.test.ts`: covers the 1512, 1599, 1600, 1875 and 2560 defaults.
+
 ## 2026-10-18 · prompt "I want to make my frame captures available through github repo too" (number pending: prompt log already holds #371–#419)
 
 - `[frame capture] screenshots/.gitattributes` (new): routes the folder's `*.png` and `*.gif` to Git LFS so captures can live on GitHub without bloating Git history.
@@ -226,6 +232,11 @@ Changes that are made but not yet committed. The user decides when to commit and
 - `tests/timeline.test.ts`: cover merged disabled groups, separated groups, empty, fully enabled and fully disabled sequences.
 - `docs/design-system-rules.md`: record shared rules; capture Chat + Playback as requested.
 - Validation: TypeScript and all 14 timeline tests pass. Browser checks confirm no underline, #101010 outer background with #181818 panels, and one correctly sized disabled-region border matching enabled blocks. Saved Chat + Playback capture #447.
+
+## 2026-10-18 · prompt #481 · Wider default Chat from 1600px
+
+- `src/features/workbench/workspace-responsive.ts`: from 1600 CSS pixels, default Chat is 36vw instead of the 500px plateau or the previous 32vw above 1728px. Smaller widths stay on their existing defaults.
+- `docs/design-system.md`, `docs/design-system-rules.md`: record the shared breakpoint and fraction.
 
 ## 2026-10-18 · prompt #451 · Thinner to-do stations and milestone jump width
 
@@ -490,3 +501,29 @@ Changes that are made but not yet committed. The user decides when to commit and
 ## 2026-10-18 · prompt #480 — updated logomark file
 
 - `src/assets/verso-logomark.svg`: regenerated from the replaced `final-logomark.svg` (same shape; the name starts 20 units further right, viewBox 438 × 144). Shape geometry, favicon and sizing tokens unchanged.
+
+
+## 2026-10-18 · prompt #482 · Chat version-card breakpoint
+
+- `workspace-layout.css`: switch all related version-card layout queries to the shared Chat panel boundary: stacked through 525px, horizontal above it.
+- `docs/design-system-rules.md`: record the container-based rule. Inline annotation has no local source path.
+- Validation: TypeScript and diff checks pass. Chrome confirms stacked cards at 525px and horizontal cards at 526px and 600px, including ordinary cards and milestone invitations.
+
+## 2026-10-18 · prompt #483 · Captions and horizontal preview proportions
+
+- `TheaterCaption.tsx`, `gallery.css`, `VersionCard.tsx`: remove full-text hover/focus tooltips for prompt/push captions and node titles, keeping clamping and title expansion.
+- `MessageOutput.tsx`, `workspace-layout.css`: derive horizontal preview width from natural image dimensions and contain the full image if capped, for ordinary cards and invitations.
+- `docs/design-system-rules.md`: record caption and image-proportion rules.
+- Validation: TypeScript and diff checks pass; Chrome verifies the natural image ratio at 526px, 600px, and 760px Chat widths, contain sizing for ordinary/invited cards, and no full-text caption tooltip.
+
+## 2026-10-18 · prompt #484 · Version cards horizontal from 500px
+
+- `workspace-layout.css`: move all version-card container-query boundaries to horizontal at 500px and above, stacked below 500px, including ordinary cards and milestone invitations.
+- `docs/design-system-rules.md`: update the shared Chat-panel breakpoint. The inline browser reference has no local source path.
+- Validation: Chrome confirms stacked at 499px and horizontal at 500px/525px for invitation and ordinary cards; visually checked the 500px card. Diff check passes.
+
+## 2026-10-18 · prompt #485 · Compact stacked invitation actions
+
+- `control-tokens.css`: replace the fixed 88px stacked action reserve with the responsive milestone button diameter plus an 8px gap, bringing the buttons closer to the copy on narrow cards.
+- `docs/design-system-rules.md`: record the shared spacing rule. Inline browser reference has no local source path.
+- Validation: Chrome at a 385px Chat width confirms a 60px action reserve (52px button + 8px), reduced from 88px, with no text/button overlap; visually checked and diff check passes.

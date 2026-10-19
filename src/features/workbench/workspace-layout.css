@@ -806,7 +806,7 @@
 .mw-surface { container:chat-panel / inline-size; }
 .message-version-output { container:message-output / inline-size; }
 /* Keep a readable copy column beside the cover and physical controls. */
-@container chat-panel (width < max(640px, calc(100vw * 650 / 1876))) {
+@container chat-panel (width < 500px) {
   .mw-app .message-version-main { position:relative; inset:auto; height:auto; flex-direction:column; align-items:stretch; gap:12px; padding:0 16px var(--message-stacked-action-height); }
   .message-version-main .message-version-preview { flex:none; align-self:stretch; height:auto; aspect-ratio:var(--message-preview-aspect); margin-inline:-16px; }
   .message-version-main .message-version-label { flex:none; min-height:54px; padding:0; }
@@ -815,19 +815,21 @@
 
 /* Medium cards keep their text and falling actions in a single 90px band. */
 @container chat-panel (min-width:400px) {
-@container chat-panel (width < max(640px, calc(100vw * 650 / 1876))) {
+@container chat-panel (width < 500px) {
   .mw-app .message-version-main { gap:0; padding-bottom:0; }
   .message-version-main .message-version-label { min-height:var(--message-preview-height); }
   .is-milestone-ready .message-version-main .message-version-label { padding-right:calc(var(--milestone-controls-width, var(--milestone-ball-size)) - 8px); }
 }
 }
 
-@container chat-panel (width >= max(640px, calc(100vw * 650 / 1876))) {
+@container chat-panel (width >= 500px) {
+  .message-version-preview { flex-basis:min(calc((var(--message-preview-height) - 2px) * var(--message-image-aspect, var(--message-preview-aspect))),var(--message-preview-max-width)); }
+  .message-version-preview img { object-fit:contain; }
   .milestone-label-swap { line-height:inherit; }
 }
 
 /* Ordinary stacked cards fit the label; invitation mode owns its extra action space. */
-@container chat-panel (width < max(640px, calc(100vw * 650 / 1876))) {
+@container chat-panel (width < 500px) {
   .mw-app .message-version-output:not(.is-milestone-ready) .message-version-main { gap:0; padding-bottom:0; }
   .message-version-output:not(.is-milestone-ready) .message-version-label { min-height:0; padding-block:var(--message-default-label-padding); }
 }

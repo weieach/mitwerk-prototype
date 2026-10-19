@@ -18,6 +18,7 @@ export function MessageOutput({ output, onOpen }: { output: NonNullable<Message[
   const [jumping, setJumping] = useState(false);
   const [invited, setInvited] = useState(false);
   const image = useRef<HTMLImageElement>(null);
+  const [imageAspect, setImageAspect] = useState<number | undefined>();
   const [decodedCover, setDecodedCover] = useState<string | null>(null);
   const [controlsReady, setControlsReady] = useState(false);
   const previousHeight = useRef(0);
@@ -28,7 +29,10 @@ export function MessageOutput({ output, onOpen }: { output: NonNullable<Message[
     const loaded = async () => {
       if (!cover.naturalWidth) return;
       try { await cover.decode(); } catch { return; }
-      if (!cancelled) setDecodedCover(output.imageUrl ?? null);
+      if (!cancelled) {
+        setImageAspect(cover.naturalWidth / cover.naturalHeight);
+        setDecodedCover(output.imageUrl ?? null);
+      }
     };
     cover.addEventListener('load', loaded);
     if (cover.complete) void loaded();
@@ -94,7 +98,7 @@ export function MessageOutput({ output, onOpen }: { output: NonNullable<Message[
     window.addEventListener(milestonesChangedEvent, sync);
     return () => { window.removeEventListener('storage', sync); window.removeEventListener(milestonesChangedEvent, sync); };
   }, [key]);
-  return <div ref={root} className={`message-version-output${jumping ? ' is-milestone-jumping' : ''}${invited ? ' is-milestone-ready' : ''}`} style={{'--milestone-invite-gradient':milestoneInviteGradient, '--milestone-bump-duration':`${milestoneInviteMotion.duration}ms`} as CSSProperties}>
+  return <div ref={root} className={`message-version-output${jumping ? ' is-milestone-jumping' : ''}${invited ? ' is-milestone-ready' : ''}`} style={{'--message-image-aspect':imageAspect, '--milestone-invite-gradient':milestoneInviteGradient, '--milestone-bump-duration':`${milestoneInviteMotion.duration}ms`} as CSSProperties}>
     <div className="message-version-card">
       <span className="message-version-placeholder" aria-hidden="true"/>
       <button type="button" className="message-version-main" aria-label={invited ? "You've accomplished a lot! Ready to mark a new milestone?" : `Version block #${output.version}, Prompt #${output.prompt}`} onClick={invited ? openMilestone : () => onOpen()}>

@@ -82,13 +82,9 @@
 .theater-metadata { height:var(--theater-metadata-height); min-height:0; overflow:hidden; width:100%; flex-shrink:0; display:flex; flex-direction:column; gap:var(--theater-row-gap, 4px); font-size:11px; }
 .theater-metadata > :not(.theater-summary) { flex-shrink:0; }
 .theater-metadata .theater-summary { min-height:0; overflow:hidden; flex:0 0 auto; }
-/* Prompt and push messages: at most --theater-summary-lines, then an ellipsis; the full text is in the hover tooltip. */
+/* Prompt and push messages: at most --theater-summary-lines, then an ellipsis. */
 .theater-metadata { --theater-summary-lines:2; }
 .theater-metadata .theater-summary { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:var(--theater-summary-lines); line-clamp:var(--theater-summary-lines); flex:0 1 auto; min-height:1lh; }
-.theater-metadata .theater-summary.is-truncated { cursor:default; }
-.theater-metadata .theater-summary.is-truncated:focus-visible { outline:var(--focus-ring-width) solid var(--focus-ring-color); outline-offset:var(--focus-ring-offset); }
-.theater-summary-tip { position:fixed; inset:auto; margin:0; padding:8px 10px; border:0; border-radius:4px; background:var(--ink); color:var(--paper); font-size:12px; line-height:1.45; white-space:pre-wrap; overflow-wrap:anywhere; pointer-events:none; box-shadow:var(--popover-shadow); }
-.theater-summary-tip:not(:popover-open) { display:none; }
 .theater-metadata p { line-height: 1.5; overflow-wrap: anywhere; }
 .theater-version { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: var(--theater-summary-gap, 2px); }
 .theater-version-group { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-width: 0; flex-wrap: wrap; }

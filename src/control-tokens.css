@@ -86,7 +86,8 @@
   --gallery-prompt-number-gap: 4px;
   --frame-placeholder-ink: var(--muted);
   --feature-entry-duration: 220ms;
-  --message-stacked-action-height: 88px;
+  --message-stacked-action-gap: 8px;
+  --message-stacked-action-height: calc(var(--milestone-ball-size) + var(--message-stacked-action-gap));
   --gallery-prompt-padding: 8px 12px;
   --composer-model-padding: 7px 10px;
   --composer-mode-padding: 5px 10px;

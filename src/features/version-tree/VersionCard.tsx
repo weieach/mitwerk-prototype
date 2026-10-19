@@ -110,7 +110,7 @@ export function VersionCard({
     </div>}
     <button className="version-heading" onClick={onSelect} aria-label={`View ${node.label}: ${node.title || 'Untitled version'}`}>
       <span className="version-meta"><span className="save-label">{node.saveType === 'auto' ? <Icon name="spark" size={11}/> : <Icon name="commit" size={12}/>} {node.git ? 'Git commit' : node.capture ? node.capture.pushed ? 'Saved push' : 'Work in progress' : node.saveType === 'auto' ? 'Autosave' : 'Manual save'}</span></span>
-      <span className={`version-title ${!node.title ? 'untitled' : ''} ${titleExpanded ? 'is-expanded' : ''}`} title={node.title || 'Untitled version'} onClick={event => { event.stopPropagation(); setTitleExpanded(open => !open); onSelect(); }}>{node.title || 'Untitled version'}</span>
+      <span className={`version-title ${!node.title ? 'untitled' : ''} ${titleExpanded ? 'is-expanded' : ''}`} onClick={event => { event.stopPropagation(); setTitleExpanded(open => !open); onSelect(); }}>{node.title || 'Untitled version'}</span>
     </button>
     {references.length > 0 ? <ReferenceFiles files={references} limit={ideaMode ? Infinity : 2} thumbnails={ideaMode} onAttach={ideaMode ? file => window.dispatchEvent(new CustomEvent(attachFrameEvent, {detail:{id:`reference:${file.url}`,url:`${import.meta.env.BASE_URL}${file.url}`,label:file.name,filename:file.name}})) : undefined}/> : node.capture && !node.capture.pushed && <div className="reference-files"><span className="empty-reference">No references yet</span></div>}
     {!compact && <>
