@@ -10,7 +10,7 @@ import { easeInCubic, easeInOutCubic, easeOutCubic, frameBand, lerp, progress, t
 export const IMPACT_INTRO = {
   frames: 7,
   /** Depth offsets between piled frames; wide enough that white frames never touch. */
-  depthStep: 2.9,
+  depthStep: 3.2,
   /** A thrown frame starts this many times larger than its slot. */
   throwScale: 16,
   /** Where each throw enters from, as a share of the viewport, cycling per frame. */

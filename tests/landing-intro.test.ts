@@ -10,11 +10,12 @@ const target = { x:600, y:430, width:geometry.width * 1.5, height:geometry.heigh
 const near = (actual:number, expected:number, tolerance = 1e-3) => assert.ok(Math.abs(actual - expected) < tolerance, `${actual} ≈ ${expected}`);
 
 test('frame and stacking offset come from the two logo assets', () => {
-  near(geometry.frame.width, 10.7321);
+  // The verso logomark's shape (final-logomark.svg): two 72-unit frames, the second offset by 24 × 17.
+  near(geometry.frame.width, 72);
   near(geometry.frame.topRight, 0);
-  near(geometry.frame.bottomLeft, 15.2512);
-  near(geometry.offset.x, 3.9232);
-  near(geometry.offset.y, 2.3525);
+  near(geometry.frame.bottomLeft, 103);
+  near(geometry.offset.x, 24);
+  near(geometry.offset.y, 17);
   assert.equal(pathPoints('M0 0h2v3H0z').length, 4);
 });
 

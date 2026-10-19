@@ -1842,8 +1842,23 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Logomark proportions — 2026-10-18
 
-- Every logomark (site header, splash screen) is the verso shape plus the name, built with the shared `.logomark` / `LogomarkSymbol` (the shape drawn tight to its bounds, in the text color). Its shape-to-name gap (`--logomark-gap`, 0.613em) and shape height (`--logomark-symbol-height`, 1.173em) are proportional to the name's computed size.
-- The site header is the reference: its name grew from 14px to 16px (type role `brand`, about 15px computed) while keeping its 9.2px visible gap and 17.6px shape. The splash keeps its 32px name and scales the shape (37.5px) and gap (19.6px) from those ratios.
-- Logomarks are white in dark mode (`--logomark-ink`; ink in light mode), including the header name's type role color.
-- The splash follows the main screen's theme: its stage is the panel color (`--paper`), the scrim is that color at 76%, and the intro's quads use the ink light gray (`--landing-frame: var(--ink)`, the home logomark's former color) with a glow of the same color at `--landing-frame-glow-alpha`.
-- Primary buttons hover by easing their fill 14% toward the page (`--mw-accent-hover`, border included), not by switching to the muted gray.
+- Every logomark (site header, splash screen) is the single verso logomark SVG (`src/assets/verso-logomark.svg`, from the user-supplied `final-logomark.svg`), rendered by the shared `Logomark` component in `--logomark-ink` (white in dark mode, ink in light). The shape-to-name spacing and proportions come from the SVG itself; no separate shape + text wrapper (supersedes the em gap and shape tokens).
+- Its height is `--logomark-height` (1.408em of the surrounding type size). The site header is the reference: the `brand` type role (16px, about 15px computed) gives a 21.1px logomark with a 17.6px shape; the splash's 32px gives 45px. Narrow headers clip it to the shape alone (`--logomark-shape-ratio`).
+- The splash intro lands on the logomark's shape (`[data-logomark-shape]`); its frame geometry (`logo-shape.svg`, `logo-shape-part.svg`) is the same shape, with pile spacing (`depthStep` 3.2) wide enough that quads never touch. The shape and name still reveal separately. The favicon uses the same shape.
+
+## Milestone and to-do fields — 2026-10-18
+
+- Every field for writing or editing a milestone or to-do is a single-line text input, never a resizable text area: the Idea stream milestone editor, the frame annotation overlay (milestone / to-do / note), inline to-do editing in the drawer, and the Edit to-do dialog. They use the shared control height (`--base-control-height`) and have no resize grip; Enter saves.
+
+
+## Milestone editor actions and commit eligibility — 2026-10-18
+
+- Idea stream milestone actions align left, including Remove when available. Its inline text field uses the stronger shared border token.
+- Frame annotation text inputs use only a contrast-colored bottom border (white in dark mode), no horizontal padding or corner radius, and an underline-only focus treatment.
+- “Also commit to …” is offered only on the latest prompt in the complete displayed project history, or when opening the milestone editor from the chat version card. Date filtering, screen filtering, hover previews, and historical push frames must not grant eligibility. Keep the prototype's existing feedback behavior.
+
+
+## Shared milestone and to-do hairlines — 2026-10-18
+
+- Annotation fields, Idea stream milestone fields, and to-do editing fields share a 0.5px bottom hairline with no surrounding border, corner radius, or inline padding. This supersedes the stronger rectangular inline milestone border.
+- Render the hairline as one inset shadow to avoid pixel-rounded borders and doubled focused lines. Use white in dark mode and contrast ink in light mode; focus brightens the line without thickening it.

@@ -1,0 +1,16 @@
+/* One hairline treatment for milestone, annotation, and to-do editing. An inset
+   shadow preserves a subpixel line even when CSS borders round to a full pixel. */
+:root { --edit-field-line-width:.5px; --edit-field-line-color:var(--contrast); }
+:root[data-theme=dark] { --edit-field-line-color:#fff; }
+.mw-app :is(.annotation-text, .idea-editor input[type=text], .todo-edit-text, .composer-todo-edit) {
+  border:0;
+  border-radius:0;
+  padding-inline:0;
+  outline:none;
+  box-shadow:inset 0 calc(-1 * var(--edit-field-line-width)) 0 color-mix(in srgb, var(--edit-field-line-color) 70%, transparent);
+}
+.mw-app :is(.annotation-text, .idea-editor input[type=text], .todo-edit-text, .composer-todo-edit):is(:focus, :focus-visible) {
+  border:0;
+  outline:none;
+  box-shadow:inset 0 calc(-1 * var(--edit-field-line-width)) 0 var(--edit-field-line-color);
+}

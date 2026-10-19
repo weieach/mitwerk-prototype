@@ -139,7 +139,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .idea-command .node-details { max-height: 180px; overflow: auto; }
 .idea-editor { padding:0; background:transparent; border:0; }
 .idea-editor label { display: block; margin-bottom: 8px; font-size: 12px; }
-.idea-editor textarea { box-sizing: border-box; width: 100%; resize: vertical; min-height: 70px; max-height: 150px; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); padding: 8px; }
+.idea-editor input[type=text] { box-sizing: border-box; width: 100%; min-height: var(--base-control-height); font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--milestone-input-border); padding: 8px; }
 .idea-editor > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .idea-editor button { border: 1px solid var(--line); border-radius: 4px; background: var(--paper); color: var(--ink); padding: 5px 8px; cursor: pointer; }
 .idea-editor button[type=submit] { background: var(--ink); color: var(--paper); }
@@ -262,8 +262,8 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .idea-todos .is-complete .idea-todo-text { text-decoration:line-through; color:var(--muted); }
 
 .idea-editor > div, .idea-editor .milestone-editor-actions { width:100%; }
-.idea-editor .milestone-editor-actions { display:flex; align-items:center; gap:8px; justify-content:flex-end; }
-.idea-editor .milestone-remove { margin-right:auto; color:var(--annotation-danger); border-color:transparent; padding:5px; display:inline-flex; }
+.idea-editor .milestone-editor-actions { display:flex; align-items:center; gap:8px; justify-content:flex-start; }
+.idea-editor .milestone-remove { margin-right:0; color:var(--annotation-danger); border-color:transparent; padding:5px; display:inline-flex; }
 .idea-todo-toggle { display:inline-flex; flex:none; padding:0; background:transparent; color:inherit; cursor:pointer; }
 
 .idea-todo-copy { display:flex; flex-direction:column; min-width:0; gap:var(--idea-todo-time-gap); overflow-wrap:anywhere; }

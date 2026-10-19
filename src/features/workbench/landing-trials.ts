@@ -8,7 +8,7 @@ import { easeInOutCubic, easeOutCubic, frameBand, lerp, progress, type Band, typ
 export const TRIAL_INTRO = {
   frames: 7,
   /** Depth offsets between spread frames; wide enough that white frames never touch. */
-  depthStep: 2.9,
+  depthStep: 3.2,
   fit: { width:.8, height:.8 },
   /** The single frame's height as a share of the viewport. */
   singleFrameHeight: .46,

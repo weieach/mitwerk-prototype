@@ -834,7 +834,7 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
       }
       if (/idea stream[^.\n]*milestone edit/i.test(prompt)) {
         await cdp('Runtime.evaluate', { expression: `(() => { if (!document.querySelector('.idea-card .idea-editor')) [...document.querySelectorAll('.idea-milestone')].at(-1)?.click(); })()` });
-        const editor = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.idea-card .idea-editor textarea')`, returnByValue: true });
+        const editor = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.idea-card .idea-editor input[type=text]')`, returnByValue: true });
         if (!editor.result?.value) { await delay(100); continue; }
       }
       if (/capture (?:location|screen) (?:chip )?dropdown/i.test(prompt)) {
@@ -907,6 +907,20 @@ async function capture(chrome, outFile, prompt = '') {
     }
     await waitForScreenshotReady(cdp, (wantsLandingCapture(prompt) || hasFlag('milestone-invite')) ? 20000 : (wantsPrototypeCapture(prompt) || wantsLiveCapture(prompt)) ? 60000 : 10000, prompt);
     await cdp('Runtime.evaluate', { expression: 'document.fonts.ready.then(() => true)', awaitPromise: true, returnByValue: true });
+    if (hasFlag('milestone-editor')) {
+      await cdp('Runtime.evaluate', { expression: `(() => { const wip = document.querySelector('.idea-wip-action'); if (!wip?.querySelector('.idea-editor')) wip?.querySelector('button')?.click(); })()` });
+      await delay(100);
+      const editor = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.idea-wip-action .idea-editor')`, returnByValue: true });
+      if (!editor.result?.value) throw new Error('Milestone editor capture needs the Idea stream WIP card');
+    }
+    const annotationKind = argValue('annotation-kind');
+    if (annotationKind) {
+      await cdp('Runtime.evaluate', { expression: `document.querySelector('.annotation-create')?.click()` });
+      await delay(100);
+      const chosen = await cdp('Runtime.evaluate', { expression: `(() => { const option = [...document.querySelectorAll('.annotation-kind-select label')].find(label => label.textContent.toLowerCase() === ${JSON.stringify(annotationKind.toLowerCase())})?.querySelector('input'); option?.click(); return !!option; })()`, returnByValue: true });
+      if (!chosen.result?.value) throw new Error(`Annotation kind unavailable: ${annotationKind}`);
+      await delay(100);
+    }
     if (/edit annotation overlay/i.test(prompt)) {
       const note = await cdp('Runtime.evaluate', { expression: `(() => {
         const item = document.querySelector('.annotation-list button');
@@ -920,7 +934,7 @@ async function capture(chrome, outFile, prompt = '') {
       await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...note.result.value });
       await cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...note.result.value });
       await delay(550);
-      const edited = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.annotation-overlay[aria-label="Edit annotation"] textarea')?.value`, returnByValue: true });
+      const edited = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.annotation-overlay[aria-label="Edit annotation"] .annotation-text')?.value`, returnByValue: true });
       if (!edited.result?.value) throw new Error('Annotation edit capture did not open a populated editor');
     }
 

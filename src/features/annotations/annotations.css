@@ -1,3 +1,5 @@
+:root { --milestone-input-border:var(--line-strong); --annotation-input-border:var(--contrast); }
+:root[data-theme=dark] { --annotation-input-border:#fff; }
 :root { --annotation-bookmark-bottom:var(--theater-action-gap, 8px); --annotation-color: #ffc629; --annotation-danger: #c73535; --annotation-preview-height: 42vh; --annotation-sheet-width: 720px; --annotation-list-height: 40vh; --annotation-message-width: 85%; --annotation-action-font-size: var(--body-font-size); }
 .frame-annotation-bookmark { margin-right:auto; align-self:flex-end; overflow:hidden; margin-bottom:calc(-1 * var(--theater-action-gap)); padding-top:0; }
 .annotation-tag { display:flex; align-items:center; gap:8px; background:var(--annotation-color); color:var(--annotation-ink); padding:9px 16px var(--annotation-bookmark-bottom, 20px); border-radius:999px; transform:translateY(110%); transition:transform 280ms ease; }
@@ -14,8 +16,8 @@
 .annotation-overlay .annotation-sheet h2 { display:flex; gap:var(--row-size-unit); align-items:center; margin:0; font-size:var(--row-title-size); font-weight:var(--compact-title-weight); }
 .annotation-preview { display:block; width:100%; max-height:var(--annotation-preview-height); object-fit:contain; background:var(--paper); border:1px solid var(--line); border-radius:var(--surface-radius); animation:annotation-content-in var(--annotation-enter-ms) ease var(--annotation-frame-delay) both; }
 .annotation-sheet form { margin-top:var(--row-padding-inline); }
-.annotation-sheet textarea { display:block; width:100%; min-height:calc(var(--base-control-height) * 3); resize:vertical; padding:calc(var(--row-padding-inline) * .375) calc(var(--row-padding-inline) / 2); border:1px solid var(--line-strong); border-radius:var(--control-radius); background:var(--paper); color:var(--ink); font:var(--body-font-size)/var(--message-line-height) var(--sans); }
-.annotation-sheet textarea:focus { outline:none; box-shadow:inset 0 0 0 1px var(--line-strong); }
+.annotation-sheet .annotation-text { display:block; width:100%; min-height:var(--base-control-height); padding:calc(var(--row-padding-inline) * .375) 0; border:0; border-bottom:1px solid var(--annotation-input-border); border-radius:0; background:var(--paper); color:var(--ink); font:var(--body-font-size)/var(--message-line-height) var(--sans); }
+.annotation-sheet .annotation-text:focus { outline:none; box-shadow:0 1px 0 var(--annotation-input-border); }
 .annotation-form-actions { display:flex; align-items:center; justify-content:space-between; gap:var(--row-size-unit); flex-wrap:wrap; margin-top:calc(var(--row-size-unit) * 3); }
 .annotation-form-actions label,.annotation-form-actions>div { display:flex; align-items:center; gap:calc(var(--row-size-unit) * 2); }
 .annotation-form-actions > .annotation-submit-actions { margin-left:auto; justify-content:flex-end; flex-wrap:wrap; }
@@ -50,8 +52,8 @@
 .annotation-todo-context { padding:12px; border:1px solid var(--mw-line); white-space:pre-wrap; max-height:160px; overflow:auto; }
 @media(prefers-reduced-motion:reduce) { .annotation-tag { transition:none; } }
 
-.annotation-sheet textarea { box-sizing:border-box;max-width:100%;max-height:30vh; }
-.mw-app .annotation-sheet textarea:focus-visible, .annotation-sheet textarea:focus-visible { outline:none;box-shadow:inset 0 0 0 1px var(--line-strong);border-color:var(--line-strong); }
+.annotation-sheet .annotation-text { box-sizing:border-box;max-width:100%; }
+.mw-app .annotation-sheet .annotation-text:focus-visible, .annotation-sheet .annotation-text:focus-visible { outline:none;box-shadow:0 1px 0 var(--annotation-input-border);border-color:var(--annotation-input-border); }
 
 .workspace .frame-annotation-bookmark .annotation-tag { height:auto; padding:var(--annotation-pill-padding); }
 

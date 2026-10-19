@@ -7,7 +7,7 @@ import { multiplyIntro } from './landing-multiply';
 import { impactIntro } from './landing-impact';
 import { flattenIntro, unfoldIntro } from './landing-trials';
 import { createLandingStage } from './landing-stage';
-import { LogomarkSymbol } from '../../components/LogomarkSymbol';
+import { Logomark, logomarkShapeSelector } from '../../components/Logomark';
 import { setStartingWorkState } from '../../shared/work-state';
 
 const geometry = logoGeometry(logoShapePart, logoShape);
@@ -19,7 +19,7 @@ export function LandingPage() {
   const [phase, setPhase] = useState<LandingPhase>('playing');
   const rootRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const symbolRef = useRef<SVGSVGElement>(null);
+  const brandRef = useRef<HTMLSpanElement>(null);
   const stageRef = useRef<ReturnType<typeof createLandingStage>>(null);
 
   useEffect(() => {
@@ -28,7 +28,8 @@ export function LandingPage() {
     const stage = createLandingStage({
       canvas, theme:root, geometry, intro, onPhase:setPhase,
       target:() => {
-        const box = symbolRef.current?.getBoundingClientRect(), frame = canvas.getBoundingClientRect();
+        // The intro lands on the shape half of the logomark.
+        const box = brandRef.current?.querySelector(logomarkShapeSelector)?.getBoundingClientRect(), frame = canvas.getBoundingClientRect();
         return box ? { x:box.left - frame.left, y:box.top - frame.top, width:box.width, height:box.height } : null;
       },
     });
@@ -46,10 +47,7 @@ export function LandingPage() {
     <canvas ref={canvasRef} className="landing-stage" aria-hidden="true"/>
     <div className="landing-scrim" aria-hidden="true"/>
     <div className="landing-content">
-      <div className="landing-brand logomark">
-        <LogomarkSymbol ref={symbolRef} className="landing-symbol"/>
-        <strong>verso</strong>
-      </div>
+      <h1 className="landing-brand"><Logomark ref={brandRef} className="landing-logomark"/></h1>
       {/* Shared design-system buttons: primary for the sample, secondary for an empty (0% work state) project. */}
       <div className="landing-actions">
         <a className="mw-button primary landing-open" href={import.meta.env.BASE_URL} onClick={() => setStartingWorkState(1)}>Open sample project</a>

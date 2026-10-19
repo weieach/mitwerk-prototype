@@ -15,7 +15,7 @@ export function MilestoneEditor({ value, onSave, onCancel, children, compactFoot
   }
   return <form className="idea-editor" onSubmit={event => { event.preventDefault(); if (draft.trim()) save(draft.trim()); }}>
     <label htmlFor={id}>Milestone</label>
-    <textarea id={id} autoFocus rows={3} value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); onCancel(); } }}/>
+    <input type="text" id={id} autoFocus value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); onCancel(); } }}/>
     <div className={compactFooter ? 'milestone-editor-footer' : undefined}>
       {children}
       <div className="milestone-editor-actions">{value && <button type="button" className="milestone-remove" aria-label="Remove milestone" title="Remove milestone" onClick={() => save('')}><PhosphorIcon name="trash"/></button>}<button type="button" onClick={onCancel}>Cancel</button><button type="submit" disabled={!draft.trim()}>Save milestone</button></div>

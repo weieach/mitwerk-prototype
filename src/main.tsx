@@ -7,6 +7,7 @@ import './index.css';
 import './control-tokens.css';
 import './features/workbench/workbench-system.css';
 import './features/workbench/workspace-layout.css';
+import './shared/edit-fields.css';
 import { applyTheme, savedTheme } from './shared/theme';
 import { installTypeStudio } from './shared/type-studio';
 import { installFeaturePalette } from './shared/palette';

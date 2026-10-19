@@ -486,17 +486,18 @@
 :root { --brand-padding-inline:10px; --zoom-scale-min-width:64px; }
 
 :root {
-  /* Logomarks (shape + name): gap and shape height per 1em of the name, taken from the site header (15px name, 9.2px gap, 17.6px shape). */
-  --logomark-gap:.613em;
-  --logomark-symbol-height:1.173em;
+  /* The logomark SVG's height per 1em of the surrounding type (header: brand role, 15px → 21.1px tall, a 17.6px shape). */
+  --logomark-height:1.408em;
+  /* The shape's width (96 units) per logomark height (144 units), for shape-only layouts. */
+  --logomark-shape-ratio:calc(96 / 144);
 }
-.logomark { display:flex; align-items:center; gap:var(--logomark-gap); color:var(--logomark-ink); }
+.logomark { display:inline-flex; align-items:center; flex:none; line-height:0; color:var(--logomark-ink); }
+.logomark > svg { display:block; flex:none; height:var(--logomark-height); width:auto; }
 /* Logomarks are white in dark mode and ink in light mode. */
 :root { --logomark-ink:var(--ink); }
 /* Primary buttons hover by easing their own fill slightly toward the page, keeping the label's contrast. */
 .mw-app { --mw-accent-hover:color-mix(in srgb, var(--mw-accent) 86%, var(--mw-page)); }
 :root[data-theme=dark] { --logomark-ink:#fff; }
-.logomark-symbol { display:block; flex:none; height:var(--logomark-symbol-height); width:auto; overflow:visible; }
 
 /* Site header view tags (from mavix237's design-system branch). */
 :root { --view-tag-fade:.15s; --view-tag-radius:6px; --view-tag-tint:10%; --view-tag-ink:var(--accent); }

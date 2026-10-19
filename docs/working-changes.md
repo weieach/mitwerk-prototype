@@ -454,3 +454,39 @@ Changes that are made but not yet committed. The user decides when to commit and
 - `src/control-tokens.css`, `src/shared/type-studio.ts`: `--logomark-ink` (white in dark mode, ink in light) for the shape and the header name.
 - `src/features/workbench/workbench.css`, `control-tokens.css`: design-system primary hover uses `--mw-accent-hover` (fill eased 14% toward the page) instead of muted gray — applies to every primary button.
 - `docs/design-system-rules.md`: rules updated.
+
+## 2026-10-18 · prompt #476 — milestone / to-do fields are single-line inputs
+
+- `src/features/version-tree/MilestoneControls.tsx`, `src/features/annotations/FrameAnnotations.tsx` (`.annotation-text`), `src/features/workbench/EditableTodoText.tsx`, `Workbench.tsx` (Edit to-do dialog): `<textarea>` → `<input type="text">`.
+- `src/index.css`, `src/features/annotations/annotations.css`, `src/features/workbench/workspace-layout.css`, `workbench-system.css`: styles target the inputs at the shared control height; resize grips and textarea-only heights / `field-sizing` removed.
+- `scripts/screenshot-progress.mjs`: capture readiness checks look for the inputs.
+- `docs/design-system-rules.md`: field rule.
+
+
+## 2026-10-18 · prompt #477 · Milestone editor layout and commit eligibility
+
+- `src/index.css`, `annotations.css`: left-align milestone actions, strengthen inline milestone borders, and give annotation inputs a contrast underline with no inline padding; focused state stays underline-only.
+- `annotation-context.ts`, `IterationGallery.tsx`, `FrameAnnotations.tsx`: derive latest prompt identity from full displayed history and gate the optional commit checkbox; explicitly allow the chat version-card milestone route.
+- `docs/design-system-rules.md`: document shared rules. Inline annotation images have no local source paths.
+- `scripts/screenshot-progress.mjs`: add explicit milestone-editor and annotation-kind capture flags to record both edited surfaces without changing the logged request.
+- Validation: TypeScript, script syntax, and diff checks pass. Chrome verifies historical/latest/chat-card checkbox eligibility, left-aligned actions, the stronger inline border, and a white bottom-only annotation border with zero inline padding.
+
+
+## 2026-10-18 · prompt #479 · Shared thin editing underlines
+
+- `src/shared/edit-fields.css`, `src/main.tsx`: apply a shared 0.5px inset hairline to annotation, Idea stream milestone, and to-do editing fields; remove full borders/inline padding and avoid doubling the line on focus.
+- `docs/design-system-rules.md`: record the superseding field rule. The requested #478 was taken by a concurrent logomark capture before this capture ran; use #479 without overwriting it. Inline annotation image has no local source path.
+
+## 2026-10-18 · prompt #478 — single logomark SVG
+
+- `src/assets/verso-logomark.svg` (new): the user's `final-logomark.svg` with `currentColor` fills and `data-logomark-shape` / `data-logomark-name` hooks. The root file is left in place.
+- `src/components/Logomark.tsx` (new; replaces `LogomarkSymbol.tsx`): renders the SVG; used by `BrandMenu.tsx` (header) and `LandingPage.tsx` (splash, which now targets the shape's bounds).
+- `src/control-tokens.css`, `workspace-layout.css`: `--logomark-height` (1.408em), `--logomark-shape-ratio`; narrow header clips to the shape; splash reveal animates the shape and name groups; removed the gap/shape tokens and `strong`-based rules.
+- `src/assets/logo-shape.svg`, `logo-shape-part.svg`, `public/favicon.svg`: the new shape; `landing-impact.ts` / `landing-trials.ts` `depthStep` 2.9 → 3.2 so piled quads keep their gap; `tests/landing-intro.test.ts` geometry expectations updated.
+- `src/shared/type-studio.ts`: the `brand` role targets the header logomark (its size scales the SVG).
+- `docs/design-system-rules.md`: logomark rule rewritten.
+- Validation: TypeScript and diff checks pass. Chrome confirms zero surrounding borders/inline padding and matching 0.5px inset underlines on the focused annotation and Idea stream fields.
+
+## 2026-10-18 · prompt #480 — updated logomark file
+
+- `src/assets/verso-logomark.svg`: regenerated from the replaced `final-logomark.svg` (same shape; the name starts 20 units further right, viewBox 438 × 144). Shape geometry, favicon and sizing tokens unchanged.

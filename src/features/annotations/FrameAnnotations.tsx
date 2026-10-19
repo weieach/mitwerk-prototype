@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { PhosphorIcon } from '../../components/PhosphorIcon';
 import { MilestoneCommitOption } from './MilestoneCommitOption';
+import { LatestPromptIdContext } from './annotation-context';
 import { MilestoneTrophy } from './MilestoneTrophy';
 import { captureMilestoneKey, milestoneStorageKey, parseMilestones } from '../version-tree/idea-stream';
 import { galleryTokens } from '../iteration-gallery/tokens';
@@ -65,7 +66,9 @@ export function FrameAnnotations({ frame, active, onOpen, color, milestone = '',
   </div>;
 }
 
-export function AnnotationOverlay({ frame, container, onClose, onReturn = onClose, milestoneOnly = false, startNew = false }: { milestoneOnly?: boolean; startNew?: boolean; frame: AnnotationFrame; container: HTMLElement; onClose: () => void; onReturn?: () => void }) {
+export function AnnotationOverlay({ frame, container, onClose, onReturn = onClose, milestoneOnly = false, startNew = false, fromChatVersionCard = false }: { fromChatVersionCard?: boolean; milestoneOnly?: boolean; startNew?: boolean; frame: AnnotationFrame; container: HTMLElement; onClose: () => void; onReturn?: () => void }) {
+  const latestPromptId = useContext(LatestPromptIdContext);
+  const canCommit = fromChatVersionCard || (frame.kind === 'prompt' && frame.id === latestPromptId);
   const notes = useAnnotations().filter(note => note.frame.id === frame.id);
   const [editing, setEditing] = useState<FrameAnnotation | 'new' | null>(() => milestoneOnly ? notes.find(note => note.kind === 'milestone') ?? 'new' : notes.length && !startNew ? null : 'new');
   const [text, setText] = useState(() => {
@@ -89,7 +92,7 @@ export function AnnotationOverlay({ frame, container, onClose, onReturn = onClos
   }
 
   const dialog = useRef<HTMLDialogElement>(null);
-  const textarea = useRef<HTMLTextAreaElement>(null);
+  const textarea = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const element = dialog.current!;
@@ -147,12 +150,12 @@ export function AnnotationOverlay({ frame, container, onClose, onReturn = onClos
       <header><h2><PhosphorIcon name="chat-circle-dots" size="var(--row-title-size)"/>{title}</h2><button className="icon-button" aria-label="Close annotations and return to theater" onClick={() => close(onReturn)}><PhosphorIcon name="x" size="var(--row-title-size)"/></button></header>
       <img className="annotation-preview" src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`Frame ${frame.number}: ${frame.summary}`}/>
       {editing ? <form onSubmit={event => { event.preventDefault(); save(); }}>
-        <textarea ref={textarea} aria-label={milestoneOnly ? 'Milestone' : 'Annotation'} value={text} onChange={event => setText(event.target.value)} placeholder={milestoneOnly ? 'Describe your milestone…' : 'Write a note or a prompt for your agent to work on later…'} required/>
-        <div className="annotation-form-actions">{milestoneOnly ? <MilestoneCommitOption/> : <fieldset className="annotation-kind-select"><legend className="visually-hidden">Annotation type</legend>
+        <input type="text" ref={textarea} className="annotation-text" aria-label={milestoneOnly ? 'Milestone' : 'Annotation'} value={text} onChange={event => setText(event.target.value)} placeholder={milestoneOnly ? 'Describe your milestone…' : 'Write a note or a prompt for your agent to work on later…'} required/>
+        <div className="annotation-form-actions">{milestoneOnly ? (canCommit && <MilestoneCommitOption/>) : <fieldset className="annotation-kind-select"><legend className="visually-hidden">Annotation type</legend>
           {(['todo', 'milestone'] as const).map(option => <label key={option}><input type="radio" name="annotation-kind" checked={kind === option} onChange={() => setKind(option)}/>{option === 'todo' ? 'To-do' : 'Milestone'}</label>)}
           {editing !== 'new' && !editing.todo && (!editing.kind || editing.kind === 'note') && <label><input type="radio" name="annotation-kind" checked={kind === 'note'} onChange={() => setKind('note')}/>Note</label>}
         </fieldset>}<div className="annotation-submit-actions">
-          {!milestoneOnly && kind === 'milestone' && <MilestoneCommitOption/>}
+          {!milestoneOnly && kind === 'milestone' && canCommit && <MilestoneCommitOption/>}
           {milestoneOnly && <button type="button" className="mw-button" onClick={() => close()}>Cancel</button>}
           {!milestoneOnly && editing !== 'new' && <button type="button" className="annotation-delete" onClick={remove}>Delete</button>}
           <button type="submit" className="mw-button primary annotation-save" disabled={!text.trim()}>{kind === 'milestone' ? 'Save milestone' : todo ? 'Save as to-do' : 'Save as note'}</button>
