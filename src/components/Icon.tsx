@@ -3,6 +3,7 @@ import { PhosphorIcon, FullscreenIcon } from './PhosphorIcon';
 
 const names = {
   info: 'info',
+  download: 'download-simple',
   globe: 'globe',
   branch: 'git-branch',
   commit: 'git-commit',

@@ -56,7 +56,7 @@ export function AlbumView({ simulating = false, extent, framePickerSlot, onSelec
         labels: labels => axisLabels.current?.update(labels),
       });
     } catch { setError('3D rendering is unavailable in this browser. You can still choose and open saved frames below.'); }
-    callbacks.current.onCamera?.({ zoom: direction => scene.current?.zoomBy(direction), focus: (id, complete) => { if (scene.current) scene.current.focusFrame(id, complete); else complete(); }, center: () => scene.current?.center(), reset: () => scene.current?.reset(), top: () => scene.current?.top(), orbit: (id, target, ready, complete) => scene.current?.beginTheaterOrbit(id, target, ready, complete) ?? null });
+    callbacks.current.onCamera?.({ zoom: direction => scene.current?.zoomBy(direction), focus: (id, complete) => { if (scene.current) scene.current.focusFrame(id, complete); else complete(); }, center: () => scene.current?.center(), arrive: () => scene.current?.replayLatestArrival(), reset: () => scene.current?.reset(), top: () => scene.current?.top(), orbit: (id, target, ready, complete) => scene.current?.beginTheaterOrbit(id, target, ready, complete) ?? null });
     return () => { callbacks.current.onCamera?.(null); scene.current?.dispose(); scene.current = null; };
   }, []);
   useEffect(() => {
@@ -105,7 +105,7 @@ export function AlbumView({ simulating = false, extent, framePickerSlot, onSelec
       {hovered && !tokenView && !turning && !returning && !hidden && <div className="album-prompt-label"
         style={{top:`${t.promptLabel.topPercent}%`,fontSize:t.promptLabel.fontSize,maxWidth:`calc(100% - ${t.promptLabel.edgeGap * 2}px)`}}>
         {hovered.frame.number !== null && <div className="album-prompt-number">{hovered.frame.kind === 'push' ? 'Push' : 'Prompt'} #{hovered.frame.number}</div>}
-        <div>{galleryPromptLabel(hovered.frame.fullPrompt ?? hovered.frame.summary)}</div>
+        <div>{galleryPromptLabel(hovered.frame.fullPrompt ?? hovered.frame.commitMessage ?? hovered.frame.summary)}</div>
       </div>}
       {rangeStats && <span className="album-range-stats" title={rangeStats}>{rangeStats}</span>}
       <div className="album-navigation-help"><InfoTooltip label="Gallery navigation help">{tokenView ? 'Drag to pan, Scroll to zoom, Exit to rotate the gallery' : 'Drag to rotate, Scroll to zoom, Right-drag to pan, Click a frame to play'}</InfoTooltip></div>

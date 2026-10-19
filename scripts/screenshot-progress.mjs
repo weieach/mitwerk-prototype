@@ -558,6 +558,9 @@ function wantsLiveCapture(prompt) { return argValue('gallery-view') === 'live' |
 function screenshotUrl(prompt = '') {
   const target = new URL(url);
   target.searchParams.set('screenshot', '1');
+  if (/milestone (?:play )?mode/i.test(prompt)) target.searchParams.set('playUnit', 'milestone');
+  if (/\bexport overlay\b/i.test(prompt)) target.searchParams.set('exportOpen', '1');
+  if (/\bcontrol(?:s)? (?:overlay|panel)\b/i.test(prompt)) target.searchParams.set('controlsOpen', '1');
   const workState = workStateCapture(prompt);
   if (workState) target.searchParams.set('workState', workState);
   if (wantsLandingCapture(prompt)) { target.search = '?screenshot=1&page=landing'; if (wantsDarkCapture(prompt)) target.searchParams.set('theme', 'dark'); else if (wantsLightCapture(prompt)) target.searchParams.set('theme', 'light'); return target.href; }
@@ -805,7 +808,7 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
         if (!expanded.result?.value) { await delay(100); continue; }
       }
       if (hasFlag('brand-menu')) {
-        await cdp('Runtime.evaluate', { expression: `(() => { const trigger = document.querySelector('button[aria-label="MitWerk menu"]'); if (trigger?.getAttribute('aria-expanded') !== 'true') trigger?.click(); })()` });
+        await cdp('Runtime.evaluate', { expression: `(() => { const trigger = document.querySelector('button[aria-label="verso menu"]'); if (trigger?.getAttribute('aria-expanded') !== 'true') trigger?.click(); })()` });
         const menu = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.brand-dropdown:popover-open')`, returnByValue: true });
         if (!menu.result?.value) { await delay(100); continue; }
       }
@@ -896,6 +899,12 @@ async function capture(chrome, outFile, prompt = '') {
     const ws = new WebSocket(page.webSocketDebuggerUrl);
     await waitForSocket(ws);
     const cdp = createCdp(ws);
+    if (argValue('viewport-width') || argValue('viewport-height')) {
+      const width = Number(argValue('viewport-width', '1440'));
+      const height = Number(argValue('viewport-height', '900'));
+      if (![width, height].every(value => Number.isInteger(value) && value >= 320 && value <= 7680)) throw new Error('Capture viewport dimensions must be integers between 320 and 7680');
+      await cdp('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 2, mobile: false });
+    }
     await waitForScreenshotReady(cdp, (wantsLandingCapture(prompt) || hasFlag('milestone-invite')) ? 20000 : (wantsPrototypeCapture(prompt) || wantsLiveCapture(prompt)) ? 60000 : 10000, prompt);
     await cdp('Runtime.evaluate', { expression: 'document.fonts.ready.then(() => true)', awaitPromise: true, returnByValue: true });
     if (/edit annotation overlay/i.test(prompt)) {
@@ -979,6 +988,25 @@ async function capture(chrome, outFile, prompt = '') {
         await delay(50);
       }
       if (!tipOpen) throw new Error('Gallery info tip did not open');
+    }
+    if (hasFlag('confetti') || /\bc chat (?:and|&) playback\b[^.\n]*\bconfetti\b/i.test(prompt)) {
+      const burst = await cdp('Runtime.evaluate', { expression: `new Promise(resolve => {
+        const button = document.querySelector('.annotation-milestone-icon:not(:disabled)');
+        if (!button) { resolve(false); return; }
+        button.click();
+        const start = performance.now();
+        const freeze = () => {
+          const animations = document.querySelector('.milestone-confetti')?.getAnimations({subtree:true}) ?? [];
+          if (animations.length) { animations.forEach(animation => { animation.pause(); animation.currentTime = 450; }); resolve(true); }
+          else if (performance.now() - start < 1000) requestAnimationFrame(freeze);
+          else resolve(false);
+        };
+        requestAnimationFrame(freeze);
+      })`, awaitPromise: true, returnByValue: true });
+      if (!burst.result?.value) {
+        const state = await cdp('Runtime.evaluate', { expression: `JSON.stringify({url:location.href, trophy:document.querySelector('.annotation-milestone-icon')?.outerHTML, reduced:matchMedia('(prefers-reduced-motion: reduce)').matches, confetti:!!document.querySelector('.milestone-confetti')})`, returnByValue:true });
+        throw new Error('Confetti capture needs an active milestone trophy: ' + (state.result?.value ?? JSON.stringify(burst)));
+      }
     }
     const shot = await cdp('Page.captureScreenshot', { format: 'png', fromSurface: true });
     writeFileSync(outFile, Buffer.from(shot.data, 'base64'));

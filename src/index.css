@@ -137,8 +137,7 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 @media (prefers-reduced-motion:reduce) { .idea-add { animation:none; } }
 .idea-command { margin-top: 10px; }
 .idea-command .node-details { max-height: 180px; overflow: auto; }
-.idea-editor { padding: 12px; background: var(--paper); border: 1px solid var(--line-strong); border-radius: var(--surface-radius); }
-.idea-card > .idea-editor, .idea-wip-action > .idea-editor { border-color:var(--route-color); }
+.idea-editor { padding:0; background:transparent; border:0; }
 .idea-editor label { display: block; margin-bottom: 8px; font-size: 12px; }
 .idea-editor textarea { box-sizing: border-box; width: 100%; resize: vertical; min-height: 70px; max-height: 150px; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); padding: 8px; }
 .idea-editor > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }

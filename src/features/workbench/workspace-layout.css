@@ -26,6 +26,11 @@
   --playback-action-height: 34px;
   --playback-annotation-fill: var(--line-strong);
   --playback-annotation-ink: var(--ink);
+  --playback-milestone-icon-width:40px;
+  --playback-milestone-chip-max-width:calc(50cqw - var(--playback-milestone-icon-width));
+  --playback-milestone-text-ink:#fff;
+  --playback-milestone-icon-size:16px;
+  --playback-annotation-chip-gap: 6px;
 }
 :root[data-theme=dark] { --workspace-background: var(--chrome); --panel-heading-divider: var(--line); }
 .mw-app { background: var(--workspace-background); }
@@ -94,9 +99,18 @@
 .workspace .gallery-footer .gallery-range > .row-select { flex:1; padding-inline:22px; }
 .workspace .gallery-footer :is(.gallery-range > .row-select, .panel-header-actions > button) { height:100%; }
 .workspace .gallery-footer :is(.panel-header-actions > button + button, .album-camera-actions) { border:0; }
-.workspace .theater-stage > .theater-frame-actions { margin-bottom:var(--playback-action-row-gap); min-height:0; border:0; align-items:center; gap:0; padding-right:0; flex-wrap:wrap; }
+.workspace .theater-stage > .theater-frame-actions { container-type:inline-size; margin-bottom:var(--playback-action-row-gap); min-height:0; border:0; align-items:center; gap:0; padding-right:0; flex-wrap:wrap; }
 .workspace .theater-frame-actions .frame-annotation-bookmark { align-self:center; margin:0 auto 0 0; display:flex; }
 .workspace .theater-frame-actions .annotation-tag { height:auto; min-height:0; padding:var(--annotation-pill-padding); border-radius:999px; transform:none; background:var(--playback-annotation-fill); color:var(--playback-annotation-ink); }
+/* A milestone joins a branch-colored trophy to a clipped reference-fill label, followed by the add chip. */
+.workspace .theater-frame-actions .frame-annotation-bookmark.has-milestone { align-items:center; gap:var(--playback-annotation-chip-gap); min-width:0; }
+.workspace .theater-frame-actions .annotation-tag.is-milestone { display:flex; align-items:stretch; gap:0; padding:0; height:var(--playback-action-height); background:transparent; min-width:0; overflow:hidden; opacity:1; }
+.workspace .theater-frame-actions .annotation-milestone-icon { --annotation-pill-icon-size:var(--playback-milestone-icon-size); display:flex; align-items:center; justify-content:center; flex:none; width:var(--playback-milestone-icon-width); padding:0; border:0; border-radius:0; background:var(--milestone-chip-color); color:var(--milestone-chip-ink); opacity:1; }
+.workspace .theater-frame-actions .annotation-milestone-mask { display:block; padding:0; border:0; border-radius:0; text-align:left; flex:none; height:100%; overflow:hidden; background:var(--reference-chip-fill); color:var(--playback-milestone-text-ink); opacity:1; transition:width var(--gallery-transition) ease; }
+.workspace .theater-frame-actions .annotation-tag.is-milestone .annotation-milestone-text { display:flex; align-items:center; box-sizing:border-box; width:max-content; height:100%; padding:var(--annotation-pill-padding); opacity:1; max-width:var(--playback-milestone-chip-max-width); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transform:translateY(100%); transition:transform var(--gallery-transition) ease; }
+.workspace .theater-frame-actions .annotation-milestone-copy { min-width:0; overflow:hidden; text-overflow:ellipsis; opacity:1; }
+.workspace .theater-frame-actions .annotation-tag.is-milestone.is-expanded .annotation-milestone-text { transform:translateY(0); }
+.workspace .theater-frame-actions .annotation-tag.is-add { aspect-ratio:1; justify-content:center; padding-inline:0; height:var(--playback-action-height); }
 .workspace .theater-frame-actions .annotation-tag .ui-icon { width:var(--annotation-pill-icon-size); height:var(--annotation-pill-icon-size); font-size:var(--annotation-pill-icon-size); }
 .workspace .theater-action-buttons { align-items:center; padding-left:8px; gap:8px var(--theater-action-buttons-gap, 24px); }
 .workspace .theater-action-buttons .theater-text-action { font-size:10px; min-height:var(--playback-action-height); }
@@ -166,6 +180,11 @@
 .mw-app .conversation-inner { width:100%; max-width:686px; margin:0 auto; padding:20px var(--panel-heading-padding); }
 .mw-app .mw-message { margin-bottom:var(--message-gap); }
 .mw-app .mw-message:last-child { margin-bottom:0; }
+/* "Preparing your response" fades in while sliding up inside a mask. */
+.mw-app .run-progress-mask { display:inline-flex; overflow:hidden; }
+.mw-app .run-progress-line { display:inline-flex; align-items:center; gap:8px; animation:run-progress-in var(--run-progress-enter-ms) cubic-bezier(.2,.7,.2,1) both; }
+@keyframes run-progress-in { from { opacity:0; transform:translateY(100%); } to { opacity:1; transform:none; } }
+@media (prefers-reduced-motion:reduce) { .mw-app .run-progress-line { animation:none; } }
 .mw-app .from-user { max-width:min(340px,85%); }
 .mw-app .message-content { padding-left:0; font-size:var(--message-font-size); }
 .mw-app .mw-message:not(.from-user) .message-content { max-width:var(--message-max-width); }
@@ -391,7 +410,7 @@
 .workspace .theater-frame-actions .frame-chat-action .ui-icon { width:var(--annotation-pill-icon-size); height:var(--annotation-pill-icon-size); font-size:var(--annotation-pill-icon-size); }
 .theater-top-toolbar[hidden] { display:none; }
 .workspace .playback-controls { column-gap:0; }
-.workspace .playback-end-controls { justify-self:end; display:flex; align-items:center; gap:var(--playback-end-gap); }
+.workspace .playback-end-controls { justify-self:end; display:flex; align-items:center; gap:calc(var(--playback-end-gap) * var(--playback-end-gap-scale)); }
 .workspace .playback-end-controls .playback-options { display:contents; }
 .workspace .playback-end-controls .row-select { flex:none; width:auto; padding-inline:6px; }
 .mw-app .message-version-output > :is(.idea-add, .milestone-not-yet) { display:inline-flex; align-items:center; justify-content:center; margin-top:var(--message-milestone-action-gap); min-width:var(--message-milestone-action-width); font:var(--control-font-size)/1.25 var(--sans); height:var(--base-control-height); min-height:var(--base-control-height); padding:0 12px; }
@@ -835,3 +854,5 @@
 .mw-app .workspace-links > button[aria-pressed=true], .mw-app .workspace-links > button[aria-pressed=true]:hover { color:var(--ink); }
 .workspace-links > button .panel-feature-icon { color:inherit; transition:color var(--view-tag-fade); }
 .workspace-links > button[aria-pressed=true] .panel-feature-icon { color:var(--panel-feature-color); }
+
+.workspace .theater-frame-actions .annotation-milestone-icon .milestone-trophy-glyph { display:flex; align-items:center; justify-content:center; opacity:1; }

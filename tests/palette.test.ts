@@ -29,10 +29,17 @@ test('the palette stylesheet keys accents and milestone gradient stops to the th
   assert.match(dark, /--milestone-invite-dock:color-mix\(in srgb, var\(--mw-dock\) var\(--milestone-invite-color-strength\), black\)/);
   assert.match(light, /--milestone-invite-dock:color-mix\(in srgb, var\(--mw-dock\) \d+%, white\)/);
   assert.match(light, /--milestone-invite-ink:#191a1b/);
-  assert.deepEqual(inviteGradientStops, featureNames.map(name => `var(--milestone-invite-${name})`));
+  // Stops run through adjacent hues so neighbors blend cleanly; every accent appears once.
+  assert.deepEqual([...inviteGradientStops].sort(), featureNames.map(name => `var(--milestone-invite-${name})`).sort());
 });
 
 test('merged-branch accents stay paler for theme-following palette references', () => {
   assert.equal(palerAccent('var(--mw-dock)'), 'color-mix(in srgb, var(--mw-dock), white 45%)');
   assert.equal(palerAccent('var(--contrast)'), 'var(--contrast)');
+});
+
+test('sample replies print word by word at each word boundary', async () => {
+  const { printStops } = await import('../src/features/workbench/print-text.ts');
+  const text = 'This sample project.\n\nNew frames appear';
+  assert.deepEqual(printStops(text).map(stop => text.slice(0, stop)), ['This', 'This sample', 'This sample project.', 'This sample project.\n\nNew', 'This sample project.\n\nNew frames', text]);
 });

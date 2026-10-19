@@ -61,6 +61,7 @@ export class AlbumScene {
   /** Frames and blocks easing from their previous placement (or from nothing) after a data change. */
   private growth: { object: THREE.Object3D; base: THREE.Vector3; offset: THREE.Vector3; scaleFrom: THREE.Vector3; start: number }[] = [];
   private growing = false;
+  private arrival: { start: number; rise: number; items: { object: THREE.Object3D; base: number }[]; materials: { material: THREE.Material; opacity: number }[] } | null = null;
   private retired: THREE.Object3D[] = [];
   private ticks = new Map<string, THREE.Line>();
   private rulerGuides: { slot: string; lines: THREE.Line[] }[] = [];
@@ -188,6 +189,14 @@ export class AlbumScene {
       frame.group.position.y += (target - frame.group.position.y) * blend;
       if (Math.abs(target - frame.group.position.y) < .05) frame.group.position.y = target; else moving = true;
     }
+    if (this.arrival) {
+      const arrival = this.arrival;
+      const elapsed = performance.now() - arrival.start - (this.reducedMotion ? 0 : t.arrival.holdMs);
+      const { eased, complete } = transitionProgress(Math.max(0, elapsed), this.reducedMotion ? 0 : t.arrival.durationMs);
+      for (const item of arrival.items) item.object.position.y = item.base + arrival.rise * (1 - eased);
+      for (const item of arrival.materials) { item.material.transparent = true; item.material.opacity = item.opacity * eased; }
+      if (complete) this.finishArrival(); else moving = true;
+    }
     for (const bookmark of this.bookmarks) {
       const target = bookmark.userData.restY + (bookmark.userData.frameId === this.hovered ? t.annotations.hoverLift : 0);
       bookmark.position.y += (target - bookmark.position.y) * (this.reducedMotion ? 1 : blend);
@@ -211,6 +220,27 @@ export class AlbumScene {
     this.host.dataset.inspectionReady = String(!!hovered && this.textures.has(hovered.plane.frame.id) && hovered.group.position.y === t.hoverLift && (!edgePanArmed(this.edgeHoldMs) || this.lookSettled(hovered.plane)));
     if (moving) this.invalidate();
   };
+  /** Live-update demo: hide the newest active frame, then drop it in from half its height above while it fades in. */
+  replayLatestArrival() {
+    if (this.theaterTurn || !this.album) return;
+    const latest = this.album.planes.filter(plane => plane.active).at(-1);
+    const frame = latest && this.frames.get(latest.frame.id);
+    if (!frame) return;
+    this.finishArrival();
+    this.arrival = {
+      start: performance.now(), rise: frame.plane.height * t.arrival.rise,
+      items: [...frame.group.children].map(object => ({ object, base: object.position.y })),
+      materials: [frame.image.material, frame.outline].map(material => ({ material, opacity: material.opacity })),
+    };
+    this.invalidate();
+  }
+  private finishArrival() {
+    if (!this.arrival) return;
+    for (const item of this.arrival.items) item.object.position.y = item.base;
+    for (const item of this.arrival.materials) item.material.opacity = item.opacity;
+    this.arrival = null;
+  }
+
   turnToTheater(id: string, target: TheaterTarget, complete: () => void, freezeAt?: number, reverse = false, started?: () => void) {
     // Returning to the gallery lands on the camera the person left it with (same zoom scale).
     // Only a Playback opened without an album pose (e.g. a direct capture) falls back to Reset view.
@@ -833,6 +863,7 @@ export class AlbumScene {
   update(album: Album, versions: GalleryVersion[], representatives: string[], grow = false, simulating = false) {
     this.album = album;
     this.lastUpdate = [album, versions, representatives, grow, simulating];
+    this.finishArrival();
     const previous = new Map([...this.fades].map(([material, fade]) => [material.userData.fadeKey as string, fade.opacity]));
     const placed = grow ? this.placements() : null;
     this.clearContent(true);

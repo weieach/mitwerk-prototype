@@ -18,6 +18,8 @@
 .mw-sidebar { --sidebar-inline-padding: 12px; --sidebar-nav-pad-inline: 10px; --sidebar-nav-gap: 11px; width:var(--mw-sidebar-width); flex:none; display:flex; flex-direction:column; border-right:1px solid var(--mw-line); background:var(--sidebar); padding:var(--sidebar-top-padding) 0 0; overflow:hidden; }
 .sidebar-main { display:flex; flex-direction:column; gap:var(--sidebar-group-gap); flex:1; min-height:0; padding-inline:var(--sidebar-inline-padding); overflow-y:auto; }
 .workspace-logo { display:block; height:18px; width:auto; max-width:100%; object-fit:contain; object-position:left center; }
+/* The sidebar wordmark is live text: "verso", always lowercase, at the former logo's height. */
+.workspace-wordmark { height:auto; font-size:var(--sidebar-wordmark-size, 24px); line-height:18px; font-weight:var(--strong-font-weight); letter-spacing:-.03em; color:var(--mw-ink); }
 .mw-app[data-theme=dark] .workspace-logo { filter:invert(1); }
 .mw-brand { display:flex; align-items:center; gap:9px; padding:0 8px; margin-bottom:0; min-height:var(--header-row-height); }
 .mw-brand>.ui-icon { color:var(--mw-accent); flex:none; }

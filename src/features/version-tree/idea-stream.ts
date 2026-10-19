@@ -4,7 +4,7 @@ export type Milestones = Record<string, string>;
 export const milestoneStorageKey = 'mitwerk.idea-stream.milestones.v1';
 export const milestonesChangedEvent = 'mitwerk-milestones-changed';
 export function captureMilestoneKey(version: number) { return `capture-version-${version}`; }
-/** Initial content only. Resolve labels to stable IDs; layout never depends on these labels. */
+/** Initial content only. Prefer capture identities for new seeds; layout never depends on labels. */
 export const initialMilestones: Record<string, string> = {
   V1: 'Record progress as a version stream instead of Figma annotations',
   V4: 'Mirror real Git branching in the stream',
@@ -13,7 +13,16 @@ export const initialMilestones: Record<string, string> = {
   V13: 'Add the theater view with 2D/3D transitions',
   V18: 'Let users open a pushed version as a live prototype',
   V25: 'Build a chat workspace around the version tools',
+  // Nicole Wei: eefeb1f (Idea stream V37) and dbd64b2 (Idea stream V42).
+  'capture-version-36': 'Automatically publish saved frames to Vercel Blob',
+  'capture-version-41': 'Navigate prototype versions with consistent scaling and smooth panel switching',
 };
+
+/** A capture version's milestone text: saved value first (empty means deleted), then the seeded label. */
+export function versionMilestone(milestones: Milestones, version: number) {
+  const saved = milestones[captureMilestoneKey(version)];
+  return (saved ?? initialMilestones[captureMilestoneKey(version)] ?? initialMilestones[`V${version}`] ?? '').trim();
+}
 
 export function parseMilestones(raw: string | null): Milestones {
   try {
@@ -28,7 +37,7 @@ export function seedMilestones(nodes: VersionNode[], saved: Milestones): Milesto
   for (const node of nodes) {
     // An empty saved value is an intentional deletion, not an invitation to reseed.
     const key = milestoneIdentity(node);
-    const value = saved[key] ?? saved[node.id] ?? initialMilestones[node.label];
+    const value = saved[key] ?? saved[node.id] ?? initialMilestones[key] ?? initialMilestones[node.label];
     if (value !== undefined) { next[node.id] = value; next[key] = value; }
   }
   return next;

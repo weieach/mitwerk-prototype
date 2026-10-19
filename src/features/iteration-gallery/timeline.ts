@@ -3,15 +3,48 @@ import { galleryTokens as t } from './tokens.ts';
 
 export type TimelineInput = Pick<GalleryFrame, 'id' | 'version'> & { enabled?: boolean; branch?: string | null; kind?: GalleryFrame['kind'] };
 
-export type JumpScale = 'frame' | 'version';
-export const jumpMenuDelayMs = 500;
+/** Playback unit: prompt by prompt (`frame`), version by version, or milestone by milestone. */
+export type JumpScale = 'frame' | 'version' | 'milestone';
+export const jumpScales: { value: JumpScale; label: string }[] = [
+  { value: 'frame', label: 'Prompt by prompt' }, { value: 'version', label: 'Version by version' }, { value: 'milestone', label: 'By milestone' },
+];
+type JumpFrame = Pick<GalleryFrame, 'kind'> & { version?: number };
 
-/** Version jumps land on the nearest saved push in the requested direction. */
-export function adjacentTimelineIndex(frames: Pick<GalleryFrame, 'kind'>[], index: number, direction: -1 | 1, scale: JumpScale) {
+/** Version jumps land on the nearest saved push; milestone jumps on the nearest push of a version with a milestone. */
+export function adjacentTimelineIndex(frames: JumpFrame[], index: number, direction: -1 | 1, scale: JumpScale, hasMilestone: (version: number) => boolean = () => false) {
   if (!frames[index]) return null;
   if (scale === 'version') return adjacentPushIndex(frames, index, direction);
+  if (scale === 'milestone') {
+    for (let next = index + direction; next >= 0 && next < frames.length; next += direction) {
+      if (frames[next].kind === 'push' && frames[next].version !== undefined && hasMilestone(frames[next].version!)) return next;
+    }
+    return null;
+  }
   const next = index + direction;
   return next >= 0 && next < frames.length ? next : null;
+}
+
+/** First version or milestone target in the given direction, or -1. */
+export function firstJumpIndex(frames: JumpFrame[], scale: Exclude<JumpScale, 'frame'>, hasMilestone: (version: number) => boolean = () => false, direction: 1 | -1 = 1) {
+  const isTarget = (frame: JumpFrame) => frame.kind === 'push' && (scale === 'version' || (frame.version !== undefined && hasMilestone(frame.version)));
+  if (direction > 0) return frames.findIndex(isTarget);
+  const reversed = [...frames].reverse().findIndex(isTarget);
+  return reversed < 0 ? -1 : frames.length - 1 - reversed;
+}
+
+/** Autoplay by version or milestone: step between jump targets, honoring the loop mode at either end. */
+export function unitPlaybackStep(frames: JumpFrame[], index: number, direction: 1 | -1, scale: Exclude<JumpScale, 'frame'>, mode: 'once' | 'loop' | 'ping-pong', hasMilestone: (version: number) => boolean = () => false) {
+  const stop = { index, direction, playing: false };
+  const next = adjacentTimelineIndex(frames, index, direction, scale, hasMilestone);
+  if (next !== null) return { index: next, direction, playing: true };
+  if (mode === 'once') return stop;
+  if (mode === 'loop') {
+    // Wrap to the first target from the opposite end of the sequence.
+    const target = firstJumpIndex(frames, scale, hasMilestone, direction);
+    return target < 0 || target === index ? stop : { index: target, direction, playing: true };
+  }
+  const back = adjacentTimelineIndex(frames, index, direction > 0 ? -1 : 1, scale, hasMilestone);
+  return back === null ? stop : { index: back, direction: (direction > 0 ? -1 : 1) as 1 | -1, playing: true };
 }
 
 /** Fractions of the full sequence, including the full-width thumb when everything fits. */
@@ -30,9 +63,9 @@ export function timelineRangeScroll(versions: { enabled: boolean; start: number 
 }
 
 /** Share the available width between equal version slots and their push gutters. */
-export function fitTimeline(versionCount: number, availableWidth: number) {
+export function fitTimeline(versionCount: number, availableWidth: number, fitAll = false) {
   const slots = Math.max(1, versionCount);
-  const visibleSlots = Math.min(slots, t.timeline.visibleBlocks);
+  const visibleSlots = fitAll ? slots : Math.min(slots, t.timeline.visibleBlocks);
   const contentScale = slots / visibleSlots;
   const slotWidth = availableWidth > 0 ? availableWidth / visibleSlots : t.versionDepth;
   const gapWidth = Math.min(slotWidth * t.timeline.maxGapFraction,

@@ -1,7 +1,7 @@
 import { visualReferencePrompt } from '../src/shared/visual-reference-path.mjs';
 import { parsePromptLog } from '../src/shared/prompt-log.mjs';
 import { readTokenUsage } from './token-usage.ts';
-import { readGitHistory } from './git-history.ts';
+import { readGitHistory, readPushMessages } from './git-history.ts';
 import { createReadStream, existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { captureImageInfo } from './capture-image.mjs';
 import { join } from 'node:path';
@@ -34,9 +34,12 @@ export function readCaptureCatalog(root: string) {
       && metadata.number > Number(completedPrompt)) return [];
     try {
       const image = captureImageInfo(join(directory, filename));
-      return [{ ...metadata, fullPrompt: metadata.kind === 'prompt' ? prompts.get(metadata.number) : undefined, id: filename, filename, ...image, url: `gallery/images/${encodeURIComponent(filename)}` }];
+      return [{ ...metadata, fullPrompt: metadata.kind === 'prompt' ? prompts.get(metadata.number) : undefined, commitMessage: undefined as string | undefined, id: filename, filename, ...image, url: `gallery/images/${encodeURIComponent(filename)}` }];
     } catch { ignored++; return []; }
   });
+  // Push names come from their Git commits, not the length-limited capture filename.
+  const pushMessages = readPushMessages(root, frames.flatMap(frame => frame.kind === 'push' && frame.number !== null ? [{ number: frame.number, summary: frame.summary, timestamp: frame.timestamp }] : []));
+  for (const frame of frames) if (frame.kind === 'push' && frame.number !== null) frame.commitMessage = pushMessages.get(frame.number);
   const usage = readTokenUsage(root, frames.map(frame => frame.id));
   return { frames: frames.map(frame => ({ ...frame, tokenUsage: usage[frame.id] })), ignored, references: readVisualReferences(root) };
 }

@@ -1,6 +1,7 @@
 import type { RuntimeMode } from './EmbeddedPrototype';
 import { panelIcons } from '../../components/panel-icons';
 import { captureScreen } from '../../shared/capture-screens';
+import { galleryDemoUpdateEvent } from '../../shared/demo-events';
 import { createPortal } from 'react-dom';
 import { VersionPanelSwitch } from '../../components/VersionPanelSwitch';
 import { AnnotationOverlay } from '../annotations/FrameAnnotations';
@@ -49,6 +50,7 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
   const [milestoneFrame, setMilestoneFrame] = useState<GalleryFrame | null>(null);
   const [navigationKey, setNavigationKey] = useState(0);
   const [target, setTarget] = useState<TheaterTarget | null>(null);
+  const [exportSlot, setExportSlot] = useState<HTMLSpanElement | null>(null);
   const [framePickerSlot, setFramePickerSlot] = useState<HTMLDivElement | null>(null);
   const viewStack = useRef<HTMLDivElement>(null);
   const galleryRoot = useRef<HTMLElement>(null);
@@ -82,6 +84,12 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
     setReturnReady(false); setView('returning');
   }, [view, playbackOnly, onExitPlayback]);
   const camera = useRef<GalleryCamera | null>(null);
+  // A finished chat reply in this sample project demos a live update: the newest frame drops back into the gallery.
+  useEffect(() => {
+    const arrive = () => { if (view === 'album') camera.current?.arrive(); };
+    window.addEventListener(galleryDemoUpdateEvent, arrive);
+    return () => window.removeEventListener(galleryDemoUpdateEvent, arrive);
+  }, [view]);
 
 
 
@@ -124,7 +132,7 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
   const extent = useMemo(() => simulating && catalog ? versionsForScreen(buildVersions(catalog.frames), interfaceId) : undefined, [simulating, catalog, interfaceId]);
   const clock = simulated.now ?? now;
   // The simulator always shows all time, so earlier work never falls outside the range.
-  const range = simulating ? 'all' : chosenRange ?? defaultVersionRange(versions, clock);
+  const range = simulating ? 'all' : chosenRange ?? defaultVersionRange;
   const baseline = useMemo(() => referenceCapture(versions.flatMap(version => version.frames), t.theaterReference), [versions]);
   const visibleFrames = useMemo(() => versions.flatMap(version => (versionKeepsPush(version.frames) ? version.frames : version.frames.filter(frame => frame.kind !== 'push')).filter(frame => inRange(frame, range, clock))), [versions, range, clock]);
   const counts = useMemo(() => rangeCounts(versions, range, clock), [versions, range, clock]);
@@ -212,6 +220,7 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
       {view !== 'album' && view !== 'focusing' && <div className="gallery-range"><RowSelect label="Date range" align="center" value={range} onChange={value => { setRange(value as RangeKey); setNow(Date.now()); }} options={ranges}/></div>}
       <div className="gallery-frame-picker-slot" ref={setFramePickerSlot}/>
       {headerActions}</span>
+      <span className="playback-export-slot" ref={setExportSlot}/>
     </>}/>;
 
   // Only Live server exits on a surround click; saved prototypes require the explicit exit action.
@@ -229,7 +238,7 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
       : !versions.length ? <div className="gallery-empty">{simulating ? 'No versions yet.' : 'No saved frames found.'}</div>
       : <div className="gallery-view-stack" ref={viewStack}>
       {<><AlbumView focusing={view === 'focusing'} onSelectFrame={id => select(id, true)} framePickerSlot={framePickerSlot} rangeStats={catalog ? `${counts.versions}/${counts.versionTotal} versions${rangePromptLabel}` : 'Loading frames…'} onMotion={updateTimelineMotion} turning={view === 'turning'} returning={view === 'returning'} hidden={view === 'theater' || view === 'orbiting'} onReturnStarted={startReturn} theaterTarget={target} theaterId={selectedId} onTurnComplete={finishTurn} versions={versions} range={range} now={clock} simulating={simulating} extent={extent} onOpen={open} onZoom={setZoom} onCamera={api => { camera.current = api; }}/>{!visibleFrames.length && <div className="gallery-message">No frames in this range. Earlier versions remain visible in gray.</div>}</>}
-      {view !== 'album' && view !== 'focusing' && <div className="gallery-theater-layer" inert={view === 'turning' || view === 'returning'} aria-hidden={view === 'turning' || view === 'returning'}><TheaterView runtimeCatalog={allVersions.flatMap(version => version.frames)} liveRequestKey={liveRequestKey} onRuntimeChange={runtimeChanged} onPlaybackVersion={onPlaybackVersion} navigationKey={navigationKey} references={catalog?.references ?? []} baseline={baseline ?? t.viewportPresets[1]} frames={visibleFrames} catalog={versions.flatMap(version => version.frames)} range={range} now={clock} selectedId={selectedId} onSelect={select} onOrbit={(id, rect) => playbackOnly ? null : camera.current?.orbit(id, rect, () => { setSelectedId(id); setView('orbiting'); }, () => { setView('album'); setTarget(null); }) ?? null} onDismiss={exit} active={view === 'theater'}/></div>}
+      {view !== 'album' && view !== 'focusing' && <div className="gallery-theater-layer" inert={view === 'turning' || view === 'returning'} aria-hidden={view === 'turning' || view === 'returning'}><TheaterView onRangeChange={setRange} exportTarget={exportSlot} runtimeCatalog={allVersions.flatMap(version => version.frames)} liveRequestKey={liveRequestKey} onRuntimeChange={runtimeChanged} onPlaybackVersion={onPlaybackVersion} navigationKey={navigationKey} references={catalog?.references ?? []} baseline={baseline ?? t.viewportPresets[1]} frames={visibleFrames} catalog={versions.flatMap(version => version.frames)} range={range} now={clock} selectedId={selectedId} onSelect={select} onOrbit={(id, rect) => playbackOnly ? null : camera.current?.orbit(id, rect, () => { setSelectedId(id); setView('orbiting'); }, () => { setView('album'); setTarget(null); }) ?? null} onDismiss={exit} active={view === 'theater'}/></div>}
       </div>}
     <footer className="gallery-footer" aria-hidden={!!runtimeMode} inert={!!runtimeMode || view === 'turning' || view === 'returning' || view === 'orbiting'}>
       <TrackedInterface value={interfaceId} onChange={value => { setInterfaceId(value); setSelectedId(''); setView('album'); setTarget(null); }}/>

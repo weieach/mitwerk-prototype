@@ -1,14 +1,14 @@
 import { bindTimelineScrolling } from './timeline-scroll';
 import { TimelineScroller } from './TimelineScroller';
 import { usePlayheadMotion } from './usePlayheadMotion';
-import { formatVersion, inRange } from './model';
+import { formatVersion, galleryBranchPaint, inRange } from './model';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent, RefObject } from 'react';
 import type { GalleryFrame, RangeKey } from './model';
-import { buildTimeline, fitTimeline, timelineDisabledRegions, timelinePointerIndex, timelineRangeScroll } from './timeline';
+import { buildTimeline, fitTimeline, timelineDisabledRegions, timelinePointerIndex, timelineRangeScroll, type JumpScale } from './timeline';
 import { galleryTokens as t } from './tokens';
 
-export function PlaybackTimeline({ navigationKey, active, frames, catalog, range, now, index, selectedId, previewIndex, onPreview, onSelect, onSelectPush, viewportRef }: { navigationKey: number; active: boolean; viewportRef: RefObject<HTMLDivElement | null>; catalog: GalleryFrame[]; range: RangeKey; now: number; previewIndex: number; onPreview: (index: number | null) => void; frames: GalleryFrame[]; index: number; selectedId: string; onSelect: (index: number) => void; onSelectPush: (id: string) => void }) {
+export function PlaybackTimeline({ unit = 'frame', hasMilestone = () => false, branches = [], navigationKey, active, frames, catalog, range, now, index, selectedId, previewIndex, onPreview, onSelect, onSelectPush, viewportRef }: { unit?: JumpScale; hasMilestone?: (version: number) => boolean; branches?: string[]; navigationKey: number; active: boolean; viewportRef: RefObject<HTMLDivElement | null>; catalog: GalleryFrame[]; range: RangeKey; now: number; previewIndex: number; onPreview: (index: number | null) => void; frames: GalleryFrame[]; index: number; selectedId: string; onSelect: (index: number) => void; onSelectPush: (id: string) => void }) {
   const [pushTip, setPushTip] = useState<number | null>(null);
   const [rangeTip, setRangeTip] = useState<{ x: number; text: string } | null>(null);
   const containerRef = viewportRef;
@@ -32,7 +32,7 @@ export function PlaybackTimeline({ navigationKey, active, frames, catalog, range
     return () => observer.disconnect();
   }, []);
   const versionCount = useMemo(() => new Set(catalog.map(frame => frame.version)).size, [catalog]);
-  const sizing = fitTimeline(versionCount, availableWidth);
+  const sizing = fitTimeline(versionCount, availableWidth, unit === 'milestone');
   const timeline = useMemo(() => buildTimeline(catalog.map(frame => ({ ...frame, enabled: inRange(frame, range, now) })), sizing.gapDepth), [catalog, range, now, sizing.gapDepth]);
   const rangeScroll = timelineRangeScroll(timeline.versions, availableWidth, availableWidth * sizing.contentScale, availableWidth * sizing.contentScale * sizing.trackFraction);
   function scrollToRange() {
@@ -82,7 +82,7 @@ export function PlaybackTimeline({ navigationKey, active, frames, catalog, range
     setRangeTip({ x: event.clientX - containerRef.current!.getBoundingClientRect().left, text: `Outside range · ${date}` });
   }
   const span = `${sizing.trackFraction * 100}%`;
-  return <div className="gallery-timeline-container"><div className="gallery-timeline-scroll" ref={containerRef} style={{ '--timeline-span': span, '--timeline-content-span': `${sizing.contentScale * 100}%`, '--timeline-tooltip-space': `${t.timeline.tooltipSpace}px`, '--timeline-edge-padding': `${t.timeline.edgePadding}px`, '--timeline-push-background': t.timeline.pushBackground, '--timeline-push-hover-background': t.timeline.pushHoverBackground, '--timeline-height': `${t.timeline.height}px`, '--timeline-playhead-height': `${t.timeline.height + t.timeline.playheadOverhang * 2}px`, '--timeline-playhead-width': `${t.timeline.playheadWidth}px`, '--timeline-preview-opacity': t.timeline.previewOpacity, '--timeline-minor-height': `${t.timeline.minorTickHeight}px`, '--timeline-progress': `${position * 100}%`, '--gallery-disabled': t.timeline.disabledOpacity } as CSSProperties}><div className="gallery-timeline-width"><div className="gallery-timeline">
+  return <div className="gallery-timeline-container" data-unit={unit}><div className="gallery-timeline-scroll" ref={containerRef} style={{ '--timeline-span': span, '--timeline-content-span': `${sizing.contentScale * 100}%`, '--timeline-tooltip-space': `${t.timeline.tooltipSpace}px`, '--timeline-edge-padding': `${t.timeline.edgePadding}px`, '--timeline-push-background': t.timeline.pushBackground, '--timeline-push-hover-background': t.timeline.pushHoverBackground, '--timeline-height': `${t.timeline.height}px`, '--timeline-playhead-height': `${t.timeline.height + t.timeline.playheadOverhang * 2}px`, '--timeline-playhead-width': `${t.timeline.playheadWidth}px`, '--timeline-preview-opacity': t.timeline.previewOpacity, '--timeline-minor-height': `${t.timeline.minorTickHeight}px`, '--timeline-progress': `${position * 100}%`, '--gallery-disabled': t.timeline.disabledOpacity } as CSSProperties}><div className="gallery-timeline-width"><div className="gallery-timeline">
     <div className="gallery-timeline-scrubber" role="slider" tabIndex={0} aria-label="Playback position"
     aria-valuemin={0} aria-valuemax={Math.max(0, frames.length - 1)} aria-valuenow={index}
     aria-valuetext={`Frame ${index + 1} of ${frames.length}, ${formatVersion(frames[index]?.version)}`}
@@ -123,16 +123,20 @@ export function PlaybackTimeline({ navigationKey, active, frames, catalog, range
     </div>
     {tipPosition !== undefined && frames[tipIndex] && <span className="capsule-tooltip gallery-timeline-tip" role="tooltip" style={{ left: `${tipPosition * 100}%` }}>{formatVersion(frames[tipIndex].version)}</span>}
     </div>
-    {timeline.pushes.map(node => <button key={node.version} type="button"
-      className={`gallery-timeline-push${node.floating ? ' is-floating' : ''}`} aria-label={`${formatVersion(node.version)} · push node`}
+    {timeline.pushes.map(node => {
+      // Version playback lights every saved push; milestone playback colors milestone pushes by branch, like the Idea stream.
+      const pushFrame = node.frameId ? catalog.find(item => item.id === node.frameId) : undefined;
+      const target = !!pushFrame && (unit === 'version' || (unit === 'milestone' && hasMilestone(node.version)));
+      return <button key={node.version} type="button"
+      className={`gallery-timeline-push${node.floating ? ' is-floating' : ''}${target ? ' is-unit-target' : ''}`} aria-label={`${formatVersion(node.version)} · push node`}
       aria-disabled={node.frameId === null} data-push-version={node.version}
-      style={{ left: `${node.start * 100}%`, width: `${(node.end - node.start) * 100}%` }}
+      style={{ left: `${node.start * 100}%`, width: `${(node.end - node.start) * 100}%`, ...(target && unit === 'milestone' ? { '--push-unit-color': galleryBranchPaint(pushFrame!.branch ?? 'main', branches) } : {}) } as CSSProperties}
       onPointerDown={event => event.stopPropagation()}
       onPointerEnter={() => { onPreview(null); setRangeTip(null); setPushTip(node.version); }}
       onPointerLeave={() => setPushTip(null)} onFocus={() => { onPreview(null); setPushTip(node.version); }} onBlur={() => setPushTip(null)}
       onClick={event => { event.stopPropagation(); onPreview(null); if (node.frameId) onSelectPush(node.frameId); }}>
       {pushTip === node.version && <span className="capsule-tooltip gallery-timeline-tip" role="tooltip">{formatVersion(node.version)} · push node{node.frameId === null && <span className="sr-only"> — no saved push</span>}</span>}
-    </button>)}
+    </button>; })}
     <div className="gallery-timeline-playhead" aria-hidden="true"/>
     {previewPosition !== undefined && <div className="gallery-timeline-playhead gallery-timeline-preview" aria-hidden="true" style={{ left: `${previewPosition * 100}%` }}/> }
   </div></div></div>

@@ -1,4 +1,4 @@
-# MitWerk application shell
+# verso application shell
 
 Mode: Operate. This extends the existing reading workspace, using the user-confirmed composition. No alternative visual world is introduced.
 

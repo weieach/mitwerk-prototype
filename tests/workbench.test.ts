@@ -111,7 +111,7 @@ test('product sample migration updates old examples once while retaining added w
  assert.equal(task.messages.at(-1)?.name,'User Example');
  assert.equal(migrated.drafts.panel,'Keep this unsent draft');
  assert.deepEqual(migrated.projects[0].members,['User Example']);
- assert.equal(migrated.projects[0].name,'MitWerk product prototype');
+ assert.equal(migrated.projects[0].name,'verso product prototype');
  assert.equal(task.messages.some(m=>m.text==='Old profile example'),false);
  const edited={...migrated,tasks:migrated.tasks.map(t=>t.id==='panel'?{...t,title:'My revised task',messages:t.messages.slice(1)}:t)};
  assert.deepEqual(migrateState(edited),edited);
@@ -157,4 +157,16 @@ test('unsent frame references stay in-session while drafts and sent references s
   if (descriptor) Object.defineProperty(globalThis, 'localStorage', descriptor);
   else Reflect.deleteProperty(globalThis, 'localStorage');
  }
+});
+
+test('the MitWerk to verso rename updates saved sample names and instructions but keeps custom text', async () => {
+ const { migrateState, defaultInstructions, sampleProjectName } = await import('../src/features/workbench/model.ts');
+ const legacy = defaultInstructions.replace('verso’s', 'MitWerk’s');
+ const migrated = migrateState({ sampleContentVersion: 2, projectName: 'MitWerk product prototype', instructions: legacy,
+  projects: [{ id: 'mobile', name: 'MitWerk product prototype', description: '', members: [], instructions: legacy }, { id: 'mine', name: 'MitWerk notes', description: '', members: [], instructions: 'Keep MitWerk as written' }] } as never);
+ assert.equal(migrated.projectName, sampleProjectName);
+ assert.equal(migrated.instructions, defaultInstructions);
+ assert.equal(migrated.projects[0].name, sampleProjectName);
+ assert.equal(migrated.projects[1].name, 'MitWerk notes');
+ assert.equal((migrated.projects[1] as { instructions?: string }).instructions, 'Keep MitWerk as written');
 });

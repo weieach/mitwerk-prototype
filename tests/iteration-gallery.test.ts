@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultVersionRange, buildVersions, formatFrameDate, formatFrameLabel, galleryBranchPaint, hoverCaptionLines, wrapTextToWidth, dateTicks, edgePanArmed, edgePanStrength, promptShare, representativeFrames, inRange, parseCaptureName, playbackStep, rangeCounts, rangeStart, ratioLabel } from '../src/features/iteration-gallery/model.ts';
+import { buildVersions, formatFrameDate, formatFrameLabel, galleryBranchPaint, hoverCaptionLines, wrapTextToWidth, dateTicks, edgePanArmed, edgePanStrength, promptShare, representativeFrames, inRange, parseCaptureName, playbackStep, rangeCounts, rangeStart, ratioLabel } from '../src/features/iteration-gallery/model.ts';
 import type { Capture } from '../src/features/iteration-gallery/model.ts';
 import { albumAxisContent, albumBlockBounds, albumEnvelope, albumFloorY, boxCorners, buildAlbum, containingBlock, coverRadius, dateLabelPose, featuredFrameAxis, defaultFrameFocus, frameFocus, hoverCaptionHeight, imageSize, resetCameraDestination, resetLook, versionLabelPose } from '../src/features/iteration-gallery/geometry.ts';
 import { galleryTokens as t } from '../src/features/iteration-gallery/tokens.ts';
@@ -290,18 +290,7 @@ test('newest frames face forward while physical hit regions and version rulers f
 });
 
 
-test('default date range chooses the narrowest window containing ten distinct visible versions', () => {
-  const versions = buildVersions(Array.from({ length: 10 }, (_, i) => capture(`push${i}`, i < 9 ? 29 : 25, 'push', i + 1)));
-  assert.equal(defaultVersionRange(versions, date(30)), '7');
-  assert.equal(defaultVersionRange(versions.slice(0, 9), date(30)), 'all');
-  assert.equal(defaultVersionRange([], date(30)), 'all');
-  const today = buildVersions(Array.from({ length: 10 }, (_, i) => capture(`push${i}`, 30, 'push', i + 1)));
-  assert.equal(defaultVersionRange(today, date(30)), 'today');
-  assert.equal(defaultVersionRange(today, new Date(2027, 0, 1).getTime()), 'all');
-  assert.equal(defaultVersionRange(today, date(29)), 'all', 'future frames do not count');
-  const busy = buildVersions(Array.from({ length: 100 }, (_, i) => capture(`prompt${i}`, 30)));
-  assert.equal(defaultVersionRange(busy, date(30)), 'all', 'many captures in one version are still one version');
-});
+
 
 
 test('default gallery anchors the top edge across frame shapes and viewport spans', () => {

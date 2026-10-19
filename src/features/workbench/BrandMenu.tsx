@@ -17,10 +17,10 @@ export function BrandMenu({ theme, onTheme }: { theme: Theme; onTheme: (theme: T
     if (value === 'exit') location.assign(`${import.meta.env.BASE_URL}?page=landing`);
   });
   return <div className="workspace-brand-menu">
-    <button id="navigation-toggle" type="button" className="workspace-brand" {...menu.triggerProps} aria-label="MitWerk menu" aria-controls={menu.open ? id : undefined}>
-      <img className="workspace-symbol" src={mitwerkSymbol} alt=""/><strong>MitWerk</strong>
+    <button id="navigation-toggle" type="button" className="workspace-brand" {...menu.triggerProps} aria-label="verso menu" aria-controls={menu.open ? id : undefined}>
+      <img className="workspace-symbol" src={mitwerkSymbol} alt=""/><strong>verso</strong>
     </button>
-    {menu.open && <SelectMenu id={id} label="MitWerk" anchor={menu.trigger} value="" minWidth={190} gap={controlTokens.brandMenuGap} className="brand-dropdown" options={[
+    {menu.open && <SelectMenu id={id} label="verso" anchor={menu.trigger} value="" minWidth={190} gap={controlTokens.brandMenuGap} className="brand-dropdown" options={[
       { value:'theme', label:theme === 'dark' ? 'Light mode' : 'Dark mode', leading:<PhosphorIcon name={theme === 'dark' ? 'sun' : 'moon'} size={14}/> },
       { value:'type', label:typeOpen ? 'Close type editor' : 'Type editor', leading:<PhosphorIcon name="text-aa" size={14}/> },
       { value:'work-state', label:'Work state simulator', leading:<PhosphorIcon name="clock-counter-clockwise" size={14}/> },

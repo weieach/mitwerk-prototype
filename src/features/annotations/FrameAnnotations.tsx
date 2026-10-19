@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { PhosphorIcon } from '../../components/PhosphorIcon';
 import { MilestoneCommitOption } from './MilestoneCommitOption';
+import { MilestoneTrophy } from './MilestoneTrophy';
 import { captureMilestoneKey, milestoneStorageKey, parseMilestones } from '../version-tree/idea-stream';
 import { galleryTokens } from '../iteration-gallery/tokens';
 import type { AnnotationFrame, FrameAnnotation, AnnotationKind } from './model';
@@ -10,11 +11,31 @@ import { annotationFrame } from './model';
 import { deleteAnnotation, putAnnotation, useAnnotations } from './store';
 import './annotations.css';
 
-export function FrameAnnotations({ frame, active, onOpen, color }: { frame: AnnotationFrame; active: boolean; onOpen: () => void; color: string }) {
+/** With a saved milestone, the chip shows it in the branch color (trophy, truncated text) beside a "+" chip for more notes. */
+export function FrameAnnotations({ frame, active, onOpen, color, milestone = '', milestoneColor = 'var(--contrast)', selected = true }: { selected?: boolean; frame: AnnotationFrame; active: boolean; onOpen: () => void; color: string; milestone?: string; milestoneColor?: string }) {
   const anchor = useRef<HTMLDivElement>(null);
+  const milestoneText = useRef<HTMLSpanElement>(null);
+  const [textWidth, setTextWidth] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+  useLayoutEffect(() => {
+    const text = milestoneText.current;
+    if (!text) return;
+    const measure = () => setTextWidth(text.getBoundingClientRect().width);
+    const observer = new ResizeObserver(measure);
+    observer.observe(text); measure();
+    return () => observer.disconnect();
+  }, [milestone]);
+  useEffect(() => {
+    if (!selected || !milestone) { setRevealed(false); return; }
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { setRevealed(true); return; }
+    let tick = requestAnimationFrame(() => { tick = requestAnimationFrame(() => setRevealed(true)); });
+    return () => cancelAnimationFrame(tick);
+  }, [selected, milestone]);
   const notes = useAnnotations().filter(note => note.frame.id === frame.id);
   const [ready, setReady] = useState(false);
   const [opened, setOpened] = useState(false);
+  const [startNew, setStartNew] = useState(false);
+  const open = (fresh: boolean) => { onOpen(); setStartNew(fresh); setOpened(true); };
   const capture = new URLSearchParams(location.search);
   useEffect(() => {
     setReady(false); setOpened(false);
@@ -27,17 +48,26 @@ export function FrameAnnotations({ frame, active, onOpen, color }: { frame: Anno
       onOpen(); setOpened(true);
     }
   }, [ready, frame.id]);
-  return <div ref={anchor} className="frame-annotation-bookmark" data-orbit-blocked style={{ '--annotation-color': color, '--annotation-ink': 'var(--on-pale)' } as CSSProperties}>
-    <button type="button" className={`annotation-tag${ready ? ' is-ready' : ''}`} disabled={!ready} aria-label={notes.length ? `Open ${notes.length} annotations` : 'New milestone / to-do'} onClick={() => { onOpen(); setOpened(true); }}>
+  const milestoneInk = milestoneColor === 'var(--contrast)' ? 'var(--paper)' : 'var(--on-pale)';
+  return <div ref={anchor} className={`frame-annotation-bookmark${milestone ? ' has-milestone' : ''}`} data-orbit-blocked style={{ '--annotation-color': color, '--annotation-ink': 'var(--on-pale)', '--milestone-chip-color': milestoneColor, '--milestone-chip-ink': milestoneInk } as CSSProperties}>
+    {milestone ? <>
+      <div className={`annotation-tag is-milestone${revealed && selected ? ' is-expanded' : ''}${ready ? ' is-ready' : ''}`}>
+        <MilestoneTrophy disabled={!ready} milestone={milestone}/>
+        <button type="button" className="annotation-milestone-mask" disabled={!ready || !selected} tabIndex={selected ? 0 : -1} aria-hidden={!selected} title={milestone} aria-label={`Milestone: ${milestone}. Open annotations`} onClick={() => open(false)} style={{ width: revealed && selected ? textWidth : 0 }}><span ref={milestoneText} className="annotation-milestone-text"><span className="annotation-milestone-copy">{milestone}</span></span></button>
+      </div>
+      <button type="button" className={`annotation-tag is-add${ready ? ' is-ready' : ''}`} disabled={!ready} aria-label="New milestone / to-do" onClick={() => open(true)}>
+        <PhosphorIcon name="plus" size="var(--annotation-pill-icon-size)"/>
+      </button>
+    </> : <button type="button" className={`annotation-tag${ready ? ' is-ready' : ''}`} disabled={!ready} aria-label={notes.length ? `Open ${notes.length} annotations` : 'New milestone / to-do'} onClick={() => open(false)}>
       <PhosphorIcon name={notes.length ? "chat-circle-dots" : "chat-circle"} size="var(--annotation-pill-icon-size)"/>{notes.length ? <strong>{notes.length}</strong> : <span>New milestone / to-do</span>}
-    </button>
-    {opened && <AnnotationOverlay frame={frame} container={anchor.current!.closest<HTMLElement>('.iteration-gallery')!} onClose={() => setOpened(false)}/>}
+    </button>}
+    {opened && <AnnotationOverlay frame={frame} startNew={startNew} container={anchor.current!.closest<HTMLElement>('.iteration-gallery')!} onClose={() => setOpened(false)}/>}
   </div>;
 }
 
-export function AnnotationOverlay({ frame, container, onClose, onReturn = onClose, milestoneOnly = false }: { milestoneOnly?: boolean; frame: AnnotationFrame; container: HTMLElement; onClose: () => void; onReturn?: () => void }) {
+export function AnnotationOverlay({ frame, container, onClose, onReturn = onClose, milestoneOnly = false, startNew = false }: { milestoneOnly?: boolean; startNew?: boolean; frame: AnnotationFrame; container: HTMLElement; onClose: () => void; onReturn?: () => void }) {
   const notes = useAnnotations().filter(note => note.frame.id === frame.id);
-  const [editing, setEditing] = useState<FrameAnnotation | 'new' | null>(() => milestoneOnly ? notes.find(note => note.kind === 'milestone') ?? 'new' : notes.length ? null : 'new');
+  const [editing, setEditing] = useState<FrameAnnotation | 'new' | null>(() => milestoneOnly ? notes.find(note => note.kind === 'milestone') ?? 'new' : notes.length && !startNew ? null : 'new');
   const [text, setText] = useState(() => {
     if (!milestoneOnly) return '';
     try { return parseMilestones(localStorage.getItem(milestoneStorageKey))[captureMilestoneKey(frame.version)] ?? ''; } catch { return ''; }

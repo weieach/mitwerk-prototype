@@ -57,5 +57,5 @@ const prototypes = createPrototypeService(join(here, '..'), builtPrototypeData(j
 createServer(async (req, res) => {
   await prototypes.middleware(req, res, () => { void serveStatic(req, res); });
 }).listen(PORT, () => {
-  console.log('Mitwerk listening on http://localhost:' + PORT);
+  console.log('verso listening on http://localhost:' + PORT);
 });

@@ -1,6 +1,6 @@
-# MitWerk design system (canonical)
+# verso design system (canonical)
 
-`echo-1017` is where the MitWerk UI is being finalized before it merges into `main`. It combines Echo's dark-mode-first restyle (Cursor Dark palette, Waldenburg, type roles, footers, popovers) with layout details ported from the `design-system` branch. Once merged, this is the canonical system: new work reads these tokens and follows these rules.
+`echo-1017` is where the verso UI is being finalized before it merges into `main`. It combines Echo's dark-mode-first restyle (Cursor Dark palette, Waldenburg, type roles, footers, popovers) with layout details ported from the `design-system` branch. Once merged, this is the canonical system: new work reads these tokens and follows these rules.
 
 - Live reference: `?view=system`. It resolves every token from the running stylesheet, in the current theme, and leaves out tokens that are not defined, so it always matches the app.
 - Restyle entry points and type roles (Type editor): `docs/ui-restyle-guide.md`.

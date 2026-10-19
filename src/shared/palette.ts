@@ -29,8 +29,8 @@ export const inviteGradient = {
   light: { stop: (name: FeatureName) => `color-mix(in srgb, var(--mw-${name}) 72%, white)`, ink: '#191a1b' },
 } as const;
 
-/** Gradient stop references, in palette order. */
-export const inviteGradientStops = featureNames.map(name => `var(--milestone-invite-${name})`);
+/** Adjacent hues blend cleanly instead of mixing complementary accents into gray. */
+export const inviteGradientStops = (['dock', 'misregister', 'handoff', 'pulse', 'route', 'assemble'] satisfies FeatureName[]).map(name => `var(--milestone-invite-${name})`);
 
 export function paletteStylesheet() {
   const block = (theme: 'light' | 'dark') => [

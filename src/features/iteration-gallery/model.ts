@@ -5,6 +5,8 @@ import { galleryTokens as t } from './tokens.ts';
 export type Capture = {
   screen?: CaptureScreen;
   fullPrompt?: string;
+  /** Pushes: the full Git commit message (the filename summary is length-limited). */
+  commitMessage?: string;
   tokenUsage?: { input: number; output: number; total: number; simulated: boolean };
   id: string; filename: string; url: string; width: number; height: number;
   kind: 'prompt' | 'push' | 'capture'; number: number | null; branch: string | null;
@@ -99,10 +101,8 @@ export function inRange(frame: Capture, range: RangeKey, now = Date.now()) {
   return frame.timestamp >= rangeStart(range, now) && frame.timestamp <= now;
 }
 
-/** Count versions, not screenshots; busy versions must not bias the default window. */
-export function defaultVersionRange(versions: GalleryVersion[], now = Date.now(), minimum = 10): RangeKey {
-  return ranges.find(option => rangeCounts(versions, option.value, now).versions >= minimum)?.value ?? 'all';
-}
+/** Enter Version blocks with the whole project history visible. */
+export const defaultVersionRange: RangeKey = 'all';
 
 export function ratioLabel(visible: number, total: number, singular: string, plural: string) {
   const unit = total === 1 ? singular : plural;

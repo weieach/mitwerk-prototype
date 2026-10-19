@@ -109,3 +109,10 @@ test('archived date filters use the push timestamp while explicit dates and date
   assert.equal(window.Date.UTC(1970, 0, 1), 0);
   assert.equal(typeof window.Date(), 'string');
 });
+
+test('push names use the full commit message without trailing Git trailers', async () => {
+  const { commitMessageText } = await import('../server/git-history.ts');
+  assert.equal(commitMessageText('Playback timeline: brighter border;\nliver server scaled\n\nCo-Authored-By: Someone <a@b.c>\n'), 'Playback timeline: brighter border;\nliver server scaled');
+  assert.equal(commitMessageText('Fix: keep the colon in a one-paragraph subject'), 'Fix: keep the colon in a one-paragraph subject');
+  assert.equal(commitMessageText('Title\n\nBody paragraph.\n\nSigned-off-by: A <a@b.c>\nCo-Authored-By: B <b@c.d>'), 'Title\n\nBody paragraph.');
+});

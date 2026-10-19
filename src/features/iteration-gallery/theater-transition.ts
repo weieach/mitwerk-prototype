@@ -22,6 +22,8 @@ export type GalleryCamera = {
   zoom: (direction: -1 | 0 | 1) => void;
   focus: (id: string, complete: () => void) => void;
   center: () => void; reset: () => void; top: () => void;
+  /** Replays the newest frame arriving, as the gallery would when new work is captured. */
+  arrive: () => void;
   orbit: (id: string, target: TheaterTarget, ready: () => void, complete: () => void) => TheaterOrbit | null;
 };
 

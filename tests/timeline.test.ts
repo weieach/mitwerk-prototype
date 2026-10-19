@@ -181,3 +181,47 @@ test('disabled region outlines merge neighboring versions but never enclose enab
   assert.deepEqual(timelineDisabledRegions(versions.map(v => ({ ...v, enabled: true }))), []);
   assert.deepEqual(timelineDisabledRegions(versions.map(v => ({ ...v, enabled: false }))), [{ start: 0, end: versions[4].end }]);
 });
+
+test('milestone jumps and unit autoplay step between the pushes of milestone versions', async () => {
+  const { adjacentTimelineIndex, unitPlaybackStep, firstJumpIndex } = await import('../src/features/iteration-gallery/timeline.ts');
+  const frames = [
+    { kind: 'prompt' as const, version: 1 }, { kind: 'push' as const, version: 1 },
+    { kind: 'prompt' as const, version: 2 }, { kind: 'push' as const, version: 2 },
+    { kind: 'prompt' as const, version: 3 }, { kind: 'push' as const, version: 3 },
+  ];
+  const milestone = (version: number) => version !== 2;
+  assert.equal(adjacentTimelineIndex(frames, 0, 1, 'milestone', milestone), 1);
+  assert.equal(adjacentTimelineIndex(frames, 1, 1, 'milestone', milestone), 5);
+  assert.equal(adjacentTimelineIndex(frames, 5, -1, 'milestone', milestone), 1);
+  assert.equal(adjacentTimelineIndex(frames, 1, 1, 'milestone'), null);
+  assert.equal(firstJumpIndex(frames, 'milestone', milestone), 1);
+  assert.equal(firstJumpIndex(frames, 'version', milestone, -1), 5);
+  assert.deepEqual(unitPlaybackStep(frames, 1, 1, 'version', 'once'), { index: 3, direction: 1, playing: true });
+  assert.deepEqual(unitPlaybackStep(frames, 5, 1, 'version', 'once'), { index: 5, direction: 1, playing: false });
+  assert.deepEqual(unitPlaybackStep(frames, 5, 1, 'milestone', 'loop', milestone), { index: 1, direction: 1, playing: true });
+  assert.deepEqual(unitPlaybackStep(frames, 5, 1, 'version', 'ping-pong'), { index: 3, direction: -1, playing: true });
+  assert.deepEqual(unitPlaybackStep([{ kind: 'prompt' as const, version: 1 }], 0, 1, 'version', 'loop'), { index: 0, direction: 1, playing: false });
+});
+
+test('a capture version milestone prefers the saved text, honors deletions, and falls back to the seeded label', async () => {
+  const { versionMilestone, captureMilestoneKey } = await import('../src/features/version-tree/idea-stream.ts');
+  assert.equal(versionMilestone({ [captureMilestoneKey(34)]: '  Ship it ' }, 34), 'Ship it');
+  assert.equal(versionMilestone({ [captureMilestoneKey(10)]: '' }, 10), '');
+  assert.equal(versionMilestone({}, 10), 'Save a copy of the codebase on every push');
+  assert.equal(versionMilestone({}, 9), '');
+});
+
+
+test('milestone fit keeps every push inside the viewport even in narrow panels', () => {
+  for (const count of [1, 20, 45, 200]) for (const width of [240, 620, 1400]) {
+    const sizing = fitTimeline(count, width, true);
+    const timeline = buildTimeline(Array.from({ length: count }, (_, i) => ({ id: `p${i}`, version: i + 1, kind: 'push' as const })), sizing.gapDepth);
+    const trackWidth = width * sizing.contentScale * sizing.trackFraction;
+    assert.equal(sizing.contentScale, 1);
+    for (const push of timeline.pushes) {
+      assert.ok(push.start >= 0 && push.end > push.start);
+      assert.ok(push.end * trackWidth <= width + 1e-8);
+    }
+    assert.ok(Math.abs(timeline.pushes.at(-1)!.end * trackWidth - width) < 1e-8);
+  }
+});

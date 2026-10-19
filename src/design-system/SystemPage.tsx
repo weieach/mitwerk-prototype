@@ -69,12 +69,12 @@ export function SystemPage() {
 
   return <div className="sys-page">
     <header className="sys-top">
-      <strong>MitWerk system</strong>
+      <strong>verso system</strong>
       <nav className="sys-nav" aria-label="Sections">{['principles', 'color', 'layout', 'motion', 'type'].map(id => <a key={id} href={`#${id}`}>{id}</a>)}</nav>
       <button type="button" className="sys-theme" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}><PhosphorIcon name={theme === 'dark' ? 'sun' : 'moon'} size={13}/>{theme === 'dark' ? 'Light' : 'Dark'}</button>
     </header>
     <main className="sys-main">
-      <Section id="principles" title="Principles" note="The canonical MitWerk design system, taken from the product itself. Summary: docs/design-system.md · restyle guide: docs/ui-restyle-guide.md · full log: docs/design-system-rules.md.">
+      <Section id="principles" title="Principles" note="The canonical verso design system, taken from the product itself. Summary: docs/design-system.md · restyle guide: docs/ui-restyle-guide.md · full log: docs/design-system-rules.md.">
         <ol className="sys-principles">
           <li><strong>The tool leads.</strong> Chat, lists and controls stay quiet; the milestone invitation is the one loud moment.</li>
           <li><strong>Chat holds its width.</strong> Beside other panels chat is a fixed column, at most 35% of the screen; the rest goes to the work.</li>

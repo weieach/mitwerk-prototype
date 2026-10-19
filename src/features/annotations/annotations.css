@@ -69,3 +69,18 @@
 .annotation-overlay[data-exiting="true"] { opacity:0; pointer-events:none; }
 .annotation-overlay[data-exiting="true"] .annotation-body { transform:translateY(var(--row-size-unit)); }
 @media(prefers-reduced-motion:reduce) { .annotation-overlay, .annotation-overlay .annotation-body { transition:none; } }
+
+/* Portaled particles escape the pill mask without intercepting any controls. */
+.milestone-confetti { position:fixed; width:0; height:0; z-index:10000; pointer-events:none; }
+.milestone-confetti i { position:absolute; width:3px; height:4.5px; border-radius:.75px; }
+.milestone-trophy-glyph.is-celebrating { animation:milestone-trophy-bounce 480ms ease-out both; }
+@keyframes milestone-trophy-bounce {
+  0%, 100% { transform:translateY(0) scale(1); }
+  20% { transform:translateY(2px) scale(.8, .9); }
+  48% { transform:translateY(-3px) scale(1.25, 1.15); }
+  72% { transform:translateY(1px) scale(.95, 1.03); }
+}
+@media(prefers-reduced-motion:reduce) {
+  .milestone-confetti { display:none; }
+  .milestone-trophy-glyph.is-celebrating { animation:none; }
+}

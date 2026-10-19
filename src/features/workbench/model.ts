@@ -12,7 +12,7 @@ export type Asset = { id: string; title: string; kind: 'document' | 'image' | 'p
 export const statuses: TaskStatus[] = ['To do', 'In progress', 'Ready for review', 'Complete'];
 export const team = ['Design Mit', 'Research Mit', 'Accessibility Mit'];
 export const assets: Asset[] = [
-  { id: 'brief', title: 'MitWerk product brief', kind: 'document', detail: 'Project context · 3 min read', content: `MitWerk — make the work visible
+  { id: 'brief', title: 'verso product brief', kind: 'document', detail: 'Project context · 3 min read', content: `verso — make the work visible
 
 The challenge
 AI-assisted creation produces many prompts, commits and visual iterations. Help the creator understand what changed, explore alternatives and return to a useful moment without losing the surrounding conversation.
@@ -57,7 +57,7 @@ Review next
 Check focus visibility, keyboard access, narrow reading-window layouts and reduced-motion behavior. Confirm that commit selection resolves to the correct push frame.
 
 About these conversations
-These are sample exchanges describing the MitWerk prototype, not transcripts of live Mit runs.` },
+These are sample exchanges describing the verso prototype, not transcripts of live Mit runs.` },
 ];
 export function seedTasks(): Task[] {
   return [
@@ -88,7 +88,7 @@ const previousGalleryMessages: Message[] = [
       { id:'m4', role:'mit', name:'Design Mit', time:'10:42', text:'The sample direction is ready to review. The gallery groups frames by version and supports date-range filtering, orbiting and hover inspection. Theater uses a segmented version timeline, and its preview stays visible while the next image loads.\n\nOpen the Iteration Visualizer to explore the blocks. The review notes cover the camera transition, timeline behavior and checks for the next iteration.', assetId:'prototype' },
 ];
 const KEY = workbenchStorageKey;
-export const defaultInstructions = 'Build MitWerk’s iteration visualizer and version stream with reusable components and shared design tokens. Derive frames from capture metadata and branching from Git. Keep test data separate from recorded history; preserve clear labels, keyboard access and stable playback.';
+export const defaultInstructions = 'Build verso’s iteration visualizer and version stream with reusable components and shared design tokens. Derive frames from capture metadata and branching from Git. Keep test data separate from recorded history; preserve clear labels, keyboard access and stable playback.';
 export type Project = {mitIds?:string[];archived?:boolean;id:string; name:string; description:string; members:string[]; instructions:string};
 export const colleagues = [
  {name:'Nicole Wei', role:'Product designer', detail:'Interaction design · Reading experience'},
@@ -109,6 +109,11 @@ const legacySampleTitles: Record<string, string> = {
  panel: 'Explore a clearer profile panel', research: 'Map everyday profile actions', access: 'Check keyboard navigation',
 };
 const legacyInstructions = 'Keep the existing information architecture. Make everyday actions easy to find. Use the MitWerk palette, clear labels and accessible focus states.';
+/** The brand is "verso" (formerly MitWerk); saved sample names and instructions follow the rename, custom text is kept. */
+export const sampleProjectName = 'verso product prototype';
+const legacyBrand = { projectName: 'MitWerk product prototype', instructions: defaultInstructions.replace('verso’s', 'MitWerk’s') };
+const rebrandName = (name: string) => name === legacyBrand.projectName ? sampleProjectName : name;
+const rebrandInstructions = (text: string) => text === legacyBrand.instructions ? defaultInstructions : text;
 
 /** Refresh bundled examples once; retain appended conversation, drafts and custom projects. */
 function migrateSampleContent(raw: Partial<SavedState> | null): Partial<SavedState> | null {
@@ -117,11 +122,12 @@ function migrateSampleContent(raw: Partial<SavedState> | null): Partial<SavedSta
  const refresh = (raw.sampleContentVersion ?? 0) < 1;
  const seeds = new Map(seedTasks().map(task => [task.id, task]));
  return {...raw,
-  projectName: refresh && raw.projectName === 'Mobile app component revamp' ? 'MitWerk product prototype' : raw.projectName,
-  instructions: refresh && raw.instructions === legacyInstructions ? defaultInstructions : raw.instructions,
-  projects: raw.projects?.map(project => ({...project, members: project.members.map(renameUser),
+  projectName: refresh && raw.projectName === 'Mobile app component revamp' ? sampleProjectName : raw.projectName === undefined ? undefined : rebrandName(raw.projectName),
+  instructions: refresh && raw.instructions === legacyInstructions ? defaultInstructions : raw.instructions === undefined ? undefined : rebrandInstructions(raw.instructions),
+  projects: raw.projects?.map(project => ({...project, name: rebrandName(project.name), members: project.members.map(renameUser),
+   ...(typeof project.instructions === 'string' ? { instructions: rebrandInstructions(project.instructions) } : {}),
    ...(refresh && project.id === 'mobile' ? {
-    name: project.name === 'Mobile app component revamp' ? 'MitWerk product prototype' : project.name,
+    name: project.name === 'Mobile app component revamp' ? sampleProjectName : project.name,
     description: project.description === 'A calmer profile experience, shaped together.' ? 'Explore how conversations, saved frames and Git history make the design process visible.' : project.description,
     instructions: project.instructions === legacyInstructions ? defaultInstructions : project.instructions,
    } : {}),
@@ -159,7 +165,7 @@ export function migrateState(raw:Partial<SavedState>|null): SavedState {
     ? {...sample.messages.find(next => next.id === message.id)!, name: message.name} : message),
   } : task)};
  }
- const projectName=typeof raw?.projectName==='string'?raw.projectName:'MitWerk product prototype';
+ const projectName=typeof raw?.projectName==='string'?raw.projectName:sampleProjectName;
  const instructions=typeof raw?.instructions==='string'?raw.instructions:defaultInstructions;
  const projects=Array.isArray(raw?.projects)&&raw.projects.length?raw.projects:[
   {id:'mobile',name:projectName,description:'Explore how conversations, saved frames and Git history make the design process visible.',members:[userName,'Nicole Wei'],instructions},

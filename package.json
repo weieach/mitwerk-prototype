@@ -13,7 +13,7 @@
     "build:vercel": "node scripts/build-vercel.mjs",
     "verify:gallery": "node --experimental-strip-types scripts/verify-gallery.ts",
     "publish:gallery": "node --experimental-strip-types scripts/publish-gallery.ts",
-    "deploy:vercel": "npm run build:vercel && npx vercel deploy --prebuilt --prod && npm run verify:gallery -- https://mitwerk-prototype.vercel.app --published",
+    "deploy:vercel": "npm run build:vercel && npx vercel deploy --prebuilt --prod && npm run verify:gallery -- https://verso-prototype.vercel.app --published",
     "spike": "node archive/review-comment-spike/scripts/spike.mjs",
     "start": "node server/standalone.mjs",
     "bench": "node archive/review-comment-spike/scripts/bench-lookup.mjs",

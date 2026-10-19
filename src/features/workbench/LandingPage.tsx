@@ -46,7 +46,7 @@ export function LandingPage() {
     <div className="landing-content">
       <div className="landing-brand">
         <svg ref={symbolRef} className="landing-symbol" viewBox={`0 0 ${geometry.width} ${geometry.height}`} aria-hidden="true"><path d={geometry.path} fill="currentColor"/></svg>
-        <strong>MitWerk</strong>
+        <strong>verso</strong>
       </div>
       <a className="mw-button landing-open" href={import.meta.env.BASE_URL}>Open project</a>
     </div>

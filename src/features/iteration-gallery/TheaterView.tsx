@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom';
+import { PlaybackExport } from './PlaybackExport';
 import { PanelIcon } from '../../components/PanelIcon';
 import { attachFrame, writeFrameDrag } from '../workbench/frame-context';
 import { annotationBookmarkColor } from '../annotations/appearance';
@@ -16,14 +18,18 @@ import { formatTime, playbackStep, ranges, inRange } from './model';
 import { galleryTokens as t } from './tokens';
 import { presentedFrame, theaterFrameSize, wheelFrameDelta } from './theater-layout';
 import { FrameLoader } from './frame-loader';
-import { adjacentTimelineIndex, type JumpScale } from './timeline';
+import { adjacentTimelineIndex, firstJumpIndex, unitPlaybackStep, type JumpScale } from './timeline';
 import { PlaybackJump } from './PlaybackJump';
 import { PlaybackTimeline } from './PlaybackTimeline';
 import { containedFrameTarget, reservedControlContains } from './theater-transition';
 import type { TheaterOrbit, TheaterTarget } from './theater-transition';
 import { theaterCaption, theaterCaptionLead } from './theater-layout';
 import { Icon } from '../../components/Icon';
-import { RowSelect } from '../../components/RowSelect';
+import { PlaybackControls } from './PlaybackControls';
+import { TheaterCaption } from './TheaterCaption';
+import { useSavedMilestones } from '../version-tree/useSavedMilestones';
+import { versionMilestone } from '../version-tree/idea-stream';
+import { galleryBranchPaint } from './model';
 
 function PlaybackTip({ label, children, edge }: { label: string; children: ReactNode; edge?: 'start' | 'end' }) {
   const [hover, setHover] = useState(false);
@@ -33,7 +39,11 @@ function PlaybackTip({ label, children, edge }: { label: string; children: React
   </span>;
 }
 
-const loopModes: { value: LoopMode; label: string }[] = [{ value: 'once', label: 'No loop' }, { value: 'loop', label: 'Loop' }, { value: 'ping-pong', label: 'Ping-pong' }];
+function savedPlayUnit(): JumpScale {
+  const params = new URLSearchParams(location.search);
+  if (params.get('screenshot') === '1' && params.get('playUnit') === 'milestone') return 'milestone';
+  try { const saved = localStorage.getItem('mitwerk-playback-jump-scale'); return saved === 'version' || saved === 'milestone' ? saved : 'frame'; } catch { return 'frame'; }
+}
 
 const frameContextOf = (frame: GalleryFrame) => ({ id: frame.id, url: `${import.meta.env.BASE_URL}${frame.url}`, label: `${formatVersion(frame.version)} · ${frame.summary}`, filename: frame.filename });
 
@@ -59,7 +69,7 @@ function PrototypeVersionLabel({ version }: { version: number }) {
   return <span className="prototype-version-mask"><span ref={label} className="theater-version-tag" aria-live="polite">{formatVersion(version)}</span></span>;
 }
 
-export function TheaterView({ runtimeCatalog, liveRequestKey = 0, onRuntimeChange, onPlaybackVersion, navigationKey, references, frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline }: { runtimeCatalog: GalleryFrame[]; liveRequestKey?:number; onRuntimeChange?:(mode:RuntimeMode|null)=>void; onPlaybackVersion?:(version:number|null)=>void; navigationKey: number; references: VisualReference[]; baseline: { width: number; height: number }; active: boolean; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string, animate?: boolean) => void }) {
+export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveRequestKey = 0, onRuntimeChange, onPlaybackVersion, navigationKey, references, frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline }: { onRangeChange: (range: RangeKey) => void; exportTarget?: HTMLElement | null; runtimeCatalog: GalleryFrame[]; liveRequestKey?:number; onRuntimeChange?:(mode:RuntimeMode|null)=>void; onPlaybackVersion?:(version:number|null)=>void; navigationKey: number; references: VisualReference[]; baseline: { width: number; height: number }; active: boolean; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string, animate?: boolean) => void }) {
   const timelineRef = useRef<HTMLDivElement>(null);
   const gesture = useRef<{ pointer: number; x: number; y: number; frameClick: boolean; orbit: TheaterOrbit | null } | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -87,11 +97,10 @@ export function TheaterView({ runtimeCatalog, liveRequestKey = 0, onRuntimeChang
   }, [selectedId, active]);
   useEffect(() => { onRuntimeChange?.(runtimeMode); }, [runtimeMode, onRuntimeChange]);
   useEffect(() => () => onRuntimeChange?.(null), [onRuntimeChange]);
-  const [speed, setSpeed] = useState(1);
-  const [mode, setMode] = useState<LoopMode>('once');
-  const [jumpScale, setJumpScale] = useState<JumpScale>(() => {
-    try { return localStorage.getItem('mitwerk-playback-jump-scale') === 'version' ? 'version' : 'frame'; } catch { return 'frame'; }
-  });
+  const [jumpScale, setJumpScale] = useState<JumpScale>(savedPlayUnit);
+  useEffect(() => { if (jumpScale === 'milestone') onRangeChange('all'); }, [jumpScale, onRangeChange]);
+  const [speed, setSpeed] = useState<number>(() => t.unitSpeeds[jumpScale]);
+  const [mode, setMode] = useState<LoopMode>(() => jumpScale === 'milestone' ? 'loop' : 'once');
   const [direction, setDirection] = useState(1);
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -135,8 +144,10 @@ export function TheaterView({ runtimeCatalog, liveRequestKey = 0, onRuntimeChang
   const showingPreview = !!previewFrame && !!previewImage;
   const navigationFrames = catalog.filter(item => inRange(item, range, now));
   const navigationIndex = navigationFrames.findIndex(item => item.id === selectedId);
-  const previousJump = adjacentTimelineIndex(navigationFrames, navigationIndex, -1, jumpScale);
-  const nextJump = adjacentTimelineIndex(navigationFrames, navigationIndex, 1, jumpScale);
+  const milestones = useSavedMilestones();
+  const hasMilestone = (version: number) => versionMilestone(milestones, version) !== '';
+  const previousJump = adjacentTimelineIndex(navigationFrames, navigationIndex, -1, jumpScale, hasMilestone);
+  const nextJump = adjacentTimelineIndex(navigationFrames, navigationIndex, 1, jumpScale, hasMilestone);
 
   useEffect(() => {
     if (!previewFrame) return;
@@ -207,11 +218,18 @@ export function TheaterView({ runtimeCatalog, liveRequestKey = 0, onRuntimeChang
   useEffect(() => {
     if (!playing || !frame || !ready || !active || previewFrame) return;
     const timer = window.setTimeout(() => {
+      if (jumpScale !== 'frame') {
+        // Version and milestone playback step between push nodes of the selected range.
+        const next = unitPlaybackStep(navigationFrames, navigationIndex, direction > 0 ? 1 : -1, jumpScale, mode, hasMilestone);
+        if (next.index !== navigationIndex) onSelect(navigationFrames[next.index].id);
+        setDirection(next.direction); setPlaying(next.playing);
+        return;
+      }
       const next = playbackStep(index, frames.length, direction, mode);
       onSelect(frames[next.index].id); setDirection(next.direction); setPlaying(next.playing);
     }, t.playbackIntervalMs / speed);
     return () => window.clearTimeout(timer);
-  }, [playing, frame, ready, active, previewFrame, index, frames, direction, mode, speed, onSelect]);
+  }, [playing, frame, ready, active, previewFrame, index, frames, direction, mode, speed, onSelect, jumpScale, navigationIndex, milestones]);
   useEffect(() => {
     const screen = screenRef.current;
     if (!screen) return;
@@ -276,10 +294,11 @@ export function TheaterView({ runtimeCatalog, liveRequestKey = 0, onRuntimeChang
     if (next === null) return;
     setDirection(1); prototype.exit(); setPlaying(false); setPreviewId(null); setPreviewImage(null); onSelect(navigationFrames[next].id, true);
   }
-  function chooseJump(scale: JumpScale, direction: -1 | 1) {
-    setJumpScale(scale);
+  /** The Play unit also drives the transport arrows; it sets the speed, and milestone playback loops. */
+  function chooseUnit(scale: JumpScale) {
+    setJumpScale(scale); setSpeed(t.unitSpeeds[scale]);
+    if (scale === 'milestone') { onRangeChange('all'); setMode('loop'); setDirection(1); }
     try { localStorage.setItem('mitwerk-playback-jump-scale', scale); } catch { /* Keep the session preference when storage is unavailable. */ }
-    jump(adjacentTimelineIndex(navigationFrames, navigationIndex, direction, scale));
   }
 
   const frameContext = () => frameContextOf(frame);
@@ -363,13 +382,22 @@ export function TheaterView({ runtimeCatalog, liveRequestKey = 0, onRuntimeChang
   }
 
   const playbackOptions = <div className="playback-options">
-        <RowSelect label="Playback speed" value={String(speed)} onChange={value => setSpeed(+value)} options={t.speeds.map(value => ({ value: String(value), label: `${value}×` }))}/>
-        <RowSelect label="Playback loop" value={mode} onChange={value => { setMode(value as LoopMode); setDirection(1); }} options={loopModes}/>
+        <PlaybackControls unit={jumpScale} speed={speed} loop={mode} onUnit={chooseUnit} onSpeed={setSpeed} onLoop={value => { setMode(value); setDirection(1); }}/>
         </div>;
+  // On a wide panel the frame cannot fill the row; the actions, metadata and playback rows follow its width.
+  const rowWidth = stageMeasured ? Math.min(frameSize.width, stageSize.width) : undefined;
+  const milestone = versionMilestone(milestones, frame.version);
   const rangeLabel = ranges.find(option => option.value === range)!.label.toLowerCase();
   const rangeFrames = catalog.filter(item => inRange(item, range, now));
   const atRangeStart = rangeFrames[0]?.id === selectedId;
   const atRangeEnd = rangeFrames.at(-1)?.id === selectedId;
+  /** With No loop, pressing play at the last unit starts over from the first one. */
+  function restartAtEnd() {
+    if (jumpScale === 'frame') { if (index === frames.length - 1) onSelect(frames[0].id); return; }
+    if (nextJump !== null) return;
+    const first = firstJumpIndex(navigationFrames, jumpScale, hasMilestone);
+    if (first >= 0) onSelect(navigationFrames[first].id);
+  }
   function scrollTimeline(edge: 'start' | 'end') {
     const next = edge === 'start' ? rangeFrames[0] : rangeFrames.at(-1);
     if (!next) return;
@@ -380,15 +408,16 @@ export function TheaterView({ runtimeCatalog, liveRequestKey = 0, onRuntimeChang
   return <div className={`theater-view${runtimeMode ? ' is-runtime' : ''}`} data-runtime-exiting={runtimeExiting} data-frame-id={frame?.id} data-selected-frame-id={requested?.id} data-preview-frame-id={previewFrame?.id} data-range-edge={atRangeEnd ? 'end' : atRangeStart ? 'start' : ''} data-frame-ready={ready && stageMeasured}
     style={{ '--theater-footer-gap': `${t.theater.playbackFooterGap}px`, '--theater-action-buttons-gap': `${t.theater.actionButtonsGap}px` } as CSSProperties}
     onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} onLostPointerCapture={pointerEnd}>
+    {active && !runtimeMode && exportTarget && createPortal(<PlaybackExport catalog={catalog} range={range} now={now} unit={jumpScale} hasMilestone={hasMilestone}/>, exportTarget)}
     <div className="theater-body" ref={bodyRef} style={{ '--theater-metadata-height': `${t.theater.metadataHeight}px`, '--theater-metadata-max': `${t.theater.metadataHeightMaxVh}vh`, '--theater-metadata-gap': `${t.theater.metadataGap}px` } as CSSProperties}>
-      <div className="theater-stage" style={{ width: runtimeMode ? frameSize.width : '100%', '--theater-action-gap': `${t.theater.actionGap}px`, '--theater-frame-bed': t.theater.frameBed } as CSSProperties}>
+      <div className="theater-stage" style={{ width: runtimeMode ? frameSize.width : rowWidth ?? '100%', '--theater-action-gap': `${t.theater.actionGap}px`, '--theater-frame-bed': t.theater.frameBed } as CSSProperties}>
       {runtimeMode === 'prototype' && <nav className="prototype-version-controls" aria-label="Prototype versions" data-orbit-blocked inert={runtimeExiting} onClick={event => event.stopPropagation()}>
         <button type="button" aria-label="Previous prototype version" disabled={!prototypeNeighbors.previous} onClick={() => switchPrototype(prototypeNeighbors.previous)}><i className="ph-fill ph-play is-previous" aria-hidden="true"/></button>
         <PrototypeVersionLabel version={prototypeVersion}/>
         <button type="button" aria-label="Next prototype version" disabled={!prototypeNeighbors.next} onClick={() => switchPrototype(prototypeNeighbors.next)}><i className="ph-fill ph-play" aria-hidden="true"/></button>
       </nav>}
       <div className="theater-frame-actions" inert={!!runtimeMode} aria-hidden={!!runtimeMode} data-orbit-blocked ref={actionsRef}>
-        {frame.kind !== 'push' && <FrameAnnotations key={navigationKey} color={annotationBookmarkColor(frame.branch, branches)} frame={frame} active={active && ready && !playing} onOpen={() => { setPlaying(false); setDisplayed(frame); setPreviewId(null); setPreviewImage(null); onSelect(frame.id); }}/>}
+        {(frame.kind !== 'push' || milestone) && <FrameAnnotations key={navigationKey} selected={!previewFrame || frame.id === selectedId} color={annotationBookmarkColor(frame.branch, branches)} milestone={milestone} milestoneColor={galleryBranchPaint(frame.branch ?? 'main', branches)} frame={frame} active={active && ready && !playing} onOpen={() => { setPlaying(false); setDisplayed(frame); setPreviewId(null); setPreviewImage(null); onSelect(frame.id); }}/>}
         <div className="theater-action-buttons">
 
         <button className="theater-text-action frame-chat-action" onClick={event => { event.stopPropagation(); attachFrame(frameContext()); }}><Icon name="plus"/>Add frame to chat</button>
@@ -411,7 +440,7 @@ export function TheaterView({ runtimeCatalog, liveRequestKey = 0, onRuntimeChang
           </span>
           <time dateTime={new Date(frame.timestamp).toISOString()}>{formatTime(frame.timestamp)}</time>
         </div>
-        <p className="theater-summary"><span data-orbit-blocked data-orbit-inline>{theaterCaption(frame)}</span></p>
+        <TheaterCaption text={theaterCaption(frame)}/>
         <div className="theater-branch-row">
           {frame.branch && <span className="theater-branch"><Icon name="branch" size={12}/>{frame.branch}</span>}
           {(frame.added !== null || frame.removed !== null) && <span className="gallery-small theater-lines"><span className="is-added">+{frame.added ?? '0'}</span> <span className="is-removed">−{frame.removed ?? '0'}</span> lines</span>}
@@ -420,23 +449,23 @@ export function TheaterView({ runtimeCatalog, liveRequestKey = 0, onRuntimeChang
       </div>
       </div>
     </div>
-    <div className="theater-playback" data-orbit-blocked>
+    <div className="theater-playback" data-orbit-blocked style={{ width: runtimeMode ? undefined : rowWidth, alignSelf: !runtimeMode && rowWidth ? 'center' : undefined }}>
       {runtimeMode && <div className="runtime-exit-scrim" inert={runtimeExiting}>
         <button ref={exitButton} className="theater-text-action" onClick={exitPrototype}><Icon name="close"/>Exit {runtimeMode === 'live' ? 'live server' : 'prototype'}</button>
       </div>}
       <div className="gallery-toolbar playback-controls" inert={!!runtimeMode} aria-hidden={!!runtimeMode} style={{ '--playback-enabled': t.theater.playbackEnabled, '--playback-disabled': t.theater.playbackDisabled } as CSSProperties}>
         <PlaybackTip label={`Jump to timeline start (${rangeLabel})`} edge="start"><button className="icon-button" aria-label="Jump to timeline start" disabled={!rangeFrames.length || atRangeStart} onClick={() => scrollTimeline('start')}><i className="ph-fill ph-caret-line-left" aria-hidden="true"/></button></PlaybackTip>
         <div className="playback-transport">
-        <PlaybackJump direction={-1} scale={jumpScale} unavailable={previousJump === null} onJump={() => jump(previousJump)} onChoose={scale => chooseJump(scale, -1)}/>
-        <PlaybackTip label={playing ? 'Pause' : 'Play'}><button className="icon-button playback-toggle" onClick={() => { prototype.exit(); if (!playing && mode === 'once' && index === frames.length - 1) onSelect(frames[0].id); setPlaying(!playing); }} disabled={frames.length < 2} aria-label={playing ? 'Pause playback' : 'Play frames'}><Icon name={playing ? 'pause' : 'play'}/></button></PlaybackTip>
-        <PlaybackJump direction={1} scale={jumpScale} unavailable={nextJump === null} onJump={() => jump(nextJump)} onChoose={scale => chooseJump(scale, 1)}/>
+        <PlaybackJump direction={-1} scale={jumpScale} unavailable={previousJump === null} onJump={() => jump(previousJump)}/>
+        <PlaybackTip label={playing ? 'Pause' : 'Play'}><button className="icon-button playback-toggle" onClick={() => { prototype.exit(); if (!playing && mode === 'once') restartAtEnd(); setPlaying(!playing); }} disabled={frames.length < 2} aria-label={playing ? 'Pause playback' : 'Play frames'}><Icon name={playing ? 'pause' : 'play'}/></button></PlaybackTip>
+        <PlaybackJump direction={1} scale={jumpScale} unavailable={nextJump === null} onJump={() => jump(nextJump)}/>
         </div>
         <div className="playback-end-controls">
           {playbackOptions}
           <PlaybackTip label={`Jump to timeline end (${rangeLabel})`} edge="end"><button className="icon-button" aria-label="Jump to timeline end" disabled={!rangeFrames.length || atRangeEnd} onClick={() => scrollTimeline('end')}><i className="ph-fill ph-caret-line-right" aria-hidden="true"/></button></PlaybackTip>
         </div>
       </div>
-      <div className="runtime-passive-timeline" inert={!!runtimeMode} aria-hidden={!!runtimeMode}><PlaybackTimeline navigationKey={navigationKey} active={active} viewportRef={timelineRef} frames={frames} catalog={catalog} range={range} now={now} index={Math.max(0, index)} selectedId={selectedId} previewIndex={previewIndex} onPreview={next => { if (prototype.open || prototype.loading) return; setPreviewId(next === null ? null : frames[next].id); if (next === null) setPreviewImage(null); }} onSelect={selectFrame} onSelectPush={id => { prototype.exit(); setPlaying(false); setPreviewId(null); setPreviewImage(null); onSelect(id); }}/></div>
+      <div className="runtime-passive-timeline" inert={!!runtimeMode} aria-hidden={!!runtimeMode}><PlaybackTimeline unit={jumpScale} hasMilestone={hasMilestone} branches={branches} navigationKey={navigationKey} active={active} viewportRef={timelineRef} frames={frames} catalog={catalog} range={range} now={now} index={Math.max(0, index)} selectedId={selectedId} previewIndex={previewIndex} onPreview={next => { if (prototype.open || prototype.loading) return; setPreviewId(next === null ? null : frames[next].id); if (next === null) setPreviewImage(null); }} onSelect={selectFrame} onSelectPush={id => { prototype.exit(); setPlaying(false); setPreviewId(null); setPreviewImage(null); onSelect(id); }}/></div>
       {toast && <div className="project-toast" role="status">{toast}</div>}
     </div>
   </div>;

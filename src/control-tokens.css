@@ -10,6 +10,7 @@
   --focus-ring-offset:-1px;
   --focus-ring-color:currentColor;
   --font-code:"SF Mono", SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+  --playback-end-gap-scale:2;
   --playback-end-gap:clamp(14px, 2cqw, 32px);
   --text-action-icon-gap:6px;
   --reference-chip-fill:color-mix(in srgb, var(--ink) 14%, var(--paper));
@@ -29,9 +30,12 @@
   /* Playback timeline: block borders lead; the scroller thumb is a darker gray than them, and prompt ruler ticks sit between the border and the base line. */
   --timeline-block-border:color-mix(in srgb, var(--faint) 75%, var(--line-strong));
   --timeline-ruler:color-mix(in srgb, var(--timeline-block-border) 45%, var(--line-strong));
+  /* Version/milestone playback: dim the prompt ruler; version pushes match the scroller thumb, milestone pushes use their branch color. */
+  --timeline-unit-dim:.35;
+  --timeline-push-unit:var(--timeline-overview-thumb);
   --timeline-range-hint-width:170px;
   --reader-title-gap:10px;
-  --milestone-invite-color-strength:64%;
+  --milestone-invite-color-strength:70%;
   --milestone-invite-flow:10s;
   --composer-controls-gap:4px;
   --sidebar-item-icon-size: 14px;
@@ -51,7 +55,9 @@
   --message-font-size: var(--chat-body-size);
   --message-max-width: 36em;
   --message-line-height: 1.6;
-  --message-output-gap: calc(var(--row-padding-inline) * 1.5);
+  /* User message to the reply below it (the user's hidden timestamp row adds to this). */
+  --message-output-gap: calc(var(--row-padding-inline) * .75);
+  --run-progress-enter-ms: 420ms;
   --message-time-gap: 8px;
   --outline-orbit-duration: 1600ms;
   --outline-orbit-width: 1px;
@@ -456,6 +462,15 @@
 .select-menu .ui-icon { flex-shrink:0; }
 .select-menu .is-highlighted { background:var(--fill-hover); }
 .select-menu [aria-selected=true] { font-weight:inherit; }
+.select-menu-group { padding:8px var(--row-padding-inline) 2px; color:var(--muted); font-size:var(--chat-meta-size, 11px); }
+.select-menu-group:not(:first-child) { margin-top:4px; border-top:1px solid var(--line); padding-top:8px; }
+/* Grouped menus can lay each section out as a column (Playback Controls: Play | Speed | Loop). */
+.select-menu.has-columns { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; align-items:start; column-gap:var(--select-menu-column-gap, 4px); }
+.select-menu.has-columns .select-menu-group, .select-menu.has-columns .select-menu-group:not(:first-child) { margin-top:0; border-top:0; padding:6px var(--row-padding-inline) 2px; }
+.select-menu.has-columns .select-menu-column + .select-menu-column { border-left:1px solid var(--line); padding-left:var(--select-menu-column-gap, 4px); }
+.select-menu.playback-controls-menu { --row-padding-inline:var(--playback-controls-item-inline, 8px); --select-menu-row-height:calc(var(--control-font-size) * 1.4 + 10px); }
+.select-menu.playback-controls-menu [role=option], .select-menu.playback-controls-menu .select-menu-group { display:flex; align-items:center; min-height:var(--select-menu-row-height); padding-block:0; justify-content:flex-start; }
+.select-menu.playback-controls-menu [aria-selected=true] { color:var(--feature-version); }
 .panel-title-short-measure { position:absolute;visibility:hidden;pointer-events:none;width:max-content;font-weight:var(--compact-title-weight); }
 
 .workspace.workspace-compact .panel-header > .panel-heading { padding-right:var(--header-padding-left); }

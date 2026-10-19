@@ -1711,7 +1711,7 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Runtime frames are bottom-aligned above the exit control so the frame-to-button gap equals the button-to-panel-bottom gap. Derive the frame bottom from twice the exit control's center-to-bottom distance, retaining the existing exit/token alignment. This supersedes full vertical centering. Fit the frame proportionally with two control-inset units of top clearance on short panels.
 - All theater frame containers share a broad light-gray shadow: blur is `20vw`, with 8px spread and 2.88% of the existing light neutral palette color. This supersedes frame-relative blur and reduces the prior 9.6% opacity by 70%. Saved images and runtime frames use the same treatment.
-- Playback reserves a caption area of 14% of the available body height, capped at 112px, independently of prompt length. The version/date and supplementary rows retain their space; the prompt shrinks and clips inside the remainder. Long or tightly wrapped prompts cannot increase the reserved area and move the frame upward. Preserve the full prompt in the data/DOM.
+- Playback reserves a caption area of 26% of the available body height (14% before 2026-10-18), capped at 112px, independently of prompt length, so the version row, a two-line caption, the branch row and reference chips fit; the caption keeps at least one line. The version/date and supplementary rows retain their space; the prompt shrinks and clips inside the remainder. Long or tightly wrapped prompts cannot increase the reserved area and move the frame upward. Preserve the full prompt in the data/DOM.
 
 ## Playback reference pills — 2026-10-18
 
@@ -1735,3 +1735,99 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Solid runtime backdrop — 2026-10-18
 
 - Live server and saved-prototype backdrops use the existing `--faint` neutral token (#646464 in dark mode), superseding #818181 with a darker design-system gray. The backdrop remains solid, without the former sky image, blur or dark scrim. Preserve existing enter/exit fades and reduced-motion behavior.
+
+
+## Wide desktop Chat and dark frame beds — 2026-10-18
+
+- Playback frame beds and image letterboxing use the existing dark chrome neutral (`--chrome`, falling back to `--ink` in light mode). Apply the shared theater frame-bed token to the bed, screen and preview layer.
+- Treat 1728 CSS pixels as the 16-inch desktop reference. Above it, default Chat to 32vw; retain the 500px intermediate and existing small-laptop defaults below it. Scale the 760px resize ceiling proportionally above 1728px, retaining the 55% available-space limit and explicit user width preferences.
+
+## Playback controls, units and milestone chip — 2026-10-18
+
+- When the Playback frame cannot fill the panel width, the frame actions row (New milestone / Add frame to chat), the prompt metadata and the playback section (transport and timeline) take the frame's width and stay centered with it. Server mode keeps its own sizing.
+- Playback speed and looping live in one **Controls** menu with three columns: Play (Prompt by prompt, Version by version, By milestone), Speed and Loop, right-aligned with the Controls button. The current choice in each column is marked only by Version blocks blue text (`--feature-version`), with no check. Items use compact 8px inline padding and each column fits its content. Choices apply in place: the menu stays open until a click outside (or Escape); the shared select menu supports section headings (`group`), per-option selection, a `columns` layout and `end` alignment. Choosing a Play unit sets the speed (`unitSpeeds`: 2× for prompt and version, 1× for milestone), and milestone playback turns Loop on (2026-10-18, revised).
+- The Play unit (saved as `mitwerk-playback-jump-scale`) decides what autoplay and the previous/next buttons step by: a prompt, a saved push (version), or the push of a version that has a milestone. The previous/next buttons no longer open a chooser.
+- Version and milestone units dim the prompt ruler (`--timeline-unit-dim`) and light only their push nodes: version pushes in `--timeline-push-unit` (the scroller thumb color), milestone pushes in their branch color (`galleryBranchPaint`, so `main` uses the contrast color, as in the Idea stream).
+- A version with a milestone replaces "New milestone / to-do" with a branch-colored chip: filled trophy icon and the milestone text, truncated with an ellipsis at `--playback-milestone-chip-max-width`. A square "+" chip in the New milestone fill follows it in the same wrapper and opens a new milestone / to-do directly.
+- A capture version's milestone reads the saved Idea-stream value first (an empty value means deleted), then the seeded `V<N>` label (`versionMilestone`).
+
+
+## Playback export confirmation and desktop summary — 2026-10-18
+
+- At 1728 CSS pixels and above, double the existing responsive `--playback-end-gap` with its shared scale token. Append the selected speed and loop mode to Controls in parentheses using muted text; smaller viewports retain the short label.
+- Ordinary Playback exposes a download action beside fullscreen with the same icon-button styling. Its anchored, nonmodal export dialog confirms an independently editable date range, the count of frames eligible for the current playback unit, and the current Prompt/Version/Milestone mode. Counts derive from the range and actual saved push/milestone targets.
+- Save uses the shared primary-button treatment and shows a bottom status toast explaining that exporting is currently not supported for the sample project. Do not generate or claim an export. The dialog supports Escape, outside dismissal and focus return; its range selector uses the shared dropdown.
+- Capture cues `w export overlay` and `control overlay` open these overlays together in Chat + Playback.
+- The Controls summary next to the button (current speed and loop) shows whenever the playback row is at least 680px wide. The row follows the panel and frame width, so this ignores screen width (supersedes the 1728px viewport rule, 2026-10-18).
+
+
+## Compact MP4 confirmation — 2026-10-18
+
+- Export playback omits the visible Time range label but keeps its accessible dropdown label. The primary action reads “Save MP4”; center the muted count immediately below it as “N prompts” for prompt mode or “N versions” for version/milestone mode, with singular grammar. Prompt counts exclude push snapshots; version counts deduplicate eligible saved pushes, filtering milestones when selected. Preserve the sample-project limitation toast.
+- Apply the 2× playback end-controls gap at all viewport widths, including the 1669px desktop reference; this supersedes the desktop-only gap multiplier. Keep its responsive base token and the existing row-width summary visibility.
+
+
+## Equal playback menu columns — 2026-10-18
+
+- Multi-column dropdowns use equal grid tracks sized from their widest content column (Play in Playback Controls), superseding content-sized unequal tracks. Playback headers and option rows share one row-height token while retaining muted header typography and blue selected options.
+- Offset Playback Controls by the shared 8px control gap from its trigger, raising the bottom-anchored menu without changing right alignment.
+
+
+## Milestone overview and editor — 2026-10-18
+
+- Version blocks defaults to All time on entry, superseding the automatic ten-version date window. Selecting milestone playback also switches to All time.
+- Milestone playback fits all catalog version slots and push gutters into the available timeline width; prompt/version modes retain the scrolling density. Animate the width/layout change with the shared gallery transition and honor reduced motion. Derive sizing from the catalog and measured panel, never specific version counts.
+- Shared milestone editors have no outer border or padding, and display their associated Milestone label above the textarea. Retain textarea styling and save/cancel/remove behavior.
+
+
+## Milestone seed identity — 2026-10-18
+
+- New sample milestone content uses stable capture identities shared by Idea stream and Playback, since graph display labels can include uncaptured versions. Existing saved edits and empty deletion values take precedence over seeds.
+
+
+## Playback mode summary and push milestones — 2026-10-18
+
+- The responsive Controls summary includes the play unit before speed and loop: “by prompts”, “by versions”, or “by milestones”, using the existing muted styling and row-width visibility rule.
+- A saved push with a milestone shows the same branch-colored trophy/text chip and adjacent add chip as a prompt frame. Resolve the displayed frame's milestone through the shared store/seed lookup; do not exclude milestone playback targets just because they are push frames.
+
+
+## Milestone chip preview and reveal — 2026-10-18
+
+- Playback milestone chips separate the trophy and label into content-sized, full-height sections. Keep the trophy's branch colors; use the shared reference-chip fill and white text for the label.
+- A nonselected hover preview shows only the trophy at full opacity. Selecting the frame expands to the measured label width and slides the label vertically through a clipped mask using the shared gallery transition. Retain accessible text, truncation, the add chip, and reduced-motion support.
+
+- Milestone trophy icons use a dedicated 16px size (up from the general 13px annotation icon). Center the label with a full-height flex container and a separate truncating text span, preserving the masked reveal. (2026-10-18)
+
+
+## Milestone invitation and celebration — 2026-10-18
+
+- Invitation gradients use adjacent palette hues and 80% dark-theme accent strength to retain clear color, replacing the muddier 64% treatment.
+- Playback milestone pills grow to content width, capped at 50% of the available action-row width, including the trophy; use container-relative sizing so expanded and split panels adapt equally.
+- The trophy is a separate keyboard-accessible celebration button: a small white/branch-color confetti burst and scale/vertical bounce, without opening annotations. Text still opens annotations; the add chip creates a note. Repeated activation restarts the effect, particles clean up after completion/unmount, and reduced motion suppresses the celebration.
+
+
+## Milestone confetti flight and contrast — 2026-10-18
+
+- Dark invitation gradients retain adjacent hues but use 70% accent strength (superseding 80%) for better contrast with white invitation controls.
+- Milestone celebration pieces are 3 × 4.5px and follow launch velocity, gravity, and air resistance, with varied spin/tumble. Use a longer 1.4s flight, keeping full opacity for its first 80% before fading. Preserve the white/branch palette, trophy bounce, repeat/unmount cleanup, and reduced-motion behavior.
+
+## Sample chat replies and live-update demo — 2026-10-18
+
+- In Chat, a user message sits closer to the reply below it: `--message-output-gap` is 0.75× the row inline padding (about 42px from the bubble to the reply, including the user's hidden timestamp row).
+- While a reply is prepared, the status row reads "Preparing your response" and fades in while sliding up inside a mask (`--run-progress-enter-ms`).
+- The sample project has no live agent: every reply says so, and explains that in a connected project the reply would appear in the conversation and new frames in Version blocks. The newest reply prints word by word (`printWordMs`), keeping the conversation pinned to its end; screen readers receive the full text at once.
+- When a reply finishes printing and the Gallery is open, the gallery demos a live update: the newest active frame hides for `arrival.holdMs`, then drops in from 50% of its height above (`arrival.rise`) while fading in over `arrival.durationMs`. Reduced motion skips the movement.
+
+- Milestone bursts use 16 pieces and a 0.72 horizontal launch multiplier, increasing density while narrowing the spread without changing vertical flight or fade timing. (2026-10-18)
+
+## Brand name: verso — 2026-10-18
+
+- The product is **verso**, always lowercase, including at the start of a sentence: top bar and brand menu, sidebar wordmark, landing page, page title, design-system page, settings copy and the sample project (name, brief, instructions). Supersedes MitWerk.
+- The sidebar wordmark is live text (`.workspace-wordmark`, at the former 18px logo height and the shared strong weight) instead of the MitWerk wordmark image. The symbol mark is unchanged until a verso mark exists.
+- Saved sample names and instructions that still carry the old brand migrate to verso on load; custom text is kept as written.
+- Internal identifiers keep their names (storage keys, `/__mitwerk/*` routes, `mw-` classes, `MITWERK_*` env vars, file and repo names) so saved data and tooling keep working.
+
+## Push names from Git; clamped captions — 2026-10-18
+
+- A push frame's name is its full Git commit message (trailers such as Co-Authored-By removed), not the length-limited capture filename. The catalog resolves it from the recorded SHA in `data/push-shas.json` only when that commit's subject matches the capture's summary; otherwise it finds the commit by subject, nearest before the capture time. The message travels in the catalog (`commitMessage`), so the published Blob catalog serves it online too.
+- Playback captions (prompt text or push message) show at most `--theater-summary-lines` (2) lines, ending in an ellipsis, and never collapse to zero height. When cut short, hovering or focusing the caption shows the full text in a top-layer tooltip (`.theater-summary-tip`) placed above the caption, or below when there is no room.

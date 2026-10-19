@@ -14,7 +14,7 @@ export function MilestoneEditor({ value, onSave, onCancel, children, compactFoot
     try { onSave(text); } catch { setError('Could not save the milestone. Please try again.'); }
   }
   return <form className="idea-editor" onSubmit={event => { event.preventDefault(); if (draft.trim()) save(draft.trim()); }}>
-    <label htmlFor={id} className="visually-hidden">Milestone</label>
+    <label htmlFor={id}>Milestone</label>
     <textarea id={id} autoFocus rows={3} value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); onCancel(); } }}/>
     <div className={compactFooter ? 'milestone-editor-footer' : undefined}>
       {children}

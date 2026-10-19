@@ -1,4 +1,6 @@
-# Mitwerk
+# verso
+
+The product is named **verso**, always lowercase (formerly MitWerk). Internal identifiers such as storage keys, `/__mitwerk/*` routes, `mw-` CSS classes and `MITWERK_*` environment variables keep their old names so saved data and tooling keep working.
 
 The active prototype now follows **Idea 2: visual iteration history**. Run `npm run dev` and open `http://localhost:5173/` for the Iteration Gallery and Version stream. The gallery reads PNGs in `[frame capture] screenshots/`, provides isometric browsing and theater playback, and includes its capture assets in `npm run build`.
 
@@ -106,7 +108,7 @@ Research board (FigJam): [Capstone research](https://www.figma.com/board/im0O0k4
 
 ### Vercel deployment
 
-Live prototype: https://mitwerk-prototype.vercel.app
+Live prototype: https://verso-prototype.vercel.app (the former https://mitwerk-prototype.vercel.app still resolves to the same Vercel project)
 
 Deploy the current working copy without committing or pushing:
 
@@ -128,7 +130,7 @@ The manual full-audit publisher remains available; it is no longer needed after 
 
 ```sh
 npm run publish:gallery
-npm run verify:gallery -- https://mitwerk-prototype.vercel.app
+npm run verify:gallery -- https://verso-prototype.vercel.app
 ```
 
 The catalog has a 60-second Blob cache lifetime, so allow up to a minute before verifying a changed live catalog. The gallery refreshes on its existing polling interval. New code, Git-history snapshots and archived prototypes still need `npm run deploy:vercel`.
