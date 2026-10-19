@@ -62,8 +62,10 @@
 .album-caption strong { color: var(--ink); font-weight: 500; }
 .album-caption span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .theater-view { container-type: inline-size; flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding: 16px 24px var(--theater-footer-gap, 4px); gap: 16px; }
-.theater-body { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: var(--theater-metadata-gap, 16px); }
+.theater-body { position:relative; flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: var(--theater-metadata-gap, 16px); }
+.theater-body.is-scrollable { overflow-y:auto; overflow-x:hidden; }
 .theater-stage { container-type:inline-size; display: flex; flex-direction: column; align-items: center; height: fit-content; flex: 0 0 auto; margin: auto; min-height: 0; max-width: 100%; }
+.theater-view:not(.is-runtime) .theater-stage { position:absolute; margin-block:0; }
 .theater-stage > .theater-frame-actions { margin-bottom: var(--theater-action-gap); }
 .theater-stage > .theater-metadata { margin-top: var(--theater-metadata-gap); }
 .theater-frame-bed { align-self: stretch; width: 100%; height: var(--theater-bed-height); display: flex; align-items: center; justify-content: center; background: var(--theater-frame-bed); flex-shrink: 0; }
@@ -82,9 +84,8 @@
 .theater-metadata { height:var(--theater-metadata-height); min-height:0; overflow:hidden; width:100%; flex-shrink:0; display:flex; flex-direction:column; gap:var(--theater-row-gap, 4px); font-size:11px; }
 .theater-metadata > :not(.theater-summary) { flex-shrink:0; }
 .theater-metadata .theater-summary { min-height:0; overflow:hidden; flex:0 0 auto; }
-/* Prompt and push messages: at most --theater-summary-lines, then an ellipsis. */
-.theater-metadata { --theater-summary-lines:2; }
-.theater-metadata .theater-summary { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:var(--theater-summary-lines); line-clamp:var(--theater-summary-lines); flex:0 1 auto; min-height:1lh; }
+/* Prompt and push messages share a single-line ellipsis. */
+.theater-metadata .theater-summary { display:block; white-space:nowrap; text-overflow:ellipsis; flex:0 0 auto; min-height:1lh; }
 .theater-metadata p { line-height: 1.5; overflow-wrap: anywhere; }
 .theater-version { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: var(--theater-summary-gap, 2px); }
 .theater-version-group { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-width: 0; flex-wrap: wrap; }

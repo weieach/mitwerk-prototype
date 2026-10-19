@@ -123,7 +123,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
   const metaRef = useRef<HTMLDivElement>(null);
   const wheel = useRef(0);
   const stepFrame = useRef<(move: number) => void>(() => {});
-  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0, actions: 0, bodyHeight: 0, caption: 0 });
   const [stageMeasured, setStageMeasured] = useState(false);
   const index = frames.findIndex(frame => frame.id === selectedId);
   const branches = useMemo(() => [...new Set(catalog.map(item => item.branch).filter((branch): branch is string => !!branch))], [catalog]);
@@ -195,18 +195,31 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
       // image position stable as text wraps or a longer prompt is selected.
       const meta = Math.min(t.theater.metadataHeight, body.clientHeight * t.theater.metadataHeightShare);
       body.style.setProperty('--theater-metadata-height', `${meta}px`);
-      const actions = (actionsRef.current?.offsetHeight ?? 0) + t.theater.actionGap;
+      const view = body.parentElement!;
+      const actionsElement = actionsRef.current;
+      const frameGap = actionsElement ? parseFloat(getComputedStyle(actionsElement).marginBottom) || 0 : 0;
+      const metadataGap = frameGap * t.theater.metadataGapScale;
+      body.style.setProperty('--theater-metadata-gap', `${metadataGap}px`);
+      const actions = (actionsElement?.offsetHeight ?? 0) + frameGap;
+      const playbackOnly = !!body.closest('.workspace-gallery-only');
+      const width = Math.min(body.clientWidth, window.innerWidth * t.theater.contentMaxViewportShare,
+        playbackOnly ? view.clientWidth * t.theater.contentShare : body.clientWidth);
       const runtimeClearance = parseFloat(getComputedStyle(body).paddingBottom) + 2 * t.controls.inset;
-      const height = Math.max(0, body.clientHeight - (runtimeMode ? runtimeClearance : meta + t.theater.metadataGap + actions));
-      setStageSize({ width: body.clientWidth, height });
+      const height = Math.max(0, body.clientHeight - (runtimeMode ? runtimeClearance : 0));
+      setStageSize({ width: runtimeMode ? body.clientWidth : width, height, actions, bodyHeight: body.clientHeight, caption: meta + metadataGap });
       setStageMeasured(body.clientWidth > 0 && height > 0);
     };
     const observer = new ResizeObserver(measure);
     observer.observe(body);
+    observer.observe(body.parentElement!);
+    window.addEventListener('resize', measure);
+    const workspace = body.closest('.workspace');
+    const modeObserver = new MutationObserver(measure);
+    if (workspace) modeObserver.observe(workspace, { attributes: true, attributeFilter: ['class'] });
     if (metaRef.current) observer.observe(metaRef.current);
     if (actionsRef.current) observer.observe(actionsRef.current);
     measure();
-    return () => observer.disconnect();
+    return () => { observer.disconnect(); modeObserver.disconnect(); window.removeEventListener('resize', measure); };
   }, [Boolean(frame), runtimeMode]);
 
   // Follow the image actually on screen, never a loading request or hover preview.
@@ -276,9 +289,13 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
   if (!frame) return <div className="gallery-empty">No frames in this date range. Choose a wider range to play.</div>;
   const naturalFrame = theaterFrameSize(stageSize, baseline, baseline);
   const staticRatio = baseline.width / Math.max(baseline.height, 1);
-  const staticHeight = Math.min(naturalFrame.height, stageSize.height);
+  const staticHeight = runtimeMode ? Math.min(naturalFrame.height, stageSize.height) : naturalFrame.height;
   const staticFrame = { width: staticHeight * staticRatio, height: staticHeight };
   const frameSize = staticFrame;
+  const stageHeight = stageSize.actions + frameSize.height + stageSize.caption;
+  // Center the complete section above the transport, keeping the frame full-width.
+  const stageTop = Math.max(0, Math.min(stageSize.bodyHeight - stageHeight, (stageSize.bodyHeight - stageHeight) / 2 + t.theater.stageOffsetY));
+  const scrollStage = !runtimeMode && stageHeight > stageSize.bodyHeight;
   function selectFrame(next: number) {
     prototype.exit();
     const nextFrame = frames[next];
@@ -384,8 +401,8 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
   const playbackOptions = <div className="playback-options">
         <PlaybackControls unit={jumpScale} speed={speed} loop={mode} onUnit={chooseUnit} onSpeed={setSpeed} onLoop={value => { setMode(value); setDirection(1); }}/>
         </div>;
-  // On a wide panel the frame cannot fill the row; the actions, metadata and playback rows follow its width.
-  const rowWidth = stageMeasured ? Math.min(frameSize.width, stageSize.width) : undefined;
+  // Keep controls readable when height limits the image; all rows share the responsive content cap.
+  const rowWidth = stageMeasured ? stageSize.width : undefined;
   const milestone = versionMilestone(milestones, frame.version);
   const rangeLabel = ranges.find(option => option.value === range)!.label.toLowerCase();
   const rangeFrames = catalog.filter(item => inRange(item, range, now));
@@ -409,8 +426,8 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
     style={{ '--theater-footer-gap': `${t.theater.playbackFooterGap}px`, '--theater-action-buttons-gap': `${t.theater.actionButtonsGap}px` } as CSSProperties}
     onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} onLostPointerCapture={pointerEnd}>
     {active && !runtimeMode && exportTarget && createPortal(<PlaybackExport catalog={catalog} range={range} now={now} unit={jumpScale} hasMilestone={hasMilestone}/>, exportTarget)}
-    <div className="theater-body" ref={bodyRef} style={{ '--theater-metadata-height': `${t.theater.metadataHeight}px`, '--theater-metadata-max': `${t.theater.metadataHeightMaxVh}vh`, '--theater-metadata-gap': `${t.theater.metadataGap}px` } as CSSProperties}>
-      <div className="theater-stage" style={{ width: runtimeMode ? frameSize.width : rowWidth ?? '100%', '--theater-action-gap': `${t.theater.actionGap}px`, '--theater-frame-bed': t.theater.frameBed } as CSSProperties}>
+    <div className={`theater-body${scrollStage ? ' is-scrollable' : ''}`} ref={bodyRef} style={{ '--theater-metadata-height': `${t.theater.metadataHeight}px`, '--theater-metadata-max': `${t.theater.metadataHeightMaxVh}vh`, '--theater-metadata-gap': `${t.theater.metadataGap}px` } as CSSProperties}>
+      <div className="theater-stage" style={{ top: runtimeMode ? undefined : stageTop, width: runtimeMode ? frameSize.width : rowWidth ?? '100%', '--theater-action-gap': `${t.theater.actionGap}px`, '--theater-frame-bed': t.theater.frameBed } as CSSProperties}>
       {runtimeMode === 'prototype' && <nav className="prototype-version-controls" aria-label="Prototype versions" data-orbit-blocked inert={runtimeExiting} onClick={event => event.stopPropagation()}>
         <button type="button" aria-label="Previous prototype version" disabled={!prototypeNeighbors.previous} onClick={() => switchPrototype(prototypeNeighbors.previous)}><i className="ph-fill ph-play is-previous" aria-hidden="true"/></button>
         <PrototypeVersionLabel version={prototypeVersion}/>
@@ -426,7 +443,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
         </button>}
         </div>
       </div>
-        <div className={`theater-screen${displayed?.kind === 'push' ? ' is-push' : ''}${runtimeMode ? ' is-runtime-screen' : ''}`} inert={runtimeExiting} ref={screenRef} style={{ height: frameSize.height, width: '100%' }}
+        <div className={`theater-screen${displayed?.kind === 'push' ? ' is-push' : ''}${runtimeMode ? ' is-runtime-screen' : ''}`} inert={runtimeExiting} ref={screenRef} style={{ height: frameSize.height, width: frameSize.width, maxWidth: '100%' }}
           onDragStart={event => { if (runtimeMode) { event.preventDefault(); return; } setPlaying(false); writeFrameDrag(event.dataTransfer, frameContext()); }}>
           {runtimeMode ? <EmbeddedPrototype key={runtimeMode === 'prototype' ? frame.id : runtimeMode} mode={runtimeMode} url={prototype.url} loading={prototype.loading} error={prototype.error ?? (prototype.available === false ? 'No saved codebase for this push.' : null)} version={frame.version} onRetry={() => void prototype.enter()}/> : displayed ? <img draggable src={`${import.meta.env.BASE_URL}${displayed.url}`} alt={`${formatVersion(displayed.version)}: ${displayed.summary}`} aria-hidden={showingPreview}/>
             : <div className="gallery-empty">{failedImage ? 'This saved image could not be loaded.' : 'Loading frame…'}</div>}

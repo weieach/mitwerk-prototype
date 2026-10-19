@@ -557,3 +557,42 @@ Changes that are made but not yet committed. The user decides when to commit and
 - `MessageOutput.tsx`, `workspace-layout.css`: hide the complete version output until its current image is decoded and measured, reset readiness on source changes, and avoid measuring/animating hidden cards.
 - `docs/design-system-rules.md`: record the shared card-loading rule.
 - Validation: TypeScript and diff checks pass. Chrome with deliberately paused image decoding confirms zero visible/layout space while waiting, then reveals the complete card at its natural image ratio with no left gap, for both cold and cached loads.
+
+## 2026-10-18 · prompt #490 · Separate panel and conversation width limits
+
+- `workspace-responsive.ts`, `useChatPanelWidth.ts`, `Workbench.tsx`: cap split Chat panels at 40vw independently of the 575px content limit, retaining wide-screen 36vw defaults and fullscreen's 675px content exception.
+- `workspace-layout.css`: center the content column and let assistant replies fill the same width as version cards in split view as well as fullscreen.
+- `tests/workspace-responsive.test.ts`, `docs/design-system-rules.md`: update responsive expectations and shared layout rules.
+- `AGENTS.md`: reconcile the push counter with the existing push #49 capture and committed HEAD.
+- Validation: TypeScript, responsive-width test, and diff checks pass. Chrome confirms the 40vw resize ceiling at 1198/1669/2560px, centered split content capped at 575px, identical reply/card bounds, and unchanged centered 675px fullscreen behavior.
+
+## 2026-10-18 · prompt #491 · Playback positioning and captions
+
+- `TheaterView.tsx`, `tokens.ts`, `gallery.css`: center the frame independently of its metadata, size it to avoid control overlap, dynamically cap landscape playback-only content to the shared 80% width token, and truncate prompt/push captions to one line. Preserve live runtime layout.
+- `docs/design-system-rules.md`: record the shared positioning, width, and caption rules. Browser annotation images have no local source path to archive.
+- Validation: TypeScript, six theater-layout tests, and diff checks pass. Chrome verifies image centering in split and solo playback at portrait/landscape sizes, one-line ellipsis, the landscape width ceiling, and no overlap with transport controls.
+
+## 2026-10-18 · prompt #492 · Full-width playback frames
+
+- `TheaterView.tsx`, `gallery.css`: size saved playback frames from the shared content width rather than shrinking them to the centered height budget; preserve aspect ratio, shift the stage when needed, and allow overflow scrolling on short panels. Runtime sizing is unchanged.
+- `docs/design-system-rules.md`: record width priority and the short-panel fallback.
+- `visual_ref/[prompt #492] Screenshot 2026-10-18 at 22.13.55.png`: save the supplied reference.
+- Validation: TypeScript and diff checks pass. Chrome confirms frame, caption, and transport widths match in split and playback-only layouts at 1669×1333, 2200×1000, and 1600×800, with the landscape 80% cap retained.
+
+## 2026-10-18 · prompt #493 · Playback width and vertical spacing
+
+- `TheaterView.tsx`, `tokens.ts`: use an 85% playback-only content column capped at 50vw, center the full stage above transport to lift it, and increase bottom padding from 4px to 12px. The split Idea stream layout retains available width within the viewport ceiling.
+- `docs/design-system-rules.md`: update shared playback sizing and spacing rules. Inline browser references have no local source files to archive.
+- Validation: TypeScript and diff checks pass. Chrome verifies matching frame/transport widths, the 85%/50vw constraint, centered full stages above controls, and 12px bottom padding across portrait, landscape, and split layouts.
+
+## 2026-10-18 · prompt #494 · Playback cap and balanced frame gaps
+
+- `tokens.ts`, `TheaterView.tsx`: raise the playback width ceiling to 60vw, add a bounded 24px downward stage offset, and derive the metadata gap from the measured action-row gap so image spacing matches above and below.
+- `docs/design-system-rules.md`: update shared playback geometry. Inline browser references have no local source files to archive.
+- Validation: TypeScript and source diff checks pass. Chrome confirms equal computed gaps above/below the image, matching content widths within 85%/60vw, and a bounded 24px downward offset across split, portrait, and landscape layouts.
+
+## 2026-10-18 · prompt #495 · Double playback caption spacing
+
+- `TheaterView.tsx`, `tokens.ts`: double the frame-to-metadata gap through a shared multiplier, including its reserved layout space.
+- `docs/design-system-rules.md`: record the new 2:1 spacing ratio. Inline browser reference has no local source file to archive.
+- Validation: TypeScript and source diff checks pass. Chrome measures 6.39px above and 12.80px below the frame, confirming the doubled caption gap without control overlap.

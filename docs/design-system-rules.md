@@ -1832,7 +1832,7 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Push names from Git; clamped captions — 2026-10-18
 
 - A push frame's name is its full Git commit message (trailers such as Co-Authored-By removed), not the length-limited capture filename. The catalog resolves it from the recorded SHA in `data/push-shas.json` only when that commit's subject matches the capture's summary; otherwise it finds the commit by subject, nearest before the capture time. The message travels in the catalog (`commitMessage`), so the published Blob catalog serves it online too.
-- Playback captions (prompt text or push message) show at most `--theater-summary-lines` (2) lines, ending in an ellipsis, and never collapse to zero height. Full-text hover/focus tooltips are not shown for prompt captions, push captions, or push-node titles; preserve the existing clamping and click-to-expand behavior.
+- Playback captions (prompt text or push message) show at most one line, ending in an ellipsis, and never collapse to zero height. Full-text hover/focus tooltips are not shown for prompt captions, push captions, or push-node titles; preserve truncation and click-to-expand behavior.
 
 ## Splash screen actions and intro — 2026-10-18
 
@@ -1888,12 +1888,21 @@ This file is reserved for project-wide design-system rules requested by the user
 
 ## Chat width limits and fullscreen — 2026-10-18
 
-- Side-by-side Chat panels and their content have a hard maximum of 575 CSS pixels at every viewport width, including drag and keyboard resizing; this supersedes the previous 600px cap, scaled 760px ceiling and uncapped 36vw defaults.
+- Side-by-side Chat panels have a maximum of 40vw, including drag and keyboard resizing. Their conversation-inner and composer content are independently capped at 575 CSS pixels and horizontally centered. Wide-screen default panels use 36vw; this supersedes the fixed 575px panel cap.
 - When Chat is the only visible panel, its surface fills the workspace and the conversation plus composer/to-do content are horizontally centered in a column no wider than 675 CSS pixels. Hide the aside conversation cards and remove their reserved space. Apply this exception from visible-panel state, including narrow screens.
 - Escape must not turn side-by-side Chat and Version blocks into fullscreen Chat; preserve other Escape dismissal behavior.
 
-- In fullscreen Chat, assistant reply text uses the full content width, matching the version card beneath it; the centered 675px column still sets the outer limit.
+- In both split and fullscreen Chat, assistant reply text uses the full content width, matching the version card beneath it. The centered column sets the outer limit: 575px in split view and 675px when Chat is the only visible panel.
 
 ## Version-card loading — 2026-10-18
 
 - Keep the entire Chat version output, including its milestone action, hidden and out of layout until the current preview image has decoded and its natural aspect ratio is available. Reveal the image and card together; no empty preview gap. Reset readiness on preview changes and begin invitation timing only after readiness.
+
+## Playback content positioning — 2026-10-18
+
+- Center the complete saved-frame section (actions, image, and metadata) in the body above the playback transport, then offset it downward by 24px, bounded by available space. This replaces centering the image alone and positions the section higher. Live runtime retains its existing layout.
+- When Version blocks shows Playback alone, its content column uses 85% of panel width at every aspect ratio, capped at 60vw. Center it horizontally. The Playback/Idea stream split keeps its available column width with the same 60vw ceiling. Recalculate on panel, viewport, and mode changes; this supersedes the landscape-only 80% rule.
+- Frames fill the same responsive width as actions, captions, and transport, preserving their aspect ratio. Do not shrink horizontally to fit height; allow content scrolling in exceptionally short panels.
+- Playback bottom padding is 12px, adding 8px beneath the timeline before the panel footer.
+
+- The gap from frame to metadata is twice the measured action-row-to-frame gap, using the shared playback spacing token and metadata gap multiplier. Preserve this ratio across responsive typography and wrapped actions.
