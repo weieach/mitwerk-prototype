@@ -217,3 +217,40 @@
 - Follow-up 2 (same canvas, no repo source changed): shot 1 frames use the gallery version-block material (muted edge 18%, line fill 3.5%) and cross-fade to the 2px final style as the camera starts moving; wrapper padding 120px; the wrapped stack turns 90° anticlockwise and the row is built from turned blocks; the ending adds a cursor click on the trophy with the app's trophy bounce and 16-particle confetti physics (`celebration.ts`).
 
 - `scripts/screenshot-progress.mjs`: Playback captures wait for the actual settled Playback and loaded frame, rather than an Idea stream readiness flag that is absent in Chat/Playback; allow 30s for cold captures. Reserved #528 because #527 already has a logged request awaiting its capture.
+- Follow-up 3 (same canvas): every animated layer rests on its final-frame style, so the editor's edit mode (which turns off CSS animation) shows the finished milestone frame instead of all shots stacked.
+- Follow-up 4 (same canvas): milestone chip centered under the highlighted block (pointer and confetti stay anchored to the trophy), 120px gaps between blocks, 4px block and highlight borders.
+- Follow-up 5 (same canvas): blocks get 150px padding top and bottom (frame ends), gaps between blocks 100px, and the Shot tweak is back on "play" (it had been set to the top-view still).
+- Follow-up 6 (same canvas): the camera move into shot 2 now includes the 90° anticlockwise turn, so the top view already shows vertical frames and the separate rotate step is gone (later beats 1s earlier); frames take the blocks' 4px border and fill.
+- Follow-up 7 (same canvas): shot 1 frames use the 4px block border and fill from the start (gallery material dropped); the zoom-out begins with the camera move into the top view and continues through the row; typing about twice as fast, click at 17.5s.
+- Follow-up 8 (same canvas): 60%-opacity Waldenburg caption "Prompts" under the shot 1 frames, crossfading to "Versions" as the wrapper forms and fading out during the pan before the milestone chip; the wrapped block is now the first block in the row (no blocks to its left) and the pan starts during the zoom-out.
+- Follow-up 9 (same canvas): row stays vertically centered; highlighted block has 8 frames; caption and milestone chip share one fixed, constant-size slot 110px above the bottom edge (caption fades at 12–12.5s, chip at 13.1s); scene starts at 85% so shot 1 clears that slot.
+- Follow-up 10 (same canvas): milestone lands on the 6th block after the wrapped one (8 frames) over a 5.4s pan; label and chip use the repo's `--sans` stack at Waldenburg Regular 400 (uploaded), both 26px; zoom-out starts at 2.2s; all easing softened to cubic-bezier(.3,0,.7,1) / (.25,.4,.35,1); click at 18.8s.
+- Follow-up 11 (same canvas): zoom-out ends at 34% at 10.2s and holds 300ms; pan (10.5–15.9s) moves at constant speed between 0.8s quadratic ease-in/out; push-in removed; ending shifted 1.9s later (click 20.7s).
+- Follow-up 12 (same canvas): typing reads elapsed time from a hidden CSS clock animation (stays in sync after edit mode or replay); 45°→41° drift removed so shot 1→2 is one rotation (4–6s); row blocks fade in only once the pan starts (10.5s, 0.18s stagger).
+- Follow-up 13 (same canvas): milestone block is the last of 16 blocks (pan still 5.4s); chip types "Finally published my site!" with a two-letter backspace; zoom-out starts at 4.4s, after the rotation begins.
+- Follow-up 14 (same canvas): black pointer with white outline; rotation 2.8–4.8s; zoom-out 3.2–7.6s at constant speed with 0.6s ease ramps; 300ms hold; pan 7.9–11.5s (3.6s); ending retimed (click 16.3s).
+- Follow-up 15 (same canvas): row is 40 blocks; pan 8.1–10.5s (2.4s, 0.3s ramps); zoom split into a pull-back to 60% during the rotation and a 1s constant-speed zoom-out (0.15s ramps) on the wrapped block at 6.8–7.8s, then a 300ms hold; ending retimed (click 15.3s).
+- Follow-up 16 (same canvas): row is 23 blocks; pan 8.3–10.7s with 0.6s ease ramps; wrapped-block zoom-out 6.8–8.0s with a 0.6s cubic landing; ending +0.2s (click 15.5s).
+- Follow-up 17 (same canvas): row is 18 blocks; pan 8.6–11.4s with a 1.2s quartic landing; zoom-out 6.8–8.3s with a 0.9s quartic landing; ending +0.7s (click 16.2s).
+- Follow-up 18 (same canvas): hold before the pan cut to 100ms; pan 8.4–12.2s (3.8s) with a 1.0s cubic ease-in and the 1.2s quartic landing; ending +0.8s (click 17.0s).
+- Follow-up 19 (same canvas): wrapped-block zoom-out moved to 5.8–7.3s so it runs with the wrapper forming; pan 7.4–11.2s; ending 1s earlier (click 16.0s).
+- Follow-up 20 (same canvas): zoom-out is one continuous move (3.2–6.4s, 0.3s ramp-in, 0.9s quartic landing) running with the rotation and the wrapper (4.8s); pan 6.5–10.3s; ending 0.9s earlier (click 15.1s).
+- Follow-up 21 (same canvas): zoom-out starts at 3.8s (1s into the rotation), ends 7.0s; pan 7.1–10.9s; ending +0.6s (click 15.7s).
+- Follow-up 22 (same canvas): zoom-out starts at 5.8s (after the rotation); wrapper and Versions caption at 6.5s, once the zoom has shrunk the block clear of the bottom label; pan 9.1–12.9s; ending +2s (click 17.7s).
+- Follow-up (same canvas, no repo source changed): the wrapped-block zoom-out now starts at 4.8s, the moment the frames finish rotating; pan and ending move 1s earlier (click 16.7s); wrapper and Versions caption at 6.0s, once the block clears the caption.
+- Follow-up (same canvas): gradual pull-back from 85% to 65% during the rotation (2.8–4.8s) so the frames stay ~25px above the label; the 4.8s zoom-out then settles at 7.07s, where "Prompts" switches to "Versions"; pan 7.15s, ending ~1s earlier (click 15.75s).
+- Follow-up (same canvas): yellow highlight border 6px (2px wider, outward); wrapper forms at 4.9s, right after the top-view lines appear.
+- Follow-up (same canvas): wrapper at 5.4s; shot 1 frames use a 55% translucent fill; pan 3.2s (was 3.8s), ending 0.6s earlier (click 15.15s).
+- Follow-up (same canvas): wrapper 5.8–6.6s with "Prompts" → "Versions" at 6.6s once it is fully on; pan 2.7s; ending 0.5s earlier (click 14.65s).
+- Follow-up (same canvas): shot 1 frame fill raised from 55% to 80% opacity.
+- Follow-up (same canvas): pan 3.1s with a 1.0s quartic ease-in and 1.3s quintic landing; ending 0.4s later (click 15.05s).
+- Follow-up (same canvas): "Prompts" → "Versions" at 5.8s, as the wrapper starts to appear mid zoom-out.
+- 2026-10-19 · brand animation export: rendered the canvas to `exports/verso-brand-animation-4k60.mp4` (3840×2160, 60fps, H.264, 17.5s) via a scratchpad headless-Chrome frame stepper; `exports/` is gitignored.
+- 2026-10-19 · brand animation: row cut to 14 blocks (pan still 3.1s); re-rendered `exports/verso-brand-animation-4k60.mp4` in place.
+
+## 2026-10-19 · prompt #529 · Production Gallery transition investigation
+
+- `AGENTS.md`: reconcile push counter to #57 from the existing push capture, SHA map, and local/remote commit `6fddca3`; prompt counter remains #528 until capture succeeds.
+- `src/features/iteration-gallery/AlbumScene.ts`, `theater-camera.ts`: anchor the turn to the selected frame's projected center instead of independently interpolating camera position and rotation; prevents a long history from sweeping toward its end before Playback settles. Preserve the original pose for reverse navigation.
+- `tests/theater-camera.test.ts`, `docs/design-system-rules.md`: cover the projected path across gallery depths, zooms, off-center targets, and reverse motion; document the shared frame-anchored transition rule.
+- Validation: 36 focused camera/transition/timeline tests and TypeScript checks passed. Browser traces confirmed monotonic selected-frame movement for both a prompt and a push, with the clicked frame preserved; return navigation restored Gallery. Saved progress capture #529 and logged the user's clarification in `docs/prompt-log.md`.

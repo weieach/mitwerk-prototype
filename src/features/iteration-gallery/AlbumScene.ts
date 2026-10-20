@@ -1,6 +1,7 @@
 import { galleryRenderRatio } from './render-quality';
 import { annotationBookmarkColor } from '../annotations/appearance';
 import { interpolateOrbit } from './camera-motion';
+import { frameCameraTurn } from './theater-camera';
 import { tokenUsageArea } from './token-usage';
 import * as THREE from 'three';
 import { dragAngles, transitionProgress, theaterEntranceDuration, theaterRotationProgress } from './theater-transition';
@@ -278,9 +279,11 @@ export class AlbumScene {
     const fromPosition = this.camera.position.clone(), fromRotation = this.camera.quaternion.clone();
     const originalZoom = this.camera.zoom;
     const fromFrustum = [this.camera.left, this.camera.right, this.camera.top, this.camera.bottom].map(value => value / this.camera.zoom);
-    const toFrustum = [-centerX * unit, (rect.width - centerX) * unit, centerY * unit, -(rect.height - centerY) * unit];
-    const destination = selected.image.position.clone().add(new THREE.Vector3(0, 0, Math.max(this.span, this.album?.depth ?? 0) * 2));
+    const toFrustum = [-centerX * unit, (rect.width - centerX) * unit, centerY * unit, -(rect.height - centerY) * unit] as const;
     const originalLift = selected.group.position.y;
+    const pivot = selected.image.position.clone();
+    const turnCamera = frameCameraTurn(this.camera, pivot.clone().add(new THREE.Vector3(0, originalLift, 0)), pivot,
+      toFrustum, Math.max(this.span, this.album?.depth ?? 0) * 2);
     const originalOpacity = selected.image.material.opacity;
     const imageScale = selected.plane.height * selected.plane.frame.width / selected.plane.frame.height / selected.plane.width;
     const otherMaterials = new Map<THREE.Material, number>();
@@ -324,11 +327,7 @@ export class AlbumScene {
       const forwardEase = rotation.eased;
       const eased = reverse ? 1 - forwardEase : forwardEase;
       this.callbacks.motion(reverse ? 1 - progress : progress);
-      this.camera.position.lerpVectors(fromPosition, destination, eased);
-      this.camera.quaternion.slerpQuaternions(fromRotation, new THREE.Quaternion(), eased);
-      this.camera.zoom = 1;
-      [this.camera.left, this.camera.right, this.camera.top, this.camera.bottom] = fromFrustum.map((value, i) => THREE.MathUtils.lerp(value, toFrustum[i], eased));
-      this.camera.updateProjectionMatrix();
+      turnCamera(eased);
       selected.group.position.y = originalLift * (1 - eased);
       selected.image.scale.x = THREE.MathUtils.lerp(1, imageScale, eased);
       selected.image.material.opacity = THREE.MathUtils.lerp(originalOpacity, 1, eased);

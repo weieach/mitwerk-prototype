@@ -5245,3 +5245,16 @@ This block is automatically supplied ambient UI state, not part of the user's re
 ## My request:
 when jumping from gallery to playback after clicking a frame, the animation isn't ass smooth as before and there's observable frame drop. Also, the selected frame should be centered in the timeline below; if there isnt enough version blocks to center it on either side, have that side be aligned against the edge of the timeline wrapper
 ```
+
+## Prompt #529
+
+```text
+while im testing on vercel, when I click on prompts in gallery under home bucket, somehow during the transition it will jump all the way to the end of sequence before entering playback, which is different from the local server behavior which is what i want
+
+```
+
+Clarification: asked whether Playback shows the clicked prompt or the latest prompt after the jump, and whether the work state simulator is enabled. User replied:
+
+```text
+shows the clicked prompt, its just the transition thats weird
+```

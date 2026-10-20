@@ -2029,3 +2029,7 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Center Playback's selected prompt mark or push node using measured timeline geometry. Clamp scroll to the real content edges when there are too few blocks on either side; never add blank space to force centering. Recalculate after panel or unit sizing changes, preserving manual scrolling and direct scrubbing.
 - Prepare the selected WebGL texture before starting the gallery camera turn. Defer background texture attachment and look-ahead decoding during the transition so capture uploads do not interrupt the shared motion clock.
+
+## Frame-anchored Gallery turn — 2026-10-19
+
+- Keep the selected frame's projected center on a direct eased path from its current Gallery position to its contained Playback position throughout the turn. Derive the camera from that screen-space anchor, its interpolated orientation, and the frame's world position, including hover lift. Do not interpolate world camera position independently of rotation: long histories amplify the resulting sweep toward unrelated frames. Apply the same path in reverse and retain the original Gallery pose.
