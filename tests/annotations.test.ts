@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { annotationMilestones, appendAnnotationContext, emptyAnnotations, removeAnnotation, saveAnnotation } from '../src/features/annotations/model.ts';
+import { annotationsForFrame, annotationMilestones, appendAnnotationContext, emptyAnnotations, removeAnnotation, saveAnnotation } from '../src/features/annotations/model.ts';
 import type { AnnotationFrame, FrameAnnotation } from '../src/features/annotations/model.ts';
 import { seedAnnotationSamples } from '../src/features/annotations/samples.ts';
 const frame:AnnotationFrame={id:'frame-240',number:240,kind:'prompt',version:26,url:'gallery/frame.png',summary:'Frame controls',timestamp:1000};
@@ -83,4 +83,22 @@ test('reload clears browser milestones and annotation copies while preserving no
  const preserved=values.get(annotationStorageKey);
  resetPrototypeMilestones(storage);
  assert.equal(values.get(annotationStorageKey),preserved);
+});
+
+
+test('frame annotation list includes version milestones without persisting or duplicating them', () => {
+ const items = [{...note, text:'Frame todo'}];
+ const listed = annotationsForFrame(items, frame, 'Seeded milestone');
+ assert.equal(items.length, 1);
+ assert.equal(listed[0].text, 'Seeded milestone');
+ assert.equal(listed[0].kind, 'milestone');
+ assert.equal(listed[1], items[0]);
+ assert.deepEqual(annotationsForFrame(items, frame, ''), items);
+ const linked = {...note, id:'linked', text:'Shared milestone', kind:'milestone' as const, todo:false, frame:{...frame,id:'another-frame'}};
+ const combined = annotationsForFrame([...items, linked], frame, linked.text);
+ assert.equal(combined[0], linked);
+ assert.equal(combined[0].frame.id, 'another-frame');
+ assert.equal(annotationsForFrame([linked], linked.frame, linked.text).length, 1);
+ const edited = saveAnnotation(emptyAnnotations, {...listed[0], text:'Edited milestone'});
+ assert.equal(annotationsForFrame(edited.items, frame, 'Edited milestone').length, 1);
 });

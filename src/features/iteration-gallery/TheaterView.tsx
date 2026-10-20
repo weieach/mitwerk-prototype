@@ -477,7 +477,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
       </div>
     </div>
     <div className="theater-playback" data-orbit-blocked style={{ width: runtimeLayout ? undefined : rowWidth, alignSelf: !runtimeLayout && rowWidth ? 'center' : undefined }}>
-      {runtimeMode && <div className="runtime-exit-scrim" inert={runtimeExiting}>
+      {runtimeMode && <div className="runtime-exit-scrim" inert={runtimeExiting} style={{ '--runtime-exit-offset-y': `${runtimeMode === 'live' ? 0 : t.theater.prototypeExitOffsetY}px` } as CSSProperties}>
         <button ref={exitButton} className="theater-text-action" onClick={exitPrototype}><Icon name="close"/>Exit {runtimeMode === 'live' ? 'live server' : 'prototype'}</button>
       </div>}
       <div className="gallery-toolbar playback-controls" inert={!!runtimeMode} aria-hidden={!!runtimeMode} style={{ '--playback-enabled': t.theater.playbackEnabled, '--playback-disabled': t.theater.playbackDisabled } as CSSProperties}>

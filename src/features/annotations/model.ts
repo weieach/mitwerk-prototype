@@ -48,3 +48,13 @@ export function appendAnnotationContext(draft: string, note: FrameAnnotation) {
   const context = annotationContext(note);
   return draft.includes(`[Frame annotation ${note.id}]`) ? draft : [draft.trim(), context].filter(Boolean).join('\n\n');
 }
+
+/** Include the version milestone even when it originated in Idea stream or on another frame. */
+export function annotationsForFrame(items: FrameAnnotation[], frame: AnnotationFrame, milestone: string): FrameAnnotation[] {
+  const notes = items.filter(note => note.frame.id === frame.id);
+  if (!milestone || notes.some(note => note.kind === 'milestone' && note.text === milestone)) return notes;
+  const existing = items.find(note => note.frame.version === frame.version && note.kind === 'milestone' && note.text === milestone);
+  const date = new Date(frame.timestamp).toISOString();
+  return [existing ?? { id: `version-milestone:${frame.version}`, frame: annotationFrame(frame), text: milestone,
+    kind: 'milestone', todo: false, status: 'To do', createdAt: date, updatedAt: date }, ...notes];
+}

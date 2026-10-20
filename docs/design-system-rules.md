@@ -2037,3 +2037,42 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Playback entrance visibility — 2026-10-19
 
 - Hide the entire Playback row, including transport, timeline, overview and scrollbars, throughout the Gallery camera turn. Reveal it only through the existing 640ms delayed entrance after Playback is ready; no timeline child may show early. Keep the row laid out for frame sizing and timeline measurement. Reduced motion reveals the row immediately after the handoff.
+
+## Saved frame annotations — 2026-10-19
+
+- Show saved annotations in a full-width, left-aligned list of bordered cards beneath the frame preview, reusing Idea stream's milestone card styling and sizing tokens. Milestones use the frame's graph-derived route color; to-dos and plain notes use the semantic neutral border. Replace the former right-aligned message bubbles.
+- Clicking an entry replaces only that entry with its editor, preserving the other saved entries. Use the shared bottom-hairline field, with Save, Cancel and Delete; cancel preserves the saved value, and saving returns to the card list (retaining the existing to-do confirmation). Keep new-entry actions left aligned.
+
+
+## Playback options and prototype exit spacing — 2026-10-19, prompt #532
+
+- Prompt playback defaults to 4× on initialization and when selected; version remains 2× and milestone remains 1× with looping. The shared speed list is 0.5×, 1×, 2×, 4×, 8×.
+- The Controls summary has three visible spaces after its label. Menu columns are Speed, Loop, and “Play per...”, with Prompt, Version, and Milestone options. Shared column menus stretch each column to the full content height so dividers reach the last row.
+- Saved-prototype exit actions sit 12px lower via the prototype exit-offset token; Live server keeps its position. Runtime clearance continues to derive from the measured exit row.
+
+
+## Milestone annotations across playback units — 2026-10-19, prompt #533
+
+- Timeline milestone push nodes retain their Idea stream branch color in Prompt, Version, and Milestone playback. Resolve milestones with the shared saved/seed lookup and branch palette, independently of the selected playback unit. Ordinary pushes keep the existing unit-specific styling; stepping behavior is unchanged.
+
+
+## Existing version milestones in Playback overlays — 2026-10-19, prompt #534
+
+- Opening a milestone chip shows the existing version milestone in the saved-card list even when it comes from Idea stream or seeded history rather than the current frame's annotations. Resolve through the same version identity and saved/seed lookup; deduplicate matching annotations and preserve their original frame when editing.
+- Milestone cards use Idea stream's text-only card layout and shared styling. Clicking opens the bottom-hairline inline editor. The list offers “Add new milestone”, defaulting the new editor to Milestone. Reading a version milestone must not create a persistent annotation; edits and deletions update the shared milestone state.
+
+
+## Responsive Playback controls menu — 2026-10-19, prompt #535
+
+- At playback panel widths of 680px and above (`controls.menuRowsMinPanelWidth`), the Controls dropdown uses three horizontal setting rows: Speed, Loop, and Play per..., with options arranged across each row. Narrower panels keep three columns. Measure the actual Playback panel and react to pane resizing, independently of the browser viewport.
+- Use the shared grouped selector row layout, horizontal dividers, and semantic tokens. Arrow keys follow the displayed layout: left/right within a row, up/down between setting rows. Recalculate popup placement when its orientation changes.
+
+
+## Contextual milestone marker emphasis — 2026-10-19, prompt #536
+
+- In Prompt and Version playback, milestone timeline markers mix their branch color at 72% strength with the normal push background (`--timeline-milestone-context-strength`). Milestone playback keeps the full branch color. Dim only the marker fill, preserving tooltip readability and existing hover/focus feedback.
+
+
+## Softer neutral milestone markers — 2026-10-19, prompt #537
+
+- Neutral (main-branch) milestone markers use `--timeline-milestone-neutral`, mixing the shared contrast color at 82% strength with the panel background. Resolve neutral markers from the branch palette, not version identities. The existing contextual dimming still applies outside Milestone mode; colored branch markers retain their palette colors.

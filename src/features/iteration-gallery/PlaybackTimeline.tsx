@@ -129,13 +129,15 @@ export function PlaybackTimeline({ unit = 'frame', hasMilestone = () => false, b
     {tipPosition !== undefined && frames[tipIndex] && <span className="capsule-tooltip gallery-timeline-tip" role="tooltip" style={{ left: `${tipPosition * 100}%` }}>{formatVersion(frames[tipIndex].version)}</span>}
     </div>
     {timeline.pushes.map(node => {
-      // Version playback lights every saved push; milestone playback colors milestone pushes by branch, like the Idea stream.
+      // Milestone annotations keep their Idea stream branch color in every playback unit.
       const pushFrame = node.frameId ? catalog.find(item => item.id === node.frameId) : undefined;
-      const target = !!pushFrame && (unit === 'version' || (unit === 'milestone' && hasMilestone(node.version)));
+      const milestone = !!pushFrame && hasMilestone(node.version);
+      const milestoneColor = galleryBranchPaint(pushFrame?.branch ?? 'main', branches);
+      const target = !!pushFrame && (unit === 'version' || milestone);
       return <button key={node.version} type="button"
-      className={`gallery-timeline-push${node.floating ? ' is-floating' : ''}${target ? ' is-unit-target' : ''}`} aria-label={`${formatVersion(node.version)} · push node`}
+      className={`gallery-timeline-push${node.floating ? ' is-floating' : ''}${target ? ' is-unit-target' : ''}${milestone ? ' is-milestone' : ''}`} aria-label={`${formatVersion(node.version)} · push node`}
       aria-disabled={node.frameId === null} data-push-version={node.version}
-      style={{ left: `${node.start * 100}%`, width: `${(node.end - node.start) * 100}%`, ...(target && unit === 'milestone' ? { '--push-unit-color': galleryBranchPaint(pushFrame!.branch ?? 'main', branches) } : {}) } as CSSProperties}
+      style={{ left: `${node.start * 100}%`, width: `${(node.end - node.start) * 100}%`, ...(milestone ? { '--push-unit-color': milestoneColor === 'var(--contrast)' ? 'var(--timeline-milestone-neutral)' : milestoneColor } : {}) } as CSSProperties}
       onPointerDown={event => event.stopPropagation()}
       onPointerEnter={() => { onPreview(null); setRangeTip(null); setPushTip(node.version); }}
       onPointerLeave={() => setPushTip(null)} onFocus={() => { onPreview(null); setPushTip(node.version); }} onBlur={() => setPushTip(null)}

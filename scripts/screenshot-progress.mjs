@@ -560,7 +560,7 @@ function wantsLiveCapture(prompt) { return argValue('gallery-view') === 'live' |
 function screenshotUrl(prompt = '') {
   const target = new URL(url);
   target.searchParams.set('screenshot', '1');
-  if (/milestone (?:play )?mode/i.test(prompt)) target.searchParams.set('playUnit', 'milestone');
+  if (!target.searchParams.has('playUnit') && /milestone (?:play )?mode/i.test(prompt)) target.searchParams.set('playUnit', 'milestone');
   if (/\bexport overlay\b/i.test(prompt)) target.searchParams.set('exportOpen', '1');
   if (/\bcontrol(?:s)? (?:overlay|panel)\b/i.test(prompt)) target.searchParams.set('controlsOpen', '1');
   const workState = workStateCapture(prompt);
@@ -734,6 +734,8 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
         ? '(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && document.querySelector(".album-3d-viewport")?.dataset.tokenUsageReady === "true"'
         : wantsTransitionCapture(prompt)
         ? '(document.documentElement.dataset.screenshotReady === "1" || !!document.querySelector(".workspace-gallery-only .album-3d-viewport canvas")) && document.querySelector(".album-3d-viewport")?.dataset.transitionReady === "true"'
+        : new URL(url).searchParams.get('annotationOverlay') === '1'
+        ? '!!document.querySelector(".annotation-overlay[open][data-entered=true]") && !!document.querySelector(".annotation-preview")?.complete && document.querySelector(".annotation-preview")?.naturalWidth > 0'
         : wantsTheaterCapture(prompt)
         ? `document.querySelector(".iteration-gallery")?.dataset.galleryPhase === "theater" && (document.querySelector(".theater-view")?.dataset.frameReady === "true") && !!document.querySelector(".theater-screen img")?.complete && (() => { const tag = document.querySelector(".annotation-tag"); return !tag || (tag.classList.contains("is-ready") && !tag.getAnimations().some(animation => animation.playState === "running")); })()${/annotation overlay|\bc theater overlay\b/i.test(prompt) && !/milestone overlay/i.test(prompt) ? ' && !!document.querySelector(".annotation-overlay[open][data-entered=true]")' : ''}${/overlay open/i.test(prompt) ? ' && !!document.querySelector(".theater-fullscreen") && !document.querySelector(".theater-fullscreen .is-exit")' : ''}${/mobile breakpoint|\bat mobile\b/i.test(prompt) ? ' && document.querySelector("[aria-label=\\"Preview viewport\\"]")?.value === "phone" && !!document.querySelector(".theater-frame-bed")' : ''}${/\breference chip\b/i.test(prompt) ? ' && !!document.querySelector(".mw-composer .frame-context-chip img")?.complete' : ''}${/prototype (?:is )?entered|prototype mode/i.test(prompt) ? ' && !!document.querySelector("[aria-label=\\"Preview viewport\\"]")' : ''}${/playhead at last frame/i.test(prompt) ? ' && document.querySelector(".theater-view")?.dataset.rangeEdge === "end" && (() => { const head = document.querySelector(".gallery-timeline-playhead"); const scroller = document.querySelector(".gallery-timeline-scroll"); if (!head || !scroller) return false; const h = head.getBoundingClientRect(); const s = scroller.getBoundingClientRect(); return h.left >= s.left - 4 && h.right <= s.right + 4; })()' : ''}`
         : /annotation overlay|\bc theater overlay\b/i.test(prompt)
@@ -912,7 +914,7 @@ async function capture(chrome, outFile, prompt = '') {
       if (![width, height].every(value => Number.isInteger(value) && value >= 320 && value <= 7680)) throw new Error('Capture viewport dimensions must be integers between 320 and 7680');
       await cdp('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 2, mobile: false });
     }
-    await waitForScreenshotReady(cdp, (wantsLandingCapture(prompt) || hasFlag('milestone-invite')) ? 20000 : (wantsPrototypeCapture(prompt) || wantsLiveCapture(prompt)) ? 60000 : wantsTheaterCapture(prompt) ? 30000 : 10000, prompt);
+    await waitForScreenshotReady(cdp, (wantsLandingCapture(prompt) || hasFlag('milestone-invite')) ? 20000 : (wantsPrototypeCapture(prompt) || wantsLiveCapture(prompt) || new URL(url).searchParams.get('annotationOverlay') === '1') ? 60000 : wantsTheaterCapture(prompt) ? 30000 : 10000, prompt);
     await cdp('Runtime.evaluate', { expression: 'document.fonts.ready.then(() => true)', awaitPromise: true, returnByValue: true });
     const chatPrompt = argValue('chat-prompt');
     if (chatPrompt) {
@@ -965,7 +967,7 @@ async function capture(chrome, outFile, prompt = '') {
       await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...note.result.value });
       await cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...note.result.value });
       await delay(550);
-      const edited = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.annotation-overlay[aria-label="Edit annotation"] .annotation-text')?.value`, returnByValue: true });
+      const edited = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('.annotation-overlay[aria-label^="Edit "] .annotation-text')?.value`, returnByValue: true });
       if (!edited.result?.value) throw new Error('Annotation edit capture did not open a populated editor');
     }
 

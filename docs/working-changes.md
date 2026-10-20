@@ -260,3 +260,67 @@
 - `src/features/iteration-gallery/gallery.css`: hide the full Playback row during the Gallery turn instead of only the transport buttons, preventing the timeline and scrollbars from appearing before the scheduled 640ms entrance.
 - `docs/design-system-rules.md`: record the shared entrance-visibility rule, preserving layout measurements and reduced motion.
 - Browser validation: before the fix, timeline UI reached full opacity during the camera turn. Afterward, transport/timeline/overview stayed at opacity 0 through all 89 sampled turning frames and the delay, then began appearing at ~649ms (the 640ms schedule plus one display frame); metadata appeared at ~182ms. The row finished fully visible.
+
+## 2026-10-19 · prompt #531 · Saved annotation cards and inline editing
+
+- `src/features/annotations/FrameAnnotations.tsx`, `annotations.css`, `src/index.css`: replace chat-style annotation bubbles with full-width Idea stream-style cards, reuse milestone sizing tokens and graph-derived route color, and edit the selected entry inline with the existing bottom-hairline field and save/delete behavior. Add Cancel and align the new-entry action left.
+- `docs/design-system-rules.md`: document the reusable card/list and inline-editor behavior.
+- `visual_ref/[prompt #531] Screenshot 2026-10-19 at 20.55.51.png`: preserve the supplied layout reference.
+- `scripts/screenshot-progress.mjs`: accept kind-specific edit-dialog titles when capturing an existing annotation editor.
+- Validation: TypeScript and browser checks pass. Three entries filled the list width with 1px card borders; selecting a milestone kept the other two visible, focused its bottom-hairline input, and save/cancel/delete all worked.
+- Visual verification caught and fixed a control-height specificity conflict: saved cards now expand to their text rather than clipping to a button row. Seven annotation model tests passed.
+- Explicit annotation-overlay progress captures now wait on the visible dialog and its decoded preview, rather than the inert Playback underneath it; the latter timed out twice despite the sheet being ready.
+- The overlay and shell checks pass in the isolated browser, but full-resolution captures exceeded the 30s budget. Allow explicit annotation-overlay captures the same 60s loading budget as runtime captures.
+- `AGENTS.md`: reconcile the push counter to #59 from the existing push capture and `data/push-shas.json`; no commit or push was performed for this request.
+- Progress capture #531 succeeded with the extended loading budget; inspected the saved annotation-list layout.
+
+
+## 2026-10-19 · prompt #532 · Playback controls refinements
+
+- `src/features/iteration-gallery/PlaybackControls.tsx`, `tokens.ts`: prompt default 4×, add 8×, shorten play-unit options under “Play per...”, and add a third space after Controls.
+- `src/control-tokens.css`: stretch grouped menu columns so dividers extend through all speed rows.
+- `src/features/iteration-gallery/TheaterView.tsx`, `gallery.css`: move Exit prototype down 12px using a shared token and measured runtime clearance.
+- `docs/design-system-rules.md`: record updated playback and spacing rules.
+- `visual_ref/[prompt #532] Screenshot 2026-10-19 at 21.00.41.png`: preserve the supplied menu reference.
+- Validation: TypeScript passed. Isolated-browser checks confirmed initial 4×, selectable 8×, unit defaults (2× version / 1× milestone / 4× prompt), equal full-height menu columns with 1px dividers, and a 12px prototype exit offset.
+
+
+## 2026-10-19 · prompt #533 · Keep timeline milestones visible across playback units
+
+- `src/features/iteration-gallery/PlaybackTimeline.tsx`: decouple milestone highlighting and branch color from the playback unit, so Prompt and Version retain the same milestone annotations as Milestone mode.
+- `docs/design-system-rules.md`: record the shared cross-mode annotation rule.
+- Validation: TypeScript passed. Browser checks found all eight existing milestone push nodes with identical branch colors in Prompt, Version, and Milestone modes; ordinary prompt-mode pushes remain unhighlighted.
+- `scripts/screenshot-progress.mjs`: preserve an explicitly supplied playback unit instead of overriding it from incidental prompt wording; two automatic milestone-mode captures timed out.
+- The local Vite process stopped responding during capture retries; restarted it on port 5173. Progress capture #533 then succeeded in per-prompt mode.
+
+
+## 2026-10-19 · prompt #534 · Show existing version milestones in chip overlays
+
+- `src/features/annotations/model.ts`, `store.ts`, `FrameAnnotations.tsx`: combine frame notes with the shared version milestone, including seeded and Idea stream entries; deduplicate and preserve originating frame identity. Support inline editing/deletion of version-only entries and a milestone-defaulted Add new milestone action.
+- Milestone cards reuse the Idea stream text-only card layout, with the existing bottom-hairline editor.
+- `docs/design-system-rules.md`: document consistent milestone lookup and overlay behavior.
+- Validation: TypeScript and eight annotation tests passed. Browser verified the v41 seeded milestone as a 720px full-width card, inline bottom-hairline editing, deletion, Milestone default for Add new milestone, preservation of the existing milestone after adding, and edits syncing to shared version state.
+- Local Vite stalled on filesystem reads during verification; restarted on the required port 5173 and completed the checks once it recovered.
+
+
+## 2026-10-19 · prompt #535 · Responsive playback dropdown rows
+
+- `src/features/iteration-gallery/PlaybackControls.tsx`, `tokens.ts`: observe Playback panel width and switch to three horizontal setting rows at 680px, retaining columns below that threshold.
+- `src/components/SelectMenu.tsx`, `src/control-tokens.css`: reusable grouped-row menu layout, horizontal dividers, matching keyboard navigation, and intrinsic-width remeasurement on orientation changes.
+- `docs/design-system-rules.md`: record the responsive menu rule.
+- Validation: TypeScript passed. Browser checks confirmed three horizontal rows at 680px and above, columns at 679px, switching while open without changing viewport size, matching arrow-key navigation, and successful speed selection.
+
+
+## 2026-10-19 · prompt #536 · Subtle milestone markers outside milestone mode
+
+- `src/features/iteration-gallery/PlaybackTimeline.tsx`, `gallery.css`, `src/control-tokens.css`: identify milestone nodes from shared milestone data and soften only their fill to 72% branch-color strength in Prompt and Version modes. Keep full color in Milestone mode and leave tooltip opacity intact.
+- `docs/design-system-rules.md`: document the shared contextual emphasis token.
+- 2026-10-19 · new Design canvas "verso Prompt and Version" (https://claude.ai/artifact/4UPQhY3WEQsUR8zuiRDmgp): 16:9 diagram of prompt (two frames → camera → "locally captured by agent hook") and version (block → git-commit → "fetched commits from git"), reusing the animation tokens, Waldenburg 26px and Phosphor regular icons from node_modules; no repo source changed.
+- Validation: TypeScript passed. Browser checks confirmed all eight milestone nodes retain their branch identities, use softened fills in Prompt and Version modes, and return to their full original colors in Milestone mode.
+
+
+## 2026-10-19 · prompt #537 · Softer white milestone markers
+
+- `src/control-tokens.css`, `src/features/iteration-gallery/PlaybackTimeline.tsx`: introduce a softer neutral marker token at 82% contrast strength, applied through the branch palette. Keep existing contextual dimming and colored branch markers.
+- `docs/design-system-rules.md`: record the shared neutral marker treatment.
+- Validation: TypeScript and whitespace checks passed; saved and visually inspected progress capture #537.

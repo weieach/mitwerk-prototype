@@ -3190,5 +3190,53 @@
     "output": 840,
     "total": 5830,
     "simulated": true
+  },
+  "[push #59] 9 files · +39 -3 · fixed playback Ui prematurely appearing-2026-10-19-200925.png": {
+    "input": 4493,
+    "output": 1803,
+    "total": 6296,
+    "simulated": true
+  },
+  "[prompt #531] +76-29 · after i created a milestone on a frame and i click on the chip, it gives a weird layout. Here, existing entries can get -2026-10-19-210755.png": {
+    "input": 7291,
+    "output": 1763,
+    "total": 9054,
+    "simulated": true
+  },
+  "[prompt #532] +120-38 · Move the exit prototype 12px lower. when in prompt mode, the default speed should be 4x. Add 8x speed to the list. The c-2026-10-19-211223.png": {
+    "input": 15559,
+    "output": 616,
+    "total": 16175,
+    "simulated": true
+  },
+  "[prompt #533] +152-42 · in per prompt and per version mode, the milestones should still get annotated like they did in milestone mode-2026-10-19-211723.png": {
+    "input": 11975,
+    "output": 3803,
+    "total": 15778,
+    "simulated": true
+  },
+  "[prompt #534] +237-53 · # Browser comments- ## User Comment 1 Target- -Implemented immersive live server view with new background- Target select-2026-10-19-212635.png": {
+    "input": 371,
+    "output": 1916,
+    "total": 2287,
+    "simulated": true
+  },
+  "[prompt #535] +306-60 · at larger playback panel width, have playback control dropdown panel ve three horizontal rows-2026-10-19-213054.png": {
+    "input": 810,
+    "output": 7294,
+    "total": 8104,
+    "simulated": true
+  },
+  "[prompt #536] +336-61 · in non-milestone mode of playback, have the milestone markers be dimmed a little-2026-10-19-213318.png": {
+    "input": 6291,
+    "output": 7102,
+    "total": 13393,
+    "simulated": true
+  },
+  "[prompt #537] +362-61 · make the white markers a little softer-2026-10-19-213544.png": {
+    "input": 9702,
+    "output": 4206,
+    "total": 13908,
+    "simulated": true
   }
 }

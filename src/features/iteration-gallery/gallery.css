@@ -225,6 +225,7 @@
 .gallery-timeline-container:is([data-unit=version], [data-unit=milestone]) .gallery-timeline-mark { opacity: var(--timeline-unit-dim); }
 .gallery-timeline-push.is-unit-target { background: var(--push-unit-color, var(--timeline-push-unit)); }
 .gallery-timeline-push.is-unit-target:hover, .gallery-timeline-push.is-unit-target:focus-visible { background: var(--push-unit-color, var(--timeline-push-unit)); filter: brightness(1.15); }
+.gallery-timeline-container:not([data-unit=milestone]) .gallery-timeline-push.is-milestone { background:color-mix(in srgb, var(--push-unit-color) var(--timeline-milestone-context-strength), var(--timeline-push-background)); }
 .gallery-timeline-push:focus-visible { outline: 1px solid var(--ink); outline-offset:var(--focus-ring-offset); }
 .gallery-timeline-push[aria-disabled=true] { cursor: default; }
 .gallery-timeline-push .gallery-timeline-tip { left: 50%; white-space: nowrap; }
@@ -280,7 +281,7 @@
 .theater-runtime { position:absolute; inset:0; z-index:1; background:var(--paper); overflow:hidden; }
 .theater-runtime > .theater-prototype { z-index:1; inset:0 auto auto 0; width:calc(100% / var(--runtime-scale, 1)); height:calc(100% / var(--runtime-scale, 1)); transform:scale(var(--runtime-scale, 1)); transform-origin:0 0; }
 .runtime-status { position:absolute; inset:0; z-index:2; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:12px; background:var(--paper); color:var(--ink); font-size:12px; padding:24px; }
-.runtime-exit-scrim { position:absolute; inset:auto 0 calc(var(--gallery-runtime-footer-height, var(--panel-footer-height, 56px)) + var(--gallery-control-inset) + var(--gallery-token-lift)); height:calc(var(--base-control-height) + 2 * var(--gallery-floating-pad-block)); z-index:6; display:flex; align-items:center; justify-content:center; pointer-events:none; animation:annotation-content-in var(--annotation-enter-ms) ease var(--annotation-ui-delay) both; }
+.runtime-exit-scrim { position:absolute; inset:auto 0 calc(var(--gallery-runtime-footer-height, var(--panel-footer-height, 56px)) + var(--gallery-control-inset) + var(--gallery-token-lift) - var(--runtime-exit-offset-y, 0px)); height:calc(var(--base-control-height) + 2 * var(--gallery-floating-pad-block)); z-index:6; display:flex; align-items:center; justify-content:center; pointer-events:none; animation:annotation-content-in var(--annotation-enter-ms) ease var(--annotation-ui-delay) both; }
 .runtime-exit-scrim button { pointer-events:auto; }
 .runtime-exit-scrim .theater-text-action { color:#fff; background:none; border:0; border-radius:var(--surface-radius); padding:8px 14px; font-size:12px; }
 .runtime-exit-scrim .theater-text-action:hover { background:none; color:#fff; opacity:.72; }

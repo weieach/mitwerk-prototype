@@ -26,18 +26,21 @@
 .annotation-overlay .mw-button { font:inherit; font-size:var(--control-font-size); }
 .annotation-overlay .mw-button.primary { background:var(--mw-accent,var(--ink)); color:var(--paper); }
 .annotation-overlay .mw-button:disabled { opacity:.4; }
-.annotation-list { margin-top:var(--row-padding-inline); max-height:var(--annotation-list-height); overflow:auto; display:flex; flex-direction:column; gap:calc(var(--row-size-unit) * 3); padding:var(--row-size-unit); }
-.annotation-message { flex:none; align-self:flex-end; width:fit-content; max-width:var(--annotation-message-width); display:flex; flex-direction:column; gap:calc(var(--row-size-unit) * 2); padding:var(--card-padding); text-align:left; background:var(--mw-panel, var(--fill)); border:1px solid transparent; border-radius:var(--surface-radius); animation:annotation-message-in var(--annotation-message-enter) ease both; animation-delay:calc(var(--annotation-ui-delay) + var(--annotation-message-index) * var(--annotation-message-stagger)); }
-.annotation-message:hover { background:var(--fill-hover); border-color:var(--line); }
-.annotation-message:focus-visible { outline:var(--focus-ring-width) solid var(--focus-ring-color); outline-offset:var(--focus-ring-offset); }
-.annotation-message-body { white-space:pre-wrap; overflow-wrap:anywhere; line-height:var(--message-line-height); }
-.annotation-message-meta { display:flex; align-items:center; justify-content:flex-end; gap:calc(var(--row-size-unit) * 2); align-self:flex-end; color:var(--muted); font-size:var(--meta-font-size); }
+.annotation-list { margin-top:var(--row-padding-inline); max-height:var(--annotation-list-height); overflow:auto; display:flex; flex-direction:column; gap:calc(var(--row-size-unit) * 2); padding:var(--focus-ring-offset); }
+.annotation-entry-row { flex:none; min-width:0; animation:annotation-message-in var(--annotation-message-enter) ease both; animation-delay:calc(var(--annotation-ui-delay) + var(--annotation-message-index) * var(--annotation-message-stagger)); }
+.annotation-sheet .annotation-entry { max-height:none; }
+.annotation-entry .annotation-kind { display:flex; margin-bottom:var(--row-size-unit); }
+.annotation-entry:hover { background:var(--fill-hover); }
+.annotation-entry:focus-visible { outline:var(--focus-ring-width) solid var(--focus-ring-color); outline-offset:var(--focus-ring-offset); }
+.annotation-entry-row form { margin-top:0; }
+.annotation-entry-row .annotation-form-actions { margin-top:var(--row-size-unit); }
+.annotation-message-body { display:block; white-space:pre-wrap; overflow-wrap:anywhere; }
 .annotation-kind { display:inline-flex; align-items:center; gap:var(--row-size-unit); color:var(--muted); font-size:var(--meta-font-size); white-space:nowrap; }
 .annotation-form-actions > label { font-size:var(--annotation-action-font-size) !important; }
 .annotation-overlay .annotation-save { --primary-button-font-size:calc(var(--annotation-action-font-size) + var(--primary-button-font-increase)); }
 .mw-app .annotation-overlay .annotation-save { font-size:var(--primary-button-font-size) !important; }
 @keyframes annotation-message-in { from { opacity:0; transform:translateY(calc(var(--row-size-unit) * 4)) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
-.annotation-create { display:flex; margin:var(--row-padding-inline) 0 0 auto; }
+.annotation-create { display:flex; margin:var(--row-padding-inline) 0 0; }
 .annotation-confirmation { padding:var(--row-padding-inline); border:1px solid var(--line); border-radius:var(--surface-radius); background:var(--paper); }
 .annotation-confirmation>i { margin-bottom:calc(var(--row-size-unit) * 2); }
 .annotation-confirmation p { color:var(--muted); line-height:var(--message-line-height); }
@@ -45,7 +48,7 @@
 .annotation-overlay .annotation-return, .annotation-sheet>header, .annotation-sheet>form, .annotation-list, .annotation-create { animation:annotation-content-in var(--annotation-enter-ms) ease var(--annotation-ui-delay) both; }
 @keyframes annotation-blur-in { from { opacity:0; backdrop-filter:blur(0); } to { opacity:1; backdrop-filter:blur(var(--annotation-blur)); } }
 @keyframes annotation-content-in { from { opacity:0; transform:translateY(var(--row-size-unit)); } to { opacity:1; transform:translateY(0); } }
-@media(prefers-reduced-motion:reduce) { .annotation-overlay::before, .annotation-overlay .annotation-return, .annotation-sheet>header, .annotation-sheet>form, .annotation-preview, .annotation-list, .annotation-create, .annotation-message { animation:none; } }
+@media(prefers-reduced-motion:reduce) { .annotation-overlay::before, .annotation-overlay .annotation-return, .annotation-sheet>header, .annotation-sheet>form, .annotation-preview, .annotation-list, .annotation-create, .annotation-entry-row { animation:none; } }
 .annotation-todo { margin-bottom:10px; }
 .annotation-todo .kanban-task { margin-bottom:0; }
 .annotation-todo .annotation-source { display:flex; align-items:center; gap:5px; font-size:var(--meta-font-size); color:var(--mw-muted); margin-bottom:8px; }

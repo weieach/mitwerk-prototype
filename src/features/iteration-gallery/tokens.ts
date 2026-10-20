@@ -5,7 +5,7 @@ export const galleryTokens = {
   runtimeBackdrop: { color: 'var(--faint)' },
   theaterMotion: { entryMs: 240, infoDelayMs: 180, playbackDelayMs: 640, runtimeReturnMs: 560, rotateMs: 1100, verticalAxisFadeMs: 180, frameBorderMs: 180, controlsFadeMs: 280, captureProgress: .5, timelineMs: 320, timelineOffsetVh: 5 },
   theaterDrag: { radiansPerViewport: Math.PI, pitchLimit: Math.PI * .45 },
-  controls: { headerGap: 14, tokenLift: 48, floatingBackground: 'var(--paper)', floatingWidth: 144, floatingPaddingInline: 16, floatingPaddingBlock: 6, labelOpacity: .6, frameSelectorShare: .3, fileMaxWidth: 240, frameSelectMaxWidth: 200, inset: 24, gap: 8 },
+  controls: { menuRowsMinPanelWidth: 680, headerGap: 14, tokenLift: 48, floatingBackground: 'var(--paper)', floatingWidth: 144, floatingPaddingInline: 16, floatingPaddingBlock: 6, labelOpacity: .6, frameSelectorShare: .3, fileMaxWidth: 240, frameSelectMaxWidth: 200, inset: 24, gap: 8 },
   interfaces: captureScreens,
   webgl: { pixelRatioMax: 3, resolution: { panelStart: 600, panelEnd: 1600, largePanelScale: 1.5, maxPixels: 12_000_000 }, rotateSpeed: .7, zoomSpeed: .55, keyRotateRadians: .12, dragThreshold: 5,
     blockOpacity: .035, disabledOutlineScale: .5, edgeOpacity: .18, hoverEdgeOpacity: .5, edgeWidth: .75, hoverEdgeWidth: 1.5, frameOutlineOpacity: .92, frontViewPadding: 1.8, frontViewLift: .15, defaultScale: .8, latestFrameTop: .44,
@@ -27,17 +27,17 @@ export const galleryTokens = {
   labelBackdrop: { color: 'var(--paper)', opacity: .94, paddingInline: 4, paddingBlock: 2 }, labelSummaryLength: 42,
   disabledOpacity: 0.14, endpointOpacity: 0.72, refreshMs: 30_000,
   zoomMin: 0.5, zoomMax: 3, zoomStep: 0.25,
-  playbackIntervalMs: 350, speeds: [0.5, 1, 2, 4],
+  playbackIntervalMs: 350, speeds: [0.5, 1, 2, 4, 8],
   /** Live-update demo: the newest frame hides, then drops in from half its height above while fading in. */
   arrival: { rise: .5, holdMs: 350, durationMs: 700 },
   /** Choosing a Play unit sets its speed; milestone playback also turns looping on. */
-  unitSpeeds: { frame: 2, version: 2, milestone: 1 } as const,
+  unitSpeeds: { frame: 4, version: 2, milestone: 1 } as const,
   timeline: { seekDurationMs: 450, height: 34, playheadOverhang: 5, playheadWidth: 2, minorTickHeight: 16, majorTickHeight: 22, inlinePadding: 6, disabledOpacity: .5, previewOpacity: .45, gapScale: .5, rangeLabelGap: 6, pushBackground: 'var(--paper)', pushHoverBackground: 'var(--timeline-push-hover)', pushMinWidth: 2.5, edgePadding: 2, maxGapFraction: .5, visibleBlocks: 20, tooltipSpace: 28 },
   fullscreen: { scrim: 'rgba(0, 0, 0, .8)', gutter: 48, closeGap: 8, closeSize: 28 },
   theaterReference: { kind: 'prompt', number: 56 } as const,
   capturePushVersion: 16,
   // Runtime previews render at this desktop width (the capture viewport) and scale down to fit the frame, never up.
-  theater: { contentShare: .85, contentMaxViewportShare: .6, stageOffsetY: 24, runtimeViewportWidth: 1440, fullscreenHintMs: 3500, prototypeTimeoutMs: 60000, focusBackground: 'var(--paper)', frameShadow: '0 0 20vw 8px color-mix(in srgb, var(--cursor-base, var(--line-strong)) 2.88%, transparent)', frameBed: 'var(--chrome, var(--ink))', metadataHeight: 112, metadataHeightShare: .26, metadataGap: 16, metadataHeightMaxVh: 20, metadataRowGap: 4, referenceChipWidth: 180, summaryGapScale: 1.75, playbackFooterGap: 12, playbackEnabled: 'var(--ink)', playbackDisabled: 'var(--faint)', actionGap: 0, actionButtonsGap: 24, enterDelayMs: 1000, enterExpandMs: 280, enterFadeMs: 180, imageCacheSize: 8, preloadFrames: 3, wheelStep: 80, addedColor: '#1f8a4c', removedColor: '#d12b2b' },
+  theater: { contentShare: .85, contentMaxViewportShare: .6, stageOffsetY: 24, runtimeViewportWidth: 1440, prototypeExitOffsetY: 12, fullscreenHintMs: 3500, prototypeTimeoutMs: 60000, focusBackground: 'var(--paper)', frameShadow: '0 0 20vw 8px color-mix(in srgb, var(--cursor-base, var(--line-strong)) 2.88%, transparent)', frameBed: 'var(--chrome, var(--ink))', metadataHeight: 112, metadataHeightShare: .26, metadataGap: 16, metadataHeightMaxVh: 20, metadataRowGap: 4, referenceChipWidth: 180, summaryGapScale: 1.75, playbackFooterGap: 12, playbackEnabled: 'var(--ink)', playbackDisabled: 'var(--faint)', actionGap: 0, actionButtonsGap: 24, enterDelayMs: 1000, enterExpandMs: 280, enterFadeMs: 180, imageCacheSize: 8, preloadFrames: 3, wheelStep: 80, addedColor: '#1f8a4c', removedColor: '#d12b2b' },
   viewportPresets: [
     { value: 'original', label: 'Original size', width: 0, height: 0 },
     { value: 'desktop', label: 'Desktop', width: 1440, height: 900 },

@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { annotationMilestones, annotationStorageKey as key, emptyAnnotations, removeAnnotation, saveAnnotation } from './model';
-import { milestoneStorageKey, milestonesChangedEvent, parseMilestones } from '../version-tree/idea-stream';
+import { captureMilestoneKey, milestoneStorageKey, milestonesChangedEvent, parseMilestones } from '../version-tree/idea-stream';
 import type { AnnotationState, FrameAnnotation, AnnotationFrame } from './model';
 import { seedAnnotationSamples } from './samples';
 function read(): AnnotationState {
@@ -36,10 +36,18 @@ window.addEventListener('storage', event => { if (event.key === key) { state = r
 export function useAnnotations() {
   return useSyncExternalStore(callback => { listeners.add(callback); return () => { listeners.delete(callback); }; }, () => state).items;
 }
+export function putAnnotations(notes: FrameAnnotation[]) { commit(notes.reduce((next, note) => saveAnnotation(next, note), state)); }
 export function putAnnotation(note: FrameAnnotation) { commit(saveAnnotation(state, note)); }
 export function deleteAnnotation(id: string) { commit(removeAnnotation(state, id)); }
 export function seedAnnotations(frames: AnnotationFrame[]) { commit(seedAnnotationSamples(state, frames)); }
 export function updateAnnotation(id: string, changes: Partial<Pick<FrameAnnotation, 'status' | 'chatId'>>) {
   const note = state.items.find(item => item.id === id);
   if (note) putAnnotation({ ...note, ...changes, updatedAt: new Date().toISOString() });
+}
+
+/** Delete a version-only milestone without materializing a frame note on read. */
+export function deleteVersionMilestone(version: number) {
+  const saved = parseMilestones(localStorage.getItem(milestoneStorageKey));
+  localStorage.setItem(milestoneStorageKey, JSON.stringify({ ...saved, [captureMilestoneKey(version)]: '' }));
+  window.dispatchEvent(new Event(milestonesChangedEvent));
 }

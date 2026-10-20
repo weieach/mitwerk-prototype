@@ -32,6 +32,8 @@
   --timeline-ruler:color-mix(in srgb, var(--timeline-block-border) 45%, var(--line-strong));
   /* Version/milestone playback: dim the prompt ruler; version pushes match the scroller thumb, milestone pushes use their branch color. */
   --timeline-unit-dim:.35;
+  --timeline-milestone-context-strength:72%;
+  --timeline-milestone-neutral:color-mix(in srgb, var(--contrast) 82%, var(--paper));
   --timeline-push-unit:var(--timeline-overview-thumb);
   --timeline-range-hint-width:170px;
   --reader-title-gap:10px;
@@ -465,8 +467,8 @@
 .select-menu [aria-selected=true] { font-weight:inherit; }
 .select-menu-group { padding:8px var(--row-padding-inline) 2px; color:var(--muted); font-size:var(--chat-meta-size, 11px); }
 .select-menu-group:not(:first-child) { margin-top:4px; border-top:1px solid var(--line); padding-top:8px; }
-/* Grouped menus can lay each section out as a column (Playback Controls: Play | Speed | Loop). */
-.select-menu.has-columns { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; align-items:start; column-gap:var(--select-menu-column-gap, 4px); }
+/* Grouped menus can lay each section out as a column (Playback Controls: Speed | Loop | Play per...). */
+.select-menu.has-columns { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; align-items:stretch; column-gap:var(--select-menu-column-gap, 4px); }
 .select-menu.has-columns .select-menu-group, .select-menu.has-columns .select-menu-group:not(:first-child) { margin-top:0; border-top:0; padding:6px var(--row-padding-inline) 2px; }
 .select-menu.has-columns .select-menu-column + .select-menu-column { border-left:1px solid var(--line); padding-left:var(--select-menu-column-gap, 4px); }
 .select-menu.playback-controls-menu { --row-padding-inline:var(--playback-controls-item-inline, 8px); --select-menu-row-height:calc(var(--control-font-size) * 1.4 + 10px); }
@@ -524,3 +526,10 @@
 
 :root[data-small-workspace=true] { font-size:15px; }
 :root { --milestone-edit-border:color-mix(in srgb,var(--ink) 24%,var(--paper)); }
+
+/* Grouped selectors can use one horizontal row per setting when their panel has room. */
+.select-menu.has-rows { display:flex; flex-direction:column; }
+.select-menu.has-rows .select-menu-column { display:flex; align-items:stretch; }
+.select-menu.has-rows .select-menu-column + .select-menu-column { border-top:1px solid var(--line); }
+.select-menu.has-rows .select-menu-group { flex:0 0 80px; margin:0; border:0; padding:0 var(--row-padding-inline); }
+.select-menu.has-rows [role=option] { flex:1 0 auto; justify-content:center; }

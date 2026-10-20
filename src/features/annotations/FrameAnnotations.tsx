@@ -5,11 +5,13 @@ import { PhosphorIcon } from '../../components/PhosphorIcon';
 import { MilestoneCommitOption } from './MilestoneCommitOption';
 import { LatestPromptIdContext } from './annotation-context';
 import { MilestoneTrophy } from './MilestoneTrophy';
-import { captureMilestoneKey, milestoneStorageKey, parseMilestones } from '../version-tree/idea-stream';
+import { captureMilestoneKey, milestoneStorageKey, parseMilestones, versionMilestone } from '../version-tree/idea-stream';
+import { useSavedMilestones } from '../version-tree/useSavedMilestones';
+import { ideaTheme } from '../version-tree/tokens';
 import { galleryTokens } from '../iteration-gallery/tokens';
 import type { AnnotationFrame, FrameAnnotation, AnnotationKind } from './model';
-import { annotationFrame } from './model';
-import { deleteAnnotation, putAnnotation, useAnnotations } from './store';
+import { annotationFrame, annotationsForFrame } from './model';
+import { deleteAnnotation, deleteVersionMilestone, putAnnotations, useAnnotations } from './store';
 import './annotations.css';
 
 /** With a saved milestone, the chip shows it in the branch color (trophy, truncated text) beside a "+" chip for more notes. */
@@ -62,14 +64,18 @@ export function FrameAnnotations({ frame, active, onOpen, color, milestone = '',
     </> : <button type="button" className={`annotation-tag${ready ? ' is-ready' : ''}`} disabled={!ready} aria-label={notes.length ? `Open ${notes.length} annotations` : 'New milestone / to-do'} onClick={() => open(false)}>
       <PhosphorIcon name={notes.length ? "chat-circle-dots" : "chat-circle"} size="var(--annotation-pill-icon-size)"/>{notes.length ? <strong>{notes.length}</strong> : <span>New milestone / to-do</span>}
     </button>}
-    {opened && <AnnotationOverlay frame={frame} startNew={startNew} container={anchor.current!.closest<HTMLElement>('.iteration-gallery')!} onClose={() => setOpened(false)}/>}
+    {opened && <AnnotationOverlay frame={frame} routeColor={milestoneColor} startNew={startNew} container={anchor.current!.closest<HTMLElement>('.iteration-gallery')!} onClose={() => setOpened(false)}/>}
   </div>;
 }
 
-export function AnnotationOverlay({ frame, container, onClose, onReturn = onClose, milestoneOnly = false, startNew = false, fromChatVersionCard = false }: { fromChatVersionCard?: boolean; milestoneOnly?: boolean; startNew?: boolean; frame: AnnotationFrame; container: HTMLElement; onClose: () => void; onReturn?: () => void }) {
+export function AnnotationOverlay({ frame, container, onClose, onReturn = onClose, milestoneOnly = false, startNew = false, fromChatVersionCard = false, routeColor = 'var(--contrast)' }: { routeColor?: string; fromChatVersionCard?: boolean; milestoneOnly?: boolean; startNew?: boolean; frame: AnnotationFrame; container: HTMLElement; onClose: () => void; onReturn?: () => void }) {
   const latestPromptId = useContext(LatestPromptIdContext);
   const canCommit = fromChatVersionCard || (frame.kind === 'prompt' && frame.id === latestPromptId);
-  const notes = useAnnotations().filter(note => note.frame.id === frame.id);
+  const storedNotes = useAnnotations();
+  const savedMilestones = useSavedMilestones();
+  const milestone = versionMilestone(savedMilestones, frame.version);
+  const notes = annotationsForFrame(storedNotes, frame, milestone);
+  const versionOnly = (note: FrameAnnotation) => !storedNotes.some(item => item.id === note.id);
   const [editing, setEditing] = useState<FrameAnnotation | 'new' | null>(() => milestoneOnly ? notes.find(note => note.kind === 'milestone') ?? 'new' : notes.length && !startNew ? null : 'new');
   const [text, setText] = useState(() => {
     if (!milestoneOnly) return '';
@@ -81,7 +87,7 @@ export function AnnotationOverlay({ frame, container, onClose, onReturn = onClos
   const [savedTodo, setSavedTodo] = useState(false);
   const [entered, setEntered] = useState(false);
   const [exiting, setExiting] = useState(false);
-  const title = milestoneOnly ? "What's your new milestone?" : savedTodo ? 'To-do saved' : editing === 'new' ? `New ${todo ? 'to-do' : kind}` : editing ? 'Edit annotation' : 'Annotations';
+  const title = milestoneOnly ? "What's your new milestone?" : savedTodo ? 'To-do saved' : editing === 'new' ? `New ${todo ? 'to-do' : kind}` : editing ? `Edit ${kind === 'milestone' ? 'milestone' : todo ? 'to-do' : 'note'}` : 'Annotations';
   const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (exitTimer.current) clearTimeout(exitTimer.current); }, []);
   function close(after = onClose) {
@@ -113,26 +119,38 @@ export function AnnotationOverlay({ frame, container, onClose, onReturn = onClos
     else if (editing) textarea.current?.focus();
     else dialog.current?.querySelector<HTMLButtonElement>('.annotation-list button, .annotation-create')?.focus();
   }, [editing, savedTodo, entered]);
-  function edit(note: FrameAnnotation | 'new') {
-    setEditing(note); setText(note === 'new' ? '' : note.text); setKind(note === 'new' ? 'todo' : note.kind ?? (note.todo ? 'todo' : 'note')); setError('');
+  function edit(note: FrameAnnotation | 'new', newKind: AnnotationKind = 'todo') {
+    setEditing(note); setText(note === 'new' ? '' : note.text); setKind(note === 'new' ? newKind : note.kind ?? (note.todo ? 'todo' : 'note')); setError('');
   }
   function save() {
     const date = new Date().toISOString();
     const original = editing && editing !== 'new' ? editing : null;
     try {
-      putAnnotation({ id: original?.id ?? crypto.randomUUID(), frame: annotationFrame(frame), text, todo, kind,
-        status: original?.status ?? 'To do', createdAt: original?.createdAt ?? date, updatedAt: date, chatId: original?.chatId });
+      putAnnotations([...(editing === 'new' && kind === 'milestone' ? notes.filter(versionOnly) : []), { id: original?.id ?? crypto.randomUUID(), frame: annotationFrame(original?.frame ?? frame), text, todo, kind,
+        status: original?.status ?? 'To do', createdAt: original?.createdAt ?? date, updatedAt: date, chatId: original?.chatId }]);
       if (milestoneOnly) { close(); return; }
       setEditing(null); setError(''); setSavedTodo(todo);
     } catch { setError('Your browser could not save this note. Free some local storage and try again.'); }
   }
   function remove() {
     if (!editing || editing === 'new') return;
-    try { deleteAnnotation(editing.id); setEditing(null); setError(''); }
+    try { if (versionOnly(editing)) deleteVersionMilestone(editing.frame.version); else deleteAnnotation(editing.id); setEditing(null); setError(''); }
     catch { setError('Could not delete this annotation. Please try again.'); }
   }
+  const editor = editing && <form onSubmit={event => { event.preventDefault(); save(); }}>
+        <input type="text" ref={textarea} className="annotation-text" aria-label={kind === 'milestone' ? 'Milestone' : todo ? 'To-do' : 'Annotation'} value={text} onChange={event => setText(event.target.value)} placeholder={milestoneOnly ? 'Describe your milestone…' : 'Write a note or a prompt for your agent to work on later…'} required/>
+        <div className="annotation-form-actions">{milestoneOnly ? (canCommit && <MilestoneCommitOption/>) : editing !== 'new' && versionOnly(editing) ? null : <fieldset className="annotation-kind-select"><legend className="visually-hidden">Annotation type</legend>
+          {(['todo', 'milestone'] as const).map(option => <label key={option}><input type="radio" name="annotation-kind" checked={kind === option} onChange={() => setKind(option)}/>{option === 'todo' ? 'To-do' : 'Milestone'}</label>)}
+          {editing !== 'new' && !editing.todo && (!editing.kind || editing.kind === 'note') && <label><input type="radio" name="annotation-kind" checked={kind === 'note'} onChange={() => setKind('note')}/>Note</label>}
+        </fieldset>}<div className="annotation-submit-actions">
+          {!milestoneOnly && kind === 'milestone' && canCommit && <MilestoneCommitOption/>}
+          <button type="button" className="mw-button" onClick={() => { if (milestoneOnly || !notes.length) close(); else { setEditing(null); setError(''); } }}>Cancel</button>
+          {!milestoneOnly && editing !== 'new' && <button type="button" className="annotation-delete" onClick={remove}>Delete</button>}
+          <button type="submit" className="mw-button primary annotation-save" disabled={!text.trim()}>{kind === 'milestone' ? 'Save milestone' : todo ? 'Save as to-do' : 'Save as note'}</button>
+        </div></div>
+      </form>;
   return createPortal(<dialog ref={dialog} className={`annotation-overlay${milestoneOnly ? ' milestone-overlay' : ''}`} data-entered={entered} data-exiting={exiting} aria-label={title}
-    style={{ '--annotation-exit-ms': `${galleryTokens.annotations.exitMs}ms`, '--annotation-blur': `${galleryTokens.annotations.blur}px`, '--annotation-blur-ms': `${galleryTokens.annotations.blurMs}ms`, '--annotation-frame-delay': `${galleryTokens.annotations.frameDelayMs}ms`, '--annotation-ui-delay': `${galleryTokens.annotations.uiDelayMs}ms`, '--annotation-enter-ms': `${galleryTokens.annotations.enterMs}ms`, '--annotation-message-stagger': `${galleryTokens.annotations.messageStaggerMs}ms`, '--annotation-message-enter': `${galleryTokens.annotations.messageEnterMs}ms` } as CSSProperties}
+    style={{ '--milestone-font-size': `${ideaTheme.milestoneFontSize}px`, '--milestone-padding': `${ideaTheme.milestonePaddingBlock}px ${ideaTheme.milestonePaddingInline}px`, '--annotation-exit-ms': `${galleryTokens.annotations.exitMs}ms`, '--annotation-blur': `${galleryTokens.annotations.blur}px`, '--annotation-blur-ms': `${galleryTokens.annotations.blurMs}ms`, '--annotation-frame-delay': `${galleryTokens.annotations.frameDelayMs}ms`, '--annotation-ui-delay': `${galleryTokens.annotations.uiDelayMs}ms`, '--annotation-enter-ms': `${galleryTokens.annotations.enterMs}ms`, '--annotation-message-stagger': `${galleryTokens.annotations.messageStaggerMs}ms`, '--annotation-message-enter': `${galleryTokens.annotations.messageEnterMs}ms` } as CSSProperties}
     onKeyDown={event => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
       if (event.key !== 'Tab') return;
@@ -149,18 +167,16 @@ export function AnnotationOverlay({ frame, container, onClose, onReturn = onClos
     </section> : <section className="annotation-sheet">
       <header><h2><PhosphorIcon name="chat-circle-dots" size="var(--row-title-size)"/>{title}</h2><button className="icon-button" aria-label="Close annotations and return to theater" onClick={() => close(onReturn)}><PhosphorIcon name="x" size="var(--row-title-size)"/></button></header>
       <img className="annotation-preview" src={`${import.meta.env.BASE_URL}${frame.url}`} alt={`Frame ${frame.number}: ${frame.summary}`}/>
-      {editing ? <form onSubmit={event => { event.preventDefault(); save(); }}>
-        <input type="text" ref={textarea} className="annotation-text" aria-label={milestoneOnly ? 'Milestone' : 'Annotation'} value={text} onChange={event => setText(event.target.value)} placeholder={milestoneOnly ? 'Describe your milestone…' : 'Write a note or a prompt for your agent to work on later…'} required/>
-        <div className="annotation-form-actions">{milestoneOnly ? (canCommit && <MilestoneCommitOption/>) : <fieldset className="annotation-kind-select"><legend className="visually-hidden">Annotation type</legend>
-          {(['todo', 'milestone'] as const).map(option => <label key={option}><input type="radio" name="annotation-kind" checked={kind === option} onChange={() => setKind(option)}/>{option === 'todo' ? 'To-do' : 'Milestone'}</label>)}
-          {editing !== 'new' && !editing.todo && (!editing.kind || editing.kind === 'note') && <label><input type="radio" name="annotation-kind" checked={kind === 'note'} onChange={() => setKind('note')}/>Note</label>}
-        </fieldset>}<div className="annotation-submit-actions">
-          {!milestoneOnly && kind === 'milestone' && canCommit && <MilestoneCommitOption/>}
-          {milestoneOnly && <button type="button" className="mw-button" onClick={() => close()}>Cancel</button>}
-          {!milestoneOnly && editing !== 'new' && <button type="button" className="annotation-delete" onClick={remove}>Delete</button>}
-          <button type="submit" className="mw-button primary annotation-save" disabled={!text.trim()}>{kind === 'milestone' ? 'Save milestone' : todo ? 'Save as to-do' : 'Save as note'}</button>
-        </div></div>
-      </form> : <><div className="annotation-list" aria-label="Saved annotations">{notes.length ? notes.map((note, index) => <button key={note.id} className="annotation-message" style={{ '--annotation-message-index': index } as CSSProperties} onClick={() => edit(note)}><span className="annotation-message-body">{note.text}</span><span className="annotation-message-meta"><span className="annotation-kind"><PhosphorIcon name={note.kind === 'milestone' ? 'trophy' : note.todo ? 'check-square' : 'note'}/>{note.kind === 'milestone' ? 'Milestone' : note.todo ? note.status : 'Note'}</span><time dateTime={note.updatedAt}>{new Date(note.updatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</time><PhosphorIcon name="pencil-simple" size="var(--meta-font-size)"/></span></button>) : <p>No annotations yet.</p>}</div><button className="mw-button primary annotation-create" onClick={() => edit('new')}><PhosphorIcon name="plus"/>New milestone / to-do</button></>}
+      {milestoneOnly || editing === 'new' ? editor : <>
+        <div className="annotation-list" aria-label="Saved annotations">{notes.map((note, index) => <div key={note.id} className="annotation-entry-row" style={{ '--annotation-message-index': index, '--route-color': note.kind === 'milestone' ? routeColor : 'var(--line)' } as CSSProperties}>
+          {editing?.id === note.id ? editor : <button type="button" className="annotation-entry" aria-label={`Edit ${note.kind === 'milestone' ? 'milestone' : note.todo ? 'to-do' : 'note'}: ${note.text}`} onClick={() => edit(note)}>
+            {note.kind !== 'milestone' && <span className="annotation-kind"><PhosphorIcon name={note.todo ? 'check-square' : 'note'}/>{note.todo ? note.status : 'Note'}</span>}
+            <span className="annotation-message-body">{note.text}</span>
+          </button>}
+        </div>)}</div>
+        {!editing && <button className="mw-button annotation-create" onClick={() => edit('new', milestone ? 'milestone' : 'todo')}><PhosphorIcon name="plus"/>{milestone ? 'Add new milestone' : 'New milestone / to-do'}</button>}
+      </>}
+
       {error && <p role="alert">{error}</p>}
     </section>}
     </div>

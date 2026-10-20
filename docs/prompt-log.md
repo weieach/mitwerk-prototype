@@ -5265,3 +5265,61 @@ shows the clicked prompt, its just the transition thats weird
 when transitioning to playback, the playback UI kind of already show up before its scheduled to appear
 
 ```
+
+## Prompt #531
+
+```text
+after i created a milestone on a frame and i click on the chip, it gives a weird layout. Here, existing entries can get displayed like how it did on idea stream, and clicking on individual milestone shows the edit field with border on bottom
+
+```
+
+## Prompt #532
+
+```text
+Move the exit prototype 12px lower. when in prompt mode, the default speed should be 4x. Add 8x speed to the list. The column line on the last row is missing. In the "play" col dropdown, change option text to Prompt, Version and Milestone, and the header to "Play per..."
+
+Browser comment 1 (Playback controls):
+add one more space char in btwn
+
+```
+
+## Prompt #533
+
+```text
+in per prompt and per version mode, the milestones should still get annotated like they did in milestone mode
+
+```
+
+## Prompt #534
+
+```text
+# Browser comments:
+
+## User Comment 1
+Target: "Implemented immersive live server view with new background"
+Target selector: div.frame-annotation-bookmark.has-milestone:nth-of-type(1) > div.annotation-tag.is-milestone > button.annotation-milestone-mask:nth-of-type(2) > span.annotation-milestone-text
+Comment:
+clicking here should show the existing milestone with the add new milestone btn on the overlay - the existing milestone should be in the same card layout as it is in idea stream
+
+```
+
+## Prompt #535
+
+```text
+at larger playback panel width, have playback control dropdown panel ve three horizontal rows
+
+```
+
+## Prompt #536
+
+```text
+in non-milestone mode of playback, have the milestone markers be dimmed a little
+
+```
+
+## Prompt #537
+
+```text
+make the white markers a little softer
+
+```
