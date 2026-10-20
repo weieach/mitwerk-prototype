@@ -160,7 +160,7 @@
 .gallery-phase-turning .gallery-theater-layer { pointer-events: none; }
 .gallery-phase-turning .theater-view > .gallery-toolbar,
 .gallery-phase-turning .theater-frame-actions, .gallery-phase-turning .theater-metadata,
-.gallery-phase-turning .playback-controls { opacity: 0; }
+.gallery-phase-turning .theater-playback { opacity: 0; }
 .gallery-phase-turning .theater-screen { opacity: var(--frame-border-opacity, 0); background: transparent; }
 .gallery-phase-turning .theater-screen img, .gallery-phase-turning .theater-screen .gallery-empty { visibility: hidden; }
 .gallery-phase-turning .gallery-timeline {

@@ -3178,5 +3178,17 @@
     "output": 4246,
     "total": 7837,
     "simulated": true
+  },
+  "[push #58] 11 files · +150 -9 · fixed weird camera jump-2026-10-19-200343.png": {
+    "input": 6472,
+    "output": 7897,
+    "total": 14369,
+    "simulated": true
+  },
+  "[prompt #530] +25-2 · when transitioning to playback, the playback UI kind of already show up before its scheduled to appear-2026-10-19-200759.png": {
+    "input": 4990,
+    "output": 840,
+    "total": 5830,
+    "simulated": true
   }
 }

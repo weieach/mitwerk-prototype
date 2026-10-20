@@ -2033,3 +2033,7 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Frame-anchored Gallery turn — 2026-10-19
 
 - Keep the selected frame's projected center on a direct eased path from its current Gallery position to its contained Playback position throughout the turn. Derive the camera from that screen-space anchor, its interpolated orientation, and the frame's world position, including hover lift. Do not interpolate world camera position independently of rotation: long histories amplify the resulting sweep toward unrelated frames. Apply the same path in reverse and retain the original Gallery pose.
+
+## Playback entrance visibility — 2026-10-19
+
+- Hide the entire Playback row, including transport, timeline, overview and scrollbars, throughout the Gallery camera turn. Reveal it only through the existing 640ms delayed entrance after Playback is ready; no timeline child may show early. Keep the row laid out for frame sizing and timeline measurement. Reduced motion reveals the row immediately after the handoff.

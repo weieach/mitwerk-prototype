@@ -254,3 +254,9 @@
 - `src/features/iteration-gallery/AlbumScene.ts`, `theater-camera.ts`: anchor the turn to the selected frame's projected center instead of independently interpolating camera position and rotation; prevents a long history from sweeping toward its end before Playback settles. Preserve the original pose for reverse navigation.
 - `tests/theater-camera.test.ts`, `docs/design-system-rules.md`: cover the projected path across gallery depths, zooms, off-center targets, and reverse motion; document the shared frame-anchored transition rule.
 - Validation: 36 focused camera/transition/timeline tests and TypeScript checks passed. Browser traces confirmed monotonic selected-frame movement for both a prompt and a push, with the clicked frame preserved; return navigation restored Gallery. Saved progress capture #529 and logged the user's clarification in `docs/prompt-log.md`.
+
+## 2026-10-19 · prompt #530 · Prevent early Playback UI
+
+- `src/features/iteration-gallery/gallery.css`: hide the full Playback row during the Gallery turn instead of only the transport buttons, preventing the timeline and scrollbars from appearing before the scheduled 640ms entrance.
+- `docs/design-system-rules.md`: record the shared entrance-visibility rule, preserving layout measurements and reduced motion.
+- Browser validation: before the fix, timeline UI reached full opacity during the camera turn. Afterward, transport/timeline/overview stayed at opacity 0 through all 89 sampled turning frames and the delay, then began appearing at ~649ms (the 640ms schedule plus one display frame); metadata appeared at ~182ms. The row finished fully visible.

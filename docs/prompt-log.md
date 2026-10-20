@@ -5258,3 +5258,10 @@ Clarification: asked whether Playback shows the clicked prompt or the latest pro
 ```text
 shows the clicked prompt, its just the transition thats weird
 ```
+
+## Prompt #530
+
+```text
+when transitioning to playback, the playback UI kind of already show up before its scheduled to appear
+
+```
