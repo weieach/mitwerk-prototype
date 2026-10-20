@@ -509,8 +509,13 @@
 
 /* Capture detail field, matching design-system 8eb969a. */
 :root {
+  --capture-detail-dot-size:6px;
+  --capture-detail-dot-gap:3px;
+  --capture-detail-dot-lift:-2px;
+  --capture-detail-dot-duration:900ms;
+  --capture-detail-dot-stagger:120ms;
   --capture-detail-height:var(--capture-row-height);
-  --capture-detail-min-width:7ch;
+  --capture-detail-min-width:1ch;
   --capture-detail-placeholder:color-mix(in srgb, var(--ink) 38%, transparent);
   --inline-field-line-hover:color-mix(in srgb, var(--ink) 42%, transparent);
   --inline-field-line-focus:color-mix(in srgb, var(--ink) 60%, transparent);

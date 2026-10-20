@@ -919,3 +919,14 @@
   .milestone-return-leaving { visibility:hidden; }
   .is-invitation-exiting .message-version-label { transition:none; }
 }
+
+/* Capture-detail inference shares the field's footprint while the message is changing. */
+.capture-detail-control { position:relative; display:inline-flex; min-width:0; max-width:100%; vertical-align:middle; }
+.capture-detail-control[data-loading=true] .capture-detail-field { opacity:0; pointer-events:none; }
+.capture-detail-status { position:absolute; inset:0; pointer-events:none; display:flex; align-items:center; }
+.capture-detail-dots { display:flex; align-items:center; gap:var(--capture-detail-dot-gap); }
+.capture-detail-dots > i { display:block; width:var(--capture-detail-dot-size); height:var(--capture-detail-dot-size); border-radius:50%; background:var(--muted); animation:capture-detail-pulse var(--capture-detail-dot-duration) ease-in-out infinite both; }
+.capture-detail-dots > i:nth-child(2) { animation-delay:var(--capture-detail-dot-stagger); }
+.capture-detail-dots > i:nth-child(3) { animation-delay:calc(2 * var(--capture-detail-dot-stagger)); }
+@keyframes capture-detail-pulse { 0%,100% { opacity:.25; transform:translateY(0); } 45% { opacity:.9; transform:translateY(var(--capture-detail-dot-lift)); } }
+@media (prefers-reduced-motion:reduce) { .capture-detail-dots > i { animation:none; opacity:.65; } }

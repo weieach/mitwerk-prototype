@@ -31,7 +31,7 @@ export const galleryTokens = {
   /** Live-update demo: the newest frame hides, then drops in from half its height above while fading in. */
   arrival: { rise: .5, holdMs: 350, durationMs: 700 },
   /** Choosing a Play unit sets its speed; milestone playback also turns looping on. */
-  unitSpeeds: { frame: 4, version: 2, milestone: 1 } as const,
+  unitSpeeds: { frame: 4, version: 2, milestone: .5 } as const,
   timeline: { seekDurationMs: 450, height: 34, playheadOverhang: 5, playheadWidth: 2, minorTickHeight: 16, majorTickHeight: 22, inlinePadding: 6, disabledOpacity: .5, previewOpacity: .45, gapScale: .5, rangeLabelGap: 6, pushBackground: 'var(--paper)', pushHoverBackground: 'var(--timeline-push-hover)', pushMinWidth: 2.5, edgePadding: 2, maxGapFraction: .5, visibleBlocks: 20, tooltipSpace: 28 },
   fullscreen: { scrim: 'rgba(0, 0, 0, .8)', gutter: 48, closeGap: 8, closeSize: 28 },
   theaterReference: { kind: 'prompt', number: 56 } as const,

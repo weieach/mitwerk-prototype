@@ -210,7 +210,10 @@ function nextTagCount(dir, tag) {
       max = Math.max(max, Number(match[1]));
     }
   }
-  return Math.max(max, matching) + 1;
+  const recorded = tag === 'push'
+    ? Math.max(0, ...Object.keys(readPushShas()).map(Number).filter(Number.isFinite))
+    : 0;
+  return Math.max(max, matching, recorded) + 1;
 }
 
 function findChrome() {
@@ -914,7 +917,10 @@ async function capture(chrome, outFile, prompt = '') {
       if (![width, height].every(value => Number.isInteger(value) && value >= 320 && value <= 7680)) throw new Error('Capture viewport dimensions must be integers between 320 and 7680');
       await cdp('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 2, mobile: false });
     }
-    await waitForScreenshotReady(cdp, hasFlag('milestone-overlay') ? 60000 : (wantsLandingCapture(prompt) || hasFlag('milestone-invite')) ? 20000 : (wantsPrototypeCapture(prompt) || wantsLiveCapture(prompt) || new URL(url).searchParams.get('annotationOverlay') === '1') ? 60000 : wantsTheaterCapture(prompt) ? 30000 : 10000, prompt);
+    const defaultReadyTimeout = hasFlag('milestone-overlay') ? 60000 : (wantsLandingCapture(prompt) || hasFlag('milestone-invite')) ? 20000 : (wantsPrototypeCapture(prompt) || wantsLiveCapture(prompt) || new URL(url).searchParams.get('annotationOverlay') === '1') ? 60000 : wantsTheaterCapture(prompt) ? 30000 : 10000;
+    const readyTimeout = Number(argValue('ready-timeout-ms', String(defaultReadyTimeout)));
+    if (!Number.isInteger(readyTimeout) || readyTimeout < 1000 || readyTimeout > 120000) throw new Error('Capture readiness timeout must be between 1000 and 120000ms');
+    await waitForScreenshotReady(cdp, readyTimeout, prompt);
     await cdp('Runtime.evaluate', { expression: 'document.fonts.ready.then(() => true)', awaitPromise: true, returnByValue: true });
     const chatPrompt = argValue('chat-prompt');
     if (chatPrompt) {
@@ -1314,7 +1320,21 @@ async function reconcilePush({ commitAndPush }) {
   }
 }
 
+function explicitCaptureCue(prompt = '') {
+  return Boolean(
+    wantsLandingCapture(prompt) || wantsLiveCapture(prompt) || wantsPrototypeCapture(prompt)
+    || wantsIdeaStreamCapture(prompt) || wantsTodosCapture(prompt) || wantsSideBySideCapture(prompt)
+    || wantsChatPlaybackCapture(prompt) || wantsChatCapture(prompt) || wantsHomeCapture(prompt)
+    || wantsTokenCapture(prompt) || wantsGalleryHover(prompt) || wantsTransitionCapture(prompt)
+    || wantsTheaterCapture(prompt) || wantsResetCapture(prompt) || workStateCapture(prompt),
+  );
+}
+
 async function takeScreenshot({ tag, label, sha, base }) {
+  // Ordinary commit subjects do not name a screen. Capture the home layout so the push hook can finish.
+  if (tag === 'push' && !argValue('gallery-view') && !explicitCaptureCue(label)) {
+    process.argv.push('--gallery-view', 'home');
+  }
   const chrome = findChrome();
   if (!chrome) {
     throw new Error('Google Chrome is required to capture progress screenshots.');

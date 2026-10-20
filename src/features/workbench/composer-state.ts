@@ -15,7 +15,7 @@ export type ChatComposerState = {
 };
 
 export function defaultComposer(): ChatComposerState {
-  return { mode: 'prompt', open: false, todos: [], capture: { screen: 'homescreen', overlay: 'editor overlay' } };
+  return { mode: 'prompt', open: false, todos: [], capture: { screen: 'homescreen', overlay: '' } };
 }
 
 /** Saving a to-do never mutates conversation messages or starts an agent run. */

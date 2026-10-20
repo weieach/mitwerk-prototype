@@ -72,7 +72,7 @@ function PrototypeVersionLabel({ version }: { version: number }) {
 
 export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveRequestKey = 0, onLiveRequestHandled, onRuntimeChange, onPlaybackVersion, navigationKey, references, frames, catalog, range, now, selectedId, onSelect, onOrbit, onDismiss, active, baseline }: { onRangeChange: (range: RangeKey) => void; exportTarget?: HTMLElement | null; runtimeCatalog: GalleryFrame[]; liveRequestKey?:number; onLiveRequestHandled:(key:number)=>void; onRuntimeChange?:(mode:RuntimeMode|null)=>void; onPlaybackVersion?:(version:number|null)=>void; navigationKey: number; references: VisualReference[]; baseline: { width: number; height: number }; active: boolean; onOrbit: (id: string, target: TheaterTarget) => TheaterOrbit | null; onDismiss: () => void; frames: GalleryFrame[]; catalog: GalleryFrame[]; range: RangeKey; now: number; selectedId: string; onSelect: (id: string, animate?: boolean) => void }) {
   const timelineRef = useRef<HTMLDivElement>(null);
-  const gesture = useRef<{ pointer: number; x: number; y: number; frameClick: boolean; orbit: TheaterOrbit | null } | null>(null);
+  const gesture = useRef<{ pointer: number; x: number; y: number; frameClick: boolean; dismissible: boolean; orbit: TheaterOrbit | null } | null>(null);
   const [playing, setPlaying] = useState(false);
   const [runtimeMode, setRuntimeMode] = useState<RuntimeMode | null>(null);
   const [runtimeExiting, setRuntimeExiting] = useState(false);
@@ -327,11 +327,19 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
     if (!frame) return;
     window.dispatchEvent(new CustomEvent('mitwerk-go-to-commit', { detail: { version: frame.version } }));
   }
+  function inContentColumn(root: HTMLElement, x: number) {
+    const content = root.querySelector<HTMLElement>('.theater-stage');
+    if (!content) return true;
+    const bounds = content.getBoundingClientRect(), style = getComputedStyle(root);
+    // Protect the content and its inline padding for the entire height below the header.
+    return x >= bounds.left - (parseFloat(style.paddingLeft) || 0)
+      && x <= bounds.right + (parseFloat(style.paddingRight) || 0);
+  }
   function pointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (runtimeMode || !active || !event.isPrimary || event.button !== 0 || gesture.current) return;
     const root = event.currentTarget;
     if ((event.target as HTMLElement).closest('button, input, select, label, a, [data-orbit-blocked]')) return;
-    // Control rows reserve their own box and margins; open gaps between them dismiss theater.
+    // Control rows reserve their own box and margins independently of the content column.
     const blocked = [...root.querySelectorAll<HTMLElement>('[data-orbit-blocked]:not([data-orbit-inline])')].some(element => {
       const style = getComputedStyle(element);
       const margin = (side: string) => parseFloat(style.getPropertyValue(`margin-${side}`)) || 0;
@@ -345,7 +353,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
     });
     if (blocked) return;
     const frameClick = !!(event.target as HTMLElement).closest('.theater-screen');
-    gesture.current = { pointer: event.pointerId, x: event.clientX, y: event.clientY, frameClick, orbit: null };
+    gesture.current = { pointer: event.pointerId, x: event.clientX, y: event.clientY, frameClick, dismissible: !inContentColumn(root, event.clientX), orbit: null };
     // The frame image is a native drag source for chat; orbit starts from the theater area around it.
     if (!frameClick) root.setPointerCapture(event.pointerId);
   }
@@ -370,7 +378,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
     drag.orbit?.end();
     if (!drag.orbit && event.type === 'pointerup') {
       if (drag.frameClick) goToCommit();
-      else onDismiss();
+      else if (drag.dismissible && !inContentColumn(event.currentTarget, event.clientX)) onDismiss();
     }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   }

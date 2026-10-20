@@ -2083,3 +2083,22 @@ This file is reserved for project-wide design-system rules requested by the user
 - Opening a chat version card’s milestone invitation keeps its gradient, invitation text, and current height until the overlay closes. This supersedes the earlier immediate-dismiss-on-open rule. Correlate completion to the originating card; saving, cancelling, Escape, and navigation away resolve that invitation.
 - Disable invitation controls while the overlay is open. After a shared 300ms delay, drop both controls through the card’s bottom mask over 320ms. Closing the overlay wipes the gradient downward and slides the invitation text out while the default version label slides in over 520ms, then restores the ordinary card layout. Use the same flush when declining “Not yet”. Reduced motion resolves immediately without movement.
 - Persist a milestone only on Save; cancellation only dismisses the invitation. Keep image loading, saved-milestone feedback, and responsive card sizing unchanged.
+
+
+## Playback content column interactions — 2026-10-19, prompt #540
+
+- In Playback, the content column is protected from click-to-Gallery for the full region below the header and above the footer, including the panel’s inline padding on either side of the measured content width. Derive this region from the rendered stage and computed padding so it follows resizing and split layouts. Side gutters outside that column retain click-to-Gallery; dragging still orbits, and frame/control actions keep their existing behavior.
+- Milestone mode defaults to 0.5×, both when restored and when selected from Play per.... Prompt remains 4× and Version 2×; explicit speed choices and milestone looping remain available. Use the shared unit speed tokens.
+
+
+## Capture details inferred from the message — 2026-10-19, prompt #541
+
+- Empty message drafts show the editable Capture details placeholder “overlay, UI state, dark mode...”, replacing the seeded “editor overlay” value. Clearing the message restores that placeholder.
+- While a nonempty draft changes, replace the field’s visible text with three large, staggered dots that fade and bounce gently. After 1000ms without a change, infer details from the draft. Typing, pasted text, and to-do drawer insertion use the same path; cancel stale timers when the message changes or the conversation unmounts.
+- Match whole-word “dark mode”, “gallery”, “playback”, “idea stream”, and “live server” case-insensitively, in textual order. Use the first two distinct matches joined with “ and ”, or “default view” if none match. Users may still edit the finished field manually; subsequent message changes infer it again.
+- Share inference and motion tokens. Expose a loading status accessibly; reduced motion keeps three steady dots without movement.
+
+
+## Capture detail sizing — 2026-10-19, prompt #542
+
+- Capture detail underlines fit the displayed text, including short values such as “gallery”, using content sizing with a 1ch minimum. Loading dots use a shared 3px gap.

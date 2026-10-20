@@ -45,7 +45,8 @@ function TodoComposerRow({ onAdd }: { onAdd: (text: string, bucket: string) => v
   </li>;
 }
 
-export function ComposerDrawer({ state, onToggle, onComplete, onUseTodo, onEdit, onAdd, onCapture, children }: {
+export function ComposerDrawer({ state, message, onToggle, onComplete, onUseTodo, onEdit, onAdd, onCapture, children }: {
+  message: string;
   onAdd: (text: string, bucket: string) => void;
   onEdit: (id: string, text: string) => void; state: ChatComposerState; onToggle: () => void; onComplete: (id: string) => void; onUseTodo: (id: string) => void;
   onCapture: (key: 'screen' | 'overlay', value: string) => void; children: ReactNode;
@@ -77,7 +78,7 @@ export function ComposerDrawer({ state, onToggle, onComplete, onUseTodo, onEdit,
     onPointerCancel: () => { drag.current = null; setDragOffset(0); },
   };
   return <div className="chat-composer-stack">
-    <div className="capture-settings"><span>Capturing</span><CaptureBucketChip value={state.capture.screen} onChange={value => onCapture('screen', value)}/><span>with</span><CaptureDetailField value={state.capture.overlay} onChange={value => onCapture('overlay', value)}/></div>
+    <div className="capture-settings"><span>Capturing</span><CaptureBucketChip value={state.capture.screen} onChange={value => onCapture('screen', value)}/><span>with</span><CaptureDetailField message={message} value={state.capture.overlay} onChange={value => onCapture('overlay', value)}/></div>
     <div className={`composer-drawer ${state.open ? 'is-expanded' : ''}${dragOffset ? ' is-dragging' : ''}`} style={{ '--drawer-drag': `${dragOffset}px` } as CSSProperties}>
       <button type="button" className="composer-drawer-heading" aria-expanded={state.open} aria-controls={id} aria-label="To-do drawer" aria-describedby={countId} title="Click or drag up and down" {...dragHandlers} onClick={() => { if (suppressClick.current) { suppressClick.current = false; return; } onToggle(); }}><span>To-do</span>{unfinished > 0 && <span className="composer-drawer-count" aria-hidden="true">{unfinished}</span>}<span className="sr-only" id={countId} aria-live="polite">{unfinished} unfinished to-dos</span></button>
       <div id={id} className="composer-drawer-reveal" inert={!state.open} aria-hidden={!state.open} role="region" aria-label="Chat to-dos"><div className="composer-drawer-clip"><div className="composer-drawer-content">
