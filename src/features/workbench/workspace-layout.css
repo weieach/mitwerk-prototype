@@ -890,3 +890,32 @@
 .mw-app .mw-body.chat-only .conversation-cards { display:none; }
 
 .mw-app .mw-body { --message-max-width:100%; }
+
+/* Keep the invitation while its overlay is open; the card itself masks falling controls. */
+.mw-app .message-version-main:disabled { opacity:1; cursor:default; }
+.milestone-falling-controls.is-leaving {
+  animation:milestone-controls-drop var(--milestone-controls-exit-duration) cubic-bezier(.55,0,.85,.4) var(--milestone-controls-exit-delay) both;
+}
+@keyframes milestone-controls-drop { from { translate:0 0; } to { translate:0 110%; } }
+.is-invitation-exiting .milestone-falling-controls { visibility:hidden; }
+.is-invitation-exiting .message-version-card::after {
+  content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+  background:var(--message-version-fill); transform-origin:top;
+  animation:milestone-gradient-flush var(--milestone-invite-exit-duration) cubic-bezier(.22,.7,.15,1) both;
+}
+@keyframes milestone-gradient-flush { from { transform:scaleY(0); } to { transform:scaleY(1); } }
+.is-invitation-exiting .message-version-main { z-index:1; }
+.is-invitation-exiting .message-version-label {
+  padding-right:0; color:var(--ink);
+  transition:padding-right var(--milestone-invite-exit-duration) ease, color var(--milestone-invite-exit-duration) ease;
+}
+.milestone-return-leaving { animation:milestone-text-out var(--milestone-invite-exit-duration) cubic-bezier(.2,0,.2,1) both; }
+.milestone-return-default { align-self:center; animation:milestone-text-in var(--milestone-invite-exit-duration) cubic-bezier(.2,0,.2,1) both; }
+@keyframes milestone-text-out { to { transform:translateY(110%); opacity:0; } }
+@keyframes milestone-text-in { from { transform:translateY(-110%); opacity:0; } to { transform:translateY(0); opacity:1; } }
+@media (prefers-reduced-motion:reduce) {
+  .milestone-falling-controls.is-leaving { animation:none; visibility:hidden; }
+  .is-invitation-exiting .message-version-card::after, .milestone-return-leaving, .milestone-return-default { animation:none; }
+  .milestone-return-leaving { visibility:hidden; }
+  .is-invitation-exiting .message-version-label { transition:none; }
+}

@@ -831,12 +831,12 @@ async function waitForScreenshotReady(cdp, timeoutMs, prompt = '') {
         const menu = await cdp('Runtime.evaluate', { expression: `!!document.querySelector('[role="listbox"][aria-label="Date range"]')`, returnByValue: true });
         if (!menu.result?.value) { await delay(100); continue; }
       }
-      if (/milestone overlay/i.test(prompt) && !wantsLiveCapture(prompt) && !wantsPrototypeCapture(prompt)) {
+      if ((hasFlag('milestone-overlay') || /milestone overlay/i.test(prompt)) && !wantsLiveCapture(prompt) && !wantsPrototypeCapture(prompt)) {
         const milestone = await cdp('Runtime.evaluate', { expression: `(() => {
           const button = document.querySelector('.message-version-output.is-milestone-ready .message-version-main');
           const clicked = !${milestoneRequested} && !!button;
           if (clicked) button.click();
-          return { clicked, ready: !!document.querySelector('.milestone-overlay[open][data-entered=true] .annotation-preview')?.complete && !!document.querySelector('.milestone-commit-option input:not(:disabled)') };
+          return { clicked, ready: !!document.querySelector('.milestone-overlay[open][data-entered=true] .annotation-preview')?.complete && !!document.querySelector('.milestone-overlay .annotation-text') };
         })()`, returnByValue: true });
         milestoneRequested ||= !!milestone.result?.value?.clicked;
         if (!milestone.result?.value?.ready) { await delay(100); continue; }
@@ -914,7 +914,7 @@ async function capture(chrome, outFile, prompt = '') {
       if (![width, height].every(value => Number.isInteger(value) && value >= 320 && value <= 7680)) throw new Error('Capture viewport dimensions must be integers between 320 and 7680');
       await cdp('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 2, mobile: false });
     }
-    await waitForScreenshotReady(cdp, (wantsLandingCapture(prompt) || hasFlag('milestone-invite')) ? 20000 : (wantsPrototypeCapture(prompt) || wantsLiveCapture(prompt) || new URL(url).searchParams.get('annotationOverlay') === '1') ? 60000 : wantsTheaterCapture(prompt) ? 30000 : 10000, prompt);
+    await waitForScreenshotReady(cdp, hasFlag('milestone-overlay') ? 60000 : (wantsLandingCapture(prompt) || hasFlag('milestone-invite')) ? 20000 : (wantsPrototypeCapture(prompt) || wantsLiveCapture(prompt) || new URL(url).searchParams.get('annotationOverlay') === '1') ? 60000 : wantsTheaterCapture(prompt) ? 30000 : 10000, prompt);
     await cdp('Runtime.evaluate', { expression: 'document.fonts.ready.then(() => true)', awaitPromise: true, returnByValue: true });
     const chatPrompt = argValue('chat-prompt');
     if (chatPrompt) {
@@ -940,6 +940,7 @@ async function capture(chrome, outFile, prompt = '') {
       if (!finished) throw new Error('Chat prompt capture timed out waiting for the completed version card');
       await waitForScreenshotReady(cdp, 60000, prompt);
     }
+    if (hasFlag('milestone-overlay')) await delay(700);
     if (hasFlag('milestone-editor')) {
       await cdp('Runtime.evaluate', { expression: `(() => { const wip = document.querySelector('.idea-wip-action'); if (!wip?.querySelector('.idea-editor')) wip?.querySelector('button')?.click(); })()` });
       await delay(100);

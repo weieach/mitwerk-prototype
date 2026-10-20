@@ -52,7 +52,7 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
   const [zoom, setZoom] = useState(1);
   const [view, setView] = useState<'album' | 'focusing' | 'turning' | 'theater' | 'returning' | 'orbiting'>('album');
   const [selectedId, setSelectedId] = useState('');
-  const [milestoneFrame, setMilestoneFrame] = useState<GalleryFrame | null>(null);
+  const [milestoneFrame, setMilestoneFrame] = useState<{frame: GalleryFrame; onComplete?: () => void} | null>(null);
   const [navigationKey, setNavigationKey] = useState(0);
   const [target, setTarget] = useState<TheaterTarget | null>(null);
   const [exportSlot, setExportSlot] = useState<HTMLSpanElement | null>(null);
@@ -79,6 +79,7 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
   const finishTurn = useCallback(() => { setView(previous => previous === 'returning' ? 'album' : 'theater'); setTarget(null); }, []);
   const exit = useCallback(() => {
     if (view !== 'theater') return;
+    setMilestoneFrame(null);
     if (playbackOnly) onExitPlayback?.();
     const shown = viewStack.current?.querySelector<HTMLElement>('.theater-view')?.dataset.frameId;
     const screen = viewStack.current?.querySelector('.theater-screen');
@@ -156,7 +157,7 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
     if (!inRange(push, range, clock)) setRange('all');
     select(push.id, true);
     if ('live' in pushRequest) setLiveRequestKey(key => Math.abs(key) + 1);
-    setMilestoneFrame(pushRequest.milestone ? push : null);
+    setMilestoneFrame(pushRequest.milestone ? {frame:push, onComplete:pushRequest.onMilestoneClose} : null);
     if (view === 'album') { updateTimelineMotion(0); setView('turning'); }
   }, [pushRequest, versions, view, select, updateTimelineMotion, range, clock]);
   const enterPlayback = useCallback(() => {
@@ -258,6 +259,19 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
         <button className="icon-button" aria-label="Zoom gallery in" disabled={zoom >= t.zoomMax} onClick={() => camera.current?.zoom(1)}><Icon name="plus"/></button>
       </div>}
     </footer>
-    {milestoneFrame && view === 'theater' && galleryRoot.current && <AnnotationOverlay key={milestoneFrame.id} frame={milestoneFrame} milestoneOnly fromChatVersionCard container={galleryRoot.current} onClose={() => setMilestoneFrame(null)}/>}
+    {milestoneFrame && view === 'theater' && galleryRoot.current && <RequestedMilestoneOverlay key={milestoneFrame.frame.id} frame={milestoneFrame.frame} onComplete={milestoneFrame.onComplete} container={galleryRoot.current} onClose={() => setMilestoneFrame(null)}/>}
   </section></LatestPromptIdContext.Provider>;
+}
+
+/** Resolve the originating card on save, cancel, or navigation away from its overlay. */
+function RequestedMilestoneOverlay({frame, container, onClose, onComplete}: {
+  frame: GalleryFrame; container: HTMLElement; onClose: () => void; onComplete?: () => void;
+}) {
+  const completion = useRef<{timer: ReturnType<typeof setTimeout>; callback?: () => void} | undefined>(undefined);
+  useEffect(() => {
+    // Ignore StrictMode's simulated unmount, but resolve a replaced card's request.
+    if (completion.current?.callback === onComplete) clearTimeout(completion.current?.timer);
+    return () => { completion.current = {callback:onComplete, timer:setTimeout(() => onComplete?.(), 0)}; };
+  }, [onComplete]);
+  return <AnnotationOverlay frame={frame} milestoneOnly fromChatVersionCard container={container} onClose={onClose}/>;
 }

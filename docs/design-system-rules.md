@@ -2076,3 +2076,10 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Softer neutral milestone markers — 2026-10-19, prompt #537
 
 - Neutral (main-branch) milestone markers use `--timeline-milestone-neutral`, mixing the shared contrast color at 82% strength with the panel background. Resolve neutral markers from the branch palette, not version identities. The existing contextual dimming still applies outside Milestone mode; colored branch markers retain their palette colors.
+
+
+## Milestone invitation overlay lifecycle — 2026-10-19, prompt #539
+
+- Opening a chat version card’s milestone invitation keeps its gradient, invitation text, and current height until the overlay closes. This supersedes the earlier immediate-dismiss-on-open rule. Correlate completion to the originating card; saving, cancelling, Escape, and navigation away resolve that invitation.
+- Disable invitation controls while the overlay is open. After a shared 300ms delay, drop both controls through the card’s bottom mask over 320ms. Closing the overlay wipes the gradient downward and slides the invitation text out while the default version label slides in over 520ms, then restores the ordinary card layout. Use the same flush when declining “Not yet”. Reduced motion resolves immediately without movement.
+- Persist a milestone only on Save; cancellation only dismisses the invitation. Keep image loading, saved-milestone feedback, and responsive card sizing unchanged.

@@ -241,7 +241,7 @@ export function wrapTextToWidth(text: string, maxWidth: number, measure: (value:
   return lines;
 }
 
-export type FrameRequest = ({version: number} | {frameId: string} | {live: boolean}) & { milestone?: boolean };
+export type FrameRequest = ({version: number} | {frameId: string} | {live: boolean}) & { milestone?: boolean; onMilestoneClose?: () => void };
 export function resolveFrameRequest(versions: GalleryVersion[], request: FrameRequest) {
   if ('live' in request) return versions.flatMap(version => version.frames).sort((a,b) => b.timestamp - a.timestamp)[0];
   return versions.flatMap(version => version.frames).find(frame => 'frameId' in request

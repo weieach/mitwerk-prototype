@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 import { ArrowUpRight } from '../../components/PhosphorIcon';
 import { invitationPhysics, makeInvitationBody, stepInvitation, invitationRestPose, guideInvitation, guidePillDescent, invitationReleasePose } from './invitation-physics';
 
-export function MilestoneInvitationControls({onOpen,onDismiss}:{onOpen:()=>void;onDismiss:()=>void}) {
+export function MilestoneInvitationControls({onOpen,onDismiss,leaving=false}:{onOpen:()=>void;onDismiss:()=>void;leaving?:boolean}) {
   const host=useRef<HTMLDivElement>(null), arrow=useRef<HTMLButtonElement>(null),pill=useRef<HTMLButtonElement>(null);
   useLayoutEffect(()=>{
     const area=host.current!,elements=[arrow.current!,pill.current!],reduced=matchMedia('(prefers-reduced-motion: reduce)');
@@ -36,7 +36,7 @@ export function MilestoneInvitationControls({onOpen,onDismiss}:{onOpen:()=>void;
     const observer=new ResizeObserver(start);observer.observe(area);elements.forEach(element=>observer.observe(element));reduced.addEventListener('change',start);
     return()=>{cancelAnimationFrame(frame);observer.disconnect();reduced.removeEventListener('change',start);};
   },[]);
-  return <div ref={host} className="milestone-falling-controls">
+  return <div ref={host} className={`milestone-falling-controls${leaving ? ' is-leaving' : ''}`} inert={leaving}>
     <button ref={arrow} type="button" className="milestone-open outline-orbit" aria-label="Mark a new milestone" onClick={onOpen}><ArrowUpRight size="var(--milestone-arrow-size)"/></button>
     <button ref={pill} type="button" className="milestone-not-yet outline-orbit" onClick={onDismiss}>Not yet</button>
   </div>;

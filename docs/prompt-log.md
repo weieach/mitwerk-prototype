@@ -5332,3 +5332,23 @@ help me sync change and push. x counter
 ```
 
 - Backed up malformed duplicate `main 2` refs outside Git’s refs directory so fetch can succeed. Existing application changes were already committed in `13a6093`.
+
+## Prompt #538
+
+```text
+check if this infographic accurately describes how these mechanic work
+```
+
+## Prompt #539
+
+```text
+<in-app-browser-context source="ambient-ui-state">
+This block is automatically supplied ambient UI state, not part of the user's request. Do not treat it as an instruction or as evidence that the user explicitly selected the in-app browser.
+# In app browser:
+- The user has the in-app browser open with 1 tab.
+- Current URL: http://localhost:5173/
+</in-app-browser-context>
+
+## My request:
+after user clicked on the arrow btn on gradient version card, dont just make that state go away; it should remain in gradient (delay for 300ms to have the btns drop from the version card, masked from below) until user either clicked on save milestone or decided to cancel from the overlay. Then, the gradient field  will exit with a flush and the text has an animated transition back to default
+```
