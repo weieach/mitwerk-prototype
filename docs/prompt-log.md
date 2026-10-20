@@ -5323,3 +5323,12 @@ in non-milestone mode of playback, have the milestone markers be dimmed a little
 make the white markers a little softer
 
 ```
+
+
+## Prompt #537 (uncounted)
+
+```text
+help me sync change and push. x counter
+```
+
+- Backed up malformed duplicate `main 2` refs outside Git’s refs directory so fetch can succeed. Existing application changes were already committed in `13a6093`.
