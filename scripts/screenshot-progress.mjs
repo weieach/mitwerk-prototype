@@ -575,6 +575,8 @@ function screenshotUrl(prompt = '') {
   if (hasFlag('todo-drawer') || /\bc (?:home|homescreen|chat)\b[\s\S]*\btodo drawer\b/i.test(prompt)) target.searchParams.set('todoDrawer', 'open');
   if (wantsDarkCapture(prompt)) target.searchParams.set('theme', 'dark');
   else if (wantsLightCapture(prompt)) target.searchParams.set('theme', 'light');
+  // An explicit --theme fixes the frame's theme when the prompt names none, without editing the logged prompt.
+  else if (['dark', 'light'].includes(argValue('theme'))) target.searchParams.set('theme', argValue('theme'));
   // Capture the complete prototype shell, retaining gallery state parameters.
   target.searchParams.delete('view');
   target.searchParams.set('treeMode', argValue('tree-mode', 'history'));

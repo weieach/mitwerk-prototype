@@ -50,9 +50,17 @@ export function theaterCaptionLead(frame: Pick<Capture, 'kind' | 'number'>) {
   return `${label} #${frame.number}: `;
 }
 
+/** The prompt log keeps requests verbatim, including context blocks the editor injected around them.
+ *  Displays show only the user's words: drop `<in-app-browser-context>` blocks and the `## My request:` heading after them. */
+export function userPromptText(text: string) {
+  const stripped = text.replace(/<in-app-browser-context\b[^>]*>[\s\S]*?<\/in-app-browser-context>\s*/g, '');
+  if (stripped === text) return text;
+  return stripped.replace(/^## My request:[ \t]*\n?/, '').trim() || text;
+}
+
 /** Legacy filenames cannot distinguish exact-limit messages from truncated ones. */
 export function theaterCaption(frame: Pick<Capture, 'kind' | 'summary' | 'fullPrompt' | 'commitMessage'>) {
-  if (frame.fullPrompt !== undefined) return frame.fullPrompt;
+  if (frame.fullPrompt !== undefined) return userPromptText(frame.fullPrompt);
   if (frame.kind === 'push' && frame.commitMessage) return frame.commitMessage;
   if (frame.kind !== 'prompt') return frame.summary;
   const summary = frame.summary.trim();

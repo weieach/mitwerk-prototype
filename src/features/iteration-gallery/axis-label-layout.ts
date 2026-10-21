@@ -80,6 +80,9 @@ export function mergeAxisAnchors(anchors: AxisAnchor[], featured: AxisAnchor[]) 
 export function projectAxisLabels(anchors: AxisAnchor[], camera: THREE.OrthographicCamera, width: number, height: number, dateBlend = axisTopBlend(camera), tokenBlend = 0, measureText: (text: string, size: number) => number = (text, size) => text.length * size * .65): AxisLabel[] {
   const { minPx, basePx, maxPx, referenceViewport, minProjection } = t.axisText;
   const fontSize = THREE.MathUtils.clamp(basePx * Math.min(width, height) / referenceViewport, minPx, maxPx);
+  // Version values crowd as the album shrinks: below 100% zoom they ease down to zoomedOutValueScale at the zoom floor.
+  const zoomedOut = THREE.MathUtils.clamp((1 - camera.zoom) / (1 - t.zoomMin), 0, 1);
+  const valueFontSize = fontSize * THREE.MathUtils.lerp(1, t.axisText.zoomedOutValueScale, zoomedOut);
   const inverseCamera = camera.quaternion.clone().invert();
   const frontBlend = axisFrontBlend(camera);
   const topBlend = axisTopBlend(camera);
@@ -117,7 +120,8 @@ export function projectAxisLabels(anchors: AxisAnchor[], camera: THREE.Orthograp
     const railOpacity = underTitle ? 1 - tokenBlend : 1;
     const matrix = [right.x, -right.y, right.z, 0, -up.x, up.y, -up.z, 0,
       normal.x, -normal.y, normal.z, 0, point.x, point.y, 0, 1];
-    return { id: anchor.id, text: anchor.text, layer: layers.get(anchor.timestamp!) ?? 0, transform: `matrix3d(${matrix.join(',')})`, fontSize,
+    return { id: anchor.id, text: anchor.text, layer: layers.get(anchor.timestamp!) ?? 0, transform: `matrix3d(${matrix.join(',')})`,
+      fontSize: anchor.face === 'ground' && !AXIS_TITLES.has(anchor.text) && !anchor.id.startsWith('tokens:') ? valueFontSize : fontSize,
       hidden: point.z < -1 || point.z > 1, featured: anchor.featured, face: anchor.face,
       rise: anchor.face === 'ground' ? 1 - topBlend : 0,
       align, dateRail: anchor.face === 'wall' ? (anchor.overheadDate ? 'overhead' : 'wall') : undefined,

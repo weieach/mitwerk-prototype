@@ -293,3 +293,15 @@ test('panning across every viewport edge preserves date rows and translates labe
     });
   }
 });
+
+test('version values shrink toward the zoom floor while titles and dates keep their size', () => {
+  const view = camera();
+  const mixed: AxisAnchor[] = [...anchors, { id: 'v62', text: 'v62', position: new THREE.Vector3(-100, 0, 0), face: 'ground' }, { id: 'title', text: 'Version', position: new THREE.Vector3(-200, 0, 0), face: 'ground' }];
+  const size = (zoom: number) => { view.zoom = zoom; view.updateProjectionMatrix(); return projectAxisLabels(mixed, view, 800, 640).map(label => label.fontSize); };
+  const [date, value, title] = size(1), half = size(.5), close = size(2);
+  assert.equal(value, date);
+  assert.equal(half[0], date);
+  assert.equal(half[2], title);
+  assert.ok(Math.abs(half[1] / value - .87) < 1e-9);
+  assert.equal(close[1], value);
+});

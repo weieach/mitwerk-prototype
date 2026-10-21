@@ -254,7 +254,7 @@
 .workspace-tab { border-left:1px solid transparent; border-top:1px solid transparent; }
 .workspace-tab[data-selected=true] { border-color:var(--workspace-tab-active-border); }
 .workspace-tab:has(.workspace-fullscreen) [role=tab] { padding-right:var(--workspace-fullscreen-gap); }
-.mw-body > .mw-surface:has(.mw-dialog) { position:relative; z-index:1; box-shadow:var(--workspace-panel-shadow); }
+.mw-body > .mw-surface:has(.mw-dialog) { position:relative; z-index:1; box-shadow:0 0 0 1px var(--panel-outline), var(--workspace-panel-shadow); }
 
 /* Task summaries disclose in place without changing the status control. */
 .conversation-context-card[data-expanded] { cursor:pointer; }

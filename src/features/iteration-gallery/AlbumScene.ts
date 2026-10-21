@@ -59,6 +59,8 @@ export class AlbumScene {
   private prefetchQueue: { id: string; url: string }[] = [];
   private prefetching = 0;
   private fades = new Map<THREE.Material, { opacity: number; target: number }>();
+  /** Hover occlusion: frames and block wireframes between the camera and the hovered frame recede (keys `frame:id`, `block:key`). */
+  private occlusion = new Map<string, { value: number; target: number }>();
   /** Frames and blocks easing from their previous placement (or from nothing) after a data change. */
   private growth: { object: THREE.Object3D; base: THREE.Vector3; offset: THREE.Vector3; scaleFrom: THREE.Vector3; start: number }[] = [];
   private growing = false;
@@ -175,6 +177,7 @@ export class AlbumScene {
       if (Math.abs(fade.target - fade.opacity) < .002) fade.opacity = fade.target; else moving = true;
       material.opacity = fade.opacity;
     }
+    if (this.syncOcclusionBlend(blend)) moving = true;
     if (this.growth.length) {
       const clock = performance.now();
       this.growth = this.growth.filter(item => {
@@ -551,6 +554,7 @@ export class AlbumScene {
     this.callbacks.hover(id);
     this.syncFeaturedLabels();
     this.syncBlockStrokes();
+    this.syncOcclusion();
     this.updateImages();
     this.invalidate();
   }
@@ -578,6 +582,45 @@ export class AlbumScene {
       if (fade) fade.target = target;
       else material.opacity = target;
     }
+  }
+  private occluded(key: string) {
+    return this.occlusion.get(key)?.value ?? 1;
+  }
+  /** Targets follow camera-space depth, so the frames in front of the hovered one recede at any orbit angle. */
+  private syncOcclusion() {
+    const hovered = this.hovered ? this.frames.get(this.hovered) : undefined;
+    const hoveredKey = this.hoveredBlockKey();
+    this.camera.updateMatrixWorld();
+    const depth = (object: THREE.Object3D) => object.getWorldPosition(new THREE.Vector3()).applyMatrix4(this.camera.matrixWorldInverse).z;
+    const limit = hovered ? depth(hovered.image) : -Infinity;
+    const set = (key: string, inFront: boolean) => {
+      const target = hovered && inFront ? (key.startsWith('frame:') ? t.webgl.hoverOcclusion.image : t.webgl.hoverOcclusion.edge) : 1;
+      const entry = this.occlusion.get(key);
+      if (entry) entry.target = target;
+      else if (target !== 1) this.occlusion.set(key, { value: 1, target });
+    };
+    for (const [id, frame] of this.frames) set(`frame:${id}`, id !== this.hovered && depth(frame.image) > limit + t.webgl.hoverOcclusion.depthMargin);
+    for (const [key, { edges }] of this.blockEdges) set(`block:${key}`, key !== hoveredKey && depth(edges) > limit + t.webgl.hoverOcclusion.depthMargin);
+  }
+  /** Ease occlusion with the shared hover blend and apply it on top of each material's own fade. */
+  private syncOcclusionBlend(blend: number) {
+    let moving = false;
+    for (const [key, entry] of this.occlusion) {
+      entry.value += (entry.target - entry.value) * blend;
+      if (Math.abs(entry.target - entry.value) < .002) entry.value = entry.target; else moving = true;
+      if (key.startsWith('frame:')) {
+        const id = key.slice(6), frame = this.frames.get(id);
+        if (!frame) continue;
+        frame.image.material.opacity = (id === this.hovered ? 1 : this.captureOpacity) * entry.value;
+        frame.outline.opacity = (this.fades.get(frame.outline)?.opacity ?? frame.outline.opacity) * entry.value;
+        frame.outline.transparent = true;
+      } else {
+        const block = this.blockEdges.get(key.slice(6));
+        if (block) block.material.opacity = (this.fades.get(block.material)?.opacity ?? block.material.opacity) * entry.value;
+      }
+      if (entry.value === 1 && entry.target === 1) this.occlusion.delete(key);
+    }
+    return moving;
   }
   private syncEdgeResolution() {
     const { width, height } = this.renderer.domElement;
@@ -1045,7 +1088,7 @@ export class AlbumScene {
       // so their GPU uploads cannot interrupt the selected frame's animation.
       if (this.theaterTurn && id !== this.hovered) continue;
       frame.image.visible = visible.has(id);
-      frame.image.material.opacity = id === this.hovered ? 1 : this.captureOpacity;
+      frame.image.material.opacity = (id === this.hovered ? 1 : this.captureOpacity) * this.occluded(`frame:${id}`);
       frame.outline.color.set(id === this.hovered ? this.colors.ink : this.colors.line);
       if (!frame.image.visible) { frame.image.material.map = null; frame.image.material.color.set(this.colors.paper); continue; }
       this.pickTargets.push(frame.image);
@@ -1121,7 +1164,7 @@ export class AlbumScene {
     this.featuredAnchors = [];
     this.ticks.clear();
     this.rulerGuides = [];
-    this.content.clear(); this.bookmarks = []; this.frames.clear(); this.blockEdges.clear(); this.pickTargets = []; this.fades.clear();
+    this.content.clear(); this.bookmarks = []; this.frames.clear(); this.blockEdges.clear(); this.pickTargets = []; this.fades.clear(); this.occlusion.clear();
     this.featuredGuides = new THREE.Group();
   }
   private release(objects: THREE.Object3D[]) {

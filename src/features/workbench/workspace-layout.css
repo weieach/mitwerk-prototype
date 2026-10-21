@@ -117,7 +117,7 @@
 .workspace .playback-options { gap:10px; }
 .workspace .playback-options .row-select { padding:0 10px; }
 .workspace .playback-options .row-select > .ui-icon { display:none; }
-.workspace .theater-version-tag { min-height:0; height:auto; padding:0 4px; border-color:var(--muted); font-size:11px; font-weight:500; line-height:16px; }
+.workspace .theater-version-tag { min-height:0; height:auto; padding:0 4px; border-color:var(--theater-version-tag-border, var(--muted)); font-size:11px; font-weight:500; line-height:16px; }
 .workspace .theater-summary { font-style:italic; color:var(--muted); }
 .theater-branch { display:flex; align-items:center; gap:4px; font-size:10px; color:var(--muted); margin-top:4px; }
 .workspace .theater-screen { border:0; }
@@ -732,22 +732,61 @@
 /* Ported from design-system: chat text follows the panel title's text inset at every width; no centered max-width column. */
 .mw-app .conversation-inner { max-width:none; padding-inline:var(--panel-title-text-inset); }
 
-/* Ported from design-system: light mode hierarchy is inverted from a white page. Panels sit on a soft gray and only what you act on
-   is lighter: the message box and in-chat version/milestone cards are white, your own sent messages a low-contrast near-white. */
+/* Light neutral palette (2026-10-20): two neutral grounds, panel #fcfcfc on chrome #f3f3f3. Every other neutral is #141414 at a fixed
+   alpha (4/6/8/10/12/16/22/50/66%), pre-mixed over the panel so WebGL surfaces resolve solid colors. Light-only: dark keeps its block. */
 :root[data-theme=light] {
-  --paper:#f5f5f3;
-  --canvas-bg:#f5f5f3;
-  --workspace-background:#ebebe8;
-  --fill:#e7e7e4;
-  --fill-hover:#dddcd9;
-  --user-message-fill:#fafaf9;
+  --ink:#141414;
+  --contrast:#141414;
+  --on-pale:#141414;
+  --muted:#636363;
+  --faint:#888;
+  --line:#e9e9e9;
+  --line-strong:#d7d7d7;
+  --paper:#fcfcfc;
+  --canvas-bg:#fcfcfc;
+  --chrome:#f3f3f3;
+  --sidebar:var(--chrome);
+  --workspace-background:var(--chrome);
+  --fill:#f0f0f0;
+  --fill-hover:#e5e5e5;
+  --selection:#e9e9e9;
+  --token-area:#e0e0e0;
+  --grid-line:#c9c9c9;
+  --shadow-color:rgb(20 20 20 / 6%);
+  --popover-border:#e0e0e0;
+  --gallery-capture-opacity:.94;
+  /* Only what you act on is lighter than the panel; your own sent messages are recessed one step. */
+  --user-message-fill:var(--chrome);
   --composer-surface:#fff;
-  --composer-drawer-surface:#e7e7e4;
-  --composer-drawer-hover:#dfdfdc;
+  --composer-border:var(--line-strong);
+  --composer-drawer-surface:var(--chrome);
+  --composer-drawer-hover:#eee;
+  --composer-drawer-glow:transparent;
+  --composer-drawer-glow-end:transparent;
+  --composer-mode-track:var(--fill-hover);
   --message-version-fill:#fff;
-  /* Title dividers follow the workspace tone instead of black. */
-  --panel-heading-divider:var(--workspace-background);
+  --panel-heading-divider:var(--line);
+  /* Panels and the active view tag get an 8% hairline instead of relying on a 1.08:1 ground difference. */
+  --panel-outline:var(--line);
+  --view-tag-outline:var(--line);
+  /* Playback: only the frame, Play and the playhead stay at full ink. Secondary actions, the add-annotation chip,
+     the version tag and the timeline overview recede to the 5/8/28/66% steps. */
+  --playback-secondary:var(--muted);
+  --playback-annotation-fill:var(--fill);
+  --playback-annotation-ink:var(--muted);
+  --playback-annotation-text-opacity:1;
+  --theater-version-tag-border:#bbb;
+  --timeline-overview-track:var(--line);
+  --timeline-overview-thumb:#bbb;
+  /* Capture details underline: light gray at rest (28%), the 50% step on hover/focus. */
+  --capture-detail-line:#bbb;
+  --capture-detail-line-active:#888;
+  /* Location chips (Capturing row and to-do tags) take the 12% fill, distinct from both the panel and the drawer. */
+  --capture-chip-surface:#e0e0e0;
 }
+:root { --panel-outline:transparent; --view-tag-outline:transparent; }
+.mw-app :is(.mw-surface, .mw-reader), .workspace-extra-panel { box-shadow:0 0 0 1px var(--panel-outline); }
+.mw-app .workspace-links > button::before { box-shadow:inset 0 0 0 1px var(--view-tag-outline); }
 
 /* Ported from design-system: narrow reader panels never clip their footer. Below 620px of panel width the gallery footer wraps into two rows:
    the frame picker on the first, time range and zoom on the second, with the range shrinking first. Controls still fill their row. */
@@ -794,6 +833,13 @@
 
 /* The To-do label and count sit on the vertical center of the visible strip above the message box: equal padding above and below (same total height). */
 :root { --drawer-heading-padding-top:11px; --drawer-heading-padding-bottom:11px; }
+/* Open, the label moves down by --drawer-open-label-shift within the same heading height, so the space above it matches the
+   space between it and the first task. Collapsed, it stays centered in the strip. The shift follows the drawer's own timing. */
+:root { --drawer-open-label-shift:4px; }
+.composer-drawer.is-expanded { --drawer-heading-padding-top:calc(11px + var(--drawer-open-label-shift)); --drawer-heading-padding-bottom:calc(11px - var(--drawer-open-label-shift)); }
+.mw-app .composer-drawer .composer-drawer-heading { transition:padding var(--drawer-close-duration) var(--drawer-close-ease), background-color var(--drawer-hover-duration, .18s) ease; }
+.mw-app .composer-drawer.is-expanded .composer-drawer-heading { transition-duration:var(--drawer-open-duration), var(--drawer-hover-duration, .18s); transition-timing-function:var(--drawer-open-ease), ease; }
+@media (prefers-reduced-motion:reduce) { .mw-app .composer-drawer .composer-drawer-heading { transition:none; } }
 
 /* To-do count is a filled dot: the heading's ink fills it and the number takes the section's surface color (the ring is inverted). */
 .mw-app .composer-drawer-count { border:0; border-radius:var(--drawer-count-size); background:var(--drawer-count-fill, var(--ink)); color:var(--composer-drawer-surface); font-weight:500; font-variant-numeric:tabular-nums; transition:background-color var(--drawer-hover-duration, .18s) ease, color var(--drawer-hover-duration, .18s) ease; }

@@ -47,3 +47,11 @@ test('prompt captions quote filename summaries and indicate the shared capture l
   assert.equal(theaterCaption({ kind: 'prompt', summary: 'x'.repeat(max + 5) }), `"${'x'.repeat(max)}..."`);
   assert.equal(theaterCaption({ kind: 'push', summary: 'Commit message' }), 'Commit message');
 });
+
+test('captions show only the user request, not injected browser context', async () => {
+  const { theaterCaption, userPromptText } = await import('../src/features/iteration-gallery/theater-layout.ts');
+  const logged = '<in-app-browser-context source="ambient-ui-state">\nThis block is automatically supplied.\n- Current URL: http://localhost:5173/\n</in-app-browser-context>\n## My request:\nset max width to 575px';
+  assert.equal(userPromptText(logged), 'set max width to 575px');
+  assert.equal(theaterCaption({ kind: 'prompt', summary: 'ignored', fullPrompt: logged }), 'set max width to 575px');
+  assert.equal(userPromptText('## My request: stays when no context was injected'), '## My request: stays when no context was injected');
+});

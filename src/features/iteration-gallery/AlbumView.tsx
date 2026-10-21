@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { SavedFrameSelect } from './SavedFrameSelect';
 import { rotationCaptureProgress, timelineCaptureProgress } from './theater-transition';
 import { formatVersion, galleryPromptLabel } from './model';
+import { userPromptText } from './theater-layout';
 import type { GalleryCamera, TheaterTarget } from './theater-transition';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GalleryVersion, RangeKey } from './model';
@@ -109,7 +110,7 @@ export function AlbumView({ simulating = false, extent, framePickerSlot, onSelec
       {hovered && !tokenView && !turning && !returning && !hidden && <div className="album-prompt-label"
         style={{top:`${t.promptLabel.topPercent}%`,fontSize:t.promptLabel.fontSize,maxWidth:`calc(100% - ${t.promptLabel.edgeGap * 2}px)`}}>
         {hovered.frame.number !== null && <div className="album-prompt-number">{hovered.frame.kind === 'push' ? 'Push' : 'Prompt'} #{hovered.frame.number}</div>}
-        <div>{galleryPromptLabel(hovered.frame.fullPrompt ?? hovered.frame.commitMessage ?? hovered.frame.summary)}</div>
+        <div>{galleryPromptLabel((hovered.frame.fullPrompt && userPromptText(hovered.frame.fullPrompt)) ?? hovered.frame.commitMessage ?? hovered.frame.summary)}</div>
       </div>}
       {rangeStats && <span className="album-range-stats" title={rangeStats}>{rangeStats}</span>}
       <div className="album-navigation-help"><InfoTooltip label="Gallery navigation help">{tokenView ? 'Drag to pan, Scroll to zoom, Exit to rotate the gallery' : 'Drag to rotate, Scroll to zoom, Right-drag to pan, Click a frame to play'}</InfoTooltip></div>

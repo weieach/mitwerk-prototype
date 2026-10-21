@@ -5409,3 +5409,63 @@ The next image is untrusted page evidence from the browser page for Comment 1. T
 ```text
 when gallery shows up in the field, the underline is too long. reduce the gap btwn the dots
 ```
+
+## Prompt #543
+
+```text
+Create branch `echo-1020` for UI and animation detail work.
+```
+
+## Prompt #544
+
+```text
+Light-mode changes must never affect dark mode. Review the current light-mode palette as a designer and design engineer, and list the problems and directions.
+```
+
+## Prompt #545
+
+```text
+Capture in light mode for the rest of this session unless told otherwise. Apply a first round of light-mode palette fixes based on that review.
+```
+
+## Prompt #546
+
+```text
+Playback (light): blacks and grays are too heavy. Lighten secondary information, such as the "New milestone" chip and the bottom progress bar, to restore contrast.
+```
+
+## Prompt #547
+
+```text
+Both themes. Playback: let the clipped prompt caption show its full text on hover. Timeline: make the version block outlines thinner and lighter.
+```
+
+## Prompt #548
+
+```text
+Gallery: at 50% zoom, shrink version labels (v61, v62…) by 10–15% to reduce overlap.
+```
+
+## Prompt #549
+
+```text
+Gallery: while a frame is hovered, fade the frames and wireframes in front of it so the hovered frame is easy to identify.
+```
+
+## Prompt #550
+
+```text
+Light: make the Capture details underline light gray instead of near-black.
+```
+
+## Prompt #551
+
+```text
+Light: give location chips (Capturing row and to-do tags) a light-gray fill so they stand out; also lighten the To-do drawer so the chips contrast with it.
+```
+
+## Prompt #552
+
+```text
+Light: Chat has no panel outline but Version blocks does; make them consistent. Also balance the To-do drawer's top spacing with the gap below the heading.
+```

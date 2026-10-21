@@ -2102,3 +2102,51 @@ This file is reserved for project-wide design-system rules requested by the user
 ## Capture detail sizing — 2026-10-19, prompt #542
 
 - Capture detail underlines fit the displayed text, including short values such as “gallery”, using content sizing with a 1ch minimum. Loading dots use a shared 3px gap.
+
+
+## Light mode edits stay out of dark mode — 2026-10-20, prompt #544
+
+- Light-mode color changes never change dark mode. Put light-only values in a `:root[data-theme=light]` (or `.mw-app[data-theme=light]`) block; `src/shared/theme.ts` always sets `data-theme`, so that selector is reliable.
+- Changing a token in the shared base `:root` block also changes dark mode wherever `:root[data-theme=dark]` does not redefine it. Before editing such a token for light mode, either move the light value into the light block or first give dark mode an explicit override that keeps its current value.
+- Check every light-mode change with a `c dark mode` comparison of the same frame; dark frames must be identical before and after.
+
+## Light mode neutral palette — 2026-10-20, prompt #545
+
+- Light mode mirrors the structure of the dark-mode palette: two neutral grounds — panels `--paper` #fcfcfc on chrome `--chrome` #f3f3f3 (workspace background and sidebar) — and every other neutral is ink #141414 at a fixed alpha, pre-mixed over the panel: `--line` 8% #e9e9e9, `--line-strong` 16% #d7d7d7, `--fill` 5% #f0f0f0, `--fill-hover` 10% #e5e5e5, `--token-area` 12% #e0e0e0, `--grid-line` 22% #c9c9c9, `--faint` 50% #888, `--muted` 66% #636363. Ink and `--contrast` are #141414, not pure black. No warm greige and no cool tints; the To-do drawer has no blue glow.
+- Panels and the active view tag carry an 8% hairline (`--panel-outline`, `--view-tag-outline`; transparent in dark) instead of relying on the 1.08:1 ground difference. Title dividers use `--line`.
+- Only what you act on is lighter than the panel: the message box and in-chat version/milestone cards stay white. Sent messages are recessed to `--chrome`. Gallery captures render at .94 opacity, as in dark.
+- Supersedes the 2026-10-18 light hierarchy values (#f5f5f3 on #e2e2df/#ebebe8, near-white sent messages, workspace-tone title divider). Values live only in `:root[data-theme=light]` in `workspace-layout.css`.
+
+## Light Playback hierarchy — 2026-10-20, prompt #546
+
+- In light Playback only the frame, Play and the playhead stay at full ink. Jump-to-start/end and seek buttons use `--playback-secondary` (`--muted`) and return to ink on hover; the "New milestone / to-do" chip uses `--fill` with `--muted` ink at full opacity; the version tag border is 28% ink (#bbb); the timeline overview track is `--line` with a 28% thumb (the version-push unit color follows the thumb).
+- Each hook falls back to the existing value (ink, `--line-strong` chip, `--muted` tag border, `#000` track), so dark mode is unchanged.
+
+## Playback prompt unfolds; hairline timeline outlines — 2026-10-20, prompt #547
+
+- Supersedes "Full-text hover/focus tooltips are not shown for prompt captions, push captions" (2026-10-18) for Playback captions: the caption still rests at one line with an ellipsis, but when its text is cut off, hover (after `captionRevealDelayMs` 250ms), keyboard focus, Enter/Space or a click unfolds it in place. The unfolded card sits over the metadata with its first line exactly on the clamped line (`captionCardPadding` minus the 1px border), uses the popover surface, border, radius and shadow, scrolls internally past `captionCardMaxVh` (40vh) or the theater body, closes `captionCloseDelayMs` after the pointer leaves both, and Escape closes it. Unclipped captions are inert. Reduced motion skips the unfold.
+- Displays show only the user's words: `<in-app-browser-context>` blocks injected by the editor (and the `## My request:` heading after them) are removed from Playback and gallery hover captions. `docs/prompt-log.md` keeps the verbatim text.
+- Playback timeline block outlines are a hairline: `--timeline-block-outline-width` 0.5px at `--timeline-block-outline` (55% of `--timeline-block-border`), in both themes. The scroller thumb and ruler still derive from `--timeline-block-border`.
+
+## Version values shrink when zoomed out — 2026-10-20, prompt #548
+
+- Version value labels (`v1`…`vN`, including the featured one) scale with gallery zoom below 100%: full size at 100% and above, easing linearly to `axisText.zoomedOutValueScale` (0.87, 13% smaller) at the `zoomMin` floor (50%). The Version and Date titles, date values and token-view scale labels keep the shared viewport-based size. This refines "zoom never shrinks the text" for version values only; it applies in both themes.
+
+## Hover occlusion in the gallery — 2026-10-20, prompt #549
+
+- While a frame is hovered, every frame image/outline and block wireframe between it and the camera recedes so the hovered frame reads clearly: images to `webgl.hoverOcclusion.image` (0.22×) and block edges to `hoverOcclusion.edge` (0.35×) of their resting opacity. "In front" is measured in camera space (with a `depthMargin`), so it follows any orbit angle, not a fixed chronological direction. The hovered frame's own block keeps its hover stroke; frames and blocks behind it are unchanged.
+- Occlusion eases with the shared hover blend (`transitionMs`), multiplies each material's own fade, restores fully when hover ends or moves, and is immediate under reduced motion. Applies in both themes.
+
+## Light capture-details underline — 2026-10-20, prompt #550
+
+- In light mode the Capture details field underline is light gray: `--capture-detail-line` #bbb (28% ink) at rest and `--capture-detail-line-active` #888 (50%) on hover/focus, replacing 65%/85% ink. Dark mode keeps its values.
+
+## Light location chips and lighter To-do drawer — 2026-10-20, prompt #551
+
+- In light mode, location chips — the Capturing row bucket chip and to-do location tags — share `--capture-chip-surface` #e0e0e0 (12% ink) instead of white, so they read against the #fcfcfc panel. Bucket menu option surfaces keep deriving from it.
+- The light To-do drawer drops one step to the chrome tone: `--composer-drawer-surface` `--chrome` (#f3f3f3, 4%), hover #eee (6%), so its chips keep clear contrast. This supersedes the drawer #eee/#e7e7e7 values from the 2026-10-20 light neutral palette rule. Dark mode keeps its values.
+
+## Consistent panel outlines and balanced open To-do heading — 2026-10-20, prompt #552
+
+- Every workspace panel carries the same `--panel-outline` hairline, including Chat: the conversation is an `.mw-dialog`, so the `.mw-surface:has(.mw-dialog)` rule layers the outline beneath `--workspace-panel-shadow` (now an empty `0 0 #0000` shadow by default) instead of replacing it. Dark keeps a transparent outline.
+- When the To-do drawer is open, its label shifts down by `--drawer-open-label-shift` (4px) inside the unchanged heading height (padding 15/7), so the space above "To-do" equals the space between it and the first task (17px each). Collapsed, the label stays centered (11/11). The shift uses the drawer's open/close duration and easing; reduced motion makes it immediate. Applies in both themes.

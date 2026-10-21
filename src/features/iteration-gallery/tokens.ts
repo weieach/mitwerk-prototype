@@ -9,7 +9,7 @@ export const galleryTokens = {
   interfaces: captureScreens,
   webgl: { pixelRatioMax: 3, resolution: { panelStart: 600, panelEnd: 1600, largePanelScale: 1.5, maxPixels: 12_000_000 }, rotateSpeed: .7, zoomSpeed: .55, keyRotateRadians: .12, dragThreshold: 5,
     blockOpacity: .035, disabledOutlineScale: .5, edgeOpacity: .18, hoverEdgeOpacity: .5, edgeWidth: .75, hoverEdgeWidth: 1.5, frameOutlineOpacity: .92, frontViewPadding: 1.8, frontViewLift: .15, defaultScale: .8, latestFrameTop: .44,
-    initialDirection: [-1, .5, 1] as const, groundRotationDegrees: -12, textureCacheSize: 8, prefetchConcurrency: 2, anisotropyMax: 16 },
+    hoverOcclusion: { image: .22, edge: .35, depthMargin: 1 }, initialDirection: [-1, .5, 1] as const, groundRotationDegrees: -12, textureCacheSize: 8, prefetchConcurrency: 2, anisotropyMax: 16 },
   overviewPadding: 1.12, overviewFitScale: 1.2, representativeVersionStride: 3,
   edgePan: { bandPx: 64, speed: 32, accelerationMs: 420, delayMs: 480, followMs: 140, settle: 4 },
   versionDepth: 88, blockGap: 10, padding: 10, maxImageWidth: 340, maxImageHeight: 240,
@@ -18,7 +18,7 @@ export const galleryTokens = {
   axisTitle: { valueGap: 138, dateValueGap: 69, zoomGapPower: .25, minProjection: .1 },
   tokenUsage: { clockwiseDegrees: -90, startDegrees: 87, fullDegrees: 89, fadeMs: 300, rotateMs: 850, areaOpacity: .85, areaColor: 'var(--token-area)', branchTint: .5, barOpacity: .8, barWidth: .7, barSpacingRatio: .45, axisInsetPx: 24, axisTitleGapPx: 6, scaleTicks: [0, .5, 1], surfaceLift: 1, labelGap: 44, outlineOpacity: .18, outlineWidth: .75, outlineRenderOrder: 2 },
   featuredTickScale: .5,
-  axisText: { lineHeight: 1.25, collisionGap: 2, hoverBackground: 'var(--paper)', hoverBorderWidth: 1, hoverBorderColor: 'var(--paper)', hoverBorderGap: 1, minPx: 8, basePx: 9, maxPx: 11, referenceViewport: 640, minProjection: .55, dateMaxCompensation: 1 },
+  axisText: { lineHeight: 1.25, collisionGap: 2, hoverBackground: 'var(--paper)', hoverBorderWidth: 1, hoverBorderColor: 'var(--paper)', hoverBorderGap: 1, minPx: 8, basePx: 9, maxPx: 11, referenceViewport: 640, minProjection: .55, dateMaxCompensation: 1, zoomedOutValueScale: .87 },
   axisFacing: { startDegrees: 30, fullyFrontDegrees: 12 },
   topView: { startDegrees: 55, fullDegrees: 75, dateFadeMs: 240, titleEndGap: 48 },
   labelFontSize: 10, labelWorldHeight: 22, labelTextureMin: 96, labelTextureMax: 512,
@@ -37,7 +37,7 @@ export const galleryTokens = {
   theaterReference: { kind: 'prompt', number: 56 } as const,
   capturePushVersion: 16,
   // Runtime previews render at this desktop width (the capture viewport) and scale down to fit the frame, never up.
-  theater: { contentShare: .85, contentMaxViewportShare: .6, stageOffsetY: 24, runtimeViewportWidth: 1440, prototypeExitOffsetY: 12, fullscreenHintMs: 3500, prototypeTimeoutMs: 60000, focusBackground: 'var(--paper)', frameShadow: '0 0 20vw 8px color-mix(in srgb, var(--cursor-base, var(--line-strong)) 2.88%, transparent)', frameBed: 'var(--chrome, var(--ink))', metadataHeight: 112, metadataHeightShare: .26, metadataGap: 16, metadataHeightMaxVh: 20, metadataRowGap: 4, referenceChipWidth: 180, summaryGapScale: 1.75, playbackFooterGap: 12, playbackEnabled: 'var(--ink)', playbackDisabled: 'var(--faint)', actionGap: 0, actionButtonsGap: 24, enterDelayMs: 1000, enterExpandMs: 280, enterFadeMs: 180, imageCacheSize: 8, preloadFrames: 3, wheelStep: 80, addedColor: '#1f8a4c', removedColor: '#d12b2b' },
+  theater: { contentShare: .85, contentMaxViewportShare: .6, stageOffsetY: 24, runtimeViewportWidth: 1440, prototypeExitOffsetY: 12, fullscreenHintMs: 3500, prototypeTimeoutMs: 60000, focusBackground: 'var(--paper)', frameShadow: '0 0 20vw 8px color-mix(in srgb, var(--cursor-base, var(--line-strong)) 2.88%, transparent)', frameBed: 'var(--chrome, var(--ink))', metadataHeight: 112, metadataHeightShare: .26, metadataGap: 16, metadataHeightMaxVh: 20, metadataRowGap: 4, referenceChipWidth: 180, summaryGapScale: 1.75, playbackFooterGap: 12, captionRevealDelayMs: 250, captionCloseDelayMs: 140, captionCardPadding: 10, captionCardMaxVh: 40, playbackEnabled: 'var(--ink)', playbackDisabled: 'var(--faint)', actionGap: 0, actionButtonsGap: 24, enterDelayMs: 1000, enterExpandMs: 280, enterFadeMs: 180, imageCacheSize: 8, preloadFrames: 3, wheelStep: 80, addedColor: '#1f8a4c', removedColor: '#d12b2b' },
   viewportPresets: [
     { value: 'original', label: 'Original size', width: 0, height: 0 },
     { value: 'desktop', label: 'Desktop', width: 1440, height: 900 },

@@ -30,6 +30,9 @@
   /* Playback timeline: block borders lead; the scroller thumb is a darker gray than them, and prompt ruler ticks sit between the border and the base line. */
   --timeline-block-border:color-mix(in srgb, var(--faint) 75%, var(--line-strong));
   --timeline-ruler:color-mix(in srgb, var(--timeline-block-border) 45%, var(--line-strong));
+  /* Block outlines are a hairline at reduced strength; the border color above still derives the thumb and ruler. */
+  --timeline-block-outline:color-mix(in srgb, var(--timeline-block-border) 55%, transparent);
+  --timeline-block-outline-width:.5px;
   /* Version/milestone playback: dim the prompt ruler; version pushes match the scroller thumb, milestone pushes use their branch color. */
   --timeline-unit-dim:.35;
   --timeline-milestone-context-strength:72%;
@@ -174,7 +177,7 @@
   --workspace-tab-close-gap: calc(var(--row-size-unit) * 3);
   --workspace-tab-hover-opacity: .5;
   --workspace-tab-active-border: var(--line-strong);
-  --workspace-panel-shadow: none;
+  --workspace-panel-shadow: 0 0 #0000;
   --panel-control-icon-color: var(--muted);
   --panel-title-switch-gap: var(--row-size-unit);
   --workspace-tab-radius: 4px;
