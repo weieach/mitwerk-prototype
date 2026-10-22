@@ -3467,46 +3467,22 @@
     "total": 13365,
     "simulated": true
   },
-  "[prompt #570] +166-80 · Continue modifying the content on main. First, I need to refine the transition and related animation when you click a ve-2026-10-21-225828.png": {
+  "[prompt #570] +166-80 · Smoother Gallery → Playback transition-2026-10-21-225828.png": {
     "input": 10071,
     "output": 875,
     "total": 10946,
     "simulated": true
   },
-  "[prompt #571] +220-84 · When switching to Playback, I feel the other block outlines in the gallery disappear rather slowly, so just before the s-2026-10-21-230348.png": {
+  "[prompt #571] +220-84 · Fix leftover line when Gallery turns into Playback-2026-10-21-230348.png": {
     "input": 15574,
     "output": 6277,
     "total": 21851,
     "simulated": true
   },
-  "[prompt #572] +283-100 · When Gallery switches to Playback, there is some flickering around the moment the UI is almost fully shown-2026-10-21-231036.png": {
+  "[prompt #572] +283-100 · Fix flicker as Playback UI finishes appearing-2026-10-21-231036.png": {
     "input": 428,
     "output": 1707,
     "total": 2135,
-    "simulated": true
-  },
-  "[prompt #570] +166-80 · Smoother Gallery → Playback transition-2026-10-21-225828.png": {
-    "input": 3840,
-    "output": 801,
-    "total": 4641,
-    "simulated": true
-  },
-  "[prompt #571] +220-84 · Fix leftover line when Gallery turns into Playback-2026-10-21-230348.png": {
-    "input": 15755,
-    "output": 4542,
-    "total": 20297,
-    "simulated": true
-  },
-  "[prompt #572] +283-100 · Fix flicker as Playback UI finishes appearing-2026-10-21-231036.png": {
-    "input": 10125,
-    "output": 4071,
-    "total": 14196,
-    "simulated": true
-  },
-  "[prompt #573] +294-102 · Log prompts as concise English summaries; commit-2026-10-21-231238.png": {
-    "input": 4901,
-    "output": 147,
-    "total": 5048,
     "simulated": true
   }
 }

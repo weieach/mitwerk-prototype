@@ -5749,10 +5749,3 @@ Fix leftover line when Gallery turns into Playback
 Fix flicker as Playback UI finishes appearing
 
 ```
-
-## Prompt #573
-
-```text
-Log prompts as concise English summaries; commit
-
-```
