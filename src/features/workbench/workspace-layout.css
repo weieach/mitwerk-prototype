@@ -233,11 +233,25 @@
 .composer-drawer-content label span { white-space:pre-wrap; overflow-wrap:anywhere; }
 .composer-drawer-content input[type=checkbox] { appearance:none; width:13px; height:13px; flex:none; margin:0; border:1px solid var(--ink); border-radius:2px; background:transparent; display:grid; place-content:center; }
 .composer-drawer-content input[type=checkbox]:checked::after { content:'✓'; font-size:11px; color:var(--ink); line-height:1; }
-.composer-drawer-content .is-complete span:not(.composer-todo-meta) { text-decoration:line-through; color:var(--muted); }
+.composer-drawer-content .is-complete label span { text-decoration:line-through; color:var(--muted); }
 .composer-drawer-content time { white-space:nowrap; flex:none; font-size:var(--chat-meta-size); }
-.composer-drawer-content time, .composer-todo-version { opacity:var(--drawer-time-opacity); }
-.composer-todo-meta { display:inline-flex; flex:none; align-items:center; gap:var(--drawer-row-inline-gap); max-width:max-content; overflow:hidden; interpolate-size:allow-keywords; transition:max-width var(--drawer-editing-fade) ease, opacity var(--drawer-editing-fade) ease, margin-inline-start var(--drawer-editing-fade) ease; }
-.composer-drawer-content li:has(.composer-todo-edit) .composer-todo-meta { max-width:0; margin-inline-start:calc(var(--drawer-row-inline-gap) * -1); opacity:var(--drawer-editing-meta-opacity); pointer-events:none; }
+.composer-drawer-content time { opacity:var(--drawer-time-opacity); }
+/* A to-do row is checkbox | task + meta line | run. The task gets the full width on its own line; location,
+   version and age sit beneath it as one muted line, so every row has the same shape however it wraps.
+   Checkbox and run button align to the first text line. */
+:root { --drawer-row-line:1.4em; --todo-details-gap:2px; --todo-details-separator-gap:6px; }
+.composer-drawer-content li:has(> .composer-todo-body) { align-items:flex-start; }
+.composer-drawer-content li:has(> .composer-todo-body) > input[type=checkbox] { margin-top:calc((var(--drawer-row-line) - 13px) / 2); }
+.composer-todo-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:var(--todo-details-gap); }
+.composer-todo-body > .composer-todo-line { flex:none; }
+/* The to-do meta line (TodoDetails), shared by the drawer and Idea stream cards: muted, meta size, dot-separated. */
+.todo-details { display:flex; align-items:center; flex-wrap:wrap; gap:0 var(--todo-details-separator-gap); font-size:var(--chat-meta-size); line-height:1.4; color:var(--muted); text-decoration:none; }
+.todo-details > * + *::before { content:'·'; margin-inline-end:var(--todo-details-separator-gap); }
+.mw-app .todo-details time { opacity:1; font-size:inherit; color:inherit; }
+/* Outranks the chip type role, which inks bucket tags for a filled pill. Here the location is plain meta text. */
+.mw-app .todo-details .bucket-tag { padding:0; background:transparent; color:inherit; font-size:inherit; }
+.composer-drawer-content li:has(> .composer-todo-body) > .composer-todo-add { margin-top:calc((var(--drawer-row-line) - var(--drawer-run-icon-size)) / 2 - 2px); transition:opacity var(--drawer-editing-fade) ease; }
+.composer-drawer-content li:has(.composer-todo-edit) > .composer-todo-add { opacity:var(--drawer-editing-meta-opacity); pointer-events:none; }
 .composer-drawer-content .composer-todo-placeholder { opacity:var(--drawer-placeholder-opacity); pointer-events:none; }
 .composer-drawer-empty { margin:2px 0; font-size:12px; color:var(--muted); }
 /* Chrome rounds borders below 1px up to 1px, so the outline is an inset shadow; the padding absorbs the former 1px border. */
@@ -355,7 +369,7 @@
 .workspace .shared-reader-header .zoom-controls { border:0; border-radius:0; padding:0 3px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .composer-drawer-content .composer-todo-text, .composer-todo-meta { transition:none; }
+  .composer-drawer-content .composer-todo-text, .composer-drawer-content .composer-todo-add { transition:none; }
   .composer-drawer-content .composer-todo-text:is(:hover,:focus-visible) { transform:none; }
 }
 

@@ -1,42 +1,40 @@
 # Working changes
 
-Prior entries are committed through `7c675b1` on `main` (not pushed). Push #62 bookkeeping and prompts #553–#558 are included in that commit.
+Prior entries are committed through `572e099` and pushed as push #64 on `main`.
 
-## 2026-10-21 · prompt #558 uncounted · Push bookkeeping (push #63)
+## 2026-10-21 · post-push bookkeeping (push #64)
 
-- Pushed `7c675b1e9699cbc04d2714d566ce530e26b044a4` to `origin/main`. The pre-push hook saved the `[push #63]` frame and recorded the SHA in `data/push-shas.json`; `AGENTS.md` counter set to push #63. These tracking updates stay uncommitted for the next commit.
+- The pre-push hook saved the `[push #64]` frame and recorded `572e099e7bd492edde7288adf700a6f29dc164bc` in `data/push-shas.json`; `AGENTS.md` counter set to push #64. These stay uncommitted for the next commit.
 
-## 2026-10-21 · prompt #559 · Narrower saved-frame menu
+## 2026-10-21 · prompt #564 · To-do drawer row structure
 
-- `src/features/iteration-gallery/SavedFrameSelect.tsx`: drop the 280px menu minimum; the menu sizes to its options and right-aligns with the trigger (243px at 1440 wide, no clipping).
-- `docs/design-system-rules.md`: record the rule. `visual_ref/[prompt #559] 9.png`: the user's reference.
-- Prompt #558 uncounted (3): animation audit only (no code changes); findings were reported in chat.
+- `src/features/workbench/ComposerDrawer.tsx`: rows render task text, then a details line (bucket · version · time); the run button is a direct row child.
+- `src/features/workbench/workspace-layout.css`: two-line row styles with first-line alignment for checkbox and run button; removed the old inline meta and max-width editing rules; plain-text location in details. Checked in light and dark.
+- `docs/design-system-rules.md`: record the rule. `visual_ref/[prompt #564] 10.png`: the user's reference.
 
-## 2026-10-21 · prompt #560 · Motion wave 1
+## 2026-10-21 · prompt #565 · Chat resize smoothness, milestone ring
 
-- `src/control-tokens.css`: shared `--ease-out` / `--ease-in-out` / `--ease-drawer` and `--press-scale` / `--press-duration` tokens; removed the duplicate drawer timing tokens; run progress 420 → 240ms.
-- `src/features/workbench/workspace-layout.css`: single drawer timing (400ms open on the sheet curve, 260ms close); panel word exit `ease-in` → `--ease-out`; run progress curve → `--ease-out`; to-do hover nudge gated to fine pointers; press-feedback rule for controls.
-- `src/features/iteration-gallery/tokens.ts`: Playback transport delay 640 → 260ms, annotation tag ready 1000 → 420ms; overlay frame 220 → 120ms, controls 320 → 160ms, list stagger 110 → 50ms.
-- `docs/design-system-rules.md`: record the rules and what they supersede. Typecheck and 316 tests pass.
+- `src/features/workbench/useChatPanelWidth.ts`: live, rAF-coalesced CSS-variable width during drag; state commits on release.
+- `src/features/version-tree/tokens.ts`: milestone ring uses the canvas colour (verified light: rgb(252, 252, 252)).
+- `docs/design-system-rules.md`: record both rules. Typecheck and 316 tests pass.
 
-## 2026-10-21 · prompt #561 · Motion wave 2
+## 2026-10-21 · prompt #566 · Type scale
 
-- `src/index.css`, `src/features/annotations/annotations.css`, `src/features/iteration-gallery/gallery.css`, `src/features/workbench/{workspace-layout.css,workbench.css}`: 24 entrance, exit and movement easings switched to the shared `--ease-out` / `--ease-in-out`; hover easings left as `ease`.
-- `src/features/workbench/workspace-layout.css`: the drawer heading's open shift now uses `translate` on its label and count instead of a padding transition (verified: 40px height kept, label 11 → 15px).
-- `docs/design-system-rules.md`: record the rules and the two deliberate non-changes. Typecheck and 316 tests pass.
+- `src/control-tokens.css`: `--page-title-size` 20px, `--dialog-title-size` 16px, `--card-title-size` 17 → 14px; removed the to-do dialog title token.
+- `src/features/workbench/workbench-system.css`: separate page-title and dialog-title rules; removed the to-do dialog override.
+- `src/shared/type-studio.ts`: new Dialog title role; page-title role covers page headings only; card-title and milestone defaults at 14px.
+- `src/features/version-tree/tokens.ts`: milestone font 17 → 14px.
+- Verified computed sizes: Idea stream notes and to-dos 14px/400, Todos page title 20px/500, dialog title 16px/500. Typecheck and 316 tests pass.
 
-## 2026-10-21 · prompt #562 · Motion wave 3, screenshot radius, quieter reference chips
+## 2026-10-21 · prompt #567 · Idea stream to-do chip alignment, time size
 
-- `src/features/iteration-gallery/tokens.ts`, `tests/theater-transition.test.ts`: rotation 1100 → 750ms; the test derives from the token.
-- `src/components/SelectMenu.tsx`, `src/features/workbench/workspace-layout.css`: menu entrance from the trigger (verified frame by frame with motion enabled: 0 → 1 opacity, .97 → 1 scale over about 150ms).
-- `src/shared/useLeavingValue.ts` (new), `src/features/workbench/{Workbench.tsx,workbench.css}`, `src/features/iteration-gallery/{PlaybackExport.tsx,TheaterView.tsx}`, `src/features/annotations/MilestoneCommitOption.tsx`: toasts enter by transition and fade out in 150ms before unmounting (verified).
-- `src/features/workbench/workbench.css`: spinner 1.5 → 0.8s.
-- `src/features/iteration-gallery/gallery.css`, `src/control-tokens.css`: 4px Playback screenshot radius; reference chips muted, unfilled, with a hover fill.
-- `docs/design-system-rules.md`: record the rules. Typecheck and 316 tests pass. Note: headless Chrome reports reduced motion, so motion checks emulate `prefers-reduced-motion: no-preference`.
+- `src/index.css`: checkbox-only icon offset; muted to-do time. `src/control-tokens.css`: Idea stream to-do time uses `--chat-meta-size`. Verified icon and label centers match (528.5px) and the time matches the drawer token.
+- `docs/design-system-rules.md`: record the rule. `visual_ref/[prompt #567] 12.png`: the user's reference.
 
-## 2026-10-21 · prompt #563 · Confetti visibility, to-do type, dialog title, greeting
+## 2026-10-21 · prompt #568 · Shared to-do details, station icons, alignment
 
-- `src/features/annotations/{MilestoneTrophy.tsx,annotations.css}`: confetti uses badge colour plus theme ink, at 4 × 6px. Verified that it fires (16 pieces) and is visible mid-flight in light mode.
-- `src/control-tokens.css`, `src/features/workbench/workbench-system.css`: to-do title 0.75rem / 400 / 1.5, roomier cards; to-do navigation dialog title about 16px (was about 20px), verified computed 15.85px.
-- `src/features/workbench/Workbench.tsx`: greeting "Work it out with verso."
-- `docs/design-system-rules.md`: record the rules. Typecheck and 316 tests pass.
+- `src/features/workbench/TodoDetails.tsx` (new), `ComposerDrawer.tsx`, `src/features/version-tree/IdeaCard.tsx`: one details line for the drawer and Idea stream cards; `.todo-details` CSS shared in `workspace-layout.css`; old Idea card time and chip rules and tokens removed from `index.css` and `control-tokens.css`.
+- `src/features/version-tree/{tokens.ts,VersionTreePanel.tsx,IdeaCard.tsx}`: station icon scale (trophy 28 → 20px in a 36px circle).
+- `src/index.css`, `src/control-tokens.css`: centred delete icon; checkbox toggle sized to its icon and excluded from control sizing.
+- `src/features/iteration-gallery/gallery.css`, `src/control-tokens.css`: reference chip link-style hover, no fill and no negative margin.
+- `docs/design-system-rules.md`: record the rules and the audit coverage. Typecheck and 316 tests pass.

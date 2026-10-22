@@ -20,9 +20,14 @@
   --todo-column: var(--fill);
   --mw-shadow: 0 14px 44px var(--shadow-color);
 }
-.mw-app :is(.page-title h1, .mw-modal h2) {
-  font-size: calc(var(--card-title-size) + 3px);
+.mw-app .page-title h1 {
+  font-size: var(--page-title-size);
   font-weight: var(--card-title-weight);
+}
+.mw-app .mw-modal h2 {
+  font-size: var(--dialog-title-size);
+  font-weight: var(--card-title-weight);
+  line-height: 1.35;
 }
 .mw-app :is(.kanban-task h3, .mit-directory h2, .project-entry-info h2) {
   font-size: var(--card-title-size);
@@ -324,8 +329,6 @@
 @media (hover:none) { .todo-card-more { opacity:1; } }
 
 .mw-app .todo-navigation-dialog { width:min(var(--todo-navigation-width), calc(100vw - 32px)); }
-/* Outranks the page-title type role that every .mw-modal h2 takes, so only this dialog steps down. */
-:is(html[data-type-roles], html) .mw-app .mw-modal.todo-navigation-dialog h2 { font-size:var(--todo-navigation-title-size); line-height:1.35; }
 .todo-navigation-dialog > header { align-items:flex-start; gap:var(--row-size-unit); }
 .todo-navigation-dialog > header > button { flex-shrink:0; }
 .todo-navigation-actions { display:flex; flex-direction:column; gap:calc(var(--row-size-unit) * 2); }

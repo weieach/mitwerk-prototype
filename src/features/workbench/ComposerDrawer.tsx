@@ -2,6 +2,7 @@ import { CaptureDetailField } from './CaptureDetailField';
 import { EditableTodoText } from './EditableTodoText';
 import { CaptureBucketChip } from './CaptureBucketChip';
 import { BucketTag } from './BucketTag';
+import { TodoDetails } from './TodoDetails';
 import { composerModels } from './composer-models';
 import { SelectMenu, useSelectMenu } from '../../components/SelectMenu';
 import { useId, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
@@ -10,7 +11,7 @@ import { useMinuteClock } from '../../shared/useMinuteClock';
 import type { ReactNode } from 'react';
 import { PhosphorIcon } from '../../components/PhosphorIcon';
 import { useReorderAnimation } from '../../shared/useReorderAnimation';
-import { extractBucketToken, orderedComposerTodos, todoEditText, todoTimestamp, type ChatComposerState } from './composer-state';
+import { extractBucketToken, orderedComposerTodos, todoEditText, type ChatComposerState } from './composer-state';
 
 /** The configured prototype model, using the same accessible selector as the reader. */
 export function ComposerModelSelect({ value, onChange }: { value?: string; onChange: (value: string) => void }) {
@@ -83,8 +84,12 @@ export function ComposerDrawer({ state, message, onToggle, onComplete, onUseTodo
       <button type="button" className="composer-drawer-heading" aria-expanded={state.open} aria-controls={id} aria-label="To-do drawer" aria-describedby={countId} title="Click or drag up and down" {...dragHandlers} onClick={() => { if (suppressClick.current) { suppressClick.current = false; return; } onToggle(); }}><span>To-do</span>{unfinished > 0 && <span className="composer-drawer-count" aria-hidden="true">{unfinished}</span>}<span className="sr-only" id={countId} aria-live="polite">{unfinished} unfinished to-dos</span></button>
       <div id={id} className="composer-drawer-reveal" inert={!state.open} aria-hidden={!state.open} role="region" aria-label="Chat to-dos"><div className="composer-drawer-clip"><div className="composer-drawer-content">
         <ul ref={listRef}>{todos.map(todo => <li key={todo.id} data-reorder-id={todo.id} className={todo.complete ? 'is-complete' : ''}>
-          <input type="checkbox" aria-label={`Complete to-do: ${todo.text}`} checked={todo.complete} onChange={() => { capturePositions(); onComplete(todo.id); }}/><EditableTodoText text={todo.text} editText={todoEditText(todo)} suffix={todo.version !== undefined ? <span className="composer-todo-version">{` (v${todo.version})`}</span> : undefined} prefix={todo.bucket && <BucketTag bucket={todo.bucket}/>} onSave={text => { capturePositions(); onEdit(todo.id, text); }}/>
-          <span className="composer-todo-meta"><time dateTime={todo.created}>{todoTimestamp(todo.created, clock)}</time><button type="button" className="composer-todo-add" aria-label={`Add to-do to prompt: ${todo.text}`} onClick={() => onUseTodo(todo.id)}><PhosphorIcon name="play" weight="fill" size="var(--drawer-run-icon-size)"/></button></span>
+          <input type="checkbox" aria-label={`Complete to-do: ${todo.text}`} checked={todo.complete} onChange={() => { capturePositions(); onComplete(todo.id); }}/>{/* One structure for every row: the task on its own line, then a muted meta line (location · version · age). */}
+          <span className="composer-todo-body">
+            <EditableTodoText text={todo.text} editText={todoEditText(todo)} onSave={text => { capturePositions(); onEdit(todo.id, text); }}/>
+            <TodoDetails todo={todo} clock={clock}/>
+          </span>
+          <button type="button" className="composer-todo-add" aria-label={`Add to-do to prompt: ${todo.text}`} onClick={() => onUseTodo(todo.id)}><PhosphorIcon name="play" weight="fill" size="var(--drawer-run-icon-size)"/></button>
         </li>)}<TodoComposerRow onAdd={onAdd}/></ul>
       </div></div></div>
       {children}

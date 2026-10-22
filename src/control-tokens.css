@@ -14,9 +14,9 @@
   --playback-end-gap:clamp(14px, 2cqw, 32px);
   --text-action-icon-gap:6px;
   /* Playback reference images are supporting detail: muted text at the meta-row size, no fill at rest.
-     Hover shows a faint fill and full ink so the link still reads as clickable. */
+     Hover shows full ink and an underline so the link still reads as clickable. */
   --reference-chip-fill:transparent;
-  --reference-chip-fill-hover:var(--fill-hover);
+  --reference-chip-gap:14px;
   --reference-chip-radius:999px;
   --reference-chip-ink:var(--muted);
   --reference-chip-ink-hover:var(--ink);
@@ -54,7 +54,11 @@
   --surface-radius: 6px;
   --control-radius: 4px;
   --card-padding: 11px 13px 12px;
-  --card-title-size: 17px;
+  /* Type scale (2026-10-21): display 28 · page title 20 · dialog title 16 · card title 14 · body 13/12 · meta 10–11.
+     Each step is clearly apart from its neighbours; dialogs no longer match page headings. */
+  --page-title-size: 20px;
+  --dialog-title-size: 16px;
+  --card-title-size: 14px;
   --strong-font-weight: 500;
   --card-title-weight: var(--strong-font-weight);
   --body-font-size: 0.75rem;
@@ -213,8 +217,6 @@
   --todo-title-weight: 400;
   --todo-title-line-height: 1.5;
   --todo-navigation-width: 270px;
-  /* Compact choice dialogs: the question is 80% of the page-title role (~16px instead of ~20px). */
-  --todo-navigation-title-size: calc(var(--type-page-title-size, calc(var(--card-title-size) + 3px)) * .8);
   --todo-card-gap: 10px;
   --todo-card-padding-block: 12px;
   --todo-card-action-size: 22px;
@@ -229,7 +231,7 @@
   --row-divider: 1px solid var(--line);
 }
 
-:is(.workspace, .theater-fullscreen) button:not(.station, .branch-count, .idea-fold, .version-heading, .gallery-timeline-push, .theater-resize),
+:is(.workspace, .theater-fullscreen) button:not(.station, .branch-count, .idea-fold, .version-heading, .gallery-timeline-push, .theater-resize, .idea-todo-toggle),
 :is(.workspace, .theater-fullscreen) select,
 :is(.workspace, .theater-fullscreen) input[type=number] {
   height: var(--control-height);
@@ -499,7 +501,7 @@
 
 :root { --idea-footer-control-min-width:52px; --idea-footer-compact-control:40px; --idea-footer-compact-scale:52px; --idea-footer-tight-control:32px; --idea-footer-tight-scale:44px; --idea-jump-max-width:300px; }
 
-:root { --message-milestone-action-gap:10px; --message-milestone-action-width:116px; --idea-todo-time-size:12px; --idea-todo-time-gap:4px; }
+:root { --message-milestone-action-gap:10px; --message-milestone-action-width:116px; }
 
 :root { --brand-padding-inline:10px; --zoom-scale-min-width:64px; }
 

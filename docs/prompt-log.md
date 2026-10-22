@@ -5646,3 +5646,76 @@ When I open a new chat from the Todos view, the greeting text needs to change: r
 ```
 
 Original: 当我在todo界面里点进一个新的chat的时候，这个greeting的文字需要改一下。把design mit改成verso。我们这个产品叫verso。
+
+## Prompt #564
+
+```text
+Let's refine the to-do list here. The design feels messy, with mixed formats and inconsistent line wrapping.
+
+```
+
+Original: 我们来优化一下todo这里的，我感觉这里的设计比较乱，不同格式和换行的
+
+## Prompt #565
+
+```text
+I'm fairly happy with your design now, but when I resize the chat window width, the to-do list stutters as it changes, and sometimes two lines of content overlap. Optimize it as you see fit.
+
+```
+
+Original: 我对你的设计比较满意了，但是调整chat窗口的宽度的时候，todo这里的变化有点卡顿，有时候还会出现overlap两行内容的情况。你来根据情况优化一些
+
+Clarification sent during prompt #565 (English translation, original below):
+
+```text
+In dark mode, the black outer edge of the milestone icon blends nicely with the background. In light mode, don't keep the black; change it to the background color too, so it looks the same as in dark mode.
+```
+
+Original: darkmode这里，milestone的icon外侧黑色边缘和背景很融洽；lightmode这里不要再保留黑色了，也改成和背景一样的颜色，这样达到的效果和darkmode一样。
+
+## Prompt #566
+
+```text
+Go ahead with your proposal first; if things feel too small I can adjust later.
+
+```
+
+Original: 你先按照你的方案改，如果我觉得变小了可以再调整
+
+## Prompt #567
+
+```text
+In the Idea stream, the "landing" text and its icon are not aligned; please fix that. I also want the date and time font size in the Idea stream to match the one in the to-do list.
+
+```
+
+Original: 在idea stream这里，你看这个“landing”的文字和icon不是对齐的，修改一下。然后我希望idea stream里关于日期和时间的字号和todo里一致
+
+## Prompt #568
+
+```text
+Change the Idea stream to-do cards to the same two-line structure too, so both places are fully consistent.
+
+```
+
+Original: 把 Idea stream 的待办卡片也改成同样的两行结构，让两处完全一致
+
+Clarifications sent during prompt #568 (English translation, original below each):
+
+```text
+In the Idea stream, the icons for milestones and other stations at the same level are a bit large. Keep the circle sizes the same and adjust the icon sizes appropriately.
+```
+
+Original: idea stream里，milestone等同级别的icon有些大，在保持对应圆形大小不变的情况下，适当调整icon的大小。
+
+```text
+In the Idea stream, the delete button isn't aligned with the other two buttons; please fix it. Also, audit rigorously for other alignment problems like this across the different interaction flows.
+```
+
+Original: idea stream这里，删除和其他两个button没有对齐，调整一下。此外，你需要严格排查一下还有什么这种对齐问题。在不同的交互flow里。
+
+```text
+On the Playback images, when hovering, the fill gets cut off on one side because the tag's left edge is aligned with everything else. Please adjust this design.
+```
+
+Original: 在playback的图片这里，有时候hover，但因为这个tag左边和其他对齐了，fill被割掉了一块。调整一下这个设计

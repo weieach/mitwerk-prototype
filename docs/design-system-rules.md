@@ -2226,3 +2226,33 @@ This file is reserved for project-wide design-system rules requested by the user
 - To-do cards read like body copy: titles at `--body-font-size`, weight 400, line height 1.5 (`--todo-title-*`), replacing 0.675rem / 500 with default leading. Card padding is 12px block, gap 10px, and a 1.5-unit gap sits between project label and title.
 - Compact choice dialogs (the to-do navigation dialog) set their question at 80% of the page-title role (`--todo-navigation-title-size`). They outrank the role rule that every `.mw-modal h2` otherwise takes. Other dialogs still use the page-title size.
 - The new-chat greeting reads "Work it out with verso." (brand name, lowercase) instead of the agent name.
+
+## To-do drawer rows: one two-line structure — 2026-10-21, prompt #564
+
+- Every to-do row is checkbox | body | run button. The body puts the task text on its own line at full width, then one muted meta line at `--chat-meta-size`: location · version · age, separated by middle dots, with each part omitted when absent. This replaces the inline bucket pill before the text, the `(vN)` suffix, and the right-hand timestamp, which squeezed the text into uneven wraps.
+- In the meta line the location is plain muted text with its folder icon (no pill fill); it outranks the chip type role. Checkbox and run button align to the first text line, not the row center.
+- While a task is being edited, only the run button hides; the meta line stays. Completed tasks strike through the task text only.
+
+## Smooth chat resizing; milestone ring in canvas colour — 2026-10-21, prompt #565
+
+- Dragging the chat divider writes `--chat-panel-width` straight onto `.mw-body` once per animation frame and updates the separator's `aria-valuenow`; React state takes the final width on release. A mid-drag re-render reads the live width, so it never snaps back. This replaces a whole-workspace React render on every pointer move, which caused jank and transient overlapping to-do lines. Keyboard resizing is unchanged. Checked: to-do rows and their two lines never overlap at chat widths from 320 to 700px.
+- Idea stream milestone stations ring themselves in `var(--canvas-bg)` (`milestoneBorderColor`) instead of fixed black. The ring reads as a gap against the canvas in both themes, matching the dark-mode look in light mode.
+
+## Type scale: page, dialog, card and canvas titles — 2026-10-21, prompt #566
+
+- One scale with clear steps: display 28px (new-chat greeting, unchanged) · page title 20px (`--page-title-size`, page headings only) · dialog title 16px (`--dialog-title-size`, every `.mw-modal h2`) · card title 14px/500 (`--card-title-size`: version cards, directory and project cards) · canvas text 14px/400 (`milestoneFontSize`: Idea stream milestone notes and to-do cards) · body 13px chat / 12px UI · meta 10–11px.
+- Dialog titles are a separate "Dialog title" type role, split from "Page title". This replaces the earlier to-do dialog override (80% of the page title) and the shared page/dialog selector. Page titles no longer derive from `--card-title-size + 3px`.
+- Supersedes the 17px card title and 17px milestone font. The type studio can still tune each role.
+
+## Idea stream to-do card alignment and time size — 2026-10-21, prompt #567
+
+- In Idea stream to-do cards, only the checkbox icon drops 3px to the first text line. Icons inside location chips stay centered on their label (the shared `.idea-todos .ui-icon` offset had pushed the folder icon below "landing").
+- To-do times in the Idea stream use the drawer's meta size (`--idea-todo-time-size` → `--chat-meta-size`) and muted colour, matching the To-do drawer's details line instead of 12px at half opacity.
+
+## Shared to-do details, station icon scale, alignment pass — 2026-10-21, prompt #568
+
+- Idea stream to-do cards use the drawer's two-line shape: the task, then the shared `TodoDetails` line (location · version · age, `.todo-details`, `--todo-details-gap` 2px). Both places render the same component, so size, colour, separators and order cannot drift apart. The inline bucket pill before the text is gone from both.
+- Icons inside Idea stream station circles fill `ideaTheme.stationIconScale` (55%) of their circle: the trophy is 20px in the unchanged 36px milestone circle (was 28px), and the completed to-do check scales the same way.
+- Icon-only buttons centre their icon (`align-items`/`justify-content: center`): this fixes the milestone editor's delete button, whose icon sat 4.4px above Cancel and Save. The Idea stream to-do checkbox button hugs its icon and carries the first-line offset itself, and it is excluded from the shared 29px control sizing.
+- Playback reference chips hover as links (full ink + underline) with no fill, because the metadata column clips its edges. They sit flush with the caption, 14px apart (`--reference-chip-gap`).
+- Alignment audit (checks controls in horizontal rows whose centres differ by more than 1.5px, and icons off-centre in icon-only buttons) passes in: home, open drawer, inline to-do edit, location menu, Playback, Playback with milestone, annotation overlay, frame / date-range / export menus, Idea stream (light and dark), milestone editor, Todos, to-do dialog.

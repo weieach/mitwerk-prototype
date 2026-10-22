@@ -124,9 +124,12 @@
 .playback-tip.is-start .capsule-tooltip { left: 0; transform: none; }
 .playback-tip.is-end .capsule-tooltip { left: auto; right: 0; transform: none; }
 .theater-metadata .reference-files { flex-wrap: nowrap; overflow-x: auto; flex-shrink: 0; margin-top: 4px; }
-.theater-metadata .file-chip { flex:0 0 auto; max-width:min(var(--theater-reference-width), 100%); font:inherit; font-size:var(--reference-chip-font-size); color:var(--reference-chip-ink); background:var(--reference-chip-fill); border:0; border-radius:var(--reference-chip-radius); padding:2px 6px; margin-inline-start:-6px; transition:color var(--drawer-hover-duration) ease, background-color var(--drawer-hover-duration) ease; }
-.theater-metadata .file-chip + .file-chip { margin-inline-start:0; }
-.theater-metadata .file-chip:is(:hover,:focus-within) { color:var(--reference-chip-ink-hover); background:var(--reference-chip-fill-hover); }
+.theater-metadata .file-chip { flex:0 0 auto; max-width:min(var(--theater-reference-width), 100%); font:inherit; font-size:var(--reference-chip-font-size); color:var(--reference-chip-ink); background:var(--reference-chip-fill); border:0; border-radius:0; padding:2px 0; transition:color var(--drawer-hover-duration) ease; }
+/* Hover reads like a link (full ink + underline) rather than a fill: the metadata column clips its edges,
+   and a fill would either be cut off or push the text out of line with the caption. */
+.theater-metadata .reference-files { gap:var(--reference-chip-gap); }
+.theater-metadata .file-chip:is(:hover,:focus-within) { color:var(--reference-chip-ink-hover); }
+.theater-metadata .file-chip:is(:hover,:focus-within) .file-chip-name { text-decoration:underline; text-underline-offset:2px; }
 .theater-metadata .file-chip .file-chip-name { color:inherit; }
 .theater-metadata .file-chip .ui-icon { width:1em; height:1em; font-size:1em; color:inherit; }
 .gallery-play { background: var(--fill); border: 1px solid var(--line); border-radius: 4px; padding: 5px 14px; min-width: 62px; }

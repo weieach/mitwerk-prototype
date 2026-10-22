@@ -8,10 +8,14 @@ export function useChatPanelWidth(body: RefObject<HTMLDivElement | null>, viewpo
   const [available, setAvailable] = useState(window.innerWidth);
   const [resizing, setResizing] = useState(false);
   const drag = useRef<{ id: number; x: number; width: number } | null>(null);
+  // While dragging, the width goes straight to the CSS variable once per frame; React state (and the whole
+  // workspace re-render) only follows on release. `live` keeps any mid-drag render on the current width.
+  const live = useRef<number | null>(null);
+  const frame = useRef(0);
   const max = Math.min(viewportWidth * workspaceResponsive.chatPanelMaxFraction, Math.floor(available * chatPanelSizing.maxFraction));
   const min = Math.min(chatPanelSizing.min, max);
   const clamp = (value: number) => Math.max(min, Math.min(max, value));
-  const width = clamp(preferred ?? defaultChatWidth(viewportWidth));
+  const width = clamp(live.current ?? preferred ?? defaultChatWidth(viewportWidth));
   useLayoutEffect(() => {
     const element = body.current;
     if (!element) return;
@@ -23,7 +27,19 @@ export function useChatPanelWidth(body: RefObject<HTMLDivElement | null>, viewpo
     observer.observe(element); measure();
     return () => observer.disconnect();
   }, [body]);
-  const stop = () => { drag.current = null; setResizing(false); };
+  const stop = () => {
+    cancelAnimationFrame(frame.current);
+    if (live.current !== null) setPreferred(live.current);
+    live.current = null; drag.current = null; setResizing(false);
+  };
+  function applyLive(next: number, separator: HTMLElement) {
+    live.current = next;
+    cancelAnimationFrame(frame.current);
+    frame.current = requestAnimationFrame(() => {
+      body.current?.style.setProperty('--chat-panel-width', `${next}px`);
+      separator.setAttribute('aria-valuenow', String(Math.round(next)));
+    });
+  }
   return { width, min, max, resizing, separator: {
     onPointerDown(event: PointerEvent<HTMLDivElement>) {
       if (event.button !== 0) return;
@@ -31,7 +47,7 @@ export function useChatPanelWidth(body: RefObject<HTMLDivElement | null>, viewpo
       drag.current = { id: event.pointerId, x: event.clientX, width }; setResizing(true);
     },
     onPointerMove(event: PointerEvent<HTMLDivElement>) {
-      if (drag.current?.id === event.pointerId) setPreferred(clamp(drag.current.width + event.clientX - drag.current.x));
+      if (drag.current?.id === event.pointerId) applyLive(clamp(drag.current.width + event.clientX - drag.current.x), event.currentTarget);
     },
     onPointerUp(event: PointerEvent<HTMLDivElement>) {
       if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);

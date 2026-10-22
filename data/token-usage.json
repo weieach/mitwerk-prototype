@@ -3412,5 +3412,41 @@
     "output": 2540,
     "total": 17804,
     "simulated": true
+  },
+  "[push #64] 30 files · +361 -108 · motion pass (shared curves, shorter waits, press feedback, menus, toasts), playback and to-do polish-2026-10-21-214256.png": {
+    "input": 14665,
+    "output": 2784,
+    "total": 17449,
+    "simulated": true
+  },
+  "[prompt #564] +52-44 · Let's refine the to-do list here. The design feels messy, with mixed formats and inconsistent line wrapping-2026-10-21-214820.png": {
+    "input": 8939,
+    "output": 1833,
+    "total": 10772,
+    "simulated": true
+  },
+  "[prompt #565] +97-46 · I'm fairly happy with your design now, but when I resize the chat window width, the to-do list stutters as it changes, a-2026-10-21-215449.png": {
+    "input": 10036,
+    "output": 1530,
+    "total": 11566,
+    "simulated": true
+  },
+  "[prompt #566] +149-55 · Go ahead with your proposal first; if things feel too small I can adjust later-2026-10-21-220438.png": {
+    "input": 7052,
+    "output": 1051,
+    "total": 8103,
+    "simulated": true
+  },
+  "[prompt #567] +190-56 · In the Idea stream, the -landing- text and its icon are not aligned; please fix that. I also want the date and time font-2026-10-21-220758.png": {
+    "input": 7007,
+    "output": 4491,
+    "total": 11498,
+    "simulated": true
+  },
+  "[prompt #568] +255-69 · Change the Idea stream to-do cards to the same two-line structure too, so both places are fully consistent-2026-10-21-222153.png": {
+    "input": 2867,
+    "output": 4339,
+    "total": 7206,
+    "simulated": true
   }
 }

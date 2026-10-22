@@ -13,11 +13,14 @@ export const ideaTheme = {
   foldedGap: 80,
   foldCountSize: 26,
   milestoneDiameter: 36,
+  // Icons inside a station circle (trophy, completed to-do check) fill this share of its diameter.
+  stationIconScale: 0.55,
   milestoneBorderWidth: 2,
-  milestoneBorderColor: '#000',
+  // The ring separates the station from its route in the canvas colour, so it reads as a gap in both themes.
+  milestoneBorderColor: 'var(--canvas-bg)',
   hoverRadiusViewport: .05,
   actionFadeMs: 180,
-  milestoneFontSize: 17,
+  milestoneFontSize: 14,
   milestonePaddingBlock: 12,
   milestonePaddingInline: 14,
 };

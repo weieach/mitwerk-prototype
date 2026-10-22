@@ -257,18 +257,20 @@ html[data-screenshot-count-hover] .branch-count-hint { opacity: 1; }
 .idea-card .station.is-todo { --station-inner-size:calc(var(--idea-todo-station-size) - 2 * var(--idea-todo-station-border, 2px)); width:var(--idea-todo-station-size); height:var(--idea-todo-station-size); left:calc(var(--station-center-x) - var(--idea-todo-station-size) / 2); top:calc(var(--station-center-y) - var(--idea-todo-station-size) / 2); border:var(--idea-todo-station-border, 2px) solid var(--station-color, var(--route-color)); border-radius:0; background:var(--station-open-fill); color:var(--station-color, var(--route-color)); box-shadow:0 0 0 var(--station-clearance) var(--canvas-bg); }
 .idea-todos { display:flex; flex-direction:column; gap:var(--idea-todo-gap);  box-sizing:border-box; list-style:none; margin:0 0 var(--idea-todo-gap); padding:var(--milestone-padding); background:var(--paper); border:1px solid var(--line); border-radius:var(--surface-radius); font:var(--milestone-font-size)/1.35 var(--sans); }
 .idea-todos li { display:flex; align-items:flex-start; gap:8px; }
-.idea-todos .ui-icon { flex:none; margin-top:3px; }
+/* The checkbox button (not just its icon) drops to the first text line and hugs its icon, so icon, button
+   and hit area share one center. Icons inside chips stay centered on their label. */
+.idea-todos .idea-todo-toggle { margin-top:3px; min-height:0; height:auto; }
+.idea-todos .idea-todo-toggle .ui-icon { flex:none; }
 .idea-todo-text { white-space:pre-wrap; overflow-wrap:anywhere; min-width:0; }
 .idea-todos .is-complete .idea-todo-text { text-decoration:line-through; color:var(--muted); }
 
 .idea-editor > div, .idea-editor .milestone-editor-actions { width:100%; }
 .idea-editor .milestone-editor-actions { display:flex; align-items:center; gap:8px; justify-content:flex-start; }
-.idea-editor .milestone-remove { margin-right:0; color:var(--annotation-danger); border-color:transparent; padding:5px; display:inline-flex; }
+.idea-editor .milestone-remove { margin-right:0; color:var(--annotation-danger); border-color:transparent; padding:5px; display:inline-flex; align-items:center; justify-content:center; aspect-ratio:1; }
 .idea-todo-toggle { display:inline-flex; flex:none; padding:0; background:transparent; color:inherit; cursor:pointer; }
 
-.idea-todo-copy { display:flex; flex-direction:column; min-width:0; gap:var(--idea-todo-time-gap); overflow-wrap:anywhere; }
-.idea-todo-text > .bucket-tag { margin-right:var(--bucket-tag-text-gap); vertical-align:text-bottom; }
-.idea-todo-copy time { font-size:var(--idea-todo-time-size); opacity:var(--drawer-time-opacity); text-decoration:none; }
+/* Same two-line shape as the To-do drawer: the task, then the shared TodoDetails line. */
+.idea-todo-copy { display:flex; flex-direction:column; min-width:0; gap:var(--todo-details-gap); overflow-wrap:anywhere; }
 
 /* Keep the WIP action centered on its graph station; details grow below it. */
 .idea-wip-action { display:flex; align-items:center; flex-wrap:wrap; gap:var(--selector-content-gap); min-height:calc(var(--station-center-y) * 2); margin-bottom:var(--idea-todo-gap); }
