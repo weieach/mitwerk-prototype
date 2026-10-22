@@ -5728,3 +5728,31 @@ From this Gallery viewing angle, I notice the version labels stand out too much;
 ```
 
 Original: 我观察在gallery的这个视角，版本的文字太standout，应该是在截图后面
+
+## Prompt #570
+
+```text
+Smoother Gallery → Playback transition
+
+```
+
+## Prompt #571
+
+```text
+Fix leftover line when Gallery turns into Playback
+
+```
+
+## Prompt #572
+
+```text
+Fix flicker as Playback UI finishes appearing
+
+```
+
+## Prompt #573
+
+```text
+Log prompts as concise English summaries; commit
+
+```

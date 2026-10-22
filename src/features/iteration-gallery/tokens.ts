@@ -3,7 +3,10 @@ export const galleryTokens = {
   annotations: { exitMs: 180, blur: 12, blurMs: 220, frameDelayMs: 120, uiDelayMs: 160, enterMs: 180, mainColor: '#cdcdcd', messageStaggerMs: 50, messageEnterMs: 280, hoverLift: 10, bookmarkWidth: 22, bookmarkHeight: 18, bookmarkTextureSize: 128, bookmarkInset: 10 },
   // Server-mode surround (Live server and saved prototypes): a heavily blurred sky under a light scrim.
   runtimeBackdrop: { color: 'var(--faint)' },
-  theaterMotion: { entryMs: 240, infoDelayMs: 180, playbackDelayMs: 260, runtimeReturnMs: 560, rotateMs: 750, verticalAxisFadeMs: 180, frameBorderMs: 180, controlsFadeMs: 280, captureProgress: .5, timelineMs: 320, timelineOffsetVh: 5 },
+  // Gallery → Playback is one clock: the frame turns on turnCurve (quick start, long soft settle); Playback UI starts
+  // entering at uiStart of the turn so it settles with the frame, and the 3D frame crossfades to the DOM image over handoffMs.
+  // Other blocks and rulers are fully gone by surroundFadeEnd: edge-on, their stacked edges would read as a line through Playback.
+  theaterMotion: { entryMs: 240, infoDelayMs: 40, playbackDelayMs: 100, runtimeReturnMs: 560, rotateMs: 750, turnCurve: [.45, 0, .15, 1] as const, uiStart: .6, surroundFadeEnd: .5, handoffMs: 140, verticalAxisFadeMs: 180, frameBorderMs: 180, controlsFadeMs: 280, albumControlsFadeMs: 160, captureProgress: .5 },
   theaterDrag: { radiansPerViewport: Math.PI, pitchLimit: Math.PI * .45 },
   controls: { menuRowsMinPanelWidth: 680, headerGap: 14, tokenLift: 48, floatingBackground: 'var(--paper)', floatingWidth: 144, floatingPaddingInline: 16, floatingPaddingBlock: 6, labelOpacity: .6, frameSelectorShare: .3, fileMaxWidth: 240, frameSelectMaxWidth: 200, inset: 24, gap: 8 },
   interfaces: captureScreens,

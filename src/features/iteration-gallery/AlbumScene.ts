@@ -4,7 +4,7 @@ import { interpolateOrbit } from './camera-motion';
 import { frameCameraTurn } from './theater-camera';
 import { tokenUsageArea } from './token-usage';
 import * as THREE from 'three';
-import { dragAngles, transitionProgress, theaterEntranceDuration, theaterRotationProgress } from './theater-transition';
+import { dragAngles, transitionProgress, theaterEntranceDuration, theaterRotationProgress, surroundOpacity } from './theater-transition';
 import type { TheaterOrbit, TheaterTarget } from './theater-transition';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
@@ -92,6 +92,8 @@ export class AlbumScene {
   private initialized = false;
   private restoreAlbum: (() => void) | null = null;
   private theaterTurn: ((time: number) => void) | null = null;
+  /** Moves the forward turn's landing rectangle while it runs. */
+  private retargetTurn: ((target: TheaterTarget) => void) | null = null;
   private overheadBlend = 0;
   private failedTextures = new Set<string>();
   private reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -213,6 +215,7 @@ export class AlbumScene {
     if (this.syncTokenUsage(dt)) moving = true;
     this.renderer.render(this.scene, this.camera);
     if (this.retired.length) this.release(this.retired.splice(0));
+    if (!moving) this.scheduleUploads();
     this.host.dataset.imagesReady = String([...this.frames.values()].filter(frame => frame.image.visible).every(frame => !!frame.image.material.map));
     const axisFamily = getComputedStyle(this.host).fontFamily;
     const measureAxisText = (text: string, size: number) => {
@@ -257,6 +260,27 @@ export class AlbumScene {
     };
     this.invalidate();
   }
+  private uploaded(texture: THREE.Texture) {
+    return (this.renderer.properties.get(texture) as { __version?: number }).__version === texture.version;
+  }
+
+  private uploadIdle: number | null = null;
+  /** Upload shown captures to the GPU one per idle slice, so opening Playback never waits on them. */
+  private scheduleUploads() {
+    if (this.dead || this.uploadIdle !== null) return;
+    const idle = window.requestIdleCallback ?? ((callback: () => void) => window.setTimeout(callback, 50));
+    this.uploadIdle = idle(() => {
+      this.uploadIdle = null;
+      // A pending frame means something is animating; try again once it rests. Frames held back
+      // during a turn keep their map, so they upload while Playback is open.
+      if (this.dead || this.tick || this.down) return;
+      const waiting = [...this.frames.values()].find(frame => frame.image.material.map && !this.uploaded(frame.image.material.map));
+      if (!waiting) return;
+      this.renderer.initTexture(waiting.image.material.map!);
+      this.scheduleUploads();
+    });
+  }
+
   private finishArrival() {
     if (!this.arrival) return;
     for (const item of this.arrival.items) item.object.position.y = item.base;
@@ -275,31 +299,36 @@ export class AlbumScene {
     }
     const selected = this.frames.get(id);
     if (!selected) { complete(); return; }
-    if (this.theaterTurn) return;
+    if (this.theaterTurn) { if (!reverse) this.retargetTurn?.(target); return; }
     this.topMotion = null;
     this.pointer = null; this.down = null; this.edgeVelocity = 0; this.controls.enabled = false;
     this.inspect(id);
     this.featuredGuides.visible = false;
     this.callbacks.labels([]);
     const rect = this.host.getBoundingClientRect();
-    const centerX = target.left + target.width / 2 - rect.left;
-    const centerY = target.top + target.height / 2 - rect.top;
-    const unit = selected.plane.height / target.height;
+    const landing = (box: TheaterTarget) => {
+      const centerX = box.left + box.width / 2 - rect.left, centerY = box.top + box.height / 2 - rect.top;
+      const unit = selected.plane.height / box.height;
+      return [-centerX * unit, (rect.width - centerX) * unit, centerY * unit, -(rect.height - centerY) * unit] as const;
+    };
     const fromPosition = this.camera.position.clone(), fromRotation = this.camera.quaternion.clone();
     const originalZoom = this.camera.zoom;
     const fromFrustum = [this.camera.left, this.camera.right, this.camera.top, this.camera.bottom].map(value => value / this.camera.zoom);
-    const toFrustum = [-centerX * unit, (rect.width - centerX) * unit, centerY * unit, -(rect.height - centerY) * unit] as const;
     const originalLift = selected.group.position.y;
     const pivot = selected.image.position.clone();
     const turnCamera = frameCameraTurn(this.camera, pivot.clone().add(new THREE.Vector3(0, originalLift, 0)), pivot,
-      toFrustum, Math.max(this.span, this.album?.depth ?? 0) * 2);
+      landing(target), Math.max(this.span, this.album?.depth ?? 0) * 2);
+    this.retargetTurn = reverse ? null : box => turnCamera.retarget(landing(box));
     const originalOpacity = selected.image.material.opacity;
     const imageScale = selected.plane.height * selected.plane.frame.width / selected.plane.frame.height / selected.plane.width;
     const otherMaterials = new Map<THREE.Material, number>();
     this.content.traverse(object => {
       if (!(object instanceof THREE.Mesh || object instanceof THREE.Line)) return;
       for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
-        if (material !== selected.image.material) { material.transparent = true; otherMaterials.set(material, material.opacity); }
+        if (material === selected.image.material) continue;
+        // An opaque material's shader ignores opacity until recompiled.
+        if (!material.transparent) { material.transparent = true; material.needsUpdate = true; }
+        otherMaterials.set(material, material.opacity);
       }
     });
     const restore = () => {
@@ -310,7 +339,9 @@ export class AlbumScene {
       selected.group.position.y = originalLift; selected.image.scale.x = 1;
       selected.image.material.opacity = originalOpacity;
       for (const [material, opacity] of otherMaterials) material.opacity = opacity;
+      for (const image of deferred.splice(0)) image.visible = true;
     };
+    const deferred: THREE.Mesh[] = [];
     this.restoreAlbum = restore;
     let start: number | null = null;
     this.theaterTurn = time => {
@@ -323,8 +354,13 @@ export class AlbumScene {
         // texture must not consume the first part of the camera interpolation.
         // Frames outside the starting camera can enter its frustum mid-turn.
         // Prepare all attached capture maps now, not on their first animated draw.
+        // Idle time normally uploads them first (scheduleUploads); any still waiting stay hidden for this turn
+        // rather than stalling its first frame, since the blocks around the selection fade out anyway.
         for (const frame of this.frames.values()) {
-          if (frame.image.visible && frame.image.material.map) this.renderer.initTexture(frame.image.material.map);
+          const map = frame.image.material.map;
+          if (!frame.image.visible || !map || this.uploaded(map)) continue;
+          if (frame === selected) this.renderer.initTexture(map);
+          else { frame.image.visible = false; deferred.push(frame.image); }
         }
         this.renderer.render(this.scene, this.camera);
         start = performance.now(); started?.(); this.invalidate(); return;
@@ -332,7 +368,7 @@ export class AlbumScene {
       const duration = reverse ? t.theaterMotion.rotateMs : theaterEntranceDuration();
       const clock = transitionProgress(time - start, this.reducedMotion ? 0 : duration, freezeAt);
       const { progress, complete: finished } = clock;
-      const rotation = reverse ? clock : theaterRotationProgress(progress);
+      const rotation = theaterRotationProgress(progress);
       const forwardEase = rotation.eased;
       const eased = reverse ? 1 - forwardEase : forwardEase;
       this.callbacks.motion(reverse ? 1 - progress : progress);
@@ -342,8 +378,9 @@ export class AlbumScene {
       selected.image.material.opacity = THREE.MathUtils.lerp(originalOpacity, 1, eased);
       this.host.style.setProperty('--token-usage-opacity', String(this.tokenBlend * (1 - eased)));
       const axisOpacity = 1 - transitionProgress((reverse ? 1 - progress : rotation.progress) * t.theaterMotion.rotateMs, t.theaterMotion.verticalAxisFadeMs).eased;
+      const surrounding = surroundOpacity(reverse ? 1 - progress : progress);
       for (const [material, opacity] of otherMaterials) {
-        material.opacity = opacity * (material.userData.axisFace === 'wall' ? axisOpacity : 1 - eased);
+        material.opacity = opacity * (material.userData.axisFace === 'wall' ? axisOpacity : surrounding);
       }
       this.renderer.render(this.scene, this.camera);
       this.host.dataset.transitionProgress = String(progress);
@@ -356,8 +393,8 @@ export class AlbumScene {
           this.controls.enabled = true;
           delete this.host.dataset.transitionProgress;
           this.invalidate();
-        } else this.theaterTurn = () => {};
-        complete(); return;
+        } else { this.theaterTurn = () => {}; this.retargetTurn = null; }
+        complete(); this.scheduleUploads(); return;
       }
       this.invalidate();
     };
@@ -933,7 +970,8 @@ export class AlbumScene {
       parent.add(object);
       return object;
     };
-    const material = new THREE.LineBasicMaterial({ color: this.colors.line });
+    // Transparent from the start: an opaque material's shader forces full alpha, so the turn could not fade it.
+    const material = new THREE.LineBasicMaterial({ color: this.colors.line, transparent: true });
     material.userData.axisFace = face;
     const lines = [anchored(material, points)];
     if (face === 'wall' && this.album) {

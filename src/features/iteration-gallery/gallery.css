@@ -177,24 +177,35 @@
 .gallery-phase-turning .theater-playback { opacity: 0; }
 .gallery-phase-turning .theater-screen { opacity: var(--frame-border-opacity, 0); background: transparent; }
 .gallery-phase-turning .theater-screen img, .gallery-phase-turning .theater-screen .gallery-empty { visibility: hidden; }
-.gallery-phase-turning .gallery-timeline {
-  opacity: var(--timeline-enter-opacity, 0);
-  transform: translateY(var(--timeline-enter-offset, 0px));
-  will-change: opacity, transform;
-}
+/* Album controls leave quickly on a click instead of vanishing. */
+.album-frame-bar, .album-floating-actions, .album-saved-frame, .album-navigation-help, .album-range-stats, .iteration-gallery > .gallery-footer { transition: opacity var(--album-controls-fade) var(--ease-out); }
 .gallery-phase-turning .album-frame-bar, .gallery-phase-turning .album-floating-actions, .gallery-phase-turning .album-saved-frame, .gallery-phase-turning .album-navigation-help,
-.gallery-phase-turning > .gallery-footer, .gallery-phase-turning .panel-header-actions { opacity: 0; pointer-events: none; }
-.gallery-phase-theater .theater-view:not(.is-runtime)[data-has-frame="true"] :is(.theater-frame-actions, .theater-metadata) { animation:playback-details-in var(--playback-entry-ms) var(--ease-out) var(--playback-info-delay) both; }
-.gallery-phase-theater .theater-view:not(.is-runtime)[data-has-frame="true"] .theater-playback { animation:playback-details-in var(--playback-entry-ms) var(--ease-out) var(--playback-controls-delay) both; }
-.gallery-phase-theater > .gallery-footer { animation:theater-controls-in var(--theater-controls-fade) var(--ease-out) both; }
+.gallery-phase-turning .album-range-stats, .gallery-phase-turning > .gallery-footer { opacity: 0; pointer-events: none; }
+/* Gallery → Playback: Playback UI starts entering at theaterMotion.uiStart of the turn (data-theater-ui="in") and keeps
+   the same animation into the theater phase, so nothing restarts or waits for the turn to finish. */
+.gallery-phase-turning[data-theater-ui="in"] > .gallery-footer .panel-header-actions { visibility: hidden; }
+/* Album controls stay gone in Playback; their fade-out transition must not bring them back while the 3D view hands off. */
+.gallery-phase-theater :is(.album-frame-bar, .album-floating-actions, .album-navigation-help, .album-range-stats) { opacity: 0; pointer-events: none; transition: none; }
+/* The header frame selector is the album's picker; it enters with the other header controls. */
+.gallery-phase-turning[data-theater-ui="in"] .album-saved-frame { opacity: 1; }
+:is(.gallery-phase-theater, .gallery-phase-turning[data-theater-ui="in"]) .theater-view:not(.is-runtime)[data-has-frame="true"] :is(.theater-frame-actions, .theater-metadata) { animation:playback-details-in var(--playback-entry-ms) var(--ease-out) var(--playback-info-delay) both; }
+:is(.gallery-phase-theater, .gallery-phase-turning[data-theater-ui="in"]) .theater-view:not(.is-runtime)[data-has-frame="true"] .theater-playback { animation:playback-details-in var(--playback-entry-ms) var(--ease-out) var(--playback-controls-delay) both; }
+:is(.gallery-phase-theater, .gallery-phase-turning[data-theater-ui="in"]) > .gallery-footer { animation:theater-controls-in var(--theater-controls-fade) var(--ease-out) both; }
+/* The header can be portaled out of the gallery, so its shell carries the phase itself. */
+.gallery-header-shell { display: contents; }
+.gallery-header-shell[data-phase="turning"]:not([data-theater-ui="in"]) .panel-header-actions { opacity: 0; pointer-events: none; }
+.gallery-header-shell:is([data-phase="theater"], [data-phase="turning"][data-theater-ui="in"]) .panel-header-actions { animation:theater-controls-in var(--theater-controls-fade) var(--ease-out) both; }
+/* Hand-off: the DOM image fades in over the identical 3D frame, which hides only after it. */
+.gallery-phase-theater .theater-screen > img:not(.theater-preview-image) { animation: theater-controls-in var(--theater-handoff) linear both; }
+.gallery-phase-theater .theater-screen { transition: background-color var(--theater-handoff) linear; }
 .theater-view:not(.is-runtime)[data-has-frame="false"] :is(.theater-frame-actions, .theater-metadata, .theater-playback) { opacity:0; }
 @keyframes playback-details-in { from { opacity:0; translate:0 6px; } to { opacity:1; translate:0 0; } }
 @keyframes theater-controls-in { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .gallery-phase-theater * { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .gallery-phase-theater *, .gallery-header-shell * { animation: none !important; } }
 
-.gallery-phase-theater .album-webgl { visibility: hidden; pointer-events: none; }
+.gallery-phase-theater .album-webgl { visibility: hidden; pointer-events: none; transition: visibility 0s linear var(--theater-handoff); }
 .gallery-phase-returning .album-frame-bar, .gallery-phase-returning .album-floating-actions, .gallery-phase-returning .album-saved-frame, .gallery-phase-returning .album-navigation-help,
-.gallery-phase-returning > .gallery-footer, .gallery-phase-returning .panel-header-actions { opacity: 0; pointer-events: none; }
+.gallery-phase-returning > .gallery-footer, .gallery-phase-returning .panel-header-actions, .gallery-header-shell[data-phase="returning"] .panel-header-actions { opacity: 0; pointer-events: none; }
 .gallery-phase-returning .theater-view > .gallery-toolbar,
 .gallery-phase-returning .theater-frame-actions, .gallery-phase-returning .theater-metadata, .gallery-phase-returning .theater-playback { visibility: hidden; }
 .gallery-return-ready .gallery-theater-layer { opacity: 0; pointer-events: none; }
@@ -227,7 +238,7 @@
 
 /* A shared surface transition signals theater focus without tinting saved images. */
 .iteration-gallery { --gallery-surface: var(--paper); background: var(--gallery-surface); transition: background-color var(--theater-controls-fade) ease; }
-.iteration-gallery > .panel-header { background: var(--gallery-surface); transition: background-color var(--theater-controls-fade) ease; }
+.iteration-gallery > .gallery-header-shell > .panel-header { background: var(--gallery-surface); transition: background-color var(--theater-controls-fade) ease; }
 .gallery-phase-theater { --gallery-surface: var(--theater-focus-background); }
 @media (prefers-reduced-motion: reduce) { .iteration-gallery { transition: none; } }
 

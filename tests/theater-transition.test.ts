@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { containedFrameTarget, transitionProgress, frameBorderEntrance, timelineEntrance, timelineCaptureProgress, theaterEntranceDuration, theaterRotationProgress, rotationCaptureProgress } from '../src/features/iteration-gallery/theater-transition.ts';
+import { containedFrameTarget, cubicBezier, transitionProgress, frameBorderEntrance, theaterUiEntered, uiCaptureProgress, surroundOpacity, theaterEntranceDuration, theaterRotationProgress, rotationCaptureProgress } from '../src/features/iteration-gallery/theater-transition.ts';
 import { galleryTokens } from '../src/features/iteration-gallery/tokens.ts';
 
 test('theater handoff only completes at the end of the transformation', () => {
@@ -52,33 +52,47 @@ test('the open gap between metadata and playback is not a reserved control row',
 });
 
 
-test('frame finishes before the timeline enters and UI handoff follows both stages', () => {
-  const frameEnd = galleryTokens.theaterMotion.rotateMs / theaterEntranceDuration();
-  for (const progress of [0, frameEnd / 2, frameEnd]) {
-    assert.deepEqual(timelineEntrance(progress), { opacity: 0, offsetVh: -5 });
-  }
-  const middle = timelineCaptureProgress();
-  assert.equal(theaterRotationProgress(middle).progress, 1);
-  assert.equal(theaterRotationProgress(middle).eased, 1);
-  assert.deepEqual(timelineEntrance(middle), { opacity: .5, offsetVh: -2.5 });
-  assert.equal(transitionProgress(galleryTokens.theaterMotion.rotateMs, theaterEntranceDuration()).complete, false);
-  assert.equal(transitionProgress(theaterEntranceDuration(), theaterEntranceDuration()).complete, true);
+test('one turn clock: frame border ends with the turn and Playback UI enters during its last part', () => {
+  const { uiStart, rotateMs, frameBorderMs } = galleryTokens.theaterMotion;
+  assert.equal(theaterEntranceDuration(), rotateMs);
+  assert.equal(theaterRotationProgress(0).eased, 0);
+  assert.equal(theaterRotationProgress(1).eased, 1);
+  // Quick start, long soft settle: past the midpoint by half time, and nearly landed when the UI starts.
+  assert.ok(theaterRotationProgress(.5).eased > .5);
+  assert.ok(theaterRotationProgress(uiStart).eased > .8);
+  for (let step = 1; step <= 20; step++) assert.ok(theaterRotationProgress(step / 20).eased >= theaterRotationProgress((step - 1) / 20).eased);
   assert.equal(frameBorderEntrance(0).opacity, 0);
-  assert.equal(frameBorderEntrance(frameEnd).opacity, 1);
-  assert.equal(timelineEntrance(frameEnd).opacity, 0);
-  assert.equal(frameBorderEntrance(middle).opacity, 1);
-  assert.equal(timelineEntrance(1).opacity, 1);
-  assert.equal(Math.abs(timelineEntrance(1).offsetVh), 0);
+  assert.equal(frameBorderEntrance(1 - frameBorderMs / rotateMs).opacity, 0);
+  assert.equal(frameBorderEntrance(1).opacity, 1);
+  assert.equal(theaterUiEntered(uiStart - .01), false);
+  assert.equal(theaterUiEntered(uiStart), true);
+  assert.equal(theaterUiEntered(1), true);
 });
 
-test('capture freezes the actual staged clock and preserves the original rotation midpoint', () => {
-  const frozen = transitionProgress(9000, theaterEntranceDuration(), timelineCaptureProgress());
+test('captures freeze the turn midpoint with UI hidden, or mid UI entrance', () => {
+  assert.equal(theaterUiEntered(rotationCaptureProgress()), false);
+  assert.equal(theaterUiEntered(uiCaptureProgress()), true);
+  const frozen = transitionProgress(9000, theaterEntranceDuration(), uiCaptureProgress());
   assert.equal(frozen.complete, false);
-  assert.equal(timelineEntrance(frozen.progress).opacity, .5);
-  assert.equal(theaterRotationProgress(frozen.progress).eased, 1);
-  assert.equal(theaterRotationProgress(rotationCaptureProgress()).eased, .5);
-  assert.equal(timelineEntrance(rotationCaptureProgress()).opacity, 0);
+  assert.equal(frozen.progress, uiCaptureProgress());
   const instant = transitionProgress(0, 0);
-  assert.equal(timelineEntrance(instant.progress).opacity, 1);
+  assert.equal(theaterUiEntered(instant.progress), true);
   assert.equal(theaterRotationProgress(instant.progress).eased, 1);
+});
+
+test('cubic-bezier matches its linear and endpoint cases', () => {
+  const linear = cubicBezier([0, 0, 1, 1]);
+  for (const x of [.1, .25, .5, .9]) assert.ok(Math.abs(linear(x) - x) < 1e-4);
+  const curve = cubicBezier([.45, 0, .15, 1]);
+  assert.equal(curve(0), 0);
+  assert.equal(curve(1), 1);
+});
+
+test('surrounding blocks are gone before the turn faces them edge-on, and before Playback UI enters', () => {
+  const { surroundFadeEnd, uiStart } = galleryTokens.theaterMotion;
+  assert.equal(surroundOpacity(0), 1);
+  assert.equal(surroundOpacity(surroundFadeEnd), 0);
+  assert.ok(surroundFadeEnd <= uiStart);
+  assert.equal(surroundOpacity(1), 0);
+  assert.ok(surroundOpacity(surroundFadeEnd / 2) > 0 && surroundOpacity(surroundFadeEnd / 2) < 1);
 });

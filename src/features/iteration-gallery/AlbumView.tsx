@@ -2,7 +2,7 @@ import { AnnotationOverlay } from '../annotations/FrameAnnotations';
 import { useAnnotations } from '../annotations/store';
 import { createPortal } from 'react-dom';
 import { SavedFrameSelect } from './SavedFrameSelect';
-import { rotationCaptureProgress, timelineCaptureProgress } from './theater-transition';
+import { rotationCaptureProgress, uiCaptureProgress } from './theater-transition';
 import { formatVersion, galleryPromptLabel } from './model';
 import { userPromptText } from './theater-layout';
 import type { GalleryCamera, TheaterTarget } from './theater-transition';
@@ -98,7 +98,7 @@ export function AlbumView({ simulating = false, extent, framePickerSlot, onSelec
     if (!scene.current || error) { onTurnComplete(); return; }
     const params = new URLSearchParams(location.search);
     const freeze = params.get('screenshot') === '1' && ['transition', 'timeline-transition'].includes(params.get('galleryView') ?? '');
-    const captureProgress = params.get('galleryView') === 'timeline-transition' ? timelineCaptureProgress() : rotationCaptureProgress();
+    const captureProgress = params.get('galleryView') === 'timeline-transition' ? uiCaptureProgress() : rotationCaptureProgress();
     scene.current.turnToTheater(theaterId, theaterTarget, onTurnComplete, freeze && !returning ? captureProgress : undefined, returning, onReturnStarted);
   }, [turning, returning, theaterTarget, theaterId, onTurnComplete, onReturnStarted, error]);
 

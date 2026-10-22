@@ -42,33 +42,55 @@ export function reservedControlContains(row: TheaterTarget, control: TheaterTarg
   return containsPoint({ left: row.left, width: row.width, top: control.top, height: control.height }, x, y, margin);
 }
 
-/** One clock sequences the frame, timeline, then the existing UI fade at handoff. */
+/** CSS-style cubic-bezier timing: solve the curve's x for progress by bisection, then read its y. */
+export function cubicBezier([x1, y1, x2, y2]: readonly [number, number, number, number]) {
+  const axis = (a: number, b: number, s: number) => 3 * a * (1 - s) ** 2 * s + 3 * b * (1 - s) * s ** 2 + s ** 3;
+  return (progress: number) => {
+    if (progress <= 0 || progress >= 1) return Math.min(1, Math.max(0, progress));
+    let low = 0, high = 1, s = progress;
+    for (let step = 0; step < 24; step++) {
+      s = (low + high) / 2;
+      if (axis(x1, x2, s) < progress) low = s; else high = s;
+    }
+    return axis(y1, y2, s);
+  };
+}
+
+const turnEase = cubicBezier(t.theaterMotion.turnCurve);
+
+/** One clock: the frame turn. Playback UI enters during its last part instead of after it. */
 export function theaterEntranceDuration() {
-  return t.theaterMotion.rotateMs + t.theaterMotion.timelineMs;
+  return t.theaterMotion.rotateMs;
 }
 
 export function theaterRotationProgress(entranceProgress: number) {
-  return transitionProgress(entranceProgress * theaterEntranceDuration(), t.theaterMotion.rotateMs);
+  const progress = Math.min(1, Math.max(0, entranceProgress));
+  return { progress, eased: turnEase(progress) };
 }
 
-/** The frontal frame border finishes during the last slice of the rotation, before the timeline starts. */
+/** The frontal frame border finishes during the last slice of the rotation. */
 export function frameBorderEntrance(entranceProgress: number) {
   const { rotateMs, frameBorderMs } = t.theaterMotion;
-  const elapsed = entranceProgress * theaterEntranceDuration();
-  const { eased } = transitionProgress(elapsed - (rotateMs - frameBorderMs), frameBorderMs);
+  const { eased } = transitionProgress(entranceProgress * rotateMs - (rotateMs - frameBorderMs), frameBorderMs);
   return { opacity: eased };
 }
 
-export function timelineEntrance(entranceProgress: number) {
-  const { rotateMs, timelineMs, timelineOffsetVh } = t.theaterMotion;
-  const { eased } = transitionProgress(entranceProgress * theaterEntranceDuration() - rotateMs, timelineMs);
-  return { opacity: eased, offsetVh: -timelineOffsetVh * (1 - eased) };
+/** Opacity of everything around the selected frame, by how far the turn has gone (0 album, 1 frontal). Fully faded
+ * by surroundFadeEnd, before edge-on block edges and rulers can stack into a visible line. */
+export function surroundOpacity(turned: number) {
+  return 1 - transitionProgress(turned, t.theaterMotion.surroundFadeEnd).eased;
 }
 
-export function timelineCaptureProgress() {
-  return (t.theaterMotion.rotateMs + t.theaterMotion.timelineMs / 2) / theaterEntranceDuration();
+/** Playback controls, details, header and footer start entering once the turn passes uiStart. */
+export function theaterUiEntered(entranceProgress: number) {
+  return entranceProgress >= t.theaterMotion.uiStart;
+}
+
+/** Midway through the UI entrance, after the frame has mostly settled. */
+export function uiCaptureProgress() {
+  return t.theaterMotion.uiStart + (1 - t.theaterMotion.uiStart) / 2;
 }
 
 export function rotationCaptureProgress() {
-  return t.theaterMotion.rotateMs * t.theaterMotion.captureProgress / theaterEntranceDuration();
+  return t.theaterMotion.captureProgress;
 }

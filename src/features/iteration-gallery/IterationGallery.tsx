@@ -15,7 +15,7 @@ import '@phosphor-icons/web/regular/style.css';
 import { TrackedInterface } from './TrackedInterface';
 import type { VisualReference } from './references';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { containedFrameTarget, frameBorderEntrance, timelineEntrance } from './theater-transition';
+import { containedFrameTarget, frameBorderEntrance, theaterUiEntered } from './theater-transition';
 import type { GalleryCamera, TheaterTarget } from './theater-transition';
 import type { CSSProperties, MouseEvent, ReactNode } from 'react';
 import { AlbumView } from './AlbumView';
@@ -59,6 +59,7 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
   const [framePickerSlot, setFramePickerSlot] = useState<HTMLDivElement | null>(null);
   const viewStack = useRef<HTMLDivElement>(null);
   const galleryRoot = useRef<HTMLElement>(null);
+  const headerShell = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const root = galleryRoot.current;
     const footer = root?.querySelector<HTMLElement>('.gallery-footer');
@@ -68,11 +69,11 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
     observer.observe(footer); measure();
     return () => observer.disconnect();
   }, []);
-  const updateTimelineMotion = useCallback((progress: number) => {
-    const pose = timelineEntrance(progress);
-    galleryRoot.current?.style.setProperty('--timeline-enter-opacity', String(pose.opacity));
-    galleryRoot.current?.style.setProperty('--timeline-enter-offset', `${pose.offsetVh}vh`);
+  // Set outside React so the turn never re-renders mid-animation; the header may be portaled, so it carries its own copy.
+  const updateTurnMotion = useCallback((progress: number) => {
     galleryRoot.current?.style.setProperty('--frame-border-opacity', String(frameBorderEntrance(progress).opacity));
+    const ui = theaterUiEntered(progress) ? 'in' : 'out';
+    for (const element of [galleryRoot.current, headerShell.current]) if (element) element.dataset.theaterUi = ui;
   }, []);
   const [returnReady, setReturnReady] = useState(false);
   const startReturn = useCallback(() => setReturnReady(true), []);
@@ -158,15 +159,15 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
     select(push.id, true);
     if ('live' in pushRequest) setLiveRequestKey(key => Math.abs(key) + 1);
     setMilestoneFrame(pushRequest.milestone ? {frame:push, onComplete:pushRequest.onMilestoneClose} : null);
-    if (view === 'album') { updateTimelineMotion(0); setView('turning'); }
-  }, [pushRequest, versions, view, select, updateTimelineMotion, range, clock]);
+    if (view === 'album') { updateTurnMotion(0); setView('turning'); }
+  }, [pushRequest, versions, view, select, updateTurnMotion, range, clock]);
   const enterPlayback = useCallback(() => {
     if (view !== 'album' || !visibleFrames.length) return;
     const latest = visibleFrames.reduce((last, frame) => frame.timestamp >= last.timestamp ? frame : last);
     setSelectedId(latest.id); setView('focusing');
-    const enter = () => { updateTimelineMotion(0); setNavigationKey(key => key + 1); setView('turning'); };
+    const enter = () => { updateTurnMotion(0); setNavigationKey(key => key + 1); setView('turning'); };
     if (camera.current) camera.current.focus(latest.id, enter); else enter();
-  }, [view, visibleFrames, updateTimelineMotion]);
+  }, [view, visibleFrames, updateTurnMotion]);
   useEffect(() => {
     if (!playbackOnly || view !== 'album' || !visibleFrames.length || (pushRequest && handledPush.current !== pushRequest)) return;
     // Let the split settle before measuring the camera's latest-frame destination.
@@ -180,15 +181,21 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
       exit();
     } else enterPlayback();
   }
-  function open(id: string) { if (view !== 'album') return; updateTimelineMotion(0); setSelectedId(id); setNavigationKey(key => key + 1); setView('turning'); }
+  function open(id: string) { if (view !== 'album') return; updateTurnMotion(0); setSelectedId(id); setNavigationKey(key => key + 1); setView('turning'); }
 
   useLayoutEffect(() => {
     if (view !== 'turning') return;
-    let tick = requestAnimationFrame(() => { tick = requestAnimationFrame(() => {
+    // Playback's layout can settle a few frames after it mounts; keep measuring so the turn lands on the final rectangle.
+    let last: TheaterTarget | null = null;
+    const measure = () => {
       const screen = viewStack.current?.querySelector('.theater-screen');
       const frame = visibleFrames.find(item => item.id === selectedId);
-      if (screen && frame) setTarget(containedFrameTarget(screen.getBoundingClientRect(), frame.width, frame.height)); else finishTurn();
-    }); });
+      if (!screen || !frame) { if (!last) finishTurn(); return; }
+      const next = containedFrameTarget(screen.getBoundingClientRect(), frame.width, frame.height);
+      if (!last || (['left', 'top', 'width', 'height'] as const).some(key => Math.abs(next[key] - last![key]) > .5)) { last = next; setTarget(next); }
+      tick = requestAnimationFrame(measure);
+    };
+    let tick = requestAnimationFrame(() => { tick = requestAnimationFrame(measure); });
     return () => cancelAnimationFrame(tick);
   }, [view, selectedId, visibleFrames, finishTurn]);
 
@@ -225,13 +232,13 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
 
   useEffect(() => { if (simulating) return; try { seedAnnotations(versions.flatMap(version => version.frames)); } catch { /* Demo seeds can be retried after storage is available. */ } }, [versions, simulating]);
 
-  const header = <PanelHeader title="Version blocks" icon={panelIcons.versionBlocks} mode={view === 'album' || view === 'focusing' || view === 'returning' ? 'Gallery' : 'Playback'} onModeChange={switchView} modeAction={runtimeMode ? { label: 'Return to Playback', onClick: () => setLiveRequestKey(key => -Math.abs(key) - 1) } : undefined} modeDisabled={!visibleFrames.length || !['album','theater'].includes(view)} onTitleClick={!runtimeMode && view === 'theater' ? exit : undefined} onToggle={onToggle} expanded={expanded} actions={<>
+  const header = <div ref={headerShell} className="gallery-header-shell" data-phase={view} style={{ '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms` } as CSSProperties}><PanelHeader title="Version blocks" icon={panelIcons.versionBlocks} mode={view === 'album' || view === 'focusing' || view === 'returning' ? 'Gallery' : 'Playback'} onModeChange={switchView} modeAction={runtimeMode ? { label: 'Return to Playback', onClick: () => setLiveRequestKey(key => -Math.abs(key) - 1) } : undefined} modeDisabled={!visibleFrames.length || !['album','theater'].includes(view)} onTitleClick={!runtimeMode && view === 'theater' ? exit : undefined} onToggle={onToggle} expanded={expanded} actions={<>
       <span className="gallery-header-runtime-controls" inert={!!runtimeMode} aria-hidden={!!runtimeMode}><VersionPanelSwitch onClick={onSwitchPanel} target="Version stream"/>
       {view !== 'album' && view !== 'focusing' && <div className="gallery-range"><RowSelect label="Date range" align="center" value={range} onChange={value => { setRange(value as RangeKey); setNow(Date.now()); }} options={ranges}/></div>}
       <div className="gallery-frame-picker-slot" ref={setFramePickerSlot}/>
       {headerActions}</span>
       <span className="playback-export-slot" ref={setExportSlot}/>
-    </>}/>;
+    </>}/></div>;
 
   // Only Live server exits on a surround click; saved prototypes require the explicit exit action.
   // Covered controls are inert, so their clicks land on these ancestors.
@@ -240,14 +247,14 @@ export function IterationGallery({ onRuntimeChange, onPlaybackVersion, headerTar
     setLiveRequestKey(key => -Math.abs(key) - 1);
   }
 
-  return <LatestPromptIdContext.Provider value={latestPromptId}><section ref={galleryRoot} data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${runtimeMode ? ' gallery-runtime-active' : ''}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-label="Version blocks" onClick={exitRuntimeOutsideFrame} style={{ '--annotation-blur': `${t.annotations.blur}px`, '--annotation-blur-ms': `${t.annotations.blurMs}ms`, '--annotation-enter-ms': `${t.annotations.enterMs}ms`, '--annotation-exit-ms': `${t.annotations.exitMs}ms`, '--annotation-frame-delay': `${t.annotations.frameDelayMs}ms`, '--annotation-ui-delay': `${t.annotations.uiDelayMs}ms`, '--gallery-label-background': t.labelBackdrop.color, '--gallery-label-opacity': `${t.labelBackdrop.opacity * 100}%`, '--gallery-label-padding-inline': `${t.labelBackdrop.paddingInline}px`, '--gallery-label-padding': `${t.labelBackdrop.paddingBlock}px ${t.labelBackdrop.paddingInline}px`, '--gallery-axis-line-height': t.axisText.lineHeight, '--gallery-header-gap': `${t.controls.headerGap}px`, '--gallery-token-lift': `${t.controls.tokenLift}px`, '--gallery-floating-background': t.controls.floatingBackground, '--gallery-floating-label-opacity': t.controls.labelOpacity, '--gallery-frame-selector-share': `${t.controls.frameSelectorShare * 100}%`, '--gallery-floating-width': `${t.controls.floatingWidth}px`, '--gallery-floating-pad-inline': `${t.controls.floatingPaddingInline}px`, '--gallery-floating-pad-block': `${t.controls.floatingPaddingBlock}px`, '--gallery-file-max-width': `${t.controls.fileMaxWidth}px`, '--gallery-control-inset': `${t.controls.inset}px`, '--gallery-control-gap': `${t.controls.gap}px`, '--gallery-frame-select-max-width': `${t.controls.frameSelectMaxWidth}px`, '--theater-focus-background': t.theater.focusBackground, '--theater-frame-shadow': t.theater.frameShadow, '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px`, '--runtime-backdrop-color': t.runtimeBackdrop.color } as CSSProperties}>
+  return <LatestPromptIdContext.Provider value={latestPromptId}><section ref={galleryRoot} data-gallery-phase={view} className={`iteration-gallery gallery-phase-${view}${runtimeMode ? ' gallery-runtime-active' : ''}${returnReady && view === 'returning' ? ' gallery-return-ready' : ''}`} aria-label="Version blocks" onClick={exitRuntimeOutsideFrame} style={{ '--annotation-blur': `${t.annotations.blur}px`, '--annotation-blur-ms': `${t.annotations.blurMs}ms`, '--annotation-enter-ms': `${t.annotations.enterMs}ms`, '--annotation-exit-ms': `${t.annotations.exitMs}ms`, '--annotation-frame-delay': `${t.annotations.frameDelayMs}ms`, '--annotation-ui-delay': `${t.annotations.uiDelayMs}ms`, '--gallery-label-background': t.labelBackdrop.color, '--gallery-label-opacity': `${t.labelBackdrop.opacity * 100}%`, '--gallery-label-padding-inline': `${t.labelBackdrop.paddingInline}px`, '--gallery-label-padding': `${t.labelBackdrop.paddingBlock}px ${t.labelBackdrop.paddingInline}px`, '--gallery-axis-line-height': t.axisText.lineHeight, '--gallery-header-gap': `${t.controls.headerGap}px`, '--gallery-token-lift': `${t.controls.tokenLift}px`, '--gallery-floating-background': t.controls.floatingBackground, '--gallery-floating-label-opacity': t.controls.labelOpacity, '--gallery-frame-selector-share': `${t.controls.frameSelectorShare * 100}%`, '--gallery-floating-width': `${t.controls.floatingWidth}px`, '--gallery-floating-pad-inline': `${t.controls.floatingPaddingInline}px`, '--gallery-floating-pad-block': `${t.controls.floatingPaddingBlock}px`, '--gallery-file-max-width': `${t.controls.fileMaxWidth}px`, '--gallery-control-inset': `${t.controls.inset}px`, '--gallery-control-gap': `${t.controls.gap}px`, '--gallery-frame-select-max-width': `${t.controls.frameSelectMaxWidth}px`, '--theater-focus-background': t.theater.focusBackground, '--theater-frame-shadow': t.theater.frameShadow, '--theater-controls-fade': `${t.theaterMotion.controlsFadeMs}ms`, '--theater-handoff': `${t.theaterMotion.handoffMs}ms`, '--album-controls-fade': `${t.theaterMotion.albumControlsFadeMs}ms`, '--gallery-transition': `${t.transitionMs}ms`, '--gallery-label-size': `${t.labelFontSize}px`, '--runtime-backdrop-color': t.runtimeBackdrop.color } as CSSProperties}>
     <div className="gallery-runtime-backdrop" data-active={!!runtimeMode} aria-hidden/>
     {headerTarget ? createPortal(header, headerTarget) : header}
     {error && <div className="gallery-message" role="alert">{error} <button onClick={() => setRetry(value => value + 1)}>Retry</button></div>}
     {!catalog ? <div className="gallery-empty">{error ? 'Screenshot catalog unavailable.' : 'Reading saved frames…'}</div>
       : !versions.length ? <div className="gallery-empty">{simulating ? 'No versions yet.' : 'No saved frames found.'}</div>
       : <div className="gallery-view-stack" ref={viewStack}>
-      {<><AlbumView focusing={view === 'focusing'} onSelectFrame={id => select(id, true)} framePickerSlot={framePickerSlot} rangeStats={catalog ? `${counts.versions}/${counts.versionTotal} versions${rangePromptLabel}` : 'Loading frames…'} onMotion={updateTimelineMotion} turning={view === 'turning'} returning={view === 'returning'} hidden={view === 'theater' || view === 'orbiting'} onReturnStarted={startReturn} theaterTarget={target} theaterId={selectedId} onTurnComplete={finishTurn} versions={versions} range={range} now={clock} simulating={simulating} extent={extent} onOpen={open} onZoom={setZoom} onCamera={api => { camera.current = api; }}/>{!visibleFrames.length && <div className="gallery-message">No frames in this range. Earlier versions remain visible in gray.</div>}</>}
+      {<><AlbumView focusing={view === 'focusing'} onSelectFrame={id => select(id, true)} framePickerSlot={framePickerSlot} rangeStats={catalog ? `${counts.versions}/${counts.versionTotal} versions${rangePromptLabel}` : 'Loading frames…'} onMotion={updateTurnMotion} turning={view === 'turning'} returning={view === 'returning'} hidden={view === 'theater' || view === 'orbiting'} onReturnStarted={startReturn} theaterTarget={target} theaterId={selectedId} onTurnComplete={finishTurn} versions={versions} range={range} now={clock} simulating={simulating} extent={extent} onOpen={open} onZoom={setZoom} onCamera={api => { camera.current = api; }}/>{!visibleFrames.length && <div className="gallery-message">No frames in this range. Earlier versions remain visible in gray.</div>}</>}
       {view !== 'album' && view !== 'focusing' && <div className="gallery-theater-layer" inert={view === 'turning' || view === 'returning'} aria-hidden={view === 'turning' || view === 'returning'}><TheaterView onRangeChange={setRange} exportTarget={exportSlot} runtimeCatalog={allVersions.flatMap(version => version.frames)} liveRequestKey={liveRequestKey} onLiveRequestHandled={consumeLiveRequest} onRuntimeChange={runtimeChanged} onPlaybackVersion={onPlaybackVersion} navigationKey={navigationKey} references={catalog?.references ?? []} baseline={baseline ?? t.viewportPresets[1]} frames={visibleFrames} catalog={versions.flatMap(version => version.frames)} range={range} now={clock} selectedId={selectedId} onSelect={select} onOrbit={(id, rect) => playbackOnly ? null : camera.current?.orbit(id, rect, () => { setSelectedId(id); setView('orbiting'); }, () => { setView('album'); setTarget(null); }) ?? null} onDismiss={exit} active={view === 'theater'}/></div>}
       </div>}
     <footer className="gallery-footer" aria-hidden={!!runtimeMode} inert={!!runtimeMode || view === 'turning' || view === 'returning' || view === 'orbiting'}>
