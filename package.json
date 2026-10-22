@@ -13,7 +13,7 @@
     "build:vercel": "node scripts/build-vercel.mjs",
     "verify:gallery": "node --experimental-strip-types scripts/verify-gallery.ts",
     "publish:gallery": "node --experimental-strip-types scripts/publish-gallery.ts",
-    "predeploy:vercel": "node -e \"if (process.env.MITWERK_ALLOW_PUSH !== '1') { console.error('deploy:vercel: uploads to Vercel are paused; set MITWERK_ALLOW_PUSH=1 to deploy anyway.'); process.exit(1); }\"",
+    "predeploy:vercel": "node -e \"if (process.env.MITWERK_ALLOW_DEPLOY !== '1') { console.error('deploy:vercel: the live site is frozen; set MITWERK_ALLOW_DEPLOY=1 to deploy anyway.'); process.exit(1); }\"",
     "deploy:vercel": "npm run build:vercel && npx vercel deploy --prebuilt --prod && npm run verify:gallery -- https://verso-prototype.vercel.app --published",
     "spike": "node archive/review-comment-spike/scripts/spike.mjs",
     "start": "node server/standalone.mjs",

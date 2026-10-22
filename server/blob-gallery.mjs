@@ -22,21 +22,26 @@ export function mergeBlobCatalog(previous, next) {
 
 const escapeRegex = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 export function blobGalleryRoutes(config, local, published) {
-  const routes = [
+  return [
     { src: '/gallery/manifest.json', dest: '/gallery-manifest' },
     // Same-origin proxying keeps historical WebGL image loaders untainted.
     { src: '/gallery/(images|references|thumbs)/([a-f0-9]{64}\\.(?:png|jpg|webp))', dest: `${config.origin}/gallery/$1/$2` },
+    ...legacyGalleryRoutes(local, published, row => row.blobUrl),
   ];
+}
+
+/** Keeps previously saved chat/annotation links to filename-based URLs alive, pointing them at `destOf(publishedRow)`. */
+export function legacyGalleryRoutes(local, published, destOf) {
+  const routes = [];
   for (const [oldRows, newRows, key] of [[local.frames, published.frames, 'id'], [local.references, published.references, 'name']]) {
     const byId = new Map(newRows.map(row => [row[key], row]));
     for (const row of oldRows) {
       const target = byId.get(row[key]);
       if (!target) throw new Error(`Unpublished gallery asset: ${row[key]}`);
-      // Keep previously saved chat/annotation links to filename-based URLs alive.
       const legacyUrl = key === 'id' && row.filename ? `gallery/images/${encodeURIComponent(row.filename)}`
         : key === 'name' ? `gallery/references/${row.name.split('/').map(encodeURIComponent).join('/')}` : row.url;
       const paths = new Set([legacyUrl, decodeURIComponent(legacyUrl)]);
-      routes.push({ src: `/(?:${[...paths].map(escapeRegex).join('|')})`, dest: target.blobUrl });
+      routes.push({ src: `/(?:${[...paths].map(escapeRegex).join('|')})`, dest: destOf(target) });
     }
   }
   return routes;

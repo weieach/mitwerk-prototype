@@ -19,11 +19,13 @@ async function readTarget(path: string, blobUrl?: string) {
   if (!response.ok) throw new Error(`${response.status}: ${path}`);
   return Buffer.from(await response.arrayBuffer());
 }
-const expected = process.argv.includes('--published')
+const actual = JSON.parse((await readTarget('gallery/manifest.json')).toString('utf8'));
+// Static deployments ship re-encoded WebPs: verify them against the hashes recorded at packaging.
+const isStatic = actual.source === 'static';
+const expected = process.argv.includes('--published') && !isStatic
   ? JSON.parse(await readFile(join(root, '.vercel/blob-catalog.json'), 'utf8')) as ReturnType<typeof readCaptureCatalog>
   : readCaptureCatalog(root);
 if (!expected.frames.length) throw new Error('Local saved-frame catalog is empty; cannot verify completeness.');
-const actual = JSON.parse((await readTarget('gallery/manifest.json')).toString('utf8'));
 for (const [kind, local, deployed] of [
   ['frames', expected.frames.map(f => f.id), (actual.frames ?? []).map((f: { id: string }) => f.id)],
   ['references', expected.references.map(f => f.name), (actual.references ?? []).map((f: { name: string }) => f.name)],
@@ -42,6 +44,14 @@ let verified = 0;
 await Promise.all(Array.from({ length: 6 }, async () => {
   while (assets.length) {
     const asset = assets.pop()!;
+    if (isStatic) {
+      for (const [url, sha] of [[asset.url, asset.sha256], [asset.thumbUrl, asset.thumbSha256]]) {
+        if (!url) continue;
+        if (!sha || hash(await readTarget(url)) !== sha) throw new Error(`Image bytes differ: ${url}`);
+        verified++;
+      }
+      continue;
+    }
     const [original, published] = await Promise.all([readFile(asset.source), readTarget(asset.url, asset.blobUrl)]);
     if (hash(original) !== hash(published)) throw new Error(`Image bytes differ: ${asset.url}`);
     verified++;
@@ -64,7 +74,9 @@ if (remote) {
   for (const row of legacy) {
     const name = 'filename' in row! ? row!.filename : row!.name;
     const directory = 'filename' in row! ? captureDirectory : visualReferenceDirectory;
-    if (hash(await readTarget(row!.url)) !== hash(await readFile(join(root, directory, name)))) throw new Error(`Legacy image mismatch: ${row!.url}`);
+    const published = isStatic ? ('filename' in row! ? actual.frames.find((f: { id: string }) => f.id === row!.id) : actual.references.find((f: { name: string }) => f.name === name))?.sha256
+      : hash(await readFile(join(root, directory, name)));
+    if (hash(await readTarget(row!.url)) !== published) throw new Error(`Legacy image mismatch: ${row!.url}`);
   }
   console.log(`Verified ${Object.keys(prototypes).length} frozen archive image routes and ${legacy.length} legacy filename links.`);
 }

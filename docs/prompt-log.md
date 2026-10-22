@@ -5767,3 +5767,9 @@ Pause Vercel Blob publication after transfer cap
 ```text
 Load gallery thumbnails and pause GitHub and Vercel uploads
 ```
+
+## Prompt #575
+
+```text
+Serve live gallery images from the deployment, not Blob
+```
