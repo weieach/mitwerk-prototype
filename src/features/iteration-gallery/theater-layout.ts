@@ -19,6 +19,15 @@ export function theaterFrameSize(available: Size, _baseline: Size, viewport: Siz
   return { width, height: width / ratio };
 }
 
+/** Shrink a full-width frame, keeping its ratio, until the caption reserve fits below it.
+ *  The frame never drops under `minWidthShare` of its full width; past that the stage scrolls. */
+export function fitFrameToHeight(frame: Size, heightBudget: number, minWidthShare: number) {
+  if (frame.height <= heightBudget || frame.height <= 0) return frame;
+  const ratio = frame.width / frame.height;
+  const height = Math.max(Math.max(0, heightBudget), frame.height * minWidthShare);
+  return { width: height * ratio, height };
+}
+
 /** Fit a prototype viewport inside the theater frame, keeping its own aspect ratio. */
 export function fitPrototypeFrame(available: Size, viewport: Size) {
   const ratio = viewport.width / Math.max(viewport.height, 1);

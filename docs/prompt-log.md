@@ -5469,3 +5469,97 @@ Light: give location chips (Capturing row and to-do tags) a light-gray fill so t
 ```text
 Light: Chat has no panel outline but Version blocks does; make them consistent. Also balance the To-do drawer's top spacing with the gap below the heading.
 ```
+
+## Prompt #552 uncounted
+
+```text
+Switch straight back to the main branch; I'll make changes on main. Note: whenever I give a prompt, the docs and anything displayed should show its English translation, and the translation must be clear and easy to understand.
+```
+
+Original: 直接回到main branch上，我在main修改。但是要注意，如果我给了什么prompt，需要在文档 + 显示的时候展示英文翻译的版本，而且清晰易懂。
+
+## Prompt #552 uncounted (2)
+
+```text
+Start a preview of the current version for me.
+```
+
+Original: 帮我开启目前版本的预览
+
+## Prompt #553
+
+```text
+when there's in darkmode, i notice that the adding milestone section has a fill in the back of text. remove that fill, it's especially obvious in darkmode with light screenshot on
+
+```
+
+## Prompt #554
+
+```text
+change the outline of this button to make it less dark, it's too obvious right now. you can follow other similar buttons if the colors can be applied here.
+
+```
+
+## Prompt #554 uncounted
+
+```text
+so you remove the semi transparent background of playback mode?
+```
+
+## Prompt #555
+
+```text
+ok,continue, i realize in dark mode, i can see a separation in background, the one near screenshot is lighter, the actual bg is darker?
+
+```
+
+## Prompt #556
+
+```text
+when the computer screen/window is not wide enough, you can see the prompt beneath screenshot got cut. why? any idea to make sure prompt can be seen no matter what screenformat is? or if in this case, when user hover on the prompt area, the play/progress bar below can shrink or move down to make some room?
+
+```
+
+Clarifications sent during prompt #556:
+
+```text
+also when screen is less wide, the gallery, playback ,and all time button may overlap, fix this
+```
+
+```text
+remove this white glow when hover on this arrow during light mode
+```
+
+## Prompt #557
+
+```text
+could you revise this design to make them more readable and elegant in both mode? while making sure it's more aligned with the overall design language and clean aesthetic
+
+```
+
+## Prompt #558
+
+```text
+could you replace the fill in the back of "capturing ... with" into a progressive blur like what apple did in their drawer for liquid glass? do this for both light and dark mode
+
+```
+
+Clarifications sent during prompt #558:
+
+```text
+before editing milestone, the text area is not aligned with what we can see in the regular section as the second photo i showed. fix this to make that part in the preview screen more elegant and consistent
+```
+
+```text
+in light mode, when editing the thing that being captured, the outline is so dark, find a propoer gray that align with the overall design language
+```
+
+```text
+remove the progress blur for this part, keep it back to original design.
+```
+
+## Prompt #558 uncounted
+
+```text
+review the prompt and changes, then help me commit
+```

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { aspectRatioLabel, presentedFrame, referenceCapture, theaterFrameSize, wheelFrameDelta } from '../src/features/iteration-gallery/theater-layout.ts';
+import { aspectRatioLabel, fitFrameToHeight, presentedFrame, referenceCapture, theaterFrameSize, wheelFrameDelta } from '../src/features/iteration-gallery/theater-layout.ts';
 import type { GalleryFrame } from '../src/features/iteration-gallery/model.ts';
 const frame = (id: string, kind: GalleryFrame['kind'], number: number) => ({ id, kind, number } as GalleryFrame);
 
@@ -54,4 +54,10 @@ test('captions show only the user request, not injected browser context', async 
   assert.equal(userPromptText(logged), 'set max width to 575px');
   assert.equal(theaterCaption({ kind: 'prompt', summary: 'ignored', fullPrompt: logged }), 'set max width to 575px');
   assert.equal(userPromptText('## My request: stays when no context was injected'), '## My request: stays when no context was injected');
+});
+
+test('a frame taller than its budget shrinks proportionally, down to the minimum width share', () => {
+  assert.deepEqual(fitFrameToHeight({ width: 800, height: 450 }, 500, .5), { width: 800, height: 450 });
+  assert.deepEqual(fitFrameToHeight({ width: 800, height: 450 }, 360, .5), { width: 640, height: 360 });
+  assert.deepEqual(fitFrameToHeight({ width: 800, height: 450 }, 100, .5), { width: 400, height: 225 });
 });

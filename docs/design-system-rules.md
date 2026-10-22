@@ -2150,3 +2150,43 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Every workspace panel carries the same `--panel-outline` hairline, including Chat: the conversation is an `.mw-dialog`, so the `.mw-surface:has(.mw-dialog)` rule layers the outline beneath `--workspace-panel-shadow` (now an empty `0 0 #0000` shadow by default) instead of replacing it. Dark keeps a transparent outline.
 - When the To-do drawer is open, its label shifts down by `--drawer-open-label-shift` (4px) inside the unchanged heading height (padding 15/7), so the space above "To-do" equals the space between it and the first task (17px each). Collapsed, the label stays centered (11/11). The shift uses the drawer's open/close duration and easing; reduced motion makes it immediate. Applies in both themes.
+
+## English prompt display — 2026-10-21
+
+- Prompts written in Chinese (or any non-English language) are recorded and displayed as a clear, complete English translation. This applies to the fenced block in `docs/prompt-log.md`, capture labels and filenames, Playback captions and gallery hover captions, all of which read the same log entry, so translate once at the source.
+- Translations keep every requirement and keep identifiers, UI labels, paths, capture cues and quoted text unchanged. The original text sits below the fence as an `Original:` line. The parser does not display it.
+
+## Edit fields carry no fill — 2026-10-21, prompt #553
+
+- Milestone, to-do and annotation inputs, plus inline to-do and idea editors, have no background fill. The shared `src/shared/edit-fields.css` rule sets `background: transparent`, so the overlay's blurred backdrop shows through and only the hairline underline marks the field. This removes the dark band that showed behind the "New to-do / Milestone" input in dark mode, especially above a light screenshot. Applies in both themes.
+
+
+## Add milestone button outline — 2026-10-21, prompt #554
+
+- The chat "Add milestone" button (`.message-version-output > .idea-add`) uses the standard secondary-button hairline: `--milestone-chip-border` now resolves to `var(--line)`, the same as "See token usage" and the other bordered gallery buttons, instead of 55% ink. Its fill and the editing-state border are unchanged. Applies in both themes.
+
+## No frame glow in dark Playback — 2026-10-21, prompt #555
+
+- The broad theater frame shadow (`20vw` blur, 8px spread) takes its colour from `--theater-frame-glow`. Light mode keeps the 2.88% light-neutral glow from 2026-10-18. Dark mode sets it to transparent, because a light glow on a dark panel shows as a lighter band around the screenshot that doesn't match the panel background. Saved images and runtime frames share the token.
+
+## Playback caption room and narrow version header — 2026-10-21, prompt #556
+
+- The Playback caption reserve has a floor: version row + two prompt lines + branch row, measured from the rendered caption, and never less than the earlier `min(112px, 26% of body height)`. When the full-width frame plus that reserve don't fit the body, the frame shrinks proportionally (`fitFrameToHeight`), and the transport row narrows with it, down to `theater.frameMinWidthShare` (50%) of its full width. Past that, the stage scrolls as before. This supersedes "keep the frame full-width" for short panels; wide-enough panels are unchanged. Hovering a clipped caption still opens the full-text card.
+- Version blocks header: a heading that contains the Gallery / Playback switch keeps its content width (`min-width:max-content`). The right-hand actions shrink instead: the frame picker gives way first (shrink 3, down to its caret), then the date range (145px basis, 72px minimum, with the label truncating). Controls never overlap the view switch.
+
+## No orbiting outline light in light mode — 2026-10-21, prompt #556
+
+- `--outline-orbit-light` is transparent in light mode, so hovering the milestone invitation arrow (and its "Not yet" pill) shows no white glow; the regular hover fill remains. Dark mode keeps the white orbit.
+
+## Playback milestone chip — 2026-10-21, prompt #557
+
+- The Playback milestone chip is one soft pill in the shared annotation fill (`--playback-annotation-fill`, the same as "New milestone / to-do" and the add chip). It replaces the hard trophy block joined to a reference-fill label. A 24px circular badge (`--playback-milestone-badge-size`, inset 5px) carries the trophy in the branch colour (`--milestone-chip-color`, neutral contrast on main) with its matching ink. The label uses regular `--ink` (`--playback-milestone-text-ink`) on the pill instead of white, which was unreadable on the light fill. The expand/collapse mask motion is unchanged, so a collapsed chip is just the badge in a small pill. Applies in both themes.
+
+## Annotation entries read like their editor — 2026-10-21, prompt #558
+
+- In the Annotations sheet, a saved entry (milestone, to-do or note) shows its text exactly as its editor does: flush left, body font size and line height, the editor's vertical padding, over the shared edit-field hairline (`--edit-field-line-*`). There is no bordered box, inner padding or larger milestone font. Hover brightens the hairline to the focus opacity instead of filling a box. Opening an entry to edit therefore doesn't shift the text. Applies in both themes.
+
+## Location field focus ring — 2026-10-21, prompt #558
+
+- The new-location field in the Capturing menu ("Location name") keeps the shared focus ring, but in light mode it is coloured `--capture-new-focus-ring` → `--milestone-edit-border` (24% ink on paper, the same gray as the editing milestone outline) instead of near-black ink. Dark mode keeps the default ring.
+- A progressive blur behind "Capturing … with" was tried and reverted at the user's request. The row keeps its original design.

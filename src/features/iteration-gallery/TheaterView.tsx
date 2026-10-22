@@ -17,7 +17,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from
 import type { GalleryFrame, LoopMode, RangeKey } from './model';
 import { formatTime, playbackStep, ranges, inRange } from './model';
 import { galleryTokens as t } from './tokens';
-import { presentedFrame, theaterFrameSize, wheelFrameDelta } from './theater-layout';
+import { fitFrameToHeight, presentedFrame, theaterFrameSize, wheelFrameDelta } from './theater-layout';
 import { FrameLoader } from './frame-loader';
 import { adjacentTimelineIndex, firstJumpIndex, unitPlaybackStep, type JumpScale } from './timeline';
 import { PlaybackJump } from './PlaybackJump';
@@ -196,7 +196,15 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
     const measure = () => {
       // Reserve a bounded caption area independent of prompt length, keeping the
       // image position stable as text wraps or a longer prompt is selected.
-      const meta = Math.min(t.theater.metadataHeight, body.clientHeight * t.theater.metadataHeightShare);
+      // The floor always fits the version row, two prompt lines and the branch row, so a short
+      // panel shrinks the frame instead of clipping the prompt.
+      const metaElement = metaRef.current;
+      const versionRow = metaElement?.querySelector<HTMLElement>('.theater-version');
+      const summary = metaElement?.querySelector<HTMLElement>('.theater-summary');
+      const lineHeight = summary ? parseFloat(getComputedStyle(summary).lineHeight) || 0 : 0;
+      const rowGap = t.theater.metadataRowGap;
+      const floor = (versionRow?.offsetHeight ?? 0) + lineHeight * (t.theater.metadataMinCaptionLines + 1) + rowGap * t.theater.summaryGapScale * 2;
+      const meta = Math.max(floor, Math.min(t.theater.metadataHeight, body.clientHeight * t.theater.metadataHeightShare));
       body.style.setProperty('--theater-metadata-height', `${meta}px`);
       const view = body.parentElement!;
       const actionsElement = actionsRef.current;
@@ -291,7 +299,8 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
   }, [toast]);
 
   if (!frame) return <div className="gallery-empty">No frames in this date range. Choose a wider range to play.</div>;
-  const naturalFrame = theaterFrameSize(stageSize, baseline, baseline);
+  const fullFrame = theaterFrameSize(stageSize, baseline, baseline);
+  const naturalFrame = runtimeLayout ? fullFrame : fitFrameToHeight(fullFrame, stageSize.bodyHeight - stageSize.actions - stageSize.caption, t.theater.frameMinWidthShare);
   const staticRatio = baseline.width / Math.max(baseline.height, 1);
   const staticHeight = runtimeLayout ? Math.min(naturalFrame.height, stageSize.height) : naturalFrame.height;
   const staticFrame = { width: staticHeight * staticRatio, height: staticHeight };
@@ -415,7 +424,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
         <PlaybackControls unit={jumpScale} speed={speed} loop={mode} onUnit={chooseUnit} onSpeed={setSpeed} onLoop={value => { setMode(value); setDirection(1); }}/>
         </div>;
   // Keep controls readable when height limits the image; all rows share the responsive content cap.
-  const rowWidth = stageMeasured ? stageSize.width : undefined;
+  const rowWidth = stageMeasured ? (runtimeLayout ? stageSize.width : frameSize.width) : undefined;
   const milestone = versionMilestone(milestones, frame.version);
   const rangeLabel = ranges.find(option => option.value === range)!.label.toLowerCase();
   const rangeFrames = catalog.filter(item => inRange(item, range, now));

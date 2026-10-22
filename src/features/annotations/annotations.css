@@ -16,7 +16,7 @@
 .annotation-overlay .annotation-sheet h2 { display:flex; gap:var(--row-size-unit); align-items:center; margin:0; font-size:var(--row-title-size); font-weight:var(--compact-title-weight); }
 .annotation-preview { display:block; width:100%; max-height:var(--annotation-preview-height); object-fit:contain; background:var(--paper); border:1px solid var(--line); border-radius:var(--surface-radius); animation:annotation-content-in var(--annotation-enter-ms) ease var(--annotation-frame-delay) both; }
 .annotation-sheet form { margin-top:var(--row-padding-inline); }
-.annotation-sheet .annotation-text { display:block; width:100%; min-height:var(--base-control-height); padding:calc(var(--row-padding-inline) * .375) 0; border:0; border-radius:0; background:var(--paper); color:var(--ink); font:var(--body-font-size)/var(--message-line-height) var(--sans); }
+.annotation-sheet .annotation-text { display:block; width:100%; min-height:var(--base-control-height); padding:calc(var(--row-padding-inline) * .375) 0; border:0; border-radius:0; background:transparent; color:var(--ink); font:var(--body-font-size)/var(--message-line-height) var(--sans); }
 .annotation-sheet .annotation-text:focus { outline:none; }
 .annotation-form-actions { display:flex; align-items:center; justify-content:space-between; gap:var(--row-size-unit); flex-wrap:wrap; margin-top:calc(var(--row-size-unit) * 3); }
 .annotation-form-actions label,.annotation-form-actions>div { display:flex; align-items:center; gap:calc(var(--row-size-unit) * 2); }
@@ -30,7 +30,10 @@
 .annotation-entry-row { flex:none; min-width:0; animation:annotation-message-in var(--annotation-message-enter) ease both; animation-delay:calc(var(--annotation-ui-delay) + var(--annotation-message-index) * var(--annotation-message-stagger)); }
 .annotation-sheet .annotation-entry { max-height:none; }
 .annotation-entry .annotation-kind { display:flex; margin-bottom:var(--row-size-unit); }
-.annotation-entry:hover { background:var(--fill-hover); }
+/* A saved entry reads exactly like its editor: flush-left body text over the shared edit-field hairline,
+   so opening it to edit changes nothing but the caret. Hover brightens the line instead of filling a box. */
+.mw-app .annotation-overlay .annotation-sheet .annotation-entry { max-height:none; padding:calc(var(--row-padding-inline) * .375) 0; border:0; border-radius:0; background:transparent; font:var(--body-font-size)/var(--message-line-height) var(--sans); box-shadow:inset 0 calc(-1 * var(--edit-field-line-width)) 0 color-mix(in srgb, var(--edit-field-line-color) var(--edit-field-line-opacity), transparent); transition:box-shadow 160ms ease; }
+.mw-app .annotation-overlay .annotation-sheet .annotation-entry:hover { background:transparent; box-shadow:inset 0 calc(-1 * var(--edit-field-line-width)) 0 color-mix(in srgb, var(--edit-field-line-color) var(--edit-field-line-opacity-focus), transparent); }
 .annotation-entry:focus-visible { outline:var(--focus-ring-width) solid var(--focus-ring-color); outline-offset:var(--focus-ring-offset); }
 .annotation-entry-row form { margin-top:0; }
 .annotation-entry-row .annotation-form-actions { margin-top:var(--row-size-unit); }

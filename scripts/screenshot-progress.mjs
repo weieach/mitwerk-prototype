@@ -595,7 +595,7 @@ function screenshotUrl(prompt = '') {
   }
   if (wantsChatPlaybackCapture(prompt)) {
     target.searchParams.set('layout', 'side-by-side'); target.searchParams.set('galleryView', 'theater');
-    if (/annotation overlay/i.test(prompt) && !/milestone overlay/i.test(prompt)) target.searchParams.set('annotationOverlay', '1');
+    if ((hasFlag('annotation-overlay') || /annotation overlay/i.test(prompt)) && !/milestone overlay/i.test(prompt)) target.searchParams.set('annotationOverlay', '1');
     if (/\breference chip\b/i.test(prompt)) target.searchParams.set('frameChip', '1');
     return target.href;
   }
@@ -649,7 +649,7 @@ function screenshotUrl(prompt = '') {
   if (namedPush) target.searchParams.set('pushVersion', namedPush[1]);
   const namedFrame = /\bframe\s+#?(\d+)/i.exec(prompt);
   if (namedFrame) target.searchParams.set('frameNumber', namedFrame[1]);
-  if (/annotation overlay|\bc theater overlay\b/i.test(prompt)) target.searchParams.set('annotationOverlay', '1');
+  if (hasFlag('annotation-overlay') || /annotation overlay|\bc theater overlay\b/i.test(prompt)) target.searchParams.set('annotationOverlay', '1');
   if (/playhead at last frame/i.test(prompt)) target.searchParams.set('playhead', 'end');
   if (/show the toast/i.test(prompt)) target.searchParams.set('prototypeToast', '1');
   if (/overlay open/i.test(prompt)) target.searchParams.set('overlay', '1');
