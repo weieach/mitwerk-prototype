@@ -6,6 +6,7 @@ import { get, list, put } from '@vercel/blob';
 import { readCaptureCatalog, captureDirectory, visualReferenceDirectory } from '../server/gallery-catalog.ts';
 import { captureImageInfo } from '../server/capture-image.mjs';
 import { blobImagePath, mergeBlobCatalog, sha256, catalogWriteEtag } from '../server/blob-gallery.mjs';
+import { cachedCaptureThumbnail, thumbnailMimeType } from '../server/capture-thumbnail.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 if (existsSync(join(root, '.env.local'))) process.loadEnvFile(join(root, '.env.local'));
@@ -16,6 +17,7 @@ const oldCatalog = previous?.stream ? await new Response(previous.stream).json()
 const incremental = process.argv.includes('--incremental');
 const verifiedObjects = new Set([...(oldCatalog?.frames ?? []), ...(oldCatalog?.references ?? [])]
   .filter(row => row.sha256 && row.url && row.blobUrl).map(row => `${row.url}:${row.sha256}:${row.blobUrl}`));
+for (const row of oldCatalog?.frames ?? []) if (row.thumbUrl && row.thumbSha256 && row.thumbBlobUrl) verifiedObjects.add(`${row.thumbUrl}:${row.thumbSha256}:${row.thumbBlobUrl}`);
 const existing = new Map<string, string>();
 let cursor: string | undefined;
 do {
@@ -32,32 +34,41 @@ let done = 0, uploaded = 0;
 const total = assets.length;
 // Deduplicate concurrent work if multiple captures contain identical bytes.
 const pending = new Map<string, Promise<string>>();
+const store = (pathname: string, bytes: Buffer, mimeType: string) => {
+  if (!pending.has(pathname)) pending.set(pathname, (async () => {
+    let url = existing.get(pathname);
+    if (!url) {
+      const blob = await put(pathname, bytes, { access: 'public', addRandomSuffix: false,
+        contentType: mimeType, cacheControlMaxAge: 31536000 });
+      url = blob.url;
+      uploaded++;
+    }
+    // Automatic captures verify new/changed bytes, reusing immutable objects
+    // already verified in the published catalog and still present in the store.
+    if (!incremental || !verifiedObjects.has(`${pathname}:${sha256(bytes)}:${url}`)) {
+      const response = await fetch(url, { signal: AbortSignal.timeout(60_000) });
+      if (!response.ok || sha256(Buffer.from(await response.arrayBuffer())) !== sha256(bytes)) {
+        throw new Error(`Blob verification failed: ${pathname}`);
+      }
+    }
+    return url;
+  })());
+  return pending.get(pathname)!;
+};
 await Promise.all(Array.from({ length: 6 }, async () => {
   while (assets.length) {
     const asset = assets.pop()!;
     const bytes = await readFile(asset.path);
     const { mimeType } = captureImageInfo(asset.path);
     const pathname = blobImagePath(asset.kind, bytes, mimeType);
-    if (!pending.has(pathname)) pending.set(pathname, (async () => {
-      let url = existing.get(pathname);
-      if (!url) {
-        const blob = await put(pathname, bytes, { access: 'public', addRandomSuffix: false,
-          contentType: mimeType, cacheControlMaxAge: 31536000 });
-        url = blob.url;
-        uploaded++;
-      }
-      // Automatic captures verify new/changed bytes, reusing immutable objects
-      // already verified in the published catalog and still present in the store.
-      if (!incremental || !verifiedObjects.has(`${pathname}:${sha256(bytes)}:${url}`)) {
-        const response = await fetch(url, { signal: AbortSignal.timeout(60_000) });
-        if (!response.ok || sha256(Buffer.from(await response.arrayBuffer())) !== sha256(bytes)) {
-          throw new Error(`Blob verification failed: ${pathname}`);
-        }
-      }
-      return url;
-    })());
-    const blobUrl = await pending.get(pathname)!;
-    asset.output.set(asset.key, { ...asset.row, url: pathname, blobUrl, sha256: sha256(bytes), bytes: bytes.length, mimeType });
+    const blobUrl = await store(pathname, bytes, mimeType);
+    let thumb = {};
+    if (asset.kind === 'images') {
+      const thumbBytes = await cachedCaptureThumbnail(root, asset.path);
+      const thumbUrl = blobImagePath('thumbs', thumbBytes, thumbnailMimeType);
+      thumb = { thumbUrl, thumbBlobUrl: await store(thumbUrl, thumbBytes, thumbnailMimeType), thumbSha256: sha256(thumbBytes) };
+    }
+    asset.output.set(asset.key, { ...asset.row, url: pathname, blobUrl, sha256: sha256(bytes), bytes: bytes.length, mimeType, ...thumb });
     done++;
     if (done % 50 === 0 || done === total) console.log(`Verified ${done}/${total} gallery assets (${uploaded} newly uploaded).`);
   }

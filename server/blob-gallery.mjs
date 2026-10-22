@@ -5,8 +5,8 @@ export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 // expects the corresponding strong object ETag (also returned by head()).
 export const catalogWriteEtag = etag => etag.replace(/^W\//, '');
 export function blobImagePath(kind, bytes, mimeType = 'image/png') {
-  if (!['images', 'references'].includes(kind)) throw new Error('Invalid gallery asset kind');
-  const extension = mimeType === 'image/jpeg' ? 'jpg' : 'png';
+  if (!['images', 'references', 'thumbs'].includes(kind)) throw new Error('Invalid gallery asset kind');
+  const extension = { 'image/jpeg': 'jpg', 'image/webp': 'webp' }[mimeType] ?? 'png';
   return `gallery/${kind}/${sha256(bytes)}.${extension}`;
 }
 
@@ -25,7 +25,7 @@ export function blobGalleryRoutes(config, local, published) {
   const routes = [
     { src: '/gallery/manifest.json', dest: '/gallery-manifest' },
     // Same-origin proxying keeps historical WebGL image loaders untainted.
-    { src: '/gallery/(images|references)/([a-f0-9]{64}\\.(?:png|jpg))', dest: `${config.origin}/gallery/$1/$2` },
+    { src: '/gallery/(images|references|thumbs)/([a-f0-9]{64}\\.(?:png|jpg|webp))', dest: `${config.origin}/gallery/$1/$2` },
   ];
   for (const [oldRows, newRows, key] of [[local.frames, published.frames, 'id'], [local.references, published.references, 'name']]) {
     const byId = new Map(newRows.map(row => [row[key], row]));

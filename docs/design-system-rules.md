@@ -2279,3 +2279,8 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - The turn lands on Playback's settled frame rectangle. Playback's layout settles a few frames after it mounts (the frame moved 10px up), so the gallery keeps measuring the theater screen throughout the turn, and the scene retargets the camera's landing rectangle mid-turn (`frameCameraTurn(...).retarget`). Measuring once at the start made the 3D frame land 10px off, which the crossfade showed as a doubled image.
 - Gallery-only controls (frame bar, floating actions such as See token usage, info, range stats) stay hidden in the theater phase, with no transition. Their fade-out transition otherwise brought them back over Playback while the 3D view was still visible during the hand-off. The saved-frame picker is excluded because it is the Playback header's frame selector. It now fades in with the other header controls once the turn passes `uiStart`.
+
+## Album thumbnails, full images only when opened — 2026-10-22, prompt #574
+
+- Every capture row carries `thumbUrl`, a 960px-wide WebP (`server/capture-thumbnail.mjs`, ~40× smaller than the PNG). The isometric album planes, their prefetch/warm-up (`captureUrl` in `capture-cache.ts`) and Version card image thumbnails use it. Theater/Playback, annotation previews, chat frame cards and file links keep the full `url`.
+- Rows without `thumbUrl` (catalogs published before this rule) fall back to `url`. Locally the dev server makes thumbnails on demand and caches them in `node_modules/.cache/verso-thumbnails`; `publish:gallery` uploads them as content-addressed `gallery/thumbs/<sha256>.webp` objects.

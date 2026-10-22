@@ -16,7 +16,7 @@ import type { buildAlbum, FramePlane, LabelFace } from './geometry';
 import { albumAxisContent, albumBlockBounds, albumFloorY, containingBlock, dateLabelPose, featuredFrameAxis, featuredTickLength, defaultFrameFocus, frameFocus, resetCameraDestination, versionLabelPose } from './geometry';
 import { galleryTokens as t } from './tokens';
 import { workStateTokens } from '../../shared/work-state';
-import { prefetchedCaptures } from './capture-cache';
+import { captureUrl, prefetchedCaptures } from './capture-cache';
 import { axisSlotKey, axisTopBlend, mergeAxisAnchors, overheadDatePosition, projectAxisLabels, withOverheadDates } from './axis-label-layout';
 import { observeTheme, resolveColor } from '../../shared/theme';
 import type { AxisAnchor, AxisLabel } from './axis-label-layout';
@@ -1006,7 +1006,7 @@ export class AlbumScene {
     this.prefetchQueue = album.planes
       .filter(plane => plane.active && !this.representatives.has(plane.frame.id))
       .sort((a, b) => b.frame.timestamp - a.frame.timestamp)
-      .map(plane => ({ id: plane.frame.id, url: `${import.meta.env.BASE_URL}${plane.frame.url}` }))
+      .map(plane => ({ id: plane.frame.id, url: captureUrl(plane.frame) }))
       .filter(item => !prefetchedCaptures.has(item.url));
     for (const block of album.blocks) {
       const geometry = new THREE.BoxGeometry(block.width, block.height, block.end - block.start);
@@ -1159,7 +1159,7 @@ export class AlbumScene {
       this.pickTargets.push(frame.image);
       const cached = this.textures.get(id);
       // A mapped capture is never tinted: the material color multiplies the texture, and a dark page would dim it.
-      const url = `${import.meta.env.BASE_URL}${frame.plane.frame.url}`;
+      const url = captureUrl(frame.plane.frame);
       const warmed = prefetchedCaptures.get(url);
       if (!cached && warmed) {
         const texture = new THREE.Texture(warmed);

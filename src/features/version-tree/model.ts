@@ -4,6 +4,8 @@ export type VersionFile = {
   name: string;
   kind: 'code' | 'reference' | 'skill';
   url?: string;
+  /** Smaller image for inline previews; links still open `url`. */
+  thumbUrl?: string;
   added: number;
   removed: number;
 };

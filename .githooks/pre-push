@@ -5,6 +5,13 @@ set -e
 
 export PATH="/usr/local/bin:/opt/homebrew/bin:${HOME}/.local/bin:${PATH}"
 
+# Uploads are paused (2026-10-22): commits and captures stay in the local repo.
+# GitHub pushes also trigger Vercel builds. Set MITWERK_ALLOW_PUSH=1 to push once.
+if [ "${MITWERK_ALLOW_PUSH:-}" != "1" ]; then
+  printf >&2 "\n%s\n%s\n\n" "pre-push: uploads to GitHub/Vercel are paused; your commits stay local." "Run MITWERK_ALLOW_PUSH=1 git push to push anyway."
+  exit 1
+fi
+
 # Both Git LFS and the capture below read the pushed refs from stdin.
 refs=""
 if [ ! -t 0 ]; then

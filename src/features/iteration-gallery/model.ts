@@ -9,6 +9,8 @@ export type Capture = {
   commitMessage?: string;
   tokenUsage?: { input: number; output: number; total: number; simulated: boolean };
   id: string; filename: string; url: string; width: number; height: number;
+  /** Small WebP for album planes and previews; catalogs published before it fall back to `url`. */
+  thumbUrl?: string;
   kind: 'prompt' | 'push' | 'capture'; number: number | null; branch: string | null;
   timestamp: number; summary: string; added: string | null; removed: string | null;
 };

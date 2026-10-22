@@ -5,7 +5,8 @@ import { simulateCaptures } from '../../shared/work-state';
 export const prefetchedCaptures = new Map<string, HTMLImageElement>();
 const inflight = new Map<string, Promise<void>>();
 
-export function captureUrl(frame: Pick<Capture, 'url'>) { return `${import.meta.env.BASE_URL}${frame.url}`; }
+/** Album planes and their warm-up use the small thumbnail; opened frames load `frame.url`. */
+export function captureUrl(frame: Pick<Capture, 'url' | 'thumbUrl'>) { return `${import.meta.env.BASE_URL}${frame.thumbUrl ?? frame.url}`; }
 
 function warm(url: string) {
   if (prefetchedCaptures.has(url)) return Promise.resolve();

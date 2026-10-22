@@ -4,6 +4,11 @@ import { fileURLToPath } from 'node:url';
 import { acquirePublicationLock, drainCapturePublications, pendingPublications, startPublicationWorker } from './capture-publication.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
+// Paused 2026-10-22 with the capture-side gate: queued requests wait until publication is opted into.
+if (process.env.MITWERK_BLOB_PUBLISH !== '1') {
+  console.log('Blob publication is paused; set MITWERK_BLOB_PUBLISH=1 to drain the queue.');
+  process.exit(0);
+}
 const release = acquirePublicationLock(root);
 if (release) {
   try {

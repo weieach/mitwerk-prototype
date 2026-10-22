@@ -4,6 +4,7 @@ import { readTokenUsage } from './token-usage.ts';
 import { readGitHistory, readPushMessages } from './git-history.ts';
 import { createReadStream, existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { captureImageInfo } from './capture-image.mjs';
+import { cachedCaptureThumbnail, thumbnailMimeType } from './capture-thumbnail.mjs';
 import { join } from 'node:path';
 import type { Plugin } from 'vite';
 import { parseCaptureName } from '../src/features/iteration-gallery/model.ts';
@@ -12,6 +13,7 @@ export const captureDirectory = '[frame capture] screenshots';
 export const visualReferenceDirectory = 'visual_ref';
 const manifestPath = '/gallery/manifest.json';
 const imagesPath = '/gallery/images/';
+const thumbsPath = '/gallery/thumbs/';
 const referencesPath = '/gallery/references/';
 
 export function readCaptureCatalog(root: string) {
@@ -34,7 +36,7 @@ export function readCaptureCatalog(root: string) {
       && metadata.number > Number(completedPrompt)) return [];
     try {
       const image = captureImageInfo(join(directory, filename));
-      return [{ ...metadata, fullPrompt: metadata.kind === 'prompt' ? prompts.get(metadata.number) : undefined, commitMessage: undefined as string | undefined, id: filename, filename, ...image, url: `gallery/images/${encodeURIComponent(filename)}` }];
+      return [{ ...metadata, fullPrompt: metadata.kind === 'prompt' ? prompts.get(metadata.number) : undefined, commitMessage: undefined as string | undefined, id: filename, filename, ...image, url: `gallery/images/${encodeURIComponent(filename)}`, thumbUrl: `gallery/thumbs/${encodeURIComponent(filename)}` }];
     } catch { ignored++; return []; }
   });
   // Push names come from their Git commits, not the length-limited capture filename.
@@ -102,6 +104,20 @@ export function iterationGalleryCatalog(): Plugin {
           const stream = createReadStream(path);
           stream.on('error', () => { if (!res.headersSent) res.statusCode = 404; res.end(); });
           stream.pipe(res);
+        } else if (pathname.startsWith(thumbsPath)) {
+          let filename: string;
+          try { filename = decodeURIComponent(pathname.slice(thumbsPath.length)); }
+          catch { res.statusCode = 400; res.end(); return; }
+          const path = join(directory, filename);
+          if (filename.includes('/') || filename.includes('\\') || !parseCaptureName(filename) || !existsSync(path)) {
+            res.statusCode = 404; res.end(); return;
+          }
+          cachedCaptureThumbnail(root, path).then(bytes => {
+            res.setHeader('Content-Type', thumbnailMimeType);
+            res.setHeader('Cache-Control', 'public, max-age=60');
+            res.setHeader('Content-Length', bytes.length);
+            res.end(bytes);
+          }, () => { res.statusCode = 404; res.end(); });
         } else if (pathname.startsWith(referencesPath)) {
           let filename: string;
           try { filename = decodeURIComponent(pathname.slice(referencesPath.length)); }
@@ -136,6 +152,8 @@ export function iterationGalleryCatalog(): Plugin {
       if (useBlob) return; // Vercel routes serve immutable image objects from Blob.
       for (const frame of catalog.frames) this.emitFile({ type: 'asset', fileName: `gallery/images/${frame.filename}`,
         source: readFileSync(join(root, captureDirectory, frame.filename)) });
+      for (const frame of catalog.frames) this.emitFile({ type: 'asset', fileName: `gallery/thumbs/${frame.filename}`,
+        source: await cachedCaptureThumbnail(root, join(root, captureDirectory, frame.filename)) });
       for (const reference of catalog.references) this.emitFile({ type: 'asset', fileName: `gallery/references/${reference.name}`,
         source: readFileSync(join(root, visualReferenceDirectory, reference.name)) });
     },

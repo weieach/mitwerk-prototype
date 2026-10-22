@@ -1093,6 +1093,11 @@ function captureLog(message) {
 }
 
 function publishSavedCapture(outFile) {
+  // Paused 2026-10-22: the Hobby Blob store hit its monthly transfer cap. Opt in per run.
+  if (process.env.MITWERK_BLOB_PUBLISH !== '1') {
+    captureLog(`Blob publication skipped (MITWERK_BLOB_PUBLISH != 1): ${basename(outFile)}`);
+    return;
+  }
   try {
     enqueueCapturePublication(root, outFile);
     captureLog(`Blob publication queued: ${basename(outFile)}`);

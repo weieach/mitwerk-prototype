@@ -24,6 +24,7 @@ const localCatalog = data.catalog();
 await writeFile(join(staticDir, 'gallery/manifest.json'), JSON.stringify(blobCatalog));
 await rm(join(staticDir, 'gallery/images'), { recursive: true, force: true });
 await rm(join(staticDir, 'gallery/references'), { recursive: true, force: true });
+await rm(join(staticDir, 'gallery/thumbs'), { recursive: true, force: true });
 const service = createPrototypeService(root, { ...data, catalog: () => blobCatalog });
 const prototypes = {};
 const routes = blobGalleryRoutes(blobConfig, localCatalog, blobCatalog);
@@ -43,7 +44,7 @@ for (const number of numbers) {
     'Access-Control-Allow-Origin': '*', 'X-Content-Type-Options': 'nosniff',
   }, continue: true });
   // The iframe keeps its original frozen catalog; image bytes are stored only once.
-  routes.push({ src: `${base}/gallery/(images|references)/([a-f0-9]{64}\\.(?:png|jpg))`, dest: `${blobConfig.origin}/gallery/$1/$2` });
+  routes.push({ src: `${base}/gallery/(images|references|thumbs)/([a-f0-9]{64}\\.(?:png|jpg|webp))`, dest: `${blobConfig.origin}/gallery/$1/$2` });
 }
 const fn = join(output, 'functions/prototypes.func');
 await mkdir(fn, { recursive: true });

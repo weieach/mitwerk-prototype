@@ -31,3 +31,8 @@ test('Blob routes preserve relative gallery URLs and escaped historical filename
   }
   assert.throws(() => blobGalleryRoutes({}, local, { frames: [], references: [] }), /Unpublished/);
 });
+test('thumbnails are content-addressed WebP objects served through the same-origin route', () => {
+  assert.match(blobImagePath('thumbs', Buffer.from('t'), 'image/webp'), /^gallery\/thumbs\/[a-f0-9]{64}\.webp$/);
+  const [, assets] = blobGalleryRoutes({ origin: 'https://example.com' }, { frames: [], references: [] }, { frames: [], references: [] });
+  assert.ok(new RegExp(`^${assets.src}$`).test(`/${blobImagePath('thumbs', Buffer.from('t'), 'image/webp')}`));
+});
