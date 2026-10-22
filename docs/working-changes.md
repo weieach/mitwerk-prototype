@@ -1,47 +1,42 @@
 # Working changes
 
-Prior application entries are committed through `1aee094` (pushed as push #62 on `echo-1020`); the uncounted sync request is recorded in `docs/prompt-log.md`.
+Prior entries are committed through `7c675b1` on `main` (not pushed). Push #62 bookkeeping and prompts #553–#558 are included in that commit.
 
-## 2026-10-20 · post-push bookkeeping (push #62)
+## 2026-10-21 · prompt #558 uncounted · Push bookkeeping (push #63)
 
-- `data/push-shas.json`, `AGENTS.md`, `[frame capture] screenshots/[push #62] …`: record push #62 (`1aee094`) on `echo-1020`. Prompt remains #552. These updates stay uncommitted for the next commit.
+- Pushed `7c675b1e9699cbc04d2714d566ce530e26b044a4` to `origin/main`. The pre-push hook saved the `[push #63]` frame and recorded the SHA in `data/push-shas.json`; `AGENTS.md` counter set to push #63. These tracking updates stay uncommitted for the next commit.
 
-## 2026-10-21 · prompt #552 uncounted · Switch to `main`; English prompt display rule
+## 2026-10-21 · prompt #559 · Narrower saved-frame menu
 
-- Switched from `echo-1020` to `main` and fast-forwarded it to `origin/main` (`1aee094`, identical to `echo-1020`), carrying over the uncommitted push #62 bookkeeping.
-- `AGENTS.md`, `docs/design-system-rules.md`: non-English prompts are logged and displayed (prompt log, capture labels, Playback and gallery captions) as a clear, complete English translation, with the original kept below the fence. No capture was taken because this was a setup request.
+- `src/features/iteration-gallery/SavedFrameSelect.tsx`: drop the 280px menu minimum; the menu sizes to its options and right-aligns with the trigger (243px at 1440 wide, no clipping).
+- `docs/design-system-rules.md`: record the rule. `visual_ref/[prompt #559] 9.png`: the user's reference.
+- Prompt #558 uncounted (3): animation audit only (no code changes); findings were reported in chat.
 
-## 2026-10-21 · prompt #553 · Remove edit-field fill
+## 2026-10-21 · prompt #560 · Motion wave 1
 
-- `src/shared/edit-fields.css`, `src/features/annotations/annotations.css`: the milestone / to-do overlay input (and other shared edit fields) no longer paints `--paper` behind its text; the field is transparent with only its hairline underline. Most visible in dark mode over a light screenshot.
-- `docs/design-system-rules.md`: record the no-fill rule. `visual_ref/[prompt #553] 1.png`, `2.png`: the user's references.
+- `src/control-tokens.css`: shared `--ease-out` / `--ease-in-out` / `--ease-drawer` and `--press-scale` / `--press-duration` tokens; removed the duplicate drawer timing tokens; run progress 420 → 240ms.
+- `src/features/workbench/workspace-layout.css`: single drawer timing (400ms open on the sheet curve, 260ms close); panel word exit `ease-in` → `--ease-out`; run progress curve → `--ease-out`; to-do hover nudge gated to fine pointers; press-feedback rule for controls.
+- `src/features/iteration-gallery/tokens.ts`: Playback transport delay 640 → 260ms, annotation tag ready 1000 → 420ms; overlay frame 220 → 120ms, controls 320 → 160ms, list stagger 110 → 50ms.
+- `docs/design-system-rules.md`: record the rules and what they supersede. Typecheck and 316 tests pass.
 
-- `scripts/screenshot-progress.mjs`: add an explicit `--annotation-overlay` capture flag, which opens the annotation overlay without the cue in the logged prompt. The `--milestone-overlay` path timed out because the home screen had no milestone-ready card. The resulting #553 frame shows the Annotations list in dark mode; the input form itself is not open in it.
+## 2026-10-21 · prompt #561 · Motion wave 2
 
-## 2026-10-21 · prompt #554 · Lighter Add milestone outline
+- `src/index.css`, `src/features/annotations/annotations.css`, `src/features/iteration-gallery/gallery.css`, `src/features/workbench/{workspace-layout.css,workbench.css}`: 24 entrance, exit and movement easings switched to the shared `--ease-out` / `--ease-in-out`; hover easings left as `ease`.
+- `src/features/workbench/workspace-layout.css`: the drawer heading's open shift now uses `translate` on its label and count instead of a padding transition (verified: 40px height kept, label 11 → 15px).
+- `docs/design-system-rules.md`: record the rules and the two deliberate non-changes. Typecheck and 316 tests pass.
 
-- `src/control-tokens.css`: `--milestone-chip-border` changes from 55% ink to `var(--line)`, matching similar bordered buttons, so the chat "Add milestone" outline is less prominent.
-- `docs/design-system-rules.md`: record the rule. `visual_ref/[prompt #554] 3.png`: the user's reference.
+## 2026-10-21 · prompt #562 · Motion wave 3, screenshot radius, quieter reference chips
 
-## 2026-10-21 · prompt #555 · Dark Playback background separation
+- `src/features/iteration-gallery/tokens.ts`, `tests/theater-transition.test.ts`: rotation 1100 → 750ms; the test derives from the token.
+- `src/components/SelectMenu.tsx`, `src/features/workbench/workspace-layout.css`: menu entrance from the trigger (verified frame by frame with motion enabled: 0 → 1 opacity, .97 → 1 scale over about 150ms).
+- `src/shared/useLeavingValue.ts` (new), `src/features/workbench/{Workbench.tsx,workbench.css}`, `src/features/iteration-gallery/{PlaybackExport.tsx,TheaterView.tsx}`, `src/features/annotations/MilestoneCommitOption.tsx`: toasts enter by transition and fade out in 150ms before unmounting (verified).
+- `src/features/workbench/workbench.css`: spinner 1.5 → 0.8s.
+- `src/features/iteration-gallery/gallery.css`, `src/control-tokens.css`: 4px Playback screenshot radius; reference chips muted, unfilled, with a hover fill.
+- `docs/design-system-rules.md`: record the rules. Typecheck and 316 tests pass. Note: headless Chrome reports reduced motion, so motion checks emulate `prefers-reduced-motion: no-preference`.
 
-- `src/features/iteration-gallery/{tokens.ts,gallery.css}`: the theater frame shadow uses a new `--theater-frame-glow` token. It's unchanged in light mode and transparent in dark, which removes the lighter halo that split the dark Playback background around the screenshot.
-- `docs/design-system-rules.md`: record the rule. `visual_ref/[prompt #555] 4.png`: the user's reference.
+## 2026-10-21 · prompt #563 · Confetti visibility, to-do type, dialog title, greeting
 
-## 2026-10-21 · prompt #556 · Playback caption always visible; header overlap; light-mode orbit glow
-
-- `src/features/iteration-gallery/{theater-layout.ts,TheaterView.tsx,tokens.ts}`, `tests/theater-layout.test.ts`: the caption reserve has a floor (version row + 2 prompt lines + branch row). The frame shrinks proportionally to keep it, down to 50% width; the transport row follows the frame width. New `fitFrameToHeight` with a test. Verified in headless Chrome at 1100×800, 1280×720, 1440×800 and 1920×900: the prompt and branch rows are visible with no scrolling.
-- `src/features/workbench/workspace-layout.css`: the Version blocks heading with the Gallery / Playback switch no longer shrinks under its content; the frame picker, then the date range, shrink instead. Verified at 900, 1100 and 1440 wide: no overlap. Also removes the hover orbit light on the milestone invitation controls in light mode (mid-turn request).
-- `docs/design-system-rules.md`: record the rules. `visual_ref/[prompt #556] 5.png`: the user's reference (header and arrow references were inline images without local files).
-
-## 2026-10-21 · prompt #557 · Playback milestone chip redesign
-
-- `src/features/workbench/workspace-layout.css`: the milestone chip is one pill in the shared annotation fill, with a 24px branch-coloured trophy badge and ink-coloured label. This replaces the full-height trophy block and the white-on-gray label. Checked with v44 "Finalized brand name & concept!" in light and dark.
-- `docs/design-system-rules.md`: record the rule. `visual_ref/[prompt #557] 6.png`, `7.png`: the user's references.
-
-## 2026-10-21 · prompt #558 · Annotation entry alignment, location focus ring (blur reverted)
-
-- `src/features/workbench/{ComposerDrawer.tsx,workspace-layout.css}`: added a six-layer progressive blur behind the Capturing row, then reverted it fully at the user's request (ComposerDrawer is back to its committed state).
-- `src/features/annotations/annotations.css`: saved annotation entries use the editor's metrics and hairline, with no bordered box, so the milestone text lines up before and during editing.
-- `src/features/workbench/workspace-layout.css`: light-mode focus ring on the "Location name" field uses `--milestone-edit-border` gray.
-- `docs/design-system-rules.md`: record the rules. `visual_ref/[prompt #558] 8.png`: the user's reference (the later inline screenshots had no local files).
+- `src/features/annotations/{MilestoneTrophy.tsx,annotations.css}`: confetti uses badge colour plus theme ink, at 4 × 6px. Verified that it fires (16 pieces) and is visible mid-flight in light mode.
+- `src/control-tokens.css`, `src/features/workbench/workbench-system.css`: to-do title 0.75rem / 400 / 1.5, roomier cards; to-do navigation dialog title about 16px (was about 20px), verified computed 15.85px.
+- `src/features/workbench/Workbench.tsx`: greeting "Work it out with verso."
+- `docs/design-system-rules.md`: record the rules. Typecheck and 316 tests pass.

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { PhosphorIcon } from '../../components/PhosphorIcon';
+import { useLeavingValue } from '../../shared/useLeavingValue';
 
 /** Prototype feedback only: this option never creates a Git commit. */
 export function MilestoneCommitOption() {
   const [branch, setBranch] = useState('');
   const [checked, setChecked] = useState(false);
   const [success, setSuccess] = useState(false);
+  const successToast = useLeavingValue(success);
   useEffect(() => {
     const abort = new AbortController();
     fetch(`${import.meta.env.BASE_URL}gallery/git-history.json`, { signal: abort.signal, cache: 'no-cache' })
@@ -20,6 +22,6 @@ export function MilestoneCommitOption() {
     return () => clearTimeout(timer);
   }, [success]);
   return <><label className="milestone-commit-option"><input type="checkbox" disabled={!branch} checked={checked} onChange={event => { setChecked(event.target.checked); setSuccess(event.target.checked); }}/><span>Also commit to <span className="milestone-branch"><PhosphorIcon name="git-branch"/>{branch || 'current branch'}</span></span></label>
-    {success && <div className="mw-toast" role="status">Success<button type="button" aria-label="Dismiss notification" onClick={() => setSuccess(false)}><PhosphorIcon name="x"/></button></div>}
+    {successToast.shown && <div className="mw-toast" role="status" data-leaving={successToast.leaving || undefined}>Success<button type="button" aria-label="Dismiss notification" onClick={() => setSuccess(false)}><PhosphorIcon name="x"/></button></div>}
   </>;
 }

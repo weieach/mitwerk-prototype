@@ -119,12 +119,12 @@
   display: flex;
   align-items: center;
   gap: var(--todo-project-gap);
-  margin: 0 0 var(--row-size-unit);
+  margin: 0 0 var(--todo-project-title-gap);
   color: var(--mw-muted);
   font-size: var(--todo-project-size);
 }
 .mw-app :is(.kanban-project, .kanban-frame) > .ph { flex: none; font-size: var(--todo-project-icon-size); width: var(--todo-project-icon-size); height: var(--todo-project-icon-size); }
-.mw-app .kanban-task h3 { margin: 0; font-size: var(--todo-title-size); font-weight: var(--todo-title-weight); }
+.mw-app .kanban-task h3 { margin: 0; font-size: var(--todo-title-size); font-weight: var(--todo-title-weight); line-height: var(--todo-title-line-height); }
 .mw-app .kanban-task footer { margin-top: var(--row-size-unit); }
 .mw-app .kanban-task footer .mw-avatar { width: 16px; height: 16px; font-size: 8px; }
 .mw-app .kanban-empty { display: block; text-align: center; }
@@ -324,7 +324,8 @@
 @media (hover:none) { .todo-card-more { opacity:1; } }
 
 .mw-app .todo-navigation-dialog { width:min(var(--todo-navigation-width), calc(100vw - 32px)); }
-.mw-app .todo-navigation-dialog h2 { font-size:var(--todo-navigation-title-size); line-height:1.35; }
+/* Outranks the page-title type role that every .mw-modal h2 takes, so only this dialog steps down. */
+:is(html[data-type-roles], html) .mw-app .mw-modal.todo-navigation-dialog h2 { font-size:var(--todo-navigation-title-size); line-height:1.35; }
 .todo-navigation-dialog > header { align-items:flex-start; gap:var(--row-size-unit); }
 .todo-navigation-dialog > header > button { flex-shrink:0; }
 .todo-navigation-actions { display:flex; flex-direction:column; gap:calc(var(--row-size-unit) * 2); }

@@ -31,6 +31,7 @@ import { TheaterCaption } from './TheaterCaption';
 import { useSavedMilestones } from '../version-tree/useSavedMilestones';
 import { versionMilestone } from '../version-tree/idea-stream';
 import { galleryBranchPaint } from './model';
+import { useLeavingValue } from '../../shared/useLeavingValue';
 
 function PlaybackTip({ label, children, edge }: { label: string; children: ReactNode; edge?: 'start' | 'end' }) {
   const [hover, setHover] = useState(false);
@@ -90,6 +91,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
   const exitButton = useRef<HTMLButtonElement>(null);
   useEffect(() => { if (runtimeMode) exitButton.current?.focus(); }, [runtimeMode]);
   const [toast, setToast] = useState('');
+  const projectToast = useLeavingValue(toast);
   useEffect(() => {
     if (active && pendingPrototype.current === selectedId) return;
     pendingPrototype.current = null;
@@ -510,7 +512,7 @@ export function TheaterView({ onRangeChange, exportTarget, runtimeCatalog, liveR
         </div>
       </div>
       <div className="runtime-passive-timeline" inert={!!runtimeMode} aria-hidden={!!runtimeMode}><PlaybackTimeline unit={jumpScale} hasMilestone={hasMilestone} branches={branches} navigationKey={navigationKey} active={active} viewportRef={timelineRef} frames={frames} catalog={catalog} range={range} now={now} index={Math.max(0, index)} selectedId={selectedId} previewIndex={previewIndex} onPreview={next => { if (prototype.open || prototype.loading) return; setPreviewId(next === null ? null : frames[next].id); if (next === null) setPreviewImage(null); }} onSelect={selectFrame} onSelectPush={id => { prototype.exit(); setPlaying(false); setPreviewId(null); setPreviewImage(null); onSelect(id); }}/></div>
-      {toast && <div className="project-toast" role="status">{toast}</div>}
+      {projectToast.shown && <div className="project-toast" role="status" data-leaving={projectToast.leaving || undefined}>{projectToast.shown}</div>}
     </div>
   </div>;
 }

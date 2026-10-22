@@ -25,7 +25,7 @@ export function MilestoneTrophy({ disabled, milestone }: { disabled: boolean; mi
       <span key={burst?.sequence ?? 0} className={`milestone-trophy-glyph${burst ? ' is-celebrating' : ''}`}><PhosphorIcon name="trophy" weight="fill" size="var(--annotation-pill-icon-size)"/></span>
     </button>
     {burst && createPortal(<div ref={particles} key={burst.sequence} className="milestone-confetti" aria-hidden="true" style={{ left: burst.x, top: burst.y }}>
-      {Array.from({ length: celebration.particles }, (_, i) => <i key={i} style={{ backgroundColor: i % 2 ? burst.color : '#fff' }}/>) }
+      {Array.from({ length: celebration.particles }, (_, i) => <i key={i} style={{ backgroundColor: i % 2 ? burst.color : 'var(--confetti-contrast)' }}/>) }
     </div>, document.body)}
   </>;
 }

@@ -2,19 +2,19 @@
 :root[data-theme=dark] { --annotation-input-border:#fff; }
 :root { --annotation-bookmark-bottom:var(--theater-action-gap, 8px); --annotation-color: #ffc629; --annotation-danger: #c73535; --annotation-preview-height: 42vh; --annotation-sheet-width: 720px; --annotation-list-height: 40vh; --annotation-message-width: 85%; --annotation-action-font-size: var(--body-font-size); }
 .frame-annotation-bookmark { margin-right:auto; align-self:flex-end; overflow:hidden; margin-bottom:calc(-1 * var(--theater-action-gap)); padding-top:0; }
-.annotation-tag { display:flex; align-items:center; gap:8px; background:var(--annotation-color); color:var(--annotation-ink); padding:9px 16px var(--annotation-bookmark-bottom, 20px); border-radius:999px; transform:translateY(110%); transition:transform 280ms ease; }
+.annotation-tag { display:flex; align-items:center; gap:8px; background:var(--annotation-color); color:var(--annotation-ink); padding:9px 16px var(--annotation-bookmark-bottom, 20px); border-radius:999px; transform:translateY(110%); transition:transform 280ms var(--ease-out); }
 .annotation-tag.is-ready { transform:translateY(0); }
 .annotation-tag span { color:inherit; opacity:.65; }
 .annotation-tag:disabled { opacity:1; }
 .annotation-overlay { position:absolute; z-index:20; inset:0; width:100%; height:100%; max-width:none; max-height:none; border:0; margin:0; padding:var(--row-padding-inline); background:transparent; color:var(--ink); overflow:hidden; font:var(--body-font-size)/var(--message-line-height) var(--sans); }
 .annotation-overlay[open] { display:flex; flex-direction:column; gap:var(--row-padding-inline); }
-.annotation-overlay::before { content:''; position:absolute; inset:0; pointer-events:none; background:color-mix(in srgb, var(--paper) 76%, transparent); backdrop-filter:blur(var(--annotation-blur)); animation:annotation-blur-in var(--annotation-blur-ms) ease both; }
+.annotation-overlay::before { content:''; position:absolute; inset:0; pointer-events:none; background:color-mix(in srgb, var(--paper) 76%, transparent); backdrop-filter:blur(var(--annotation-blur)); animation:annotation-blur-in var(--annotation-blur-ms) var(--ease-out) both; }
 .annotation-return { position:relative; align-self:flex-start; flex:none; z-index:1; height:var(--base-control-height); }
 .annotation-body { position:relative; flex:1; min-height:0; overflow:auto; display:flex; padding:var(--row-size-unit); }
 .annotation-sheet { flex:none; width:min(var(--annotation-sheet-width),100%); margin:auto; }
 .annotation-sheet header { display:flex; align-items:center; justify-content:space-between; gap:var(--row-size-unit); margin-bottom:calc(var(--row-size-unit) * 2); }
 .annotation-overlay .annotation-sheet h2 { display:flex; gap:var(--row-size-unit); align-items:center; margin:0; font-size:var(--row-title-size); font-weight:var(--compact-title-weight); }
-.annotation-preview { display:block; width:100%; max-height:var(--annotation-preview-height); object-fit:contain; background:var(--paper); border:1px solid var(--line); border-radius:var(--surface-radius); animation:annotation-content-in var(--annotation-enter-ms) ease var(--annotation-frame-delay) both; }
+.annotation-preview { display:block; width:100%; max-height:var(--annotation-preview-height); object-fit:contain; background:var(--paper); border:1px solid var(--line); border-radius:var(--surface-radius); animation:annotation-content-in var(--annotation-enter-ms) var(--ease-out) var(--annotation-frame-delay) both; }
 .annotation-sheet form { margin-top:var(--row-padding-inline); }
 .annotation-sheet .annotation-text { display:block; width:100%; min-height:var(--base-control-height); padding:calc(var(--row-padding-inline) * .375) 0; border:0; border-radius:0; background:transparent; color:var(--ink); font:var(--body-font-size)/var(--message-line-height) var(--sans); }
 .annotation-sheet .annotation-text:focus { outline:none; }
@@ -27,7 +27,7 @@
 .annotation-overlay .mw-button.primary { background:var(--mw-accent,var(--ink)); color:var(--paper); }
 .annotation-overlay .mw-button:disabled { opacity:.4; }
 .annotation-list { margin-top:var(--row-padding-inline); max-height:var(--annotation-list-height); overflow:auto; display:flex; flex-direction:column; gap:calc(var(--row-size-unit) * 2); padding:var(--focus-ring-offset); }
-.annotation-entry-row { flex:none; min-width:0; animation:annotation-message-in var(--annotation-message-enter) ease both; animation-delay:calc(var(--annotation-ui-delay) + var(--annotation-message-index) * var(--annotation-message-stagger)); }
+.annotation-entry-row { flex:none; min-width:0; animation:annotation-message-in var(--annotation-message-enter) var(--ease-out) both; animation-delay:calc(var(--annotation-ui-delay) + var(--annotation-message-index) * var(--annotation-message-stagger)); }
 .annotation-sheet .annotation-entry { max-height:none; }
 .annotation-entry .annotation-kind { display:flex; margin-bottom:var(--row-size-unit); }
 /* A saved entry reads exactly like its editor: flush-left body text over the shared edit-field hairline,
@@ -48,7 +48,7 @@
 .annotation-confirmation>i { margin-bottom:calc(var(--row-size-unit) * 2); }
 .annotation-confirmation p { color:var(--muted); line-height:var(--message-line-height); }
 .annotation-confirmation .modal-actions { flex-wrap:wrap; }
-.annotation-overlay .annotation-return, .annotation-sheet>header, .annotation-sheet>form, .annotation-list, .annotation-create { animation:annotation-content-in var(--annotation-enter-ms) ease var(--annotation-ui-delay) both; }
+.annotation-overlay .annotation-return, .annotation-sheet>header, .annotation-sheet>form, .annotation-list, .annotation-create { animation:annotation-content-in var(--annotation-enter-ms) var(--ease-out) var(--annotation-ui-delay) both; }
 @keyframes annotation-blur-in { from { opacity:0; backdrop-filter:blur(0); } to { opacity:1; backdrop-filter:blur(var(--annotation-blur)); } }
 @keyframes annotation-content-in { from { opacity:0; transform:translateY(var(--row-size-unit)); } to { opacity:1; transform:translateY(0); } }
 @media(prefers-reduced-motion:reduce) { .annotation-overlay::before, .annotation-overlay .annotation-return, .annotation-sheet>header, .annotation-sheet>form, .annotation-preview, .annotation-list, .annotation-create, .annotation-entry-row { animation:none; } }
@@ -73,14 +73,17 @@
 
 /* Retain the dialog and focus containment until every dismissal finishes. */
 .annotation-overlay { opacity:1; transition:opacity var(--annotation-exit-ms) ease; }
-.annotation-overlay .annotation-body { transition:transform var(--annotation-exit-ms) ease; }
+.annotation-overlay .annotation-body { transition:transform var(--annotation-exit-ms) var(--ease-out); }
 .annotation-overlay[data-exiting="true"] { opacity:0; pointer-events:none; }
 .annotation-overlay[data-exiting="true"] .annotation-body { transform:translateY(var(--row-size-unit)); }
 @media(prefers-reduced-motion:reduce) { .annotation-overlay, .annotation-overlay .annotation-body { transition:none; } }
 
 /* Portaled particles escape the pill mask without intercepting any controls. */
 .milestone-confetti { position:fixed; width:0; height:0; z-index:10000; pointer-events:none; }
-.milestone-confetti i { position:absolute; width:3px; height:4.5px; border-radius:.75px; }
+/* Pieces alternate the badge color with the theme's ink, so they read on both light and dark grounds
+   (fixed white pieces vanished in light mode). */
+:root { --confetti-contrast:var(--ink); --confetti-piece-width:4px; --confetti-piece-height:6px; }
+.milestone-confetti i { position:absolute; width:var(--confetti-piece-width); height:var(--confetti-piece-height); border-radius:1px; }
 .milestone-trophy-glyph.is-celebrating { animation:milestone-trophy-bounce 480ms ease-out both; }
 @keyframes milestone-trophy-bounce {
   0%, 100% { transform:translateY(0) scale(1); }

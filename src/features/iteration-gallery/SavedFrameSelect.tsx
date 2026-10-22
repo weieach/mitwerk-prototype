@@ -3,8 +3,6 @@ import { PhosphorIcon } from '../../components/PhosphorIcon';
 import { SelectMenu, useSelectMenu } from '../../components/SelectMenu';
 import { formatFrameLabel, type GalleryFrame } from './model';
 
-const savedFrameMenuMinWidth = 280;
-
 /** A rich listbox keeps annotation indicators aligned independently of label length. */
 export function SavedFrameSelect({ frames, counts, value, onChange }: {
   frames: GalleryFrame[]; counts: ReadonlyMap<string, number>; value: string; onChange: (id: string) => void;
@@ -23,7 +21,8 @@ export function SavedFrameSelect({ frames, counts, value, onChange }: {
       <span className="row-select-copy">{selected ? formatFrameLabel(selected) : frames.length ? 'Select frame' : 'No frames in range'}</span>
       <PhosphorIcon name="caret-down" size="var(--selector-caret-size)"/>
     </button>
+    {/* Sized to its longest label, right-aligned under the trigger at the panel's edge. */}
     {menu.open && <SelectMenu id={id} label="Saved frames, newest first" anchor={menu.trigger} options={options} value={value}
-      minWidth={savedFrameMenuMinWidth} onChoose={menu.choose} onDismiss={menu.dismiss}/>}
+      align="end" onChoose={menu.choose} onDismiss={menu.dismiss}/>}
   </>;
 }

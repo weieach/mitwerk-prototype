@@ -38,7 +38,9 @@ export function SelectMenu({ id, label, anchor, options, value, minWidth = 0, ga
       const below = innerHeight - rect.bottom - viewportGap - gap, above = rect.top - viewportGap - gap;
       const flip = below < Math.min(preferredHeight, menu.scrollHeight) && above > below;
       setBounds({ left: Math.max(viewportGap, Math.min(preferredLeft, innerWidth - viewportGap - width)), minWidth: width, maxWidth: innerWidth - viewportGap * 2,
-        maxHeight: Math.min(preferredHeight, flip ? above : below), ...(flip ? { bottom: innerHeight - rect.top + gap } : { top: rect.bottom + gap }) });
+        maxHeight: Math.min(preferredHeight, flip ? above : below), ...(flip ? { bottom: innerHeight - rect.top + gap } : { top: rect.bottom + gap }),
+        // Scale in from the trigger: its center, on the edge the menu opens from.
+        transformOrigin: `${rect.left + rect.width / 2 - Math.max(viewportGap, Math.min(preferredLeft, innerWidth - viewportGap - width))}px ${flip ? 'bottom' : 'top'}` });
     };
     place(); addEventListener('resize', place); addEventListener('scroll', place, true);
     // Panels can resize as frames load or panes open without a window resize.

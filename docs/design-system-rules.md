@@ -2190,3 +2190,39 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - The new-location field in the Capturing menu ("Location name") keeps the shared focus ring, but in light mode it is coloured `--capture-new-focus-ring` → `--milestone-edit-border` (24% ink on paper, the same gray as the editing milestone outline) instead of near-black ink. Dark mode keeps the default ring.
 - A progressive blur behind "Capturing … with" was tried and reverted at the user's request. The row keeps its original design.
+
+## Saved-frame menu width — 2026-10-21, prompt #559
+
+- The Playback / Gallery saved-frame menu ("#558 - v63 - Oct 21, 7:35") sizes to its longest option (`SelectMenu align="end"`) and right-aligns under its trigger, instead of a fixed 280px minimum. It still never clips its labels or exceeds the viewport.
+
+## Motion wave 1: shared curves, shorter waits, press feedback — 2026-10-21, prompt #560
+
+- Shared curves in `src/control-tokens.css`: `--ease-out` `cubic-bezier(.23,1,.32,1)` for entering UI and feedback, `--ease-in-out` `cubic-bezier(.77,0,.175,1)` for on-screen movement, `--ease-drawer` `cubic-bezier(.32,.72,0,1)` for sheets. New motion uses these instead of ad-hoc beziers or bare `ease`. No UI animation uses `ease-in`; the Gallery/Playback word exit now uses `--ease-out`.
+- Playback entry (supersedes the 640ms from prompt #507 and the 1000ms annotation wait): details still appear 180ms after the frame lands; transport and timeline follow at 260ms (an 80ms stagger); the milestone / annotation tag is ready at 420ms (details delay + entry). No control stays disabled after its row is visible.
+- Annotation and runtime overlay (supersedes 220ms frame / 320ms controls): the frame enters after 120ms, the controls after 160ms, and the list staggers 50ms per entry (was 110ms). The 220ms blur and 180ms fades are unchanged.
+- To-do drawer: one timing source (the duplicate 440/300ms tokens are removed). It opens in 400ms on `--ease-drawer` and closes in 260ms on `--ease-out`; exit is faster than entry.
+- Run progress line enters in 240ms on `--ease-out` (was 420ms).
+- Press feedback: pressable controls (buttons, icon buttons, selects, view switch, chips, milestone controls, composer tools) scale to `--press-scale` (.97) over `--press-duration` (140ms) while held, using the `scale` property so existing transforms still compose. Release is immediate. Wide surfaces (cards, list rows, drawer handle) are excluded. Skipped under reduced motion.
+- The to-do text hover nudge requires `(hover:hover) and (pointer:fine)`; keyboard focus keeps it.
+
+## Motion wave 2: shared curves applied, drawer heading on transform — 2026-10-21, prompt #561
+
+- Entrances and exits use `--ease-out`. That covers Playback details and controls, caption cards, annotation overlay, blur, list and tag motion, runtime hints, the reader entrance, panel-switch and version-panel entrances, location menu items, the milestone chip reveal, and idea actions. Position and width changes on the timeline (blocks, push units, content width) use `--ease-in-out`. Plain `ease` stays only for hover colour and opacity changes, where it is the right curve. Infinite loops (invitation gradient, loading dots), the landing page and the work-state slider keep their own dedicated curves.
+- The To-do drawer heading keeps fixed 11/11 padding; opening moves its label and count down by `--drawer-open-label-shift` with `translate`, on the drawer's open/close timing. This replaces the padding transition: same 4px result and 40px height, no layout work per frame.
+- Not changed, on purpose: the playhead seek (its animated value drives each block's progress fill, so a compositor-only animation would not remove the re-render; it runs only on explicit 450ms jumps), and the split-pane `grid-template-columns` transition (only when entering or leaving a prototype, which is rare).
+
+## Motion wave 3 and Playback detail polish — 2026-10-21, prompt #562
+
+- Gallery → Playback rotation shortens from 1100ms to 750ms (`theaterMotion.rotateMs`), keeping its symmetric smoothstep curve; the timeline, frame border and capture handoff derive from it. This is a frequent switch, so it should not make people wait.
+- Menus (`SelectMenu`) enter in 150ms (`--menu-enter-ms`): opacity plus 97% → 100% `scale` on `--ease-out`, with `transform-origin` at the trigger's horizontal center on the edge the menu opens from (top, or bottom when flipped). Closing is instant. Reduced motion keeps only the fade.
+- Toasts (`.mw-toast`, `.project-toast`) enter with an interruptible transition plus `@starting-style` (320ms, 28px rise) instead of a keyframe, and leave in 150ms (`--toast-exit-ms`, an 8px drop and fade). `useLeavingValue` keeps a dismissed toast mounted with `data-leaving` for the exit. Exit is faster than entry. Reduced motion uses a short fade only.
+- The loading spinner turns once per 0.8s (was 1.5s); faster rotation reads as faster loading.
+- Playback screenshots have a minimal 4px corner radius (`--theater-frame-radius`), clipping the image and runtime frames inside.
+- Playback reference-image chips are supporting detail: muted ink at the meta-row size (`--row-meta-size`), no fill at rest, aligned to the text column. On hover or focus they get full ink and the faint hover fill. This supersedes the 14%-ink filled pill at caption size.
+
+## Confetti in both themes, to-do readability, compact dialog title, greeting — 2026-10-21, prompt #563
+
+- Milestone confetti pieces alternate the badge colour with `--confetti-contrast` (the theme's `--ink`) instead of fixed white, which vanished on light grounds. Pieces grow to 4 × 6px (`--confetti-piece-width/height`). This supersedes the white/branch palette and 3 × 4.5px size; flight, bounce and reduced-motion rules are unchanged.
+- To-do cards read like body copy: titles at `--body-font-size`, weight 400, line height 1.5 (`--todo-title-*`), replacing 0.675rem / 500 with default leading. Card padding is 12px block, gap 10px, and a 1.5-unit gap sits between project label and title.
+- Compact choice dialogs (the to-do navigation dialog) set their question at 80% of the page-title role (`--todo-navigation-title-size`). They outrank the role rule that every `.mw-modal h2` otherwise takes. Other dialogs still use the page-title size.
+- The new-chat greeting reads "Work it out with verso." (brand name, lowercase) instead of the agent name.

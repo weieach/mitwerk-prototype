@@ -108,8 +108,8 @@
 .workspace .theater-frame-actions .frame-annotation-bookmark.has-milestone { align-items:center; gap:var(--playback-annotation-chip-gap); min-width:0; }
 .workspace .theater-frame-actions .annotation-tag.is-milestone { display:flex; align-items:center; gap:0; padding:0 var(--playback-milestone-badge-inset); height:var(--playback-action-height); background:var(--playback-annotation-fill); min-width:0; overflow:hidden; opacity:1; }
 .workspace .theater-frame-actions .annotation-milestone-icon { --annotation-pill-icon-size:var(--playback-milestone-icon-size); display:flex; align-items:center; justify-content:center; flex:none; width:var(--playback-milestone-badge-size); height:var(--playback-milestone-badge-size); min-height:0; align-self:center; aspect-ratio:1; padding:0; border:0; border-radius:50%; background:var(--milestone-chip-color); color:var(--milestone-chip-ink); opacity:1; }
-.workspace .theater-frame-actions .annotation-milestone-mask { display:block; padding:0; border:0; border-radius:0; text-align:left; flex:none; height:100%; overflow:hidden; background:transparent; color:var(--playback-milestone-text-ink); opacity:1; transition:width var(--gallery-transition) ease; }
-.workspace .theater-frame-actions .annotation-tag.is-milestone .annotation-milestone-text { display:flex; align-items:center; box-sizing:border-box; width:max-content; height:100%; padding:0 calc(var(--playback-milestone-badge-inset) + 7px) 0 8px; opacity:1; max-width:var(--playback-milestone-chip-max-width); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transform:translateY(100%); transition:transform var(--gallery-transition) ease; }
+.workspace .theater-frame-actions .annotation-milestone-mask { display:block; padding:0; border:0; border-radius:0; text-align:left; flex:none; height:100%; overflow:hidden; background:transparent; color:var(--playback-milestone-text-ink); opacity:1; transition:width var(--gallery-transition) var(--ease-out); }
+.workspace .theater-frame-actions .annotation-tag.is-milestone .annotation-milestone-text { display:flex; align-items:center; box-sizing:border-box; width:max-content; height:100%; padding:0 calc(var(--playback-milestone-badge-inset) + 7px) 0 8px; opacity:1; max-width:var(--playback-milestone-chip-max-width); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transform:translateY(100%); transition:transform var(--gallery-transition) var(--ease-out); }
 .workspace .theater-frame-actions .annotation-milestone-copy { min-width:0; overflow:hidden; text-overflow:ellipsis; opacity:1; }
 .workspace .theater-frame-actions .annotation-tag.is-milestone.is-expanded .annotation-milestone-text { transform:translateY(0); }
 .workspace .theater-frame-actions .annotation-tag.is-add { aspect-ratio:1; justify-content:center; padding-inline:0; height:var(--playback-action-height); }
@@ -183,7 +183,7 @@
 .mw-app .mw-message:last-child { margin-bottom:0; }
 /* "Preparing your response" fades in while sliding up inside a mask. */
 .mw-app .run-progress-mask { display:inline-flex; overflow:hidden; }
-.mw-app .run-progress-line { display:inline-flex; align-items:center; gap:8px; animation:run-progress-in var(--run-progress-enter-ms) cubic-bezier(.2,.7,.2,1) both; }
+.mw-app .run-progress-line { display:inline-flex; align-items:center; gap:8px; animation:run-progress-in var(--run-progress-enter-ms) var(--ease-out) both; }
 @keyframes run-progress-in { from { opacity:0; transform:translateY(100%); } to { opacity:1; transform:none; } }
 @media (prefers-reduced-motion:reduce) { .mw-app .run-progress-line { animation:none; } }
 .mw-app .from-user { max-width:min(340px,85%); }
@@ -306,8 +306,8 @@
 }
 .workspace .workspace-panel-header .panel-view-label:hover { opacity:1; }
 .workspace .workspace-panel-header .panel-view-label:disabled { cursor:default; }
-.panel-view-word { display:block; animation:panel-word-enter var(--panel-label-motion) ease-out both; }
-.panel-view-word.is-leaving { animation:panel-word-leave var(--panel-label-motion) ease-in both; }
+.panel-view-word { display:block; animation:panel-word-enter var(--panel-label-motion) var(--ease-out) both; }
+.panel-view-word.is-leaving { animation:panel-word-leave var(--panel-label-motion) var(--ease-out) both; }
 @keyframes panel-word-leave { to { opacity:0; transform:translateY(-65%); } }
 @keyframes panel-word-enter { from { opacity:0; transform:translateY(65%); } to { opacity:1; transform:translateY(0); } }
 @media(prefers-reduced-motion:reduce) { .panel-view-word, .panel-view-word.is-leaving { animation:none; } }
@@ -329,7 +329,10 @@
 .mw-app .composer-drawer .composer-tools > button[type=submit] { background:var(--composer-send-background); color:var(--composer-send-foreground); border-radius:var(--composer-send-radius); }
 .mw-app .composer-drawer .composer-tools > button[type=submit]:disabled { opacity:.4; }
 .composer-drawer-content .composer-todo-text { flex:1; min-width:0; padding:0; text-align:left; white-space:pre-wrap; overflow-wrap:anywhere; font:inherit; text-decoration:underline; text-decoration-color:transparent; text-underline-offset:3px; transition:transform var(--drawer-hover-duration) ease, text-decoration-color var(--drawer-hover-duration) ease; }
-.composer-drawer-content .composer-todo-text:is(:hover,:focus-visible) { text-decoration-color:currentColor; transform:translateX(var(--drawer-hover-shift)); }
+.composer-drawer-content .composer-todo-text:is(:hover,:focus-visible) { text-decoration-color:currentColor; }
+/* The hover nudge needs a real pointer; on touch, a tap would leave the text shifted. Keyboard focus keeps it. */
+.composer-drawer-content .composer-todo-text:focus-visible { transform:translateX(var(--drawer-hover-shift)); }
+@media (hover:hover) and (pointer:fine) { .composer-drawer-content .composer-todo-text:hover { transform:translateX(var(--drawer-hover-shift)); } }
 .composer-drawer-content .composer-todo-text:focus-visible { outline:var(--focus-ring-width) solid var(--focus-ring-color); outline-offset:var(--focus-ring-offset); }
 .composer-drawer-content .is-complete .composer-todo-text { text-decoration:line-through; color:var(--muted); }
 
@@ -583,10 +586,11 @@
   --composer-text-inset:var(--panel-heading-padding);
   --composer-padding-inline:calc(var(--composer-text-inset) - var(--composer-inset));
   --composer-tool-inset:8px;
-  --drawer-open-duration:520ms;
-  --drawer-close-duration:380ms;
-  --drawer-open-ease:cubic-bezier(.33,.7,.2,1);
-  --drawer-close-ease:cubic-bezier(.4,0,.25,1);
+  /* The only drawer timing: opening follows the sheet curve; closing is faster than opening. */
+  --drawer-open-duration:400ms;
+  --drawer-close-duration:260ms;
+  --drawer-open-ease:var(--ease-drawer);
+  --drawer-close-ease:var(--ease-out);
 }
 :root[data-theme=dark] {
   --composer-surface:var(--user-message-fill);
@@ -680,9 +684,9 @@
 .capture-bucket-option.is-highlighted { background:var(--capture-option-highlight); }
 .capture-bucket-new { field-sizing:content; border:0; outline:none; background:var(--capture-new-surface); cursor:text; caret-color:var(--capture-chip-ink); }
 .capture-bucket-new::placeholder { color:var(--capture-new-placeholder); opacity:1; }
-.capture-bucket-stack :is(.capture-bucket-option,.capture-bucket-new) { transition:opacity var(--location-menu-enter) ease calc(var(--i,0) * var(--location-menu-stagger)), translate var(--location-menu-enter) ease calc(var(--i,0) * var(--location-menu-stagger)),background-color 150ms ease; }
+.capture-bucket-stack :is(.capture-bucket-option,.capture-bucket-new) { transition:opacity var(--location-menu-enter) var(--ease-out) calc(var(--i,0) * var(--location-menu-stagger)), translate var(--location-menu-enter) var(--ease-out) calc(var(--i,0) * var(--location-menu-stagger)),background-color 150ms ease; }
 @starting-style { .capture-bucket-stack:popover-open :is(.capture-bucket-option,.capture-bucket-new) { opacity:0; translate:0 -6px; } }
-.capture-bucket-stack.is-closing :is(.capture-bucket-option,.capture-bucket-new) { opacity:0; translate:0 -6px; pointer-events:none; transition:opacity var(--location-menu-exit) ease, translate var(--location-menu-exit) ease; }
+.capture-bucket-stack.is-closing :is(.capture-bucket-option,.capture-bucket-new) { opacity:0; translate:0 -6px; pointer-events:none; transition:opacity var(--location-menu-exit) var(--ease-out), translate var(--location-menu-exit) var(--ease-out); }
 .mw-app .location-chip-remove { display:inline-flex; align-items:center; padding:0; border:0; color:inherit; background:transparent; }
 .workspace .workspace-panel-header .panel-view-switch { display:flex; align-items:center; gap:2px; margin-left:4px; }
 .workspace .workspace-panel-header .panel-view-option { height:24px; min-height:0; padding:0 8px; border:0; border-radius:var(--control-radius); color:var(--muted); font:400 12px/1 var(--panel-view-font); background:transparent; }
@@ -839,12 +843,14 @@
 /* The To-do label and count sit on the vertical center of the visible strip above the message box: equal padding above and below (same total height). */
 :root { --drawer-heading-padding-top:11px; --drawer-heading-padding-bottom:11px; }
 /* Open, the label moves down by --drawer-open-label-shift within the same heading height, so the space above it matches the
-   space between it and the first task. Collapsed, it stays centered in the strip. The shift follows the drawer's own timing. */
+   space between it and the first task. Collapsed, it stays centered in the strip. The shift follows the drawer's own timing
+   and moves the heading's contents with `translate`; padding stays fixed, so opening the drawer never re-lays out the strip. */
 :root { --drawer-open-label-shift:4px; }
-.composer-drawer.is-expanded { --drawer-heading-padding-top:calc(11px + var(--drawer-open-label-shift)); --drawer-heading-padding-bottom:calc(11px - var(--drawer-open-label-shift)); }
-.mw-app .composer-drawer .composer-drawer-heading { transition:padding var(--drawer-close-duration) var(--drawer-close-ease), background-color var(--drawer-hover-duration, .18s) ease; }
-.mw-app .composer-drawer.is-expanded .composer-drawer-heading { transition-duration:var(--drawer-open-duration), var(--drawer-hover-duration, .18s); transition-timing-function:var(--drawer-open-ease), ease; }
-@media (prefers-reduced-motion:reduce) { .mw-app .composer-drawer .composer-drawer-heading { transition:none; } }
+.mw-app .composer-drawer .composer-drawer-heading { transition:background-color var(--drawer-hover-duration, .18s) ease; }
+.mw-app .composer-drawer .composer-drawer-heading > * { transition:translate var(--drawer-close-duration) var(--drawer-close-ease), opacity var(--drawer-hover-duration) ease; }
+.mw-app .composer-drawer.is-expanded .composer-drawer-heading > * { translate:0 var(--drawer-open-label-shift); transition-duration:var(--drawer-open-duration), var(--drawer-hover-duration); transition-timing-function:var(--drawer-open-ease), ease; }
+.composer-drawer.is-expanded .composer-drawer-heading:not(:hover):not(:focus-visible) > span { transition-delay:0s, var(--drawer-open-duration); }
+@media (prefers-reduced-motion:reduce) { .mw-app .composer-drawer .composer-drawer-heading, .mw-app .composer-drawer .composer-drawer-heading > * { transition:none; } }
 
 /* To-do count is a filled dot: the heading's ink fills it and the number takes the section's surface color (the ring is inverted). */
 .mw-app .composer-drawer-count { border:0; border-radius:var(--drawer-count-size); background:var(--drawer-count-fill, var(--ink)); color:var(--composer-drawer-surface); font-weight:500; font-variant-numeric:tabular-nums; transition:background-color var(--drawer-hover-duration, .18s) ease, color var(--drawer-hover-duration, .18s) ease; }
@@ -995,3 +1001,32 @@
 :root { --capture-new-focus-ring:var(--focus-ring-color); }
 :root:not([data-theme=dark]) { --capture-new-focus-ring:var(--milestone-edit-border); }
 .mw-app .capture-bucket-new:focus-visible { outline-color:var(--capture-new-focus-ring); }
+
+/* Press feedback: pressable controls dip to --press-scale while held, so a press is confirmed before the result
+   arrives. `scale` composes with any transform a control already animates (falling milestone controls, sliding
+   annotation tags). Release returns at once; wide surfaces (cards, list rows, the drawer handle) are left out
+   because 3% of a wide element is a visible jump. Reduced motion skips it. */
+@media (prefers-reduced-motion:no-preference) {
+  .mw-app :is(.mw-button, .icon-button, .mw-icon, .text-action, .theater-text-action, .row-select, .gallery-play, .panel-view-option, .panel-title-pill, .idea-add, .milestone-open, .milestone-not-yet, button.annotation-tag, .annotation-create, .capture-bucket-option, .theater-fullscreen-close, .workspace-tab-close, .composer-tools > button):not(:disabled):active {
+    scale:var(--press-scale);
+    transition:scale var(--press-duration) var(--ease-out);
+  }
+}
+
+/* Toasts enter with a transition (interruptible, unlike the old keyframe) and leave faster than they arrive.
+   `useLeavingValue` keeps a dismissed toast mounted for --toast-exit-ms with data-leaving set. */
+:root { --toast-enter-ms:320ms; --toast-exit-ms:150ms; --toast-enter-offset:28px; --toast-exit-offset:8px; }
+.mw-toast, .project-toast { opacity:1; translate:0 0; transition:opacity var(--toast-enter-ms) var(--ease-out), translate var(--toast-enter-ms) var(--ease-out); }
+@starting-style { .mw-toast, .project-toast { opacity:0; translate:0 var(--toast-enter-offset); } }
+.mw-toast[data-leaving], .project-toast[data-leaving] { opacity:0; translate:0 var(--toast-exit-offset); transition-duration:var(--toast-exit-ms); pointer-events:none; }
+@media (prefers-reduced-motion:reduce) { .mw-toast, .project-toast { translate:0 0; transition:opacity var(--toast-exit-ms) linear; } }
+
+/* Menus open from their trigger: a 150ms fade with a 97% → 100% scale, origin at the trigger's center on the
+   edge the menu opens from (set by SelectMenu). Closing is instant. Reduced motion keeps only the fade. */
+:root { --menu-enter-ms:150ms; --menu-enter-scale:.97; }
+.select-menu:popover-open { opacity:1; scale:1; transition:opacity var(--menu-enter-ms) var(--ease-out), scale var(--menu-enter-ms) var(--ease-out); }
+@starting-style { .select-menu:popover-open { opacity:0; scale:var(--menu-enter-scale); } }
+@media (prefers-reduced-motion:reduce) { .select-menu:popover-open { transition:opacity var(--menu-enter-ms) linear; } @starting-style { .select-menu:popover-open { scale:1; } } }
+
+/* Playback screenshots get a minimal corner radius instead of a hard rectangle; the frame clips its image. */
+:root { --theater-frame-radius:4px; }

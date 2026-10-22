@@ -1,9 +1,9 @@
 import { captureScreens } from '../../shared/capture-screens.ts';
 export const galleryTokens = {
-  annotations: { exitMs: 180, blur: 12, blurMs: 220, frameDelayMs: 220, uiDelayMs: 320, enterMs: 180, mainColor: '#cdcdcd', messageStaggerMs: 110, messageEnterMs: 280, hoverLift: 10, bookmarkWidth: 22, bookmarkHeight: 18, bookmarkTextureSize: 128, bookmarkInset: 10 },
+  annotations: { exitMs: 180, blur: 12, blurMs: 220, frameDelayMs: 120, uiDelayMs: 160, enterMs: 180, mainColor: '#cdcdcd', messageStaggerMs: 50, messageEnterMs: 280, hoverLift: 10, bookmarkWidth: 22, bookmarkHeight: 18, bookmarkTextureSize: 128, bookmarkInset: 10 },
   // Server-mode surround (Live server and saved prototypes): a heavily blurred sky under a light scrim.
   runtimeBackdrop: { color: 'var(--faint)' },
-  theaterMotion: { entryMs: 240, infoDelayMs: 180, playbackDelayMs: 640, runtimeReturnMs: 560, rotateMs: 1100, verticalAxisFadeMs: 180, frameBorderMs: 180, controlsFadeMs: 280, captureProgress: .5, timelineMs: 320, timelineOffsetVh: 5 },
+  theaterMotion: { entryMs: 240, infoDelayMs: 180, playbackDelayMs: 260, runtimeReturnMs: 560, rotateMs: 750, verticalAxisFadeMs: 180, frameBorderMs: 180, controlsFadeMs: 280, captureProgress: .5, timelineMs: 320, timelineOffsetVh: 5 },
   theaterDrag: { radiansPerViewport: Math.PI, pitchLimit: Math.PI * .45 },
   controls: { menuRowsMinPanelWidth: 680, headerGap: 14, tokenLift: 48, floatingBackground: 'var(--paper)', floatingWidth: 144, floatingPaddingInline: 16, floatingPaddingBlock: 6, labelOpacity: .6, frameSelectorShare: .3, fileMaxWidth: 240, frameSelectMaxWidth: 200, inset: 24, gap: 8 },
   interfaces: captureScreens,
@@ -37,7 +37,7 @@ export const galleryTokens = {
   theaterReference: { kind: 'prompt', number: 56 } as const,
   capturePushVersion: 16,
   // Runtime previews render at this desktop width (the capture viewport) and scale down to fit the frame, never up.
-  theater: { contentShare: .85, contentMaxViewportShare: .6, stageOffsetY: 24, runtimeViewportWidth: 1440, prototypeExitOffsetY: 12, fullscreenHintMs: 3500, prototypeTimeoutMs: 60000, focusBackground: 'var(--paper)', frameShadow: '0 0 20vw 8px var(--theater-frame-glow)', frameBed: 'var(--chrome, var(--ink))', metadataHeight: 112, metadataHeightShare: .26, metadataMinCaptionLines: 2, frameMinWidthShare: .5, metadataGap: 16, metadataHeightMaxVh: 20, metadataRowGap: 4, referenceChipWidth: 180, summaryGapScale: 1.75, playbackFooterGap: 12, captionRevealDelayMs: 250, captionCloseDelayMs: 140, captionCardPadding: 10, captionCardMaxVh: 40, playbackEnabled: 'var(--ink)', playbackDisabled: 'var(--faint)', actionGap: 0, actionButtonsGap: 24, enterDelayMs: 1000, enterExpandMs: 280, enterFadeMs: 180, imageCacheSize: 8, preloadFrames: 3, wheelStep: 80, addedColor: '#1f8a4c', removedColor: '#d12b2b' },
+  theater: { contentShare: .85, contentMaxViewportShare: .6, stageOffsetY: 24, runtimeViewportWidth: 1440, prototypeExitOffsetY: 12, fullscreenHintMs: 3500, prototypeTimeoutMs: 60000, focusBackground: 'var(--paper)', frameShadow: '0 0 20vw 8px var(--theater-frame-glow)', frameBed: 'var(--chrome, var(--ink))', metadataHeight: 112, metadataHeightShare: .26, metadataMinCaptionLines: 2, frameMinWidthShare: .5, metadataGap: 16, metadataHeightMaxVh: 20, metadataRowGap: 4, referenceChipWidth: 180, summaryGapScale: 1.75, playbackFooterGap: 12, captionRevealDelayMs: 250, captionCloseDelayMs: 140, captionCardPadding: 10, captionCardMaxVh: 40, playbackEnabled: 'var(--ink)', playbackDisabled: 'var(--faint)', actionGap: 0, actionButtonsGap: 24, enterDelayMs: 420, enterExpandMs: 280, enterFadeMs: 180, imageCacheSize: 8, preloadFrames: 3, wheelStep: 80, addedColor: '#1f8a4c', removedColor: '#d12b2b' },
   viewportPresets: [
     { value: 'original', label: 'Original size', width: 0, height: 0 },
     { value: 'desktop', label: 'Desktop', width: 1440, height: 900 },

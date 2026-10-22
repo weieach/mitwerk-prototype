@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { containedFrameTarget, transitionProgress, frameBorderEntrance, timelineEntrance, timelineCaptureProgress, theaterEntranceDuration, theaterRotationProgress, rotationCaptureProgress } from '../src/features/iteration-gallery/theater-transition.ts';
+import { galleryTokens } from '../src/features/iteration-gallery/tokens.ts';
 
 test('theater handoff only completes at the end of the transformation', () => {
   assert.equal(transitionProgress(0, 1100).eased, 0);
@@ -52,7 +53,7 @@ test('the open gap between metadata and playback is not a reserved control row',
 
 
 test('frame finishes before the timeline enters and UI handoff follows both stages', () => {
-  const frameEnd = 1100 / theaterEntranceDuration();
+  const frameEnd = galleryTokens.theaterMotion.rotateMs / theaterEntranceDuration();
   for (const progress of [0, frameEnd / 2, frameEnd]) {
     assert.deepEqual(timelineEntrance(progress), { opacity: 0, offsetVh: -5 });
   }
@@ -60,7 +61,7 @@ test('frame finishes before the timeline enters and UI handoff follows both stag
   assert.equal(theaterRotationProgress(middle).progress, 1);
   assert.equal(theaterRotationProgress(middle).eased, 1);
   assert.deepEqual(timelineEntrance(middle), { opacity: .5, offsetVh: -2.5 });
-  assert.equal(transitionProgress(1100, theaterEntranceDuration()).complete, false);
+  assert.equal(transitionProgress(galleryTokens.theaterMotion.rotateMs, theaterEntranceDuration()).complete, false);
   assert.equal(transitionProgress(theaterEntranceDuration(), theaterEntranceDuration()).complete, true);
   assert.equal(frameBorderEntrance(0).opacity, 0);
   assert.equal(frameBorderEntrance(frameEnd).opacity, 1);

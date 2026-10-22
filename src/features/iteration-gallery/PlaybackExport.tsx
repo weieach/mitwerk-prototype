@@ -4,6 +4,7 @@ import { Icon } from '../../components/Icon';
 import { RowSelect } from '../../components/RowSelect';
 import { inRange, ranges, type GalleryFrame, type RangeKey } from './model';
 import { type JumpScale } from './timeline';
+import { useLeavingValue } from '../../shared/useLeavingValue';
 
 /** A confirmation only: the sample project does not generate an export. */
 export function PlaybackExport({ catalog, range, now, unit, hasMilestone }: {
@@ -12,6 +13,7 @@ export function PlaybackExport({ catalog, range, now, unit, hasMilestone }: {
   const [open, setOpen] = useState(() => new URLSearchParams(location.search).get('screenshot') === '1' && new URLSearchParams(location.search).get('exportOpen') === '1');
   const [exportRange, setExportRange] = useState(range);
   const [toast, setToast] = useState(false);
+  const exportToast = useLeavingValue(toast);
   const trigger = useRef<HTMLButtonElement>(null);
   const dialog = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -53,6 +55,6 @@ export function PlaybackExport({ catalog, range, now, unit, hasMilestone }: {
       <button type="button" className="mw-button primary playback-export-save" onClick={() => { close(true); setToast(true); }}>Save MP4</button>
       <p aria-live="polite">{count} {countUnit}{count === 1 ? '' : 's'}</p>
     </div>}
-    {toast && createPortal(<div className="mw-toast playback-export-toast" role="status">Exporting is currently not supported for sample project.<button type="button" aria-label="Dismiss export notification" onClick={() => setToast(false)}><Icon name="close"/></button></div>, document.body)}
+    {exportToast.shown && createPortal(<div className="mw-toast playback-export-toast" role="status" data-leaving={exportToast.leaving || undefined}>Exporting is currently not supported for sample project.<button type="button" aria-label="Dismiss export notification" onClick={() => setToast(false)}><Icon name="close"/></button></div>, document.body)}
   </>;
 }

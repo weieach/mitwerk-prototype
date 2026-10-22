@@ -5563,3 +5563,86 @@ remove the progress blur for this part, keep it back to original design.
 ```text
 review the prompt and changes, then help me commit
 ```
+
+## Prompt #559
+
+```text
+the default width of this can be smaller? since the content inside is not that long within a line?
+
+```
+
+## Prompt #560
+
+```text
+Make the first round of changes based on the animation issues you pointed out last round. Afterwards, tell me what you changed and why.
+
+```
+
+Original: 根据你上一轮指出的animation的问题，进行第一波改动。改动后告诉我改了哪里，为什么
+
+## Prompt #561
+
+```text
+OK, keep going with the changes.
+
+```
+
+Original: 好的，继续改
+
+## Prompt #562
+
+```text
+OK, start with the changes you suggested.
+
+```
+
+Original: 好的，先做你说的
+
+Clarifications sent during prompt #562 (English translation, original below each):
+
+```text
+In Version blocks Playback, could you give the screenshot a minimal corner radius? Right now it's a very sharp rectangle.
+```
+
+Original: 可以在version block的playback这里，给screenshot加一个minimal的radius吗？目前是非常sharp的矩形。
+
+```text
+In Playback, the UI for prompts with attached images is too prominent; it has a very strong presence in both modes. Can you lower its priority so it doesn't grab attention, and make it more compact and elegant, following the current design language?
+```
+
+Original: 在playback这里，prompt带图片的这个ui太显眼了，在两个mode里都是很强烈的存在。可以把他们做的优先级更低一些吗，不要这么抢眼，同时更急尖优雅一些。根据目前的设计语言。
+
+```text
+In earlier versions, was there any other animation after clicking the milestone icon, such as confetti bursting out?
+```
+
+Original: 之前的版本里，是否有点击milestone这个icon后的其他animation，比如有彩带撒出来这种
+
+## Prompt #563
+
+```text
+You said the confetti is still there when clicking the trophy on the Playback milestone chip (a small burst of 3 x 4.5px pieces with gravity and tumble, flying 1.4s), but I don't see it here in Playback.
+
+```
+
+Original: 有的，现在也还在。点 Playback 里程碑 chip 上的奖杯图标，会撒出一小簇彩带（3 × 4.5px 的碎片，有重力和翻转，飞 1.4 秒）这个我没看到，在playback这里
+
+Clarifications sent during prompt #563 (English translation, original below each):
+
+```text
+What are the font size and weight in the Todos view? It looks a bit crowded and not very readable. Please adjust it to fit the overall design language.
+```
+
+Original: todo 界面的字号字重多少，目前看上去有点拥挤，可读性不高。可以适当根据整体的设计语言调整一下
+
+```text
+What is the design format of this kind of dialog? The title text inside is too large; reduce it by 15-25%, your call. Also tell me where else this font size appears so I can decide whether to change them all.
+```
+
+Original: 这种弹窗的设计格式是什么？里面的标题文字太大，可以适当调小15-25%，你来决定。并且告诉我目前这样的字号还会在哪里出现，我看看是否需要统一修改
+
+```text
+When I open a new chat from the Todos view, the greeting text needs to change: replace "Design Mit" with "verso". Our product is called verso.
+```
+
+Original: 当我在todo界面里点进一个新的chat的时候，这个greeting的文字需要改一下。把design mit改成verso。我们这个产品叫verso。

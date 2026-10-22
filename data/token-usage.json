@@ -3376,5 +3376,41 @@
     "output": 6523,
     "total": 18699,
     "simulated": true
+  },
+  "[push #63] 31 files · +302 -127 · playback caption room and narrow header, milestone chip redesign, dark-light polish-2026-10-21-194158.png": {
+    "input": 15506,
+    "output": 3965,
+    "total": 19471,
+    "simulated": true
+  },
+  "[prompt #559] +43-46 · the default width of this can be smaller- since the content inside is not that long within a line--2026-10-21-195210.png": {
+    "input": 4027,
+    "output": 857,
+    "total": 4884,
+    "simulated": true
+  },
+  "[prompt #560] +106-59 · Make the first round of changes based on the animation issues you pointed out last round. Afterwards, tell me what you c-2026-10-21-195543.png": {
+    "input": 1789,
+    "output": 7004,
+    "total": 8793,
+    "simulated": true
+  },
+  "[prompt #561] +162-86 · OK, keep going with the changes-2026-10-21-195921.png": {
+    "input": 1395,
+    "output": 5420,
+    "total": 6815,
+    "simulated": true
+  },
+  "[prompt #562] +271-99 · OK, start with the changes you suggested-2026-10-21-213228.png": {
+    "input": 9660,
+    "output": 5067,
+    "total": 14727,
+    "simulated": true
+  },
+  "[prompt #563] +337-108 · You said the confetti is still there when clicking the trophy on the Playback milestone chip (a small burst of 3 x 4.5px-2026-10-21-214001.png": {
+    "input": 15264,
+    "output": 2540,
+    "total": 17804,
+    "simulated": true
   }
 }
