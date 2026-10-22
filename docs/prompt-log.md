@@ -5719,3 +5719,12 @@ On the Playback images, when hovering, the fill gets cut off on one side because
 ```
 
 Original: 在playback的图片这里，有时候hover，但因为这个tag左边和其他对齐了，fill被割掉了一块。调整一下这个设计
+
+## Prompt #569
+
+```text
+From this Gallery viewing angle, I notice the version labels stand out too much; they should sit behind the screenshots.
+
+```
+
+Original: 我观察在gallery的这个视角，版本的文字太standout，应该是在截图后面

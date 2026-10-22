@@ -9,7 +9,9 @@ export const galleryTokens = {
   interfaces: captureScreens,
   webgl: { pixelRatioMax: 3, resolution: { panelStart: 600, panelEnd: 1600, largePanelScale: 1.5, maxPixels: 12_000_000 }, rotateSpeed: .7, zoomSpeed: .55, keyRotateRadians: .12, dragThreshold: 5,
     blockOpacity: .035, disabledOutlineScale: .5, edgeOpacity: .18, hoverEdgeOpacity: .5, edgeWidth: .75, hoverEdgeWidth: 1.5, frameOutlineOpacity: .92, frontViewPadding: 1.8, frontViewLift: .15, defaultScale: .8, latestFrameTop: .44,
-    hoverOcclusion: { image: .22, edge: .35, depthMargin: 1 }, initialDirection: [-1, .5, 1] as const, groundRotationDegrees: -12, textureCacheSize: 8, prefetchConcurrency: 2, anisotropyMax: 16 },
+    hoverOcclusion: { image: .22, edge: .35, depthMargin: 1 },
+    // Axis labels are DOM overlays; one whose anchor sits behind a frame image eases to this opacity, as if behind the screenshot.
+    labelOcclusion: { opacity: .12, easeMs: 120 }, initialDirection: [-1, .5, 1] as const, groundRotationDegrees: -12, textureCacheSize: 8, prefetchConcurrency: 2, anisotropyMax: 16 },
   overviewPadding: 1.12, overviewFitScale: 1.2, representativeVersionStride: 3,
   edgePan: { bandPx: 64, speed: 32, accelerationMs: 420, delayMs: 480, followMs: 140, settle: 4 },
   versionDepth: 88, blockGap: 10, padding: 10, maxImageWidth: 340, maxImageHeight: 240,

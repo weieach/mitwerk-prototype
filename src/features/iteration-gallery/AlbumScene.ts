@@ -61,6 +61,9 @@ export class AlbumScene {
   private fades = new Map<THREE.Material, { opacity: number; target: number }>();
   /** Hover occlusion: frames and block wireframes between the camera and the hovered frame recede (keys `frame:id`, `block:key`). */
   private occlusion = new Map<string, { value: number; target: number }>();
+  /** Axis label opacity from frame occlusion (keys: anchor id). Labels are DOM, so the scene supplies their depth. */
+  private labelOcclusion = new Map<string, number>();
+  private labelRay = new THREE.Raycaster();
   /** Frames and blocks easing from their previous placement (or from nothing) after a data change. */
   private growth: { object: THREE.Object3D; base: THREE.Vector3; offset: THREE.Vector3; scaleFrom: THREE.Vector3; start: number }[] = [];
   private growing = false;
@@ -216,8 +219,11 @@ export class AlbumScene {
       this.axisMeasure.font = `${size}px ${axisFamily}`;
       return this.axisMeasure.measureText(text).width;
     };
+    const axisAnchors = withOverheadDates(mergeAxisAnchors(this.axisAnchors, this.featuredAnchors), this.album ? albumFloorY(this.album) : 0, this.album ? -albumBlockBounds(this.album).max.z : undefined);
+    if (this.syncLabelOcclusion(axisAnchors, dt)) moving = true;
     this.callbacks.labels([
-      ...projectAxisLabels(withOverheadDates(mergeAxisAnchors(this.axisAnchors, this.featuredAnchors), this.album ? albumFloorY(this.album) : 0, this.album ? -albumBlockBounds(this.album).max.z : undefined), this.camera, this.host.clientWidth, this.host.clientHeight, this.overheadBlend, this.tokenBlend, measureAxisText),
+      ...projectAxisLabels(axisAnchors, this.camera, this.host.clientWidth, this.host.clientHeight, this.overheadBlend, this.tokenBlend, measureAxisText)
+        .map(label => { const visible = this.labelOcclusion.get(label.id) ?? 1; return visible === 1 ? label : { ...label, opacity: label.opacity * visible }; }),
       ...projectAxisLabels(this.tokenAnchors, this.camera, this.host.clientWidth, this.host.clientHeight).map(label => ({ ...label, opacity: this.tokenBlend, hidden: label.hidden || this.tokenBlend < .01 })),
     ]);
     const hovered = this.hovered ? this.frames.get(this.hovered) : undefined;
@@ -583,6 +589,27 @@ export class AlbumScene {
       else material.opacity = target;
     }
   }
+  /** Fade axis labels whose anchor is behind a frame image. The camera is orthographic, so each test casts from the
+   *  anchor straight back toward the viewer; any frame image it meets lies in front of the label. */
+  private syncLabelOcclusion(anchors: AxisAnchor[], dt: number) {
+    const images = [...this.frames.values()].map(frame => frame.image).filter(image => image.visible && image.material.opacity > .05);
+    const toViewer = this.camera.getWorldDirection(new THREE.Vector3()).negate();
+    const blend = this.reducedMotion ? 1 : 1 - Math.exp(-dt / (t.webgl.labelOcclusion.easeMs / 3));
+    let moving = false;
+    const seen = new Set<string>();
+    for (const anchor of anchors) {
+      seen.add(anchor.id);
+      this.labelRay.set(this.content.localToWorld(anchor.position.clone()), toViewer);
+      const target = images.length && this.labelRay.intersectObjects(images, false).length ? t.webgl.labelOcclusion.opacity : 1;
+      const current = this.labelOcclusion.get(anchor.id) ?? 1;
+      const next = Math.abs(target - current) < .01 ? target : current + (target - current) * blend;
+      if (next !== target) moving = true;
+      if (next === 1) this.labelOcclusion.delete(anchor.id); else this.labelOcclusion.set(anchor.id, next);
+    }
+    for (const id of this.labelOcclusion.keys()) if (!seen.has(id)) this.labelOcclusion.delete(id);
+    return moving;
+  }
+
   private occluded(key: string) {
     return this.occlusion.get(key)?.value ?? 1;
   }

@@ -3448,5 +3448,17 @@
     "output": 4339,
     "total": 7206,
     "simulated": true
+  },
+  "[push #65] 27 files · +287 -69 · to-do two-line rows (shared details), type scale, smooth chat resize, alignment pass-2026-10-21-222533.png": {
+    "input": 5082,
+    "output": 1295,
+    "total": 6377,
+    "simulated": true
+  },
+  "[prompt #569] +58-38 · From this Gallery viewing angle, I notice the version labels stand out too much; they should sit behind the screenshots-2026-10-21-223520.png": {
+    "input": 14606,
+    "output": 4597,
+    "total": 19203,
+    "simulated": true
   }
 }
