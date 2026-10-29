@@ -2284,3 +2284,8 @@ This file is reserved for project-wide design-system rules requested by the user
 
 - Every capture row carries `thumbUrl`, a 960px-wide WebP (`server/capture-thumbnail.mjs`, ~40× smaller than the PNG). The isometric album planes, their prefetch/warm-up (`captureUrl` in `capture-cache.ts`) and Version card image thumbnails use it. Theater/Playback, annotation previews, chat frame cards and file links keep the full `url`.
 - Rows without `thumbUrl` (catalogs published before this rule) fall back to `url`. Locally the dev server makes thumbnails on demand and caches them in `node_modules/.cache/verso-thumbnails`; `publish:gallery` uploads them as content-addressed `gallery/thumbs/<sha256>.webp` objects.
+
+## The idea panel is named Idea thread — 2026-10-29
+
+- The user-facing name is **Idea thread**: the workspace view link, the panel heading (compact form **Thread**), the screen-reader title, and the zoom and navigation labels that name the panel. Type studio groups for that panel use the same name.
+- Internal identifiers stay (`ideaStream`, `idea-stream`, capture cues such as `c idea stream`). Earlier rules in this file keep the name they were written with.

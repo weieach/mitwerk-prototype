@@ -60,7 +60,7 @@ const screenshotFlags = typeof window !== 'undefined'
 const screenshotCapture = screenshotFlags.capture;
 if (screenshotFlags.countHover) document.documentElement.dataset.screenshotCountHover = '1';
 
-export function VersionTreePanel({ playbackVersion = null, embedded = false, id, title = 'Idea stream', graph: sourceGraph, dispatch, onSwitchPanel, onOpenPush, mode, modeSwitchVisible, onModeChange, status = '' }: Props) {
+export function VersionTreePanel({ playbackVersion = null, embedded = false, id, title = 'Idea thread', graph: sourceGraph, dispatch, onSwitchPanel, onOpenPush, mode, modeSwitchVisible, onModeChange, status = '' }: Props) {
   const ideaMode = mode === 'history';
   const graph = useMemo(() => ideaMode ? visibleIdeaHistory(sourceGraph) : sourceGraph, [sourceGraph, ideaMode]);
   const { todosByNode, toggleTodo } = useIdeaTodos(graph.nodes);
@@ -509,7 +509,7 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
         </button>
       </div>
     </div>;
-  const treeHeader = <div className="panel-header tree-header"><div className="panel-heading"><AdaptivePanelTitle id="tree-title" icon={panelIcons.ideaStream} full={title} short="Stream"/><VersionPanelSwitch onClick={onSwitchPanel} target="Version blocks"/>
+  const treeHeader = <div className="panel-header tree-header"><div className="panel-heading"><AdaptivePanelTitle id="tree-title" icon={panelIcons.ideaStream} full={title} short="Thread"/><VersionPanelSwitch onClick={onSwitchPanel} target="Version blocks"/>
       {modeSwitchVisible && <RowSelect label="Version stream panel" value={mode}
         options={treeModes.map(item => ({ value: item.id, label: item.label }))} onChange={value => onModeChange(value as TreeMode)}/>}
     </div>{!ideaMode && treeActions}</div>;
@@ -680,8 +680,8 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
         </div>
       </div>
     </div>
-      <footer className={`canvas-controls${ideaMode || embedded ? ' has-navigation' : ''}`} aria-label="Idea stream view controls">
-        {(ideaMode || embedded) && <div className="idea-footer-navigation" role="group" aria-label="Idea stream navigation">{embedded && modeSwitchVisible && <RowSelect label="Version stream panel" value={mode} options={treeModes.map(item => ({value:item.id,label:item.label}))} onChange={value => onModeChange(value as TreeMode)}/>} {treeActions}</div>}
+      <footer className={`canvas-controls${ideaMode || embedded ? ' has-navigation' : ''}`} aria-label="Idea thread view controls">
+        {(ideaMode || embedded) && <div className="idea-footer-navigation" role="group" aria-label="Idea thread navigation">{embedded && modeSwitchVisible && <RowSelect label="Version stream panel" value={mode} options={treeModes.map(item => ({value:item.id,label:item.label}))} onChange={value => onModeChange(value as TreeMode)}/>} {treeActions}</div>}
         {!ideaMode && <div ref={branchMenu} className="branch-controls header-branch-controls" data-header-fill>
           <button className="branch-current" data-header-fill-content onClick={() => setBranchMenuOpen(open => !open)}
             aria-haspopup="menu" aria-expanded={branchMenuOpen} aria-label={`Active branch ${activeBranchName}. Switch branch`}
@@ -706,7 +706,7 @@ export function VersionTreePanel({ playbackVersion = null, embedded = false, id,
             <i className={grid ? 'ph ph-eye-closed' : 'ph ph-eye'} aria-hidden="true"/>Grid
           </button>}
           <button className="icon-button" onClick={() => changeZoom(zoom - treeTheme.zoomStep)} disabled={zoom <= treeTheme.minZoom} aria-label="Zoom out"><Icon name="minus"/></button>
-          <ZoomScaleButton zoom={zoom} label="Reset Idea stream zoom" onResetZoom={() => changeZoom(1)} onResetView={fitAll}/>
+          <ZoomScaleButton zoom={zoom} label="Reset Idea thread zoom" onResetZoom={() => changeZoom(1)} onResetView={fitAll}/>
           <button className="icon-button" onClick={() => changeZoom(zoom + treeTheme.zoomStep)} disabled={zoom >= treeTheme.maxZoom} aria-label="Zoom in"><Icon name="plus"/></button>
           {!ideaMode && <div className="album-camera-actions"><ResetViewButton label="Fit all versions" centerLabel="center current branch endpoint" onReset={fitAll} onCenter={focusCurrentBranchEndpoint}/></div>}
         </div>

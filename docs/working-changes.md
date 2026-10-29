@@ -2,6 +2,11 @@
 
 Prior entries are committed on `main` through prompt #574 (Vercel Blob publication paused, push/deploy gates, album thumbnails).
 
+## 2026-10-29 · prompt #576 · Rename the idea panel to Idea thread
+
+- User-facing name is Idea thread: workspace view link, panel heading and compact label, screen-reader title, zoom and navigation labels, and the type studio group. Internal identifiers and capture cues stay.
+- `src/features/workbench/Workbench.tsx`, `src/features/version-tree/VersionTreePanel.tsx`, `src/ReadingWorkspace.tsx`, `src/shared/type-studio.ts`, `docs/design-system-rules.md`.
+
 ## 2026-10-22 · prompt #574 uncounted · Push #68
 
 - `AGENTS.md`: push counter set to #68 after pushing `2b56a7f`; `data/push-shas.json` and the `[push #68]` capture were recorded by the pre-push hook (Blob publication skipped).

@@ -5773,3 +5773,9 @@ Load gallery thumbnails and pause GitHub and Vercel uploads
 ```text
 Serve live gallery images from the deployment, not Blob
 ```
+
+## Prompt #576
+
+```text
+help me change the name of the idea stream panel to "Idea thread" 
+```

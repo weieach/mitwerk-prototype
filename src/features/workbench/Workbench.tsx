@@ -387,10 +387,10 @@ export function Workbench() {
    <header id="workspace-bar" className="mw-topbar">
     <BrandMenu theme={theme} onTheme={setTheme}/>
     <nav className="workspace-links" aria-label="Workspace views">
-     {/* View links follow the panels' left-to-right order: chat, reader (Version blocks, Idea stream), then Live server. */}
+     {/* View links follow the panels' left-to-right order: chat, reader (Version blocks, Idea thread), then Live server. */}
      <button aria-pressed={chatShown&&view==='dialog'} aria-controls="workspace-pane-chat" onClick={()=>togglePanel('chat')}><PanelIcon name={panelIcons.chat} size={15}/><span className="workspace-link-label">Chat</span></button>
      <button aria-pressed={versionShown&&reader==='prototype'} aria-controls="workspace-pane-version" onClick={()=>togglePanel('version')}><PanelIcon name={panelIcons.versionBlocks} size={15}/><span className="workspace-link-label">Version blocks</span></button>
-     <button aria-pressed={ideasShown} aria-controls="workspace-pane-ideas" onClick={()=>togglePanel('ideas')}><PanelIcon name={panelIcons.ideaStream} size={15}/><span className="workspace-link-label">Idea stream</span></button>
+     <button aria-pressed={ideasShown} aria-controls="workspace-pane-ideas" onClick={()=>togglePanel('ideas')}><PanelIcon name={panelIcons.ideaStream} size={15}/><span className="workspace-link-label">Idea thread</span></button>
      <button aria-pressed={liveShown} aria-controls="workspace-pane-version" onClick={()=>togglePanel('live')}><PanelIcon name={panelIcons.liveServer} size={15}/><span className="workspace-link-label">Live server</span></button>
      {openAssetIds.filter(id=>id!=='prototype').map(id=>{const asset=allAssets.find(a=>a.id===id);return asset&&<span className="workspace-resource" key={id}><button onClick={()=>selectPane(`asset:${id}`)}>{asset.title}</button><button aria-label={`Close ${asset.title}`} onClick={()=>closeAssetTab(id)}><X size={12}/></button></span>;})}
     </nav>

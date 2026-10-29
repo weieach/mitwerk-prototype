@@ -3508,5 +3508,23 @@
     "output": 1335,
     "total": 2284,
     "simulated": true
+  },
+  "[prompt #575] +189-29 · Serve live gallery images from the deployment, not Blob-2026-10-22-021721.png": {
+    "input": 6442,
+    "output": 5659,
+    "total": 12101,
+    "simulated": true
+  },
+  "[push #69] 16 files · +203 -37 · Vercel blob storage reached 10GB max; found alternative storage solution-2026-10-22-021931.png": {
+    "input": 1151,
+    "output": 1447,
+    "total": 2598,
+    "simulated": true
+  },
+  "[prompt #576] +42-13 · help me change the name of the idea stream panel to -Idea thread--2026-10-29-113339.png": {
+    "input": 697,
+    "output": 7034,
+    "total": 7731,
+    "simulated": true
   }
 }
